@@ -10744,6 +10744,28 @@ To fix this:
         }
       })(req, res, client);
 
+    } else if (custom_id === 'moai_ask_msg') {
+      // 🗿 Ask Moai about THIS message — prefills the modal with the clicked card's text
+      // (PM2 error posts, deploy notifications). Text is read back off the message itself,
+      // so it survives restarts. All builders live in moai.js.
+      return ButtonHandlerFactory.create({
+        id: 'moai_ask_msg',
+        requiresModal: true,
+        handler: async (context) => {
+          if (context.userId !== '391415444084490240') {
+            return { content: '🗿 The Moai listens only to its keeper.', ephemeral: true };
+          }
+          const { isMoaiEnvironment, extractMessageText, buildContextAskModal } = await import('./moai.js');
+          if (!isMoaiEnvironment()) {
+            return { content: '🗿 The Moai does not dwell in production.', ephemeral: true };
+          }
+          return {
+            type: InteractionResponseType.MODAL,
+            data: buildContextAskModal(extractMessageText(context.message))
+          };
+        }
+      })(req, res, client);
+
     } else if (custom_id.startsWith('moai_share_')) {
       // 🗿 Make Public — re-post the Moai's response as a public message
       return ButtonHandlerFactory.create({
@@ -17352,82 +17374,102 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'safari_export_data') {
-      // Handle Safari data export
-      try {
-        const member = req.body.member;
-        const guildId = req.body.guild_id;
-        const token = req.body.token;
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to export Safari data.')) return;
-        
-        console.log(`📤 DEBUG: Exporting Safari data for guild ${guildId}`);
-        
-        // Defer the response immediately
-        res.send({
-          type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-        
-        // Export Safari data
-        const { exportSafariData } = await import('./safariImportExport.js');
-        const exportJson = await exportSafariData(guildId);
-        
-        console.log(`📤 DEBUG: Export data length: ${exportJson.length} characters`);
-        
-        // Create the export file attachment
-        const { AttachmentBuilder } = await import('discord.js');
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const filename = `safari-export-${guildId}-${timestamp}.json`;
-        
-        const attachment = new AttachmentBuilder(Buffer.from(exportJson, 'utf8'), {
-          name: filename,
-          description: 'Safari configuration export'
-        });
-        
-        // Use Discord API directly to send the follow-up with file
-        const applicationId = req.body.application_id;
-        const followUpUrl = `https://discord.com/api/v10/webhooks/${applicationId}/${token}`;
-        
-        // Create FormData with the file
-        const FormData = (await import('form-data')).default;
-        const form = new FormData();
-        
-        form.append('payload_json', JSON.stringify({
-          content: '📤 **Safari Data Export Complete**\n\nYour Safari configuration has been exported. Download the attached JSON file to save your configuration.',
-          flags: InteractionResponseFlags.EPHEMERAL
-        }));
-        
-        form.append('files[0]', Buffer.from(exportJson, 'utf8'), {
-          filename: filename,
-          contentType: 'application/json'
-        });
-        
-        // Send the follow-up message with the file
-        await fetch(followUpUrl, {
-          method: 'POST',
-          headers: form.getHeaders(),
-          body: form
-        });
-        
-        return;
-        
-      } catch (error) {
-        console.error('Error in safari_export_data:', error);
-        
-        // If we haven't sent a response yet, send error response
-        if (!res.headersSent) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Error exporting Safari data. Please try again.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
+      // Settings → Advanced → Export — component selection screen (granular export).
+      // Actual generation happens in safari_export_select below.
+      return ButtonHandlerFactory.create({
+        id: 'safari_export_data',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async () => {
+          const { buildExportSelectionUI } = await import('./safariConfigUI.js');
+          return buildExportSelectionUI();
         }
-      }
+      })(req, res, client);
+
+    } else if (custom_id === 'safari_export_select') {
+      // Export component multi-select — builds a v2 JSON envelope, or a ZIP package
+      // when Map Image is included, and delivers it as an ephemeral file follow-up.
+      return ButtonHandlerFactory.create({
+        id: 'safari_export_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        deferred: true,
+        updateMessage: true,
+        handler: async (context) => {
+          const componentIds = req.body.data?.values || [];
+          console.log(`📤 [SafariExport] guild ${context.guildId} exporting: ${componentIds.join(', ')}`);
+
+          const { buildExportPackage, COMPONENT_MAP } = await import('./safariImportExport.js');
+          let result;
+          try {
+            result = await buildExportPackage(context.guildId, componentIds, client);
+          } catch (error) {
+            return {
+              components: [{
+                type: 17,
+                accent_color: 0xe74c3c,
+                components: [
+                  { type: 10, content: `## ❌ Export Failed` },
+                  { type: 14 },
+                  { type: 10, content: error.message },
+                  { type: 14 },
+                  { type: 1, components: [{ type: 2, custom_id: 'safari_export_data', label: 'Try Again', style: 1, emoji: { name: '🔄' } }, { type: 2, custom_id: 'castbot_settings', label: '← Settings', style: 2 }] }
+                ]
+              }],
+              flags: 1 << 15
+            };
+          }
+
+          // Deliver the file as an ephemeral follow-up (DiscordRequest is JSON-only —
+          // file sends must use raw fetch + form-data)
+          const applicationId = req.body.application_id;
+          const followUpUrl = `https://discord.com/api/v10/webhooks/${applicationId}/${context.token}`;
+          const FormData = (await import('form-data')).default;
+          const form = new FormData();
+          form.append('payload_json', JSON.stringify({
+            content: `📤 **Safari Export Complete** (${result.kind === 'zip' ? 'portable package' : 'JSON'})\n` +
+              `Included: ${result.includedComponents.map(c => `${COMPONENT_MAP[c].emoji} ${COMPONENT_MAP[c].label}`).join(', ')}`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }));
+          form.append('files[0]', result.buffer, {
+            filename: result.filename,
+            contentType: result.contentType
+          });
+          const fileRes = await fetch(followUpUrl, { method: 'POST', headers: form.getHeaders(), body: form });
+
+          const deliveryNotes = [...result.notes];
+          if (!fileRes.ok) {
+            console.error(`❌ [SafariExport] File follow-up failed: HTTP ${fileRes.status}`);
+            deliveryNotes.push(fileRes.status === 413
+              ? '❌ The export was too large for Discord to accept — try excluding the map image.'
+              : `❌ Discord rejected the file upload (HTTP ${fileRes.status}) — please try again.`);
+          }
+
+          // PATCH the selection screen with the outcome (factory sends this for us)
+          return {
+            components: [{
+              type: 17,
+              accent_color: fileRes.ok ? 0x2ecc71 : 0xe74c3c,
+              components: [
+                { type: 10, content: fileRes.ok ? '## ✅ Export Ready' : '## ❌ Export Delivery Failed' },
+                { type: 14 },
+                { type: 10, content:
+                  `**File:** \`${result.filename}\` (${(result.buffer.length / 1024).toFixed(1)} KB)\n` +
+                  `**Included:** ${result.includedComponents.map(c => `${COMPONENT_MAP[c].emoji} ${COMPONENT_MAP[c].label}`).join(', ')}` +
+                  (deliveryNotes.length ? `\n\n${deliveryNotes.map(n => `-# ${n}`).join('\n')}` : '') },
+                { type: 14 },
+                { type: 1, components: [
+                  { type: 2, custom_id: 'safari_export_data', label: 'Export Again', style: 2, emoji: { name: '📤' } },
+                  { type: 2, custom_id: 'castbot_settings', label: '← Settings', style: 2 }
+                ] }
+              ]
+            }],
+            flags: 1 << 15
+          };
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'playerdata_export_all') {
       // Handle Export All PlayerData (entire playerData.json file with all guilds)
       try {
@@ -17728,15 +17770,13 @@ Your server is now ready for Tycoons gameplay!`;
                 { type: 10, content: '## 📥 Import Safari Data' },
                 { type: 14 },
                 { type: 10, content: '### ```⚠️ Before You Import```' },
-                { type: 10, content: '-# Make sure your map is ready first — the import will merge into your active map.' },
+                { type: 10, content: '-# You can upload a `.json` export or a full `.zip` package. You\'ll see a preview and confirm before anything is written.' },
                 { type: 10, content:
-                  '**1.** Go to **Map Explorer** → **Create / Upload Map**\n' +
-                  '**2.** Upload the **same map image** used in the export\n' +
-                  '**3.** Set the correct **grid size** (must match the export)\n' +
-                  '**4.** Wait for all **location channels** to be created'
+                  '**Map data without a package image:** create your map first via **Map Explorer** → **Create / Upload Map** (same image, matching grid size).\n' +
+                  '**Full `.zip` package:** includes the map image — if this server has no map yet, CastBot can create it for you during the import.'
                 },
                 { type: 14 },
-                { type: 10, content: 'Once your map is ready, click **Import** below to upload your Safari export JSON file.' },
+                { type: 10, content: 'Click **Import** below to upload your Safari export file.' },
                 { type: 14 },
                 { type: 1, components: [
                   { type: 2, custom_id: 'castbot_settings', label: '← Settings', style: 2 },
@@ -17745,6 +17785,109 @@ Your server is now ready for Tycoons gameplay!`;
               ]
             }],
             flags: 1 << 15 // IS_COMPONENTS_V2
+          };
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('safari_import_mode_')) {
+      // Import preview — Merge/Replace mode select (re-renders the preview screen)
+      return ButtonHandlerFactory.create({
+        id: 'safari_import_mode',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const key = custom_id.replace('safari_import_mode_', '');
+          const { peekPendingImport, buildImportPreview, buildExpiredResponse } = await import('./src/fileImportHandler.js');
+          const pending = peekPendingImport(key);
+          if (!pending || pending.guildId !== context.guildId) return buildExpiredResponse();
+          const value = req.body.data?.values?.[0];
+          pending.mode = value === 'replace' ? 'replace' : 'merge';
+          return buildImportPreview(pending);
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('safari_import_back_')) {
+      // Replace second-confirm → back to the preview screen
+      return ButtonHandlerFactory.create({
+        id: 'safari_import_back',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const key = custom_id.replace('safari_import_back_', '');
+          const { peekPendingImport, buildImportPreview, buildExpiredResponse } = await import('./src/fileImportHandler.js');
+          const pending = peekPendingImport(key);
+          if (!pending || pending.guildId !== context.guildId) return buildExpiredResponse();
+          return buildImportPreview(pending);
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('safari_import_replace_confirm_')) {
+      // Second, explicit red confirmation for Replace mode → execute
+      return ButtonHandlerFactory.create({
+        id: 'safari_import_replace_confirm',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        deferred: true,
+        updateMessage: true,
+        handler: async (context) => {
+          const key = custom_id.replace('safari_import_replace_confirm_', '');
+          const { peekPendingImport, takePendingImport, buildExpiredResponse, executeSafariImport } = await import('./src/fileImportHandler.js');
+          if (peekPendingImport(key)?.guildId !== context.guildId) return buildExpiredResponse();
+          const pending = takePendingImport(key); // consume BEFORE executing — double-click guard
+          if (!pending) return buildExpiredResponse();
+          return await executeSafariImport(pending, client);
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('safari_import_confirm_')) {
+      // Import preview confirm — merge executes; replace routes to the red second confirm
+      return ButtonHandlerFactory.create({
+        id: 'safari_import_confirm',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        deferred: true,
+        updateMessage: true,
+        handler: async (context) => {
+          const key = custom_id.replace('safari_import_confirm_', '');
+          const { peekPendingImport, takePendingImport, buildReplaceConfirmScreen, buildExpiredResponse, executeSafariImport } = await import('./src/fileImportHandler.js');
+          const pending = peekPendingImport(key);
+          if (!pending || pending.guildId !== context.guildId) return buildExpiredResponse();
+          if (pending.mode === 'replace') {
+            return buildReplaceConfirmScreen(pending);
+          }
+          takePendingImport(key); // consume BEFORE executing — double-click guard
+          return await executeSafariImport(pending, client);
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('safari_import_abort_')) {
+      // Import preview cancel — discard the staged import, nothing written
+      return ButtonHandlerFactory.create({
+        id: 'safari_import_abort',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async () => {
+          const key = custom_id.replace('safari_import_abort_', '');
+          const { deletePendingImport } = await import('./src/fileImportHandler.js');
+          deletePendingImport(key);
+          return {
+            components: [{
+              type: 17,
+              accent_color: 0x95a5a6,
+              components: [
+                { type: 10, content: '## ❌ Import Cancelled' },
+                { type: 10, content: '-# Nothing was changed.' },
+                { type: 14 },
+                { type: 1, components: [
+                  { type: 2, custom_id: 'file_import_safari', label: 'Import Another File', style: 2, emoji: { name: '📥' } },
+                  { type: 2, custom_id: 'castbot_settings', label: '← Settings', style: 2 }
+                ] }
+              ]
+            }],
+            flags: 1 << 15
           };
         }
       })(req, res, client);

@@ -4,6 +4,26 @@
  */
 
 import { loadSafariContent, saveSafariContent } from './safariManager.js';
+import { createArchive, readArchive, isZipBuffer, ArchiveError } from './safariArchive.js';
+
+/** Export format identifier — present in every v2+ export envelope and package manifest. */
+export const SAFARI_EXPORT_FORMAT = 'castbot-safari-export';
+/** Highest export format version this build can produce AND import. v1 = legacy bare 5-key JSON. */
+export const SAFARI_EXPORT_VERSION = 2;
+
+/**
+ * Single source of truth mapping user-facing export components to safariContent data keys.
+ * `dataKey` is the key used inside export `data` / legacy exports (customActions is
+ * sourced from guildData.buttons; mapImage is an asset, not a data section).
+ */
+export const COMPONENT_MAP = {
+    stores:   { dataKey: 'stores',        label: 'Stores',         emoji: '🏪' },
+    items:    { dataKey: 'items',         label: 'Items',          emoji: '📦' },
+    actions:  { dataKey: 'customActions', label: 'Custom Actions', emoji: '🔘' },
+    settings: { dataKey: 'safariConfig',  label: 'Settings',       emoji: '⚙️' },
+    mapData:  { dataKey: 'maps',          label: 'Map Data',       emoji: '🗺️' },
+    mapImage: { dataKey: null,            label: 'Map Image',      emoji: '🖼️' }
+};
 
 /**
  * Export Safari data for a guild in a compact JSON format
@@ -152,13 +172,93 @@ export function isCoordInGrid(coord, dims) {
 }
 
 /**
+ * Replace-mode pre-pass: clear destination sections that the import will re-populate.
+ * Runs on the in-memory guild entry BEFORE the merge loops, so the whole operation
+ * stays transactional under the single saveSafariContent() at the end of the import —
+ * nothing is written if any later step throws.
+ *
+ * Deliberately preserved (NOT cleared), whatever the import contains:
+ *   - entityPoints — player stat/HP pools: player progress, not safari content
+ *   - roundHistory — clearing it belongs to the explicit Reset Game flow, not import
+ *   - safaris, applications, enemies, attributeDefinitions, safariLogSettings,
+ *     globalStores, priorityRoles — outside export scope entirely
+ *   - playerData.json — never touched by import (orphaned inventory itemIds are inert
+ *     behind guarded reads; the Replace confirm screen discloses this)
+ *   - per-cell runtime plumbing: channelId, anchorMessageId, navigation, fogMapUrl, emoji
+ *   - map-level identity/runtime: id, gridSize, imageFile, discordImageUrl,
+ *     mapStorage*, category/categories, playerStates, globalState, config
+ * attackQueue IS cleared when customActions are replaced: queued attacks resolve
+ * against item/action definitions, and resolving them against a replaced set risks
+ * orphaned-itemId behavior (Reset Game clears it for the same reason).
+ */
+function applyReplaceClears(guildEntry, importData, summary) {
+    const cleared = { stores: 0, items: 0, customActions: 0, mapCells: 0 };
+
+    if (importData.stores) {
+        cleared.stores = Object.keys(guildEntry.stores || {}).length;
+        guildEntry.stores = {};
+    }
+    if (importData.items) {
+        cleared.items = Object.keys(guildEntry.items || {}).length;
+        guildEntry.items = {};
+    }
+    if (importData.customActions) {
+        cleared.customActions = Object.keys(guildEntry.buttons || {}).length;
+        guildEntry.buttons = {};
+        guildEntry.attackQueue = {};
+    }
+    if (importData.safariConfig) {
+        const old = guildEntry.safariConfig || {};
+        // Wholesale replace — re-attach only the runtime fields exports never carry
+        // (the exact three filterConfigForExport excludes)
+        guildEntry.safariConfig = {
+            ...(old.currentRound !== undefined && { currentRound: old.currentRound }),
+            ...(old.lastRoundTimestamp !== undefined && { lastRoundTimestamp: old.lastRoundTimestamp }),
+            ...(old.safariLogChannelId !== undefined && { safariLogChannelId: old.safariLogChannelId })
+        };
+    }
+    if (importData.maps) {
+        const activeMapId = guildEntry.maps?.active;
+        const activeMap = activeMapId ? guildEntry.maps?.[activeMapId] : null;
+        if (activeMap) {
+            for (const [coord, coordData] of Object.entries(activeMap.coordinates || {})) {
+                // Reset cell CONTENT to fresh defaults; spread preserves the runtime
+                // plumbing listed above (channelId, anchorMessageId, navigation, fogMapUrl, emoji)
+                activeMap.coordinates[coord] = {
+                    ...coordData,
+                    baseContent: {
+                        title: coord,
+                        description: `You are at grid location ${coord}.`,
+                        image: null,
+                        clues: []
+                    },
+                    buttons: [],
+                    stores: [],
+                    hiddenCommands: {},
+                    cellType: 'unexplored',
+                    discovered: false,
+                    specialEvents: [],
+                    metadata: { ...coordData.metadata, lastModified: Date.now() }
+                };
+                cleared.mapCells++;
+            }
+            activeMap.blacklistedCoordinates = [];
+        }
+    }
+
+    summary.replaceCleared = cleared;
+}
+
+/**
  * Import Safari data with smart merge logic
  * @param {string} guildId - Discord guild ID
  * @param {string} importJson - JSON string to import
  * @param {Object} context - Import context (userId, client) for audit trail
+ * @param {Object} options - { mode: 'merge' (default) | 'replace' } — 'replace' clears
+ *   the destination sections present in the import before merging (see applyReplaceClears)
  * @returns {Object} Import summary with counts
  */
-export async function importSafariData(guildId, importJson, context = {}) {
+export async function importSafariData(guildId, importJson, context = {}, options = {}) {
     try {
         // Parse and validate import data
         const importData = JSON.parse(importJson);
@@ -188,7 +288,14 @@ export async function importSafariData(guildId, importJson, context = {}) {
             config: false,
             warnings: []  // Track warnings (e.g., map ID mismatch)
         };
-        
+
+        // Replace mode: clear the sections this import re-populates (in memory only —
+        // still transactional under the single saveSafariContent below)
+        summary.mode = options.mode === 'replace' ? 'replace' : 'merge';
+        if (summary.mode === 'replace') {
+            applyReplaceClears(currentData[guildId], importData, summary);
+        }
+
         // Import stores with smart merge
         if (importData.stores) {
             for (const [storeId, storeData] of Object.entries(importData.stores)) {
@@ -808,6 +915,17 @@ export function formatImportSummary(summary) {
         parts.push(`⚙️ **Config:** Updated`);
     }
 
+    if (summary.mode === 'replace' && summary.replaceCleared) {
+        const rc = summary.replaceCleared;
+        const clearedParts = [];
+        if (rc.stores) clearedParts.push(`${rc.stores} store${rc.stores === 1 ? '' : 's'}`);
+        if (rc.items) clearedParts.push(`${rc.items} item${rc.items === 1 ? '' : 's'}`);
+        if (rc.customActions) clearedParts.push(`${rc.customActions} custom action${rc.customActions === 1 ? '' : 's'}`);
+        if (rc.mapCells) clearedParts.push(`${rc.mapCells} map cell${rc.mapCells === 1 ? '' : 's'}`);
+        parts.push('');
+        parts.push(`♻️ **Replace mode:** cleared ${clearedParts.length ? clearedParts.join(', ') : 'no existing entries'} before importing${rc.customActions ? ' (attack queue reset)' : ''}`);
+    }
+
     // Show warnings if any
     if (summary.warnings && summary.warnings.length > 0) {
         parts.push(''); // Add blank line before warnings
@@ -827,4 +945,568 @@ export function formatImportSummary(summary) {
     }
 
     return `✅ **Import completed successfully!**\n\n${parts.join('\n')}`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v2 export pipeline — granular components, versioned envelope, ZIP package
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Count meaningful entries in a filtered component (undefined-valued config keys don't count). */
+function countComponentEntries(componentId, filtered) {
+    if (!filtered || typeof filtered !== 'object') return 0;
+    if (componentId === 'settings') {
+        return Object.values(filtered).filter(v => v !== undefined).length;
+    }
+    if (componentId === 'mapData') {
+        return Object.keys(filtered).filter(k => k !== 'active').length;
+    }
+    return Object.keys(filtered).length;
+}
+
+/** Derive component ids (COMPONENT_MAP keys) present in a data object (legacy or v2 `data`). */
+function deriveIncludedComponents(data) {
+    const out = [];
+    for (const [compId, comp] of Object.entries(COMPONENT_MAP)) {
+        if (!comp.dataKey) continue;
+        const section = data?.[comp.dataKey];
+        if (section && typeof section === 'object' && countComponentEntries(compId, section) > 0) {
+            out.push(compId);
+        }
+    }
+    return out;
+}
+
+/**
+ * Build a v2 export envelope for the selected data components.
+ * Reuses the existing per-section whitelist filters — the single place export
+ * fidelity is defined (see the ratchet tests before touching them).
+ * @param {string} guildId
+ * @param {string[]} componentIds - subset of COMPONENT_MAP keys (mapImage ignored here)
+ * @returns {{envelope: Object, emptyComponents: string[]}}
+ */
+export async function buildExportEnvelope(guildId, componentIds) {
+    const all = await loadSafariContent();
+    const guildData = all[guildId] || {};
+
+    const data = {};
+    const includedComponents = [];
+    const emptyComponents = [];
+    const counts = {};
+
+    for (const compId of componentIds) {
+        const comp = COMPONENT_MAP[compId];
+        if (!comp?.dataKey) continue;
+
+        let filtered;
+        switch (compId) {
+            case 'stores': filtered = filterStoresForExport(guildData.stores || {}); break;
+            case 'items': filtered = filterItemsForExport(guildData.items || {}); break;
+            case 'actions': filtered = filterCustomActionsForExport(guildData.buttons || {}); break;
+            case 'settings': filtered = filterConfigForExport(guildData.safariConfig || {}); break;
+            case 'mapData': filtered = filterMapsForExport(guildData.maps || {}); break;
+            default: continue;
+        }
+
+        const count = countComponentEntries(compId, filtered);
+        if (count === 0) {
+            emptyComponents.push(compId);
+            continue;
+        }
+        data[comp.dataKey] = filtered;
+        includedComponents.push(compId);
+        counts[compId] = count;
+    }
+
+    const envelope = {
+        format: SAFARI_EXPORT_FORMAT,
+        formatVersion: SAFARI_EXPORT_VERSION,
+        exportType: 'json',
+        includedComponents,
+        sourceGuildId: guildId,
+        exportedAt: new Date().toISOString(),
+        counts,
+        data
+    };
+
+    return { envelope, emptyComponents };
+}
+
+/**
+ * Locate the active map's image and prepare it for packaging.
+ *
+ * Resolution order (updateMapImage writes `<mapId>_updated.*` WITHOUT updating
+ * mapData.imageFile, so the updated variants are probed first; stored
+ * discordImageUrl expires in ~24h, so the storage MESSAGE is refetched for a
+ * fresh URL before falling back to the stale one):
+ *   1. img/<guildId>/<mapId>_updated.jpg   (disk)
+ *   2. img/<guildId>/<mapId>_updated.png   (disk)
+ *   3. mapData.imageFile                   (disk, repo-relative)
+ *   4. fresh CDN URL via mapStorageChannelId/mapStorageMessageId
+ *   5. mapData.discordImageUrl             (last chance, likely expired)
+ *
+ * The stored image is the GRID-OVERLAID composite (80px white border + grid
+ * lines). The border is cropped off so the packaged image can be fed back into
+ * map creation without double-bordering (the 4px grid lines remain baked in —
+ * disclosed via kind: 'grid_cropped').
+ *
+ * @returns {Object} { buffer, ext, kind, sourceMapId, gridWidth, gridHeight, missingReason }
+ *   buffer is null (with missingReason set) when no image could be located.
+ */
+export async function resolveMapImage(guildId, client) {
+    const all = await loadSafariContent();
+    const guildData = all[guildId] || {};
+    const activeMapId = guildData.maps?.active;
+    const mapData = activeMapId ? guildData.maps?.[activeMapId] : null;
+    if (!mapData) {
+        return { buffer: null, missingReason: 'this server has no active map' };
+    }
+
+    const dims = resolveGridDimensions(mapData) || { width: 7, height: 7 };
+    const fs = await import('fs/promises');
+    const path = (await import('path')).default;
+    const { fileURLToPath } = await import('url');
+    const repoRoot = path.dirname(fileURLToPath(import.meta.url));
+
+    let buffer = null;
+    let ext = 'png';
+
+    const diskCandidates = [
+        path.join(repoRoot, 'img', guildId, `${activeMapId}_updated.jpg`),
+        path.join(repoRoot, 'img', guildId, `${activeMapId}_updated.png`),
+        ...(mapData.imageFile ? [path.join(repoRoot, mapData.imageFile)] : [])
+    ];
+    for (const candidate of diskCandidates) {
+        try {
+            buffer = await fs.readFile(candidate);
+            ext = /\.jpe?g$/i.test(candidate) ? 'jpg' : 'png';
+            console.log(`🖼️ [SafariExport] Map image from disk: ${candidate}`);
+            break;
+        } catch { /* try next candidate */ }
+    }
+
+    if (!buffer && mapData.mapStorageMessageId && mapData.mapStorageChannelId) {
+        try {
+            const { DiscordRequest } = await import('./utils.js');
+            const message = await DiscordRequest(
+                `channels/${mapData.mapStorageChannelId}/messages/${mapData.mapStorageMessageId}`,
+                { method: 'GET' }
+            );
+            const url = message?.attachments?.[0]?.url?.trim().replace(/&+$/, '');
+            if (url) {
+                const res = await fetch(url);
+                if (res.ok) {
+                    buffer = Buffer.from(await res.arrayBuffer());
+                    ext = /\.jpe?g($|\?)/i.test(url) ? 'jpg' : 'png';
+                    console.log(`🖼️ [SafariExport] Map image via fresh storage-message URL`);
+                }
+            }
+        } catch (err) {
+            console.log(`⚠️ [SafariExport] Storage-message image fetch failed: ${err.message}`);
+        }
+    }
+
+    if (!buffer && mapData.discordImageUrl) {
+        try {
+            const res = await fetch(mapData.discordImageUrl.trim().replace(/&+$/, ''));
+            if (res.ok) {
+                buffer = Buffer.from(await res.arrayBuffer());
+                ext = /\.jpe?g($|\?)/i.test(mapData.discordImageUrl) ? 'jpg' : 'png';
+                console.log(`🖼️ [SafariExport] Map image via stored CDN URL`);
+            }
+        } catch { /* expired — expected */ }
+    }
+
+    if (!buffer) {
+        return { buffer: null, missingReason: 'the map image could not be found (not on disk, and Discord storage was unavailable)' };
+    }
+
+    // Crop the compositor's 80px border so re-import doesn't double-border
+    let kind = 'grid_full';
+    try {
+        const sharp = (await import('sharp')).default;
+        const meta = await sharp(buffer).metadata();
+        if (meta.width > 160 && meta.height > 160) {
+            const cropped = sharp(buffer).extract({
+                left: 80, top: 80, width: meta.width - 160, height: meta.height - 160
+            });
+            buffer = ext === 'jpg'
+                ? await cropped.jpeg({ quality: 90 }).toBuffer()
+                : await cropped.png().toBuffer();
+            kind = 'grid_cropped';
+        }
+    } catch (err) {
+        console.log(`⚠️ [SafariExport] Border crop failed, packaging uncropped image: ${err.message}`);
+    }
+
+    return {
+        buffer, ext, kind,
+        sourceMapId: activeMapId,
+        gridWidth: dims.width,
+        gridHeight: dims.height,
+        missingReason: null
+    };
+}
+
+/**
+ * Build the deliverable export for the selected components.
+ * With mapImage selected (and resolvable): a ZIP package
+ * (manifest.json + data.json + assets/map.png|jpg); otherwise a v2 JSON envelope.
+ * Falls back from ZIP to JSON (with a note) when the image is missing or the
+ * package can't fit Discord's ~10MiB bot upload cap even after JPEG re-encode.
+ *
+ * @param {string} guildId
+ * @param {string[]} componentIds - COMPONENT_MAP keys the user selected
+ * @param {Object} client - Discord client (used for CDN image fallback)
+ * @returns {Object} { kind: 'zip'|'json', buffer, filename, contentType, manifest, notes, includedComponents }
+ */
+export async function buildExportPackage(guildId, componentIds, client) {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const wantsImage = componentIds.includes('mapImage');
+    const dataComponents = componentIds.filter(c => c !== 'mapImage' && COMPONENT_MAP[c]?.dataKey);
+
+    const { envelope, emptyComponents } = await buildExportEnvelope(guildId, dataComponents);
+    const notes = emptyComponents.map(c =>
+        `${COMPONENT_MAP[c].emoji} ${COMPONENT_MAP[c].label}: nothing to export — skipped`);
+
+    let image = null;
+    if (wantsImage) {
+        image = await resolveMapImage(guildId, client);
+        if (!image.buffer) {
+            notes.push(`🖼️ Map Image: ${image.missingReason} — exported without it`);
+            image = null;
+        }
+    }
+
+    if (!image && envelope.includedComponents.length === 0) {
+        throw new Error('Nothing to export — the selected components are all empty on this server.');
+    }
+
+    const jsonResult = () => ({
+        kind: 'json',
+        buffer: Buffer.from(JSON.stringify(envelope, null, 1), 'utf8'),
+        filename: `safari-export-${guildId}-${timestamp}.json`,
+        contentType: 'application/json',
+        manifest: null,
+        notes,
+        includedComponents: envelope.includedComponents
+    });
+
+    if (!image) return jsonResult();
+
+    const buildZip = (imgBuffer, imgExt) => {
+        const manifest = {
+            format: SAFARI_EXPORT_FORMAT,
+            formatVersion: SAFARI_EXPORT_VERSION,
+            exportType: 'package',
+            includedComponents: [...envelope.includedComponents, 'mapImage'],
+            sourceGuildId: guildId,
+            exportedAt: envelope.exportedAt,
+            counts: envelope.counts,
+            mapImage: {
+                file: `assets/map.${imgExt}`,
+                kind: image.kind,
+                sourceMapId: image.sourceMapId,
+                gridWidth: image.gridWidth,
+                gridHeight: image.gridHeight,
+                borderSize: 80
+            }
+        };
+        const zip = createArchive([
+            { name: 'manifest.json', data: JSON.stringify(manifest, null, 1), compress: true },
+            { name: 'data.json', data: JSON.stringify(envelope.data, null, 1), compress: true },
+            { name: `assets/map.${imgExt}`, data: imgBuffer, compress: false }
+        ]);
+        return { manifest, zip };
+    };
+
+    const MAX_DELIVERY_BYTES = Math.floor(9.5 * 1024 * 1024); // headroom under Discord's ~10MiB bot cap
+    let { manifest, zip } = buildZip(image.buffer, image.ext);
+
+    if (zip.length > MAX_DELIVERY_BYTES && image.ext !== 'jpg') {
+        try {
+            const sharp = (await import('sharp')).default;
+            const jpeg = await sharp(image.buffer).jpeg({ quality: 80 }).toBuffer();
+            ({ manifest, zip } = buildZip(jpeg, 'jpg'));
+            notes.push('🖼️ Map image re-encoded as JPEG to fit Discord upload limits');
+        } catch (err) {
+            console.log(`⚠️ [SafariExport] JPEG re-encode failed: ${err.message}`);
+        }
+    }
+    if (zip.length > MAX_DELIVERY_BYTES) {
+        if (envelope.includedComponents.length === 0) {
+            throw new Error('The map image is too large for a Discord upload and no other components were selected.');
+        }
+        notes.push('🖼️ Map image too large for a Discord upload even as JPEG — exported data only');
+        return jsonResult();
+    }
+
+    return {
+        kind: 'zip',
+        buffer: zip,
+        filename: `safari-package-${guildId}-${timestamp}.zip`,
+        contentType: 'application/zip',
+        manifest,
+        notes,
+        includedComponents: manifest.includedComponents
+    };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v2 import pipeline — format detection, payload parsing, import planning
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Detect what kind of Safari export a file is. Content-driven — never trusts
+ * the filename/extension alone.
+ * @param {Buffer} buffer - Raw uploaded file bytes
+ * @returns {{format: 'package'|'envelope'|'legacy', payload?: Object}}
+ * @throws {Error} clear user-facing error for unrecognised/newer-version files
+ */
+export function detectImportFormat(buffer) {
+    if (isZipBuffer(buffer)) {
+        return { format: 'package' };
+    }
+
+    let obj;
+    try {
+        obj = JSON.parse(buffer.toString('utf8'));
+    } catch {
+        throw new Error('This file is not a recognised Safari export (not valid JSON or a ZIP package).');
+    }
+
+    if (obj && typeof obj === 'object' && obj.format === SAFARI_EXPORT_FORMAT) {
+        const v = obj.formatVersion;
+        if (!Number.isInteger(v) || v < 1) {
+            throw new Error('This Safari export has an invalid format version.');
+        }
+        if (v > SAFARI_EXPORT_VERSION) {
+            throw new Error(`This Safari export uses format version ${v}, but this bot currently supports versions 1 through ${SAFARI_EXPORT_VERSION}. Update CastBot or re-export it from a matching version.`);
+        }
+        return { format: 'envelope', payload: obj };
+    }
+
+    const legacyKeys = ['stores', 'items', 'safariConfig', 'maps', 'customActions'];
+    if (obj && typeof obj === 'object' && legacyKeys.some(k => obj[k])) {
+        return { format: 'legacy', payload: obj };
+    }
+
+    throw new Error('This file is not a recognised Safari export.');
+}
+
+/** Asset paths a package image may live at — anything else in the archive is ignored/rejected. */
+const PACKAGE_IMAGE_WHITELIST = ['assets/map.png', 'assets/map.jpg', 'assets/map.jpeg'];
+
+/**
+ * Parse an uploaded Safari export (any supported format) into a normalized payload.
+ * Validates structure and image content BEFORE anything touches destination data.
+ * @param {Buffer} buffer - Raw uploaded file bytes
+ * @returns {Object} { formatVersion, exportType, includedComponents, data, manifest,
+ *                     imageBuffer, imageExt, warnings }
+ * @throws {Error} user-facing validation errors
+ */
+export async function parseImportPayload(buffer) {
+    const detected = detectImportFormat(buffer);
+    const warnings = [];
+
+    if (detected.format === 'legacy') {
+        const data = detected.payload;
+        validateImportData(data);
+        return {
+            formatVersion: 1,
+            exportType: 'legacy',
+            includedComponents: deriveIncludedComponents(data),
+            data,
+            manifest: null,
+            imageBuffer: null,
+            imageExt: null,
+            warnings
+        };
+    }
+
+    if (detected.format === 'envelope') {
+        const envelope = detected.payload;
+        if (!envelope.data || typeof envelope.data !== 'object') {
+            throw new Error('This Safari export is missing its data section.');
+        }
+        validateImportData(envelope.data);
+        return {
+            formatVersion: envelope.formatVersion,
+            exportType: 'json',
+            includedComponents: deriveIncludedComponents(envelope.data),
+            data: envelope.data,
+            manifest: envelope,
+            imageBuffer: null,
+            imageExt: null,
+            warnings
+        };
+    }
+
+    // ZIP package
+    let entries;
+    try {
+        entries = readArchive(buffer);
+    } catch (err) {
+        if (err instanceof ArchiveError) throw new Error(err.message);
+        throw err;
+    }
+
+    const dataEntry = entries.get('data.json');
+    if (!dataEntry) {
+        throw new Error('This Safari package is missing data.json.');
+    }
+
+    let manifest = null;
+    if (entries.has('manifest.json')) {
+        try {
+            manifest = JSON.parse(entries.get('manifest.json').toString('utf8'));
+        } catch {
+            throw new Error('This Safari package has a corrupt manifest.json.');
+        }
+        if (manifest.format !== SAFARI_EXPORT_FORMAT) {
+            throw new Error('This file is not a recognised Safari export (manifest format mismatch).');
+        }
+        const v = manifest.formatVersion;
+        if (Number.isInteger(v) && v > SAFARI_EXPORT_VERSION) {
+            throw new Error(`This Safari package uses export format version ${v}, but this bot currently supports versions 1 through ${SAFARI_EXPORT_VERSION}.`);
+        }
+    } else {
+        warnings.push('Package has no manifest.json — contents were derived from data.json');
+    }
+
+    let data;
+    try {
+        data = JSON.parse(dataEntry.toString('utf8'));
+    } catch {
+        throw new Error('This Safari package has a corrupt data.json.');
+    }
+    if (!data || typeof data !== 'object') {
+        throw new Error('This Safari package has an invalid data.json.');
+    }
+
+    // Image: only whitelisted asset paths are ever consulted — never arbitrary entry names
+    let imageBuffer = null;
+    let imagePath = null;
+    const declared = manifest?.mapImage?.file;
+    if (declared) {
+        if (!PACKAGE_IMAGE_WHITELIST.includes(declared)) {
+            throw new Error('The package manifest references an unexpected asset path.');
+        }
+        imageBuffer = entries.get(declared) || null;
+        if (!imageBuffer) {
+            throw new Error('The package manifest references a map image that is missing from the archive.');
+        }
+        imagePath = declared;
+    } else {
+        imagePath = PACKAGE_IMAGE_WHITELIST.find(p => entries.has(p)) || null;
+        if (imagePath) imageBuffer = entries.get(imagePath);
+    }
+
+    let imageExt = null;
+    if (imageBuffer) {
+        if (imageBuffer.length > 15 * 1024 * 1024) {
+            throw new Error('The map image in this package is too large (max 15MB).');
+        }
+        // Validate CONTENT, not just the filename
+        try {
+            const sharp = (await import('sharp')).default;
+            const meta = await sharp(imageBuffer).metadata();
+            if (!['png', 'jpeg', 'webp'].includes(meta.format)) {
+                throw new Error(`unsupported format "${meta.format}"`);
+            }
+        } catch (err) {
+            throw new Error(`The map image in this package is not a valid image (${err.message}).`);
+        }
+        imageExt = imagePath.endsWith('.png') ? 'png' : 'jpg';
+    }
+
+    const includedComponents = deriveIncludedComponents(data);
+    if (includedComponents.length > 0) {
+        validateImportData(data);
+    } else if (!imageBuffer) {
+        throw new Error('This Safari package contains no importable data.');
+    }
+    if (imageBuffer) includedComponents.push('mapImage');
+
+    return {
+        formatVersion: manifest?.formatVersion ?? SAFARI_EXPORT_VERSION,
+        exportType: 'package',
+        includedComponents,
+        data,
+        manifest,
+        imageBuffer,
+        imageExt,
+        warnings
+    };
+}
+
+/**
+ * Read-only import planner: computes what an import WOULD do against the
+ * destination guild's current data, for the preview/confirm screen. Writes nothing.
+ * @param {string} guildId - Destination guild
+ * @param {Object} parsed - Result of parseImportPayload
+ * @returns {Object} plan (per-section create/update counts, map analysis, warnings)
+ */
+export async function planSafariImport(guildId, parsed) {
+    const all = await loadSafariContent();
+    const guildData = all[guildId] || {};
+    const { data } = parsed;
+
+    const sectionPlan = (importObj, currentObj) => {
+        const ids = Object.keys(importObj || {});
+        const update = ids.filter(id => currentObj?.[id]).length;
+        return { incoming: ids.length, create: ids.length - update, update };
+    };
+
+    const plan = {
+        stores: sectionPlan(data.stores, guildData.stores),
+        items: sectionPlan(data.items, guildData.items),
+        actions: sectionPlan(data.customActions, guildData.buttons),
+        configFields: data.safariConfig
+            ? Object.keys(data.safariConfig).filter(k => data.safariConfig[k] !== undefined)
+            : [],
+        warnings: [...(parsed.warnings || [])]
+    };
+
+    // Destination totals — what Replace mode would clear (shown on the red confirm screen)
+    plan.destTotals = {
+        stores: Object.keys(guildData.stores || {}).length,
+        items: Object.keys(guildData.items || {}).length,
+        actions: Object.keys(guildData.buttons || {}).length
+    };
+
+    const activeMapId = guildData.maps?.active;
+    const activeMap = activeMapId ? guildData.maps?.[activeMapId] : null;
+    plan.hasActiveMap = !!activeMap;
+
+    const importedMaps = Object.entries(data.maps || {}).filter(([k]) => k !== 'active');
+    plan.mapCount = importedMaps.length;
+    const firstMap = importedMaps[0]?.[1] || null;
+    plan.importGrid = firstMap ? resolveGridDimensions(firstMap) : null;
+    plan.mapCells = firstMap ? Object.keys(firstMap.coordinates || {}).length : 0;
+
+    const actionsWithCoords = Object.values(data.customActions || {}).some(a => a.coordinates?.length);
+    plan.mapContentPresent = plan.mapCount > 0 || actionsWithCoords;
+    plan.needsMapCreate = plan.mapContentPresent && !plan.hasActiveMap;
+    plan.canCreateMap = plan.needsMapCreate && !!parsed.imageBuffer && !!plan.importGrid;
+    plan.channelCount = plan.importGrid ? plan.importGrid.width * plan.importGrid.height : 0;
+    plan.channelCapExceeded = plan.needsMapCreate && plan.channelCount > 400;
+    plan.hasImage = !!parsed.imageBuffer;
+
+    if (activeMap && firstMap) {
+        const targetDims = resolveGridDimensions(activeMap);
+        const importDims = resolveGridDimensions(firstMap);
+        if (targetDims && importDims &&
+            (targetDims.width !== importDims.width || targetDims.height !== importDims.height)) {
+            plan.warnings.push(`Grid mismatch: import is ${importDims.width}x${importDims.height}, your active map is ${targetDims.width}x${targetDims.height} — out-of-grid cells will be skipped`);
+        }
+        if (targetDims) {
+            const outOfGrid = Object.keys(firstMap.coordinates || {})
+                .filter(c => !isCoordInGrid(c, targetDims)).length;
+            if (outOfGrid > 0) {
+                plan.warnings.push(`${outOfGrid} imported map cell(s) fall outside your active grid and will be skipped`);
+            }
+        }
+    }
+
+    return plan;
 }

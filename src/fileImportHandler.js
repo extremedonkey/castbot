@@ -21,7 +21,7 @@ export function buildFileImportModal(importType, guildId, configId = null) {
     safari: {
       title: 'Import Safari Data',
       label: 'Safari Export File',
-      description: 'Upload the JSON file exported from Safari Export',
+      description: 'Upload a Safari export (.json) or full package (.zip)',
     },
     playerdata: {
       title: 'Import Player Data',
@@ -92,8 +92,21 @@ export async function processFileImport({ importType, guildId, userId, resolved,
 
   console.log(`📥 [FileImport] Processing ${importType} import — file: ${attachment.filename}, size: ${attachment.size}`);
 
-  // Validate JSON extension
-  if (!attachment.filename.endsWith('.json')) {
+  // Validate extension + size (safari also accepts .zip packages; format is
+  // verified content-first downstream — the extension check is just fast feedback)
+  const isZip = attachment.filename.endsWith('.zip');
+  if (importType === 'safari') {
+    if (!attachment.filename.endsWith('.json') && !isZip) {
+      return buildErrorResponse(`Expected a .json or .zip file, got: ${attachment.filename}`, importType);
+    }
+    const maxBytes = (isZip ? 25 : 5) * 1024 * 1024;
+    if (attachment.size > maxBytes) {
+      return buildErrorResponse(
+        `File too large (${(attachment.size / 1024 / 1024).toFixed(1)}MB — max ${isZip ? 25 : 5}MB for ${isZip ? 'packages' : 'JSON exports'}).`,
+        importType
+      );
+    }
+  } else if (!attachment.filename.endsWith('.json')) {
     return buildErrorResponse(`Expected a .json file, got: ${attachment.filename}`, importType);
   }
 
@@ -102,14 +115,19 @@ export async function processFileImport({ importType, guildId, userId, resolved,
   if (!response.ok) {
     return buildErrorResponse(`Failed to download file: HTTP ${response.status}`, importType);
   }
-  const jsonContent = await response.text();
 
+  // Safari imports are parsed from raw bytes (zip or JSON) via the preview/confirm flow
+  if (importType === 'safari') {
+    const fileBuffer = Buffer.from(await response.arrayBuffer());
+    console.log(`📥 [FileImport] Downloaded ${fileBuffer.length} bytes from ${attachment.filename}`);
+    return await processSafariImport(guildId, fileBuffer, attachment.filename, userId, client);
+  }
+
+  const jsonContent = await response.text();
   console.log(`📥 [FileImport] Downloaded ${jsonContent.length} characters from ${attachment.filename}`);
 
   // Route to the appropriate import handler
-  if (importType === 'safari') {
-    return await processSafariImport(guildId, jsonContent, userId, client);
-  } else if (importType === 'playerdata') {
+  if (importType === 'playerdata') {
     return await processPlayerDataImport(guildId, jsonContent);
   } else if (importType === 'seasonquestions') {
     return await processSeasonQuestionsImport(guildId, jsonContent);
@@ -120,64 +138,351 @@ export async function processFileImport({ importType, guildId, userId, resolved,
   return buildErrorResponse(`Unknown import type: ${importType}`);
 }
 
-// --- Safari Import ---
+// --- Safari Import (parse → plan → preview → confirm → execute) ---
 
-async function processSafariImport(guildId, jsonContent, userId, client) {
-  const { importSafariData, formatImportSummary } = await import('../safariImportExport.js');
+/**
+ * Stage 1: parse + validate the uploaded file, build a read-only import plan,
+ * stash the payload, and return the preview/confirm screen. NOTHING is written here.
+ */
+async function processSafariImport(guildId, fileBuffer, filename, userId, client) {
+  const { parseImportPayload, planSafariImport } = await import('../safariImportExport.js');
 
-  // Pre-flight: if the export references map cells but the guild has no active map,
-  // refuse and tell the user to set up the map first. Otherwise the merge silently
-  // creates orphan customActions pointing at non-existent coordinates.
+  let parsed;
   try {
-    const preview = JSON.parse(jsonContent);
-    const importHasMapData = preview.maps && Object.keys(preview.maps).filter(k => k !== 'active').length > 0;
-    const importHasMapCoords = preview.customActions && Object.values(preview.customActions).some(a => a.coordinates?.length);
+    parsed = await parseImportPayload(fileBuffer);
+  } catch (err) {
+    return buildErrorResponse(err.message, 'safari');
+  }
 
-    if (importHasMapData || importHasMapCoords) {
-      const { loadSafariContent } = await import('../safariManager.js');
-      const safariData = await loadSafariContent();
-      if (!safariData[guildId]?.maps?.active) {
-        return buildErrorResponse(
-          'This export contains map data, but your server has no active map yet.\n\n' +
-          '**1.** Go to **Map Explorer** → **Create / Upload Map**\n' +
-          '**2.** Upload the **same map image** used in the export\n' +
-          '**3.** Set the correct **grid size** (must match the export)\n' +
-          '**4.** Wait for all **location channels** to be created\n\n' +
-          'Then try importing again.',
-          'safari'
-        );
+  const plan = await planSafariImport(guildId, parsed);
+
+  // Map guard: map content with no active map AND no usable packaged image →
+  // same "create the map first" refusal as before (prevents orphan coordinates).
+  // With a packaged image + grid size, the confirm screen offers auto-creation instead.
+  if (plan.needsMapCreate && !plan.canCreateMap) {
+    const gridNote = plan.importGrid ? ` (**${plan.importGrid.width}x${plan.importGrid.height}** to match this export)` : '';
+    return buildErrorResponse(
+      'This export contains map data, but your server has no active map yet' +
+      (parsed.imageBuffer ? ' and the packaged image could not be used.' : ' and no map image is included.') + '\n\n' +
+      '**1.** Go to **Map Explorer** → **Create / Upload Map**\n' +
+      '**2.** Upload the **same map image** used in the export\n' +
+      `**3.** Set the correct **grid size**${gridNote}\n` +
+      '**4.** Wait for all **location channels** to be created\n\n' +
+      'Then try importing again.\n' +
+      '-# Tip: a full **package (.zip)** export includes the map image, letting CastBot create the map for you.',
+      'safari'
+    );
+  }
+  if (plan.channelCapExceeded) {
+    return buildErrorResponse(
+      `This package's map is ${plan.importGrid.width}x${plan.importGrid.height} = ${plan.channelCount} channels, which exceeds the 400 channel limit.`,
+      'safari'
+    );
+  }
+
+  const crypto = await import('crypto');
+  const pending = {
+    key: crypto.randomBytes(6).toString('hex'),
+    guildId,
+    userId,
+    filename,
+    data: parsed.data,
+    imageBuffer: parsed.imageBuffer,
+    imageExt: parsed.imageExt,
+    manifest: parsed.manifest,
+    formatVersion: parsed.formatVersion,
+    exportType: parsed.exportType,
+    includedComponents: parsed.includedComponents,
+    plan,
+    mode: 'merge',
+    createdAt: Date.now()
+  };
+  stashPendingImport(pending);
+
+  console.log(`📥 [FileImport] Safari import staged for guild ${guildId} (key ${pending.key}, format v${pending.formatVersion}, components: ${pending.includedComponents.join(',')})`);
+  return buildImportPreview(pending);
+}
+
+// --- Pending import store (in-memory, TTL'd; one staged import per guild) ---
+
+const PENDING_TTL_MS = 15 * 60 * 1000;
+const PENDING_MAX = 5;
+
+function getPendingStore() {
+  if (!global.pendingSafariImports) global.pendingSafariImports = new Map();
+  return global.pendingSafariImports;
+}
+
+export function stashPendingImport(entry) {
+  const store = getPendingStore();
+  const now = Date.now();
+  for (const [k, v] of store) {
+    if (now - v.createdAt > PENDING_TTL_MS || v.guildId === entry.guildId) store.delete(k);
+  }
+  while (store.size >= PENDING_MAX) {
+    store.delete(store.keys().next().value); // Maps iterate in insertion order → oldest first
+  }
+  store.set(entry.key, entry);
+}
+
+/** Look up a staged import without consuming it (mode toggles, back navigation). */
+export function peekPendingImport(key) {
+  const store = getPendingStore();
+  const entry = store.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.createdAt > PENDING_TTL_MS) {
+    store.delete(key);
+    return null;
+  }
+  return entry;
+}
+
+/** Consume a staged import (confirm handlers — delete-before-execute is the double-click guard). */
+export function takePendingImport(key) {
+  const entry = peekPendingImport(key);
+  if (entry) getPendingStore().delete(key);
+  return entry;
+}
+
+export function deletePendingImport(key) {
+  getPendingStore().delete(key);
+}
+
+/** Shown when a confirm/mode interaction references an expired or consumed staged import. */
+export function buildExpiredResponse() {
+  return buildErrorResponse(
+    '⏰ This import session has expired (or was already run). Please upload the file again.',
+    'safari'
+  );
+}
+
+// --- Preview / confirm screens ---
+
+/**
+ * The preview/confirm screen: what the import contains, what it would do to THIS
+ * server, mode selection (Merge/Replace), and explicit confirm. Pure UI — no writes.
+ */
+export function buildImportPreview(pending) {
+  const { plan, mode, formatVersion, exportType, manifest, key } = pending;
+  const isReplace = mode === 'replace';
+
+  const formatLabel = exportType === 'legacy' ? 'legacy JSON (v1)'
+    : exportType === 'package' ? `ZIP package (v${formatVersion})`
+    : `JSON export (v${formatVersion})`;
+  const metaBits = [`Format: ${formatLabel}`];
+  if (manifest?.sourceGuildId) metaBits.push(`source server ${manifest.sourceGuildId}`);
+  if (manifest?.exportedAt) metaBits.push(`exported ${manifest.exportedAt.split('T')[0]}`);
+
+  const lines = [];
+  const secLine = (emoji, label, s) => {
+    if (!s || s.incoming === 0) return;
+    const bits = [];
+    if (s.create) bits.push(`${s.create} new`);
+    if (s.update) bits.push(isReplace ? `${s.update} replace existing` : `${s.update} update existing`);
+    lines.push(`${emoji} **${label}:** ${s.incoming} (${bits.join(', ')})`);
+  };
+  secLine('🏪', 'Stores', plan.stores);
+  secLine('📦', 'Items', plan.items);
+  secLine('🔘', 'Custom Actions', plan.actions);
+  if (plan.configFields.length) {
+    lines.push(`⚙️ **Settings:** ${plan.configFields.length} field${plan.configFields.length === 1 ? '' : 's'} will be applied`);
+  }
+  if (plan.mapCells) {
+    lines.push(plan.hasActiveMap
+      ? `🗺️ **Map Data:** ${plan.mapCells} cell${plan.mapCells === 1 ? '' : 's'} merged into your active map`
+      : `🗺️ **Map Data:** ${plan.mapCells} cell${plan.mapCells === 1 ? '' : 's'}`);
+  }
+  if (plan.hasImage) {
+    if (plan.hasActiveMap) {
+      lines.push('🖼️ **Map Image:** will replace your current map image and regenerate fog of war (takes a few minutes)');
+    } else if (plan.canCreateMap) {
+      lines.push(`🖼️ **Map Creation:** a new **${plan.importGrid.width}x${plan.importGrid.height}** map (${plan.channelCount} channels) will be created from the packaged image — takes several minutes`);
+    }
+  }
+
+  const components = [
+    { type: 10, content: `## 📥 Safari Import Ready` },
+    { type: 10, content: `-# ${metaBits.join(' · ')}` },
+    { type: 14 },
+    { type: 10, content: '### ```📦 Contents```' },
+    { type: 10, content: lines.join('\n') || '_Nothing importable found_' }
+  ];
+
+  if (plan.warnings.length) {
+    components.push({ type: 10, content: '⚠️ **Warnings:**\n' + plan.warnings.map(w => `• ${typeof w === 'string' ? w : w.message}`).join('\n') });
+  }
+
+  components.push(
+    { type: 14 },
+    { type: 10, content: '### ```🔀 Import Mode```' },
+    { type: 1, components: [{
+      type: 3,
+      custom_id: `safari_import_mode_${key}`,
+      options: [
+        { label: 'Merge (recommended)', value: 'merge', description: 'Update matching IDs, create the rest. Nothing is deleted.', emoji: { name: '🔀' }, default: !isReplace },
+        { label: 'Replace', value: 'replace', description: 'Clear the imported sections first, then import fresh.', emoji: { name: '♻️' }, default: isReplace }
+      ]
+    }] },
+    { type: 14 },
+    { type: 10, content: isReplace
+      ? '-# ♻️ Replace clears existing stores/items/actions/settings/map-cell content in the sections being imported, then imports fresh. You will confirm once more before anything is deleted.'
+      : '-# Nothing is written until you confirm. Merge updates entities with matching IDs and creates the rest.' },
+    { type: 1, components: [
+      { type: 2, custom_id: `safari_import_abort_${key}`, label: 'Cancel', style: 2 },
+      isReplace
+        ? { type: 2, custom_id: `safari_import_confirm_${key}`, label: 'Continue → Replace', style: 4, emoji: { name: '♻️' } }
+        : { type: 2, custom_id: `safari_import_confirm_${key}`, label: 'Import (Merge)', style: 3, emoji: { name: '📥' } }
+    ] }
+  );
+
+  return {
+    components: [{
+      type: 17,
+      accent_color: isReplace ? 0xe74c3c : 0x9b59b6,
+      components
+    }],
+    flags: 1 << 15
+  };
+}
+
+/** Second, explicit red confirmation for Replace mode — lists exactly what gets cleared. */
+export function buildReplaceConfirmScreen(pending) {
+  const { plan, key, data } = pending;
+  const clearing = [];
+  if (data.stores) clearing.push(`• All **${plan.destTotals?.stores ?? '?'}** existing stores`);
+  if (data.items) clearing.push(`• All **${plan.destTotals?.items ?? '?'}** existing items`);
+  if (data.customActions) clearing.push(`• All **${plan.destTotals?.actions ?? '?'}** existing custom actions (attack queue reset)`);
+  if (data.safariConfig) clearing.push('• Safari settings (round state is kept)');
+  if (data.maps && plan.hasActiveMap) clearing.push('• Map cell content (channels, anchors and the map image itself are kept)');
+
+  return {
+    components: [{
+      type: 17,
+      accent_color: 0xe74c3c,
+      components: [
+        { type: 10, content: '## ⚠️ Replace Existing Safari?' },
+        { type: 14 },
+        { type: 10, content: 'This will **permanently clear** the following before importing:\n' + clearing.join('\n') },
+        { type: 10, content: '-# Player inventories and currency are NOT changed — items removed by the replace become inert if players still hold them. Not cleared: enemies, attributes, round history, player stats.' },
+        { type: 14 },
+        { type: 1, components: [
+          { type: 2, custom_id: `safari_import_back_${key}`, label: '← Back', style: 2 },
+          { type: 2, custom_id: `safari_import_replace_confirm_${key}`, label: 'Yes, Replace & Import', style: 4, emoji: { name: '🗑️' } }
+        ] }
+      ]
+    }],
+    flags: 1 << 15
+  };
+}
+
+// --- Import executor (runs only after explicit confirmation) ---
+
+/**
+ * Stage 2: execute a confirmed staged import.
+ * Order matters: (1) auto-create the map when needed (importSafariData re-loads
+ * fresh data afterwards, folding cell content into the new active map), (2) merge/
+ * replace structured data, (3) apply the packaged image to a pre-existing map via
+ * the full update pipeline (which regenerates fog + PATCHes every anchor itself),
+ * (4) otherwise refresh anchors so imported buttons appear.
+ */
+export async function executeSafariImport(pending, client) {
+  const { guildId, userId, data, imageBuffer, imageExt, plan, mode } = pending;
+  const notes = [];
+  let skipAnchorRefresh = false;
+
+  try {
+    const { importSafariData, formatImportSummary } = await import('../safariImportExport.js');
+    const hasDataSections = ['stores', 'items', 'safariConfig', 'maps', 'customActions']
+      .some(k => data?.[k] && Object.keys(data[k]).length > 0);
+
+    let guild = null;
+    if (imageBuffer) guild = await client.guilds.fetch(guildId);
+
+    // Re-host the packaged image to the guild's map-storage channel so the existing
+    // URL-based mapExplorer pipelines can consume it unchanged.
+    const rehostImage = async () => {
+      const fs = await import('fs/promises');
+      const path = (await import('path')).default;
+      const { fileURLToPath } = await import('url');
+      const repoRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url))); // src/ → repo root
+      const dir = path.join(repoRoot, 'img', guildId);
+      await fs.mkdir(dir, { recursive: true });
+      const tempPath = path.join(dir, `import_${Date.now()}.${imageExt || 'png'}`);
+      await fs.writeFile(tempPath, imageBuffer);
+      try {
+        const { uploadImageToDiscord } = await import('../mapExplorer.js');
+        return await uploadImageToDiscord(guild, tempPath, `imported_map_${Date.now()}.${imageExt || 'png'}`);
+      } finally {
+        fs.unlink(tempPath).catch(() => {});
+      }
+    };
+
+    // (1) Auto-create the map when the destination has none
+    if (plan.needsMapCreate && plan.canCreateMap) {
+      console.log(`🗺️ [FileImport] Auto-creating ${plan.importGrid.width}x${plan.importGrid.height} map for guild ${guildId} from packaged image`);
+      const upload = await rehostImage();
+      const { createMapGridWithCustomImage } = await import('../mapExplorer.js');
+      const result = await createMapGridWithCustomImage(guild, userId, upload.url, plan.importGrid.width, plan.importGrid.height);
+      if (!result.success) {
+        return buildErrorResponse(`Map creation failed — nothing was imported.\n\n${result.message}`, 'safari');
+      }
+      notes.push(`🗺️ Created a new ${plan.importGrid.width}x${plan.importGrid.height} map (${plan.channelCount} channels)`);
+    }
+
+    // (2) Merge/replace the structured data
+    let summaryText;
+    if (hasDataSections) {
+      const summary = await importSafariData(guildId, JSON.stringify(data), { userId, client }, { mode });
+      console.log(`✅ [FileImport] Safari import (${mode}) completed for guild ${guildId}:`, JSON.stringify(summary));
+      summaryText = formatImportSummary(summary);
+    } else {
+      summaryText = 'ℹ️ No structured data in this package — only the map image was applied.';
+    }
+
+    // (3) Pre-existing map + packaged image → full image-update pipeline
+    if (imageBuffer && plan.hasActiveMap) {
+      try {
+        const upload = await rehostImage();
+        const { updateMapImage } = await import('../mapExplorer.js');
+        const result = await updateMapImage(guild, userId, upload.url);
+        if (result.success) {
+          notes.push('🖼️ Map image replaced — fog of war and anchors regenerated');
+          skipAnchorRefresh = true;
+        } else {
+          notes.push(`⚠️ Map image update failed: ${result.message}`);
+        }
+      } catch (imgErr) {
+        console.log(`⚠️ [FileImport] Map image update failed: ${imgErr.message}`);
+        notes.push(`⚠️ Map image update failed: ${imgErr.message}`);
       }
     }
-  } catch {
-    // JSON parse failures fall through to importSafariData, which throws a friendlier error
-  }
 
-  const summary = await importSafariData(guildId, jsonContent, { userId, client });
-  console.log(`✅ [FileImport] Safari import completed for guild ${guildId}:`, JSON.stringify(summary));
-
-  const summaryText = formatImportSummary(summary);
-
-  // Auto-refresh anchor messages so custom action buttons appear immediately
-  let refreshNote = '';
-  try {
-    const { updateAllAnchorMessages } = await import('../mapCellUpdater.js');
-    const refreshResult = await updateAllAnchorMessages(guildId, client);
-    console.log(`🔄 [FileImport] Post-import anchor refresh: ${refreshResult.successful} succeeded, ${refreshResult.failed} failed`);
-    if (refreshResult.failed > 0) {
-      const failedList = refreshResult.errors?.length ? ` (${refreshResult.errors.join(', ')})` : '';
-      refreshNote = `\n🔄 Anchor messages refreshed (${refreshResult.successful} updated, ${refreshResult.failed} failed${failedList})`;
-    } else {
-      refreshNote = `\n🔄 Anchor messages refreshed (${refreshResult.successful} updated)`;
+    // (4) Refresh anchors so imported custom action buttons appear immediately
+    if (hasDataSections && !skipAnchorRefresh) {
+      try {
+        const { updateAllAnchorMessages } = await import('../mapCellUpdater.js');
+        const refreshResult = await updateAllAnchorMessages(guildId, client);
+        console.log(`🔄 [FileImport] Post-import anchor refresh: ${refreshResult.successful} succeeded, ${refreshResult.failed} failed`);
+        if (refreshResult.failed > 0) {
+          const failedList = refreshResult.errors?.length ? ` (${refreshResult.errors.join(', ')})` : '';
+          notes.push(`🔄 Anchor messages refreshed (${refreshResult.successful} updated, ${refreshResult.failed} failed${failedList})`);
+        } else {
+          notes.push(`🔄 Anchor messages refreshed (${refreshResult.successful} updated)`);
+        }
+      } catch (refreshErr) {
+        console.log(`⚠️ [FileImport] Post-import anchor refresh failed: ${refreshErr.message}`);
+        notes.push('⚠️ Anchor refresh failed — run manually from Map Explorer');
+      }
     }
-  } catch (refreshErr) {
-    console.log(`⚠️ [FileImport] Post-import anchor refresh failed: ${refreshErr.message}`);
-    refreshNote = '\n⚠️ Anchor refresh failed — run manually from Map Explorer';
-  }
 
-  return buildSuccessResponse(
-    'Safari Import Complete',
-    `${summaryText}${refreshNote}`
-  );
+    return buildSuccessResponse(
+      'Safari Import Complete',
+      `${summaryText}${notes.length ? '\n\n' + notes.join('\n') : ''}`
+    );
+  } catch (err) {
+    console.error(`❌ [FileImport] executeSafariImport failed for guild ${guildId}:`, err);
+    return buildErrorResponse(`Import failed: ${err.message}`, 'safari');
+  }
 }
 
 // --- PlayerData Import ---

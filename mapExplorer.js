@@ -1123,7 +1123,8 @@ async function updateMapImage(guild, userId, mapUrl) {
     const expectedHeight = gridSystem.totalHeight;
     
     // Create the map with grid overlay
-    const outputPath = path.join(__dirname, 'img', guild.id, `${activeMapId}_updated.png`);
+    // let (not const): the >7MB JPEG re-encode branch below reassigns this path
+    let outputPath = path.join(__dirname, 'img', guild.id, `${activeMapId}_updated.png`);
     const svg = gridSystem.generateGridOverlaySVG();
     const svgBuffer = Buffer.from(svg);
     
@@ -1415,7 +1416,8 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
     await sharp(processedBuffer).toFile(tempMapPath);
     
     // Generate map with grid overlay
-    const outputPath = path.join(guildDir, `${mapId}.png`);
+    // let (not const): the >7MB JPEG re-encode branch below reassigns this path
+    let outputPath = path.join(guildDir, `${mapId}.png`);
     
     const gridSystem = new MapGridSystem(tempMapPath, {
       gridWidth: gridWidth,

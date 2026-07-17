@@ -239,3 +239,182 @@ describe('Safari Import/Export — custom limit round trip behavior', () => {
     assert.deepEqual(imported, { type: 'once_per_period', periodMs: 7200000, claimedBy: {} });
   });
 });
+
+// ─── v2 export format: envelope, package, replace mode (ratchets) ───
+
+describe('Safari Import/Export v2 — format constants & component map (ratchet)', () => {
+  it('declares the export format identifier and version', () => {
+    assert.ok(SOURCE.includes("SAFARI_EXPORT_FORMAT = 'castbot-safari-export'"),
+      'export format identifier changed/removed — import detection breaks for existing files');
+    assert.ok(/SAFARI_EXPORT_VERSION = 2\b/.test(SOURCE),
+      'bumping SAFARI_EXPORT_VERSION requires a conscious migration path — see detectImportFormat');
+  });
+
+  for (const compId of ['stores', 'items', 'actions', 'settings', 'mapData', 'mapImage']) {
+    it(`COMPONENT_MAP declares "${compId}"`, () => {
+      assert.ok(new RegExp(`${compId}:\\s*\\{`).test(SOURCE),
+        `COMPONENT_MAP lost component "${compId}" — granular export UI and import derivation break`);
+    });
+  }
+
+  it('actions component maps to the customActions data key (sourced from guildData.buttons)', () => {
+    assert.ok(/actions:\s*\{ dataKey: 'customActions'/.test(SOURCE),
+      'actions↔customActions mapping is load-bearing for legacy compatibility');
+  });
+});
+
+describe('Safari Import/Export v2 — replace mode clears the right things (ratchet)', () => {
+  const block = functionBlock('applyReplaceClears');
+
+  it('never touches player-progress or out-of-scope sections', () => {
+    for (const preserved of ['entityPoints', 'roundHistory', 'priorityRoles', 'attributeDefinitions', 'enemies']) {
+      assert.ok(!block.includes(preserved),
+        `applyReplaceClears references ${preserved} — replace must never clear player progress / out-of-scope data`);
+    }
+  });
+
+  it('clears attackQueue when custom actions are replaced (orphaned-attack safety)', () => {
+    assert.ok(/attackQueue = \{\}/.test(block),
+      'queued attacks referencing replaced items must be reset (same reason Reset Game clears it)');
+  });
+
+  it('re-attaches the three runtime config fields exports never carry', () => {
+    for (const field of ['currentRound', 'lastRoundTimestamp', 'safariLogChannelId']) {
+      assert.ok(block.includes(field),
+        `replace-mode config swap must preserve runtime field ${field}`);
+    }
+  });
+
+  it('preserves per-cell runtime plumbing via spread (channelId/anchorMessageId/navigation/fogMapUrl)', () => {
+    assert.ok(/\.\.\.coordData/.test(block),
+      'cell reset must spread the existing cell first — otherwise channels/anchors/fog are severed');
+  });
+
+  it('importSafariData only enters replace mode on an explicit option', () => {
+    assert.ok(/options\.mode === 'replace'/.test(SOURCE),
+      "replace must be opt-in — default mode is merge");
+  });
+});
+
+describe('Safari Import/Export v2 — package image handling (ratchet)', () => {
+  it('package image lookup is whitelist-restricted (never arbitrary archive names)', () => {
+    assert.ok(/PACKAGE_IMAGE_WHITELIST = \['assets\/map\.png', 'assets\/map\.jpg', 'assets\/map\.jpeg'\]/.test(SOURCE),
+      'image asset whitelist changed — arbitrary entry names must never be consulted');
+  });
+
+  it('map image resolution probes the _updated variants first (updateMapImage never updates imageFile)', () => {
+    const block = functionBlock('resolveMapImage');
+    assert.ok(block.includes('_updated.jpg') && block.includes('_updated.png'),
+      'resolveMapImage must check _updated.* before imageFile or exports ship a stale map');
+  });
+});
+
+// ─── v2 behavioral replicas (pure logic, replicated inline per TestingStandards.md) ───
+
+// Replicated from safariImportExport.js detectImportFormat
+const FORMAT_ID = 'castbot-safari-export';
+const FORMAT_VERSION = 2;
+function detectFormat(buffer) {
+  const sig = buffer.length >= 4 ? buffer.readUInt32LE(0) : 0;
+  if (sig === 0x04034b50 || sig === 0x06054b50) return { format: 'package' };
+  let obj;
+  try { obj = JSON.parse(buffer.toString('utf8')); }
+  catch { throw new Error('This file is not a recognised Safari export (not valid JSON or a ZIP package).'); }
+  if (obj && typeof obj === 'object' && obj.format === FORMAT_ID) {
+    const v = obj.formatVersion;
+    if (!Number.isInteger(v) || v < 1) throw new Error('This Safari export has an invalid format version.');
+    if (v > FORMAT_VERSION) throw new Error(`format version ${v} unsupported`);
+    return { format: 'envelope', payload: obj };
+  }
+  const legacyKeys = ['stores', 'items', 'safariConfig', 'maps', 'customActions'];
+  if (obj && typeof obj === 'object' && legacyKeys.some(k => obj[k])) return { format: 'legacy', payload: obj };
+  throw new Error('This file is not a recognised Safari export.');
+}
+
+describe('Safari Import/Export v2 — format detection matrix', () => {
+  it('zip magic bytes → package', () => {
+    assert.equal(detectFormat(Buffer.from([0x50, 0x4b, 0x03, 0x04, 0, 0])).format, 'package');
+  });
+
+  it('v2 envelope JSON → envelope', () => {
+    const buf = Buffer.from(JSON.stringify({ format: FORMAT_ID, formatVersion: 2, data: { items: {} } }));
+    assert.equal(detectFormat(buf).format, 'envelope');
+  });
+
+  it('bare 5-key JSON → legacy (v1 files keep importing)', () => {
+    const buf = Buffer.from(JSON.stringify({ stores: { s1: {} }, items: { i1: {} } }));
+    assert.equal(detectFormat(buf).format, 'legacy');
+  });
+
+  it('newer format version → clear unsupported-version error', () => {
+    const buf = Buffer.from(JSON.stringify({ format: FORMAT_ID, formatVersion: 4, data: {} }));
+    assert.throws(() => detectFormat(buf), /version 4 unsupported/);
+  });
+
+  it('unrelated JSON → not-a-safari-export error', () => {
+    assert.throws(() => detectFormat(Buffer.from('{"hello":"world"}')), /not a recognised Safari export/);
+  });
+
+  it('garbage bytes → clear error, no crash', () => {
+    assert.throws(() => detectFormat(Buffer.from('not json at all')), /not a recognised Safari export/);
+  });
+});
+
+// Replicated from safariImportExport.js planSafariImport sectionPlan
+function sectionPlan(importObj, currentObj) {
+  const ids = Object.keys(importObj || {});
+  const update = ids.filter(id => currentObj?.[id]).length;
+  return { incoming: ids.length, create: ids.length - update, update };
+}
+
+describe('Safari Import/Export v2 — import planner create/update counting', () => {
+  it('splits incoming ids into create vs update by destination intersection', () => {
+    const incoming = { a: {}, b: {}, c: {} };
+    const dest = { b: {}, z: {} };
+    assert.deepEqual(sectionPlan(incoming, dest), { incoming: 3, create: 2, update: 1 });
+  });
+
+  it('empty/missing sections plan to zero (partial imports never fail on absent categories)', () => {
+    assert.deepEqual(sectionPlan(undefined, { a: {} }), { incoming: 0, create: 0, update: 0 });
+    assert.deepEqual(sectionPlan({}, undefined), { incoming: 0, create: 0, update: 0 });
+  });
+});
+
+// Replicated from safariImportExport.js applyReplaceClears (cell reset semantics)
+function replaceClearCell(coord, coordData) {
+  return {
+    ...coordData,
+    baseContent: { title: coord, description: `You are at grid location ${coord}.`, image: null, clues: [] },
+    buttons: [],
+    stores: [],
+    hiddenCommands: {},
+    cellType: 'unexplored',
+    discovered: false,
+    specialEvents: [],
+    metadata: { ...coordData.metadata, lastModified: 0 }
+  };
+}
+
+describe('Safari Import/Export v2 — replace-mode cell reset preserves runtime plumbing', () => {
+  it('clears content, keeps channelId/anchorMessageId/navigation/fogMapUrl/emoji', () => {
+    const live = {
+      channelId: '123', anchorMessageId: '456', emoji: '🌴',
+      navigation: { north: { to: 'A1' } }, fogMapUrl: 'https://cdn/x.png',
+      baseContent: { title: 'Beach', description: 'Sandy', image: 'x', clues: ['c'] },
+      buttons: ['btn1'], stores: ['store1'], hiddenCommands: { dig: {} },
+      cellType: 'treasure', discovered: true, specialEvents: ['evt'],
+      metadata: { createdAt: 1 }
+    };
+    const cleared = replaceClearCell('A2', live);
+    assert.equal(cleared.channelId, '123');
+    assert.equal(cleared.anchorMessageId, '456');
+    assert.equal(cleared.emoji, '🌴');
+    assert.deepEqual(cleared.navigation, { north: { to: 'A1' } });
+    assert.equal(cleared.fogMapUrl, 'https://cdn/x.png');
+    assert.deepEqual(cleared.buttons, []);
+    assert.deepEqual(cleared.stores, []);
+    assert.equal(cleared.discovered, false);
+    assert.equal(cleared.baseContent.title, 'A2');
+    assert.equal(cleared.metadata.createdAt, 1);
+  });
+});

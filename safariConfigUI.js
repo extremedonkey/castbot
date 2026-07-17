@@ -644,3 +644,47 @@ export function buildWhisperLogConfigUI({ whispersEnabled = true, whisperLogChan
         components: [container]
     };
 }
+
+/**
+ * Export selection screen (Settings → Advanced → Export).
+ * Multi-select of Safari components; selecting fires safari_export_select which
+ * builds either a v2 JSON envelope or (with Map Image) a ZIP package.
+ * All data components are preselected so "select-all → export everything" is 2 clicks.
+ */
+export function buildExportSelectionUI() {
+    return {
+        flags: (1 << 15), // IS_COMPONENTS_V2
+        components: [{
+            type: 17,
+            accent_color: 0x9b59b6,
+            components: [
+                { type: 10, content: '## 📤 Export Safari Data' },
+                { type: 10, content: '-# Pick what to include, then close the menu to generate the export.' },
+                { type: 14 },
+                {
+                    type: 1,
+                    components: [{
+                        type: 3, // String Select (multi)
+                        custom_id: 'safari_export_select',
+                        min_values: 1,
+                        max_values: 6,
+                        placeholder: 'Select components to export...',
+                        options: [
+                            { label: 'Stores', value: 'stores', description: 'Store definitions and their item listings', emoji: { name: '🏪' }, default: true },
+                            { label: 'Items', value: 'items', description: 'Item definitions incl. combat/stamina/attribute fields', emoji: { name: '📦' }, default: true },
+                            { label: 'Custom Actions', value: 'actions', description: 'Actions, triggers, outcomes, conditions, usage limits', emoji: { name: '🔘' }, default: true },
+                            { label: 'Settings', value: 'settings', description: 'Safari config — currency, events, rounds, stamina, crafting', emoji: { name: '⚙️' }, default: true },
+                            { label: 'Map Data', value: 'mapData', description: 'Grid layout, cell content, blacklist (no channels)', emoji: { name: '🗺️' }, default: true },
+                            { label: 'Map Image', value: 'mapImage', description: 'Bundle the map image → downloads as a .zip package', emoji: { name: '🖼️' }, default: true }
+                        ]
+                    }]
+                },
+                { type: 14 },
+                { type: 10, content: '-# Including **Map Image** produces a portable `.zip` package (data + map) that can recreate the Safari on another server. Without it you get a `.json` file.' },
+                { type: 1, components: [
+                    { type: 2, custom_id: 'castbot_settings', label: '← Settings', style: 2 }
+                ] }
+            ]
+        }]
+    };
+}

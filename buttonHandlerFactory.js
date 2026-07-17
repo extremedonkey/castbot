@@ -493,6 +493,54 @@ export const BUTTON_REGISTRY = {
     parent: 'castbot_settings',
     category: 'admin'
   },
+  'safari_export_select': {
+    label: 'Export Components',
+    description: 'Multi-select of Safari export components — builds JSON envelope or ZIP package (with map image) and delivers as ephemeral file',
+    emoji: '📤',
+    style: 'String Select',
+    parent: 'safari_export_data',
+    category: 'admin'
+  },
+  'safari_import_mode_*': {
+    label: 'Import Mode',
+    description: 'Safari import preview — Merge/Replace mode select, re-renders the preview',
+    emoji: '🔀',
+    style: 'String Select',
+    parent: 'safari_import_data',
+    category: 'admin'
+  },
+  'safari_import_confirm_*': {
+    label: 'Confirm Import',
+    description: 'Safari import preview confirm — merge executes; replace routes to red second confirm',
+    emoji: '📥',
+    style: 'Success',
+    parent: 'safari_import_data',
+    category: 'admin'
+  },
+  'safari_import_replace_confirm_*': {
+    label: 'Yes, Replace & Import',
+    description: 'Safari import — second explicit confirmation for Replace mode (clears imported sections first)',
+    emoji: '🗑️',
+    style: 'Danger',
+    parent: 'safari_import_data',
+    category: 'admin'
+  },
+  'safari_import_back_*': {
+    label: '← Back',
+    description: 'Safari import — back from Replace confirm to the preview screen',
+    emoji: '↩️',
+    style: 'Secondary',
+    parent: 'safari_import_data',
+    category: 'admin'
+  },
+  'safari_import_abort_*': {
+    label: 'Cancel Import',
+    description: 'Safari import preview — discard the staged import without writing anything',
+    emoji: '❌',
+    style: 'Secondary',
+    parent: 'safari_import_data',
+    category: 'admin'
+  },
   'file_import_playerdata': {
     label: 'Server playerData',
     description: 'Import playerData via File Upload modal (Type 19) — no MessageContent intent needed',
@@ -4852,6 +4900,15 @@ export const BUTTON_REGISTRY = {
   'moai_ask_ctx_*': {
     label: 'Ask Another',
     description: 'Ask Moai a follow-up question with previous response context',
+    emoji: '🗿',
+    style: 'Secondary',
+    requiresModal: true,
+    category: 'moai',
+    parent: 'moai_ask'
+  },
+  'moai_ask_msg': {
+    label: 'Ask Moai',
+    description: 'Ask the Moai about the message this button is attached to (PM2 error posts, deploy notifications) — prefills the modal with the card text. Reece + DEV/TEST only',
     emoji: '🗿',
     style: 'Secondary',
     requiresModal: true,

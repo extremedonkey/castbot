@@ -76,6 +76,53 @@ export function isBenignStderrLine(line) {
     line.includes('DEPRECATED');
 }
 
+// Per-environment card identity. Colors match the deploy-notification convention
+// (prod red would be alarming for dev noise; dev gets yellow, test the blue box).
+const ENV_CARD_META = {
+  prod: { tag: '🔴 PM2 Errors · PROD', accent: 0xe74c3c },
+  test: { tag: '🟦 PM2 Errors · TEST', accent: 0x3498db },
+  dev: { tag: '🟡 PM2 Errors · DEV', accent: 0xf1c40f }
+};
+
+// Discord caps TOTAL text across a message's Text Displays at 4000 chars; the header
+// line takes ~40, the code fences 8 — cap the log body well inside that.
+const LOG_CONTENT_CAP = 3500;
+
+/**
+ * Build the Components V2 card for a batch of PM2 log lines.
+ * Exported pure so tests can exercise it without Discord.
+ * @param {Object} opts
+ * @param {'dev'|'test'|'prod'} opts.env
+ * @param {string} opts.timeString - preformatted local time
+ * @param {string} opts.logContent - joined log lines
+ * @param {boolean} [opts.askEnabled] - append the Ask Moai button (DEV/TEST only —
+ *   prod has no Claude CLI; the container itself renders everywhere)
+ * @returns {Object} type-17 Container
+ */
+export function buildErrorLogContainer({ env, timeString, logContent, askEnabled = process.env.PRODUCTION !== 'TRUE' }) {
+  const meta = ENV_CARD_META[env] || { tag: `PM2 Errors · ${String(env).toUpperCase()}`, accent: 0x95a5a6 };
+  let content = String(logContent || '');
+  if (content.length > LOG_CONTENT_CAP) {
+    content = content.substring(0, LOG_CONTENT_CAP) + '\n... [truncated]';
+  }
+  return {
+    type: 17,
+    accent_color: meta.accent,
+    components: [
+      { type: 10, content: `## ${meta.tag}\n-# 🕐 ${timeString}` },
+      { type: 10, content: `\`\`\`\n${content}\n\`\`\`` },
+      ...(askEnabled ? [
+        { type: 14 },
+        {
+          type: 1, components: [
+            { type: 2, custom_id: 'moai_ask_msg', label: 'Ask Moai', style: 2, emoji: { name: '🗿' } }
+          ]
+        }
+      ] : [])
+    ]
+  };
+}
+
 /**
  * PM2 Error Logger Class - Bulletproof monitoring that can't crash the bot
  */

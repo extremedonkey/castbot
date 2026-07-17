@@ -36,6 +36,82 @@ function truncate(text, max) {
   return `${text.substring(0, max)}${text.length > max ? '...' : ''}`;
 }
 
+/**
+ * Is the Moai present on this box at all? DEV and TEST only — prod has no Claude CLI
+ * installed (yet; "maybe in the future"). Same gate as Ask CastBot's environment check.
+ * @returns {boolean}
+ */
+export function isMoaiEnvironment() {
+  return process.env.PRODUCTION !== 'TRUE';
+}
+
+/**
+ * Collect all visible text out of a Discord message (Components V2 aware).
+ *
+ * This is what makes the context-aware Ask Moai button restart-proof: the message the
+ * button sits on IS the store. No in-memory cache to lose on restart, no 100-char
+ * custom_id to squeeze an error log into — just read the card back at click time.
+ * @param {Object} message - req.body.message from the interaction
+ * @returns {string}
+ */
+export function extractMessageText(message) {
+  const out = message?.content ? [message.content] : [];
+  const walk = (comps) => {
+    for (const c of comps || []) {
+      if (c?.type === 10 && typeof c.content === 'string') out.push(c.content);
+      if (Array.isArray(c?.components)) walk(c.components);
+    }
+  };
+  walk(message?.components);
+  return out.join('\n').trim();
+}
+
+/** Modal text inputs cap at 4000 chars; leave room for the truncation ellipsis. */
+const MODAL_CONTEXT_MAX = 3500;
+
+/**
+ * The Ask Moai modal with the clicked message prefilled as editable context.
+ * custom_id reuses `moai_ask_modal` so the existing MODAL_SUBMIT route handles it —
+ * the field scrape there picks up `moai_msg_context` with zero new routing.
+ * @param {string} contextText - output of extractMessageText()
+ * @returns {Object} modal `data` payload
+ */
+export function buildContextAskModal(contextText) {
+  const value = truncate(String(contextText || ''), MODAL_CONTEXT_MAX);
+  return {
+    custom_id: 'moai_ask_modal',
+    title: '🗿 Ask The Moai',
+    components: [
+      {
+        type: 18,
+        label: 'Context (auto-filled from the message)',
+        description: 'Trim this down if only part of it matters',
+        component: {
+          type: 4,
+          custom_id: 'moai_msg_context',
+          style: 2,
+          required: false,
+          max_length: 4000,
+          ...(value ? { value } : { placeholder: 'No text found on that message' })
+        }
+      },
+      {
+        type: 18,
+        label: 'Your question',
+        description: 'The Moai reads the codebase — ask what happened, why, or what to do',
+        component: {
+          type: 4,
+          custom_id: 'moai_query',
+          style: 2,
+          required: true,
+          max_length: 2000,
+          placeholder: 'e.g., "What caused this error and where?" or "Anything risky in this deploy?"'
+        }
+      }
+    ]
+  };
+}
+
 /** Split a long response, preferring newline boundaries. */
 export function chunkResponse(response) {
   const chunks = [];
@@ -51,12 +127,17 @@ export function chunkResponse(response) {
 }
 
 /** Build the Moai prompt: essence + context + question. */
-export function buildPrompt(query, prevContextText = '') {
+export function buildPrompt(query, prevContextText = '', msgContextText = '') {
   const moaiEssence = fs.readFileSync('./docs/moai.md', 'utf8');
   const prevSection = prevContextText?.trim()
     ? `\n\nPREVIOUS CONVERSATION (context from the last Moai interaction — use this to inform your response):\n${prevContextText}\n\n---\n`
     : '';
-  return `You are the Moai 🗿 — CastBot's stone advisor. Here is your personality essence:\n\n${moaiEssence}\n\nYou are responding via Discord to Reece. Keep responses concise (Discord has character limits). Use markdown formatting.\n\nIMPORTANT CONTEXT:\n- You are running in the CastBot project directory via claude --print\n- You have access to the full codebase and can read files\n- If Reece asks you to make code changes, you CAN — but tell him to click the 🔄 Restart Dev button after to apply them\n- Dev restart command: ./scripts/dev/dev-restart.sh "commit message"\n- You are a one-shot agent (no conversation memory between queries)${prevSection ? ' BUT you have context from the previous question below' : ''}${prevSection}\n\nReece asks:\n${query}`;
+  // The message the Ask Moai button was clicked on (a PM2 error post, a deploy
+  // notification) — it is the SUBJECT of the question, not conversational history.
+  const msgSection = msgContextText?.trim()
+    ? `\n\nATTACHED MESSAGE (Reece clicked "Ask Moai" on this Discord message — usually a PM2 error post or a deploy notification; treat it as the subject of the question):\n${msgContextText}\n\n---\n`
+    : '';
+  return `You are the Moai 🗿 — CastBot's stone advisor. Here is your personality essence:\n\n${moaiEssence}\n\nYou are responding via Discord to Reece. Keep responses concise (Discord has character limits). Use markdown formatting.\n\nIMPORTANT CONTEXT:\n- You are running in the CastBot project directory via claude --print\n- You have access to the full codebase and can read files\n- If Reece asks you to make code changes, you CAN — but tell him to click the 🔄 Restart Dev button after to apply them\n- Dev restart command: ./scripts/dev/dev-restart.sh "commit message"\n- You are a one-shot agent (no conversation memory between queries)${prevSection ? ' BUT you have context from the previous question below' : ''}${prevSection}${msgSection}\n\nReece asks:\n${query}`;
 }
 
 const actionRow = (responseId) => ({
@@ -147,6 +228,12 @@ export async function handleMoaiModalSubmit(req, res) {
   }
   const query = fields.moai_query;
 
+  if (!isMoaiEnvironment()) {
+    return res.send({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: { content: '🗿 The Moai does not dwell in production.', flags: InteractionResponseFlags.EPHEMERAL }
+    });
+  }
   if (!query?.trim()) {
     return res.send({
       type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -169,7 +256,7 @@ export async function handleMoaiModalSubmit(req, res) {
 
     // No tools/deny: the Moai is allowed to change code. That's its job.
     const { text: response, durationMs } = await runClaudeJob({
-      prompt: buildPrompt(query, fields.moai_prev_context),
+      prompt: buildPrompt(query, fields.moai_prev_context, fields.moai_msg_context),
       onHeartbeat: (progress) => deliver({ components: [buildProgressContainer(query, progress)] })
     });
 

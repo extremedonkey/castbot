@@ -185,7 +185,10 @@
       "PowerShell(git -C \"C:\\\\Users\\\\extre\\\\castbot\" add diceRoll.js)",
       "Read(//mnt/c/Users/extre/**)",
       "Skill(claude-api)",
-      "Skill(discord-ui)"
+      "Skill(discord-ui)",
+      "Bash(python3 -c ' *)",
+      "Bash(node -e \"console.log\\(process.version\\); const z=require\\('zlib'\\); console.log\\(typeof z.deflateRawSync, typeof z.inflateRawSync, typeof z.crc32\\)\")",
+      "Bash(node -e ' *)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

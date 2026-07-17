@@ -1,9 +1,10 @@
 # Safari Import/Export System
 
 **Status:** ✅ PRODUCTION READY
-**Deployed:** 2025-10-19 (v2.0) · Crafting & custom-limit fidelity 2026-07-11 (v2.1)
-**Version:** 2.1
-**File:** `safariImportExport.js` · **Tests:** `tests/safariImportExport.test.js` (whitelist ratchet + limit round-trip)
+**Deployed:** 2025-10-19 (v2.0) · Crafting & custom-limit fidelity 2026-07-11 (v2.1) · Granular export + ZIP packages + preview/confirm import 2026-07-17 (v3.0)
+**Version:** 3.0
+**Files:** `safariImportExport.js` (export/import core + v2 format pipeline) · `safariArchive.js` (zero-dep ZIP) · `src/fileImportHandler.js` (upload → preview → confirm flow) · `safariConfigUI.js` (export selector)
+**Tests:** `tests/safariImportExport.test.js` (whitelist ratchet + format matrix + replace semantics) · `tests/safariArchive.test.js` (ZIP hardening)
 
 > **⚠️ Allowlist maintenance rule:** every export filter is a hard whitelist. Any new Action/item/config field ships INVISIBLE to export until added here — that's how crafting recipes silently lost `menuVisibility` for 6 months. When you add a designer-configurable field anywhere in Safari, add it to the matching filter AND to the ratchet test.
 
@@ -15,13 +16,79 @@ Safari Import/Export enables full Safari template portability between servers. U
 
 ### Key Features
 
-✅ **Full Data Export** - Stores, items, maps, Custom Actions, and complete Safari configuration
+✅ **Granular Export (v3)** - Multi-select which components to export (stores/items/actions/settings/map data/map image)
+✅ **Portable ZIP Package (v3)** - One `.zip` containing manifest + data + the map image; can recreate a Safari on a fresh server
+✅ **Versioned Format (v3)** - `castbot-safari-export` envelope with `formatVersion`; legacy bare JSON still imports as v1
+✅ **Preview + Confirm Import (v3)** - Nothing is written until the admin reviews create/update counts and confirms
+✅ **Merge AND Replace modes (v3)** - Merge is default; Replace clears imported sections first behind a second red confirmation
+✅ **Auto Map Creation (v3)** - Importing a package with a map image into a map-less server offers full map creation (category + channels + fog + anchors)
 ✅ **Smart Merge Import** - Updates existing data, creates new entries, preserves runtime state
 ✅ **Ghost Map Fix** - Import merges into active map instead of creating duplicates
 ✅ **Limit Reset** - Custom Action rewards reset for new server (claimable again)
-✅ **Complete Config** - All 15 Safari settings transfer (inventory emoji, stamina, etc.)
 ✅ **Audit Trail** - Raw imports stored in #map-storage channel
 ✅ **Channel Preservation** - Import preserves existing Discord channels and anchor messages
+
+---
+
+## v3: Export Formats
+
+Three formats, detected **content-first** (never by filename alone) via `detectImportFormat`:
+
+| Format | Produced when | Detection |
+|---|---|---|
+| **ZIP package** | Map Image selected in export | `PK` magic bytes → `readArchive` |
+| **v2 JSON envelope** | Any export without the image | `format: "castbot-safari-export"` |
+| **Legacy v1 (bare JSON)** | Pre-v3 exports | Any of the 5 known top-level keys |
+
+### v2 JSON envelope
+```json
+{
+  "format": "castbot-safari-export",
+  "formatVersion": 2,
+  "exportType": "json",
+  "includedComponents": ["stores", "items"],
+  "sourceGuildId": "123...",
+  "exportedAt": "2026-07-17T09:00:00.000Z",
+  "counts": { "stores": 12, "items": 84 },
+  "data": { "stores": { ... }, "items": { ... } }
+}
+```
+`data` uses the SAME keys as legacy exports (`stores, items, safariConfig, maps, customActions`), so the merge core is shared across all formats. Component ids ↔ data keys live in `COMPONENT_MAP` (`actions` ↔ `customActions`, `settings` ↔ `safariConfig`, `mapData` ↔ `maps`).
+
+### ZIP package layout
+```text
+safari-package-<guildId>-<ts>.zip
+├── manifest.json    (format, formatVersion, exportType: "package", includedComponents,
+│                     counts, mapImage: {file, kind, sourceMapId, gridWidth, gridHeight, borderSize})
+├── data.json        (same object as envelope `data`)
+└── assets/map.png|jpg
+```
+- The packaged image is the grid composite with its 80px border **cropped off** (`kind: "grid_cropped"`) so map creation can consume it without double-bordering. The 4px grid lines remain baked in.
+- Image resolution order at export: `img/<guildId>/<mapId>_updated.jpg` → `_updated.png` → `mapData.imageFile` → fresh CDN URL via the map-storage message → stale `discordImageUrl`. If all fail, the export degrades to JSON with a note.
+- Packages >9.5MB re-encode the image as JPEG q80; still too big → JSON-only fallback (Discord bot upload cap is ~10MiB).
+- Unsupported **newer** `formatVersion` → clear error telling the user to update the bot or re-export.
+
+### ZIP hardening (`safariArchive.js` — zero npm dependencies)
+- Fully in-memory; entry names are **never** used as filesystem paths (no traversal surface — `..`/absolute/backslash names hard-reject the archive).
+- Central-directory-driven reads → OS zips with data descriptors just work; `__MACOSX/`, dotfiles, dir entries are skipped.
+- Caps: ≤32 entries, ≤16MB/entry, ≤20MB total expansion, `inflateRawSync maxOutputLength` bomb guard, CRC verified per entry.
+- zip64 / encrypted / non-store-non-deflate archives are rejected with user-presentable errors.
+- Package image is looked up ONLY at whitelisted paths (`assets/map.png|jpg|jpeg`) and sharp-validated by content (png/jpeg/webp, ≤15MB).
+
+## v3: UX Flows
+
+**Export:** Settings → Advanced → **Export** (`safari_export_data`, ManageRoles) → component multi-select, all preselected (`safari_export_select`) → file delivered as ephemeral follow-up + result screen.
+
+**Import:** Settings → Advanced → **Import** (`safari_import_data`) → Type-19 file upload modal (`.json`/`.zip`, 5MB/25MB caps) → parse + validate + **plan** (read-only) → **preview screen**: per-section `N (x new, y update existing)` counts, settings field count, map/image lines, warnings (grid mismatch, out-of-grid cells), Merge/Replace select (`safari_import_mode_<key>`), Cancel/Confirm → confirm executes. Staged payloads live in `global.pendingSafariImports` (15-min TTL, 1 per guild, max 5, consumed **before** execution as the double-click guard).
+
+**Replace mode** (`safari_import_confirm_<key>` → `safari_import_replace_confirm_<key>`, red, second confirmation): clears ONLY sections present in the import — stores, items, custom actions (+`attackQueue` reset, same rationale as Reset Game), settings (re-attaching `currentRound`/`lastRoundTimestamp`/`safariLogChannelId`), active-map **cell content** (preserving `channelId`/`anchorMessageId`/`navigation`/`fogMapUrl`/`emoji` and all map-level runtime/storage fields). Never touched: `entityPoints`, `roundHistory`, enemies, attributes, `playerData.json` (orphaned inventory items are inert — disclosed on the red screen). Runs in-memory before the merge, so the whole import stays transactional under one `saveSafariContent`.
+
+**Map handling on import** (`executeSafariImport`, `src/fileImportHandler.js`):
+1. No active map + package has image + grid → **auto-create** via `createMapGridWithCustomImage` (packaged image re-hosted to map-storage first; 400-channel cap enforced; takes minutes — disclosed on the preview).
+2. Then structured data merges (fresh load folds cells into the new/active map).
+3. Active map existed + package has image → `updateMapImage` pipeline (regenerates fog + PATCHes every anchor itself — anchor refresh skipped).
+4. Otherwise → `updateAllAnchorMessages` refresh as before.
+5. Map data but **no** image and no active map → same "create your map first" refusal as v2.x.
 
 ---
 
