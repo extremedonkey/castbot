@@ -188,7 +188,9 @@
       "Skill(discord-ui)",
       "Bash(python3 -c ' *)",
       "Bash(node -e \"console.log\\(process.version\\); const z=require\\('zlib'\\); console.log\\(typeof z.deflateRawSync, typeof z.inflateRawSync, typeof z.crc32\\)\")",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(bash /tmp/claude-1000/-home-reece-castbot/aceb9089-a0ac-499f-8c33-6fc0fd3afeba/scratchpad/test-map-profile.sh)",
+      "Bash(node --test tests/gridRects.test.js)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

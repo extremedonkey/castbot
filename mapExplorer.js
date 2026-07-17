@@ -2,7 +2,7 @@ import { ChannelType, PermissionFlagsBits } from 'discord.js';
 import sharp from 'sharp';
 // No libvips cache — ~0% hit rate, starves the 448MB prod box (RaP 0903)
 sharp.cache(false);
-import { promises as fs } from 'fs';
+import { promises as fs, readFileSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -12,6 +12,47 @@ const __dirname = dirname(__filename);
 
 // Import MapGridSystem from scripts
 import MapGridSystem from './scripts/map-tests/mapGridSystem.js';
+
+// Memory-lean fog-of-war generation (RaP 0896) — one builder per map build
+import { createFogBuilder } from './mapFogBuilder.js';
+
+// One map build at a time, process-wide: builds are the most memory-intensive thing the bot
+// does (RaP 0896), and two concurrent full-map builds would stack their sharp working sets.
+// Deliberately a reject-when-busy flag rather than a withStorageLock-style queue — a queued
+// build would outlive the second admin's 15-minute interaction token anyway.
+let activeMapBuild = null; // { guildId, startedAt }
+const MAP_BUILD_STALE_MS = 20 * 60 * 1000; // a build older than this is presumed crashed
+function tryBeginMapBuild(guildId) {
+  if (activeMapBuild && Date.now() - activeMapBuild.startedAt < MAP_BUILD_STALE_MS) {
+    return { busy: true, minutesAgo: Math.round((Date.now() - activeMapBuild.startedAt) / 60000) };
+  }
+  activeMapBuild = { guildId, startedAt: Date.now() };
+  return { busy: false };
+}
+function endMapBuild() {
+  activeMapBuild = null;
+}
+function mapBuildBusyResult(gate) {
+  return {
+    success: false,
+    message: `⏳ CastBot is already building a map (started ${gate.minutesAgo} min ago). Map builds are memory-intensive and run one at a time — please try again in a few minutes.`
+  };
+}
+
+/**
+ * MemAvailable from /proc/meminfo in MB (actual usable memory — os.freemem() misleads on
+ * Linux by ignoring reclaimable cache; see docs/infrastructure-security/InfrastructureArchitecture.md).
+ * @returns {number|null} available MB, or null when unreadable (non-Linux dev boxes → skip checks)
+ */
+export function getAvailableMemMB() {
+  try {
+    const meminfo = readFileSync('/proc/meminfo', 'utf8');
+    const match = meminfo.match(/MemAvailable:\s+(\d+)/);
+    return match ? parseInt(match[1]) / 1024 : null;
+  } catch {
+    return null;
+  }
+}
 
 // Import loadSafariContent and saveSafariContent from safariManager to benefit from caching
 import { loadSafariContent, saveSafariContent } from './safariManager.js';
@@ -196,16 +237,23 @@ async function postFogOfWarMapsToChannels(guild, fullMapPath, gridSystem, channe
     // Load safari data to update with anchor message IDs
     let safariData = await loadSafariContent();
     const activeMapId = safariData[guild.id]?.maps?.active;
-    
+
+    const fog = await createFogBuilder(fullMapPath, gridSystem, coordinates);
+    try {
     for (let i = 0; i < coordinates.length; i++) {
       const coord = coordinates[i];
       const channelId = channels[coord];
-      
+
       if (!channelId) {
         console.log(`⚠️ No channel found for coordinate ${coord}`);
         continue;
       }
-      
+
+      // Declared outside the try so the catch can save partial progress on failure
+      // (was const inside the try — every loop error became a ReferenceError at the catch)
+      let fogMapUrl = null;
+      let coordData = null;
+
       try {
         // Get the channel with retry logic for newly created channels
         let channel;
@@ -229,7 +277,7 @@ async function postFogOfWarMapsToChannels(guild, fullMapPath, gridSystem, channe
         }
         
         // Create fog of war map for this specific coordinate
-        const fogOfWarBuffer = await createFogOfWarMap(fullMapPath, gridSystem, coord, coordinates);
+        const fogOfWarBuffer = await fog.render(coord);
         
         // Create attachment
         const attachment = new AttachmentBuilder(fogOfWarBuffer, { 
@@ -243,10 +291,10 @@ async function postFogOfWarMapsToChannels(guild, fullMapPath, gridSystem, channe
           content: `Fog map for ${coord}`,
           files: [attachment]
         });
-        const fogMapUrl = storageMessage.attachments.first()?.url;
-        
+        fogMapUrl = storageMessage.attachments.first()?.url;
+
         // Get coordinate data
-        const coordData = safariData[guild.id]?.maps?.[activeMapId]?.coordinates?.[coord];
+        coordData = safariData[guild.id]?.maps?.[activeMapId]?.coordinates?.[coord];
         
         if (!coordData) {
           console.error(`No coordinate data found for ${coord}`);
@@ -288,13 +336,19 @@ async function postFogOfWarMapsToChannels(guild, fullMapPath, gridSystem, channe
         }
         
         console.log(`✅ Posted anchor message for ${coord} to #${channel.name} (${i + 1}/${coordinates.length})`);
-        
-        // Rate limiting: pause every 5 posts
+
+        if ((i + 1) % 10 === 0) {
+          console.log(`📈 Fog run RSS after ${i + 1} coords: ${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`);
+        }
+
+        // Pacing: breathing room for GC every coordinate, longer pause every 5 posts
         if ((i + 1) % 5 === 0 && i < coordinates.length - 1) {
           console.log(`⏳ Rate limiting: pausing after ${i + 1} fog maps...`);
           await new Promise(resolve => setTimeout(resolve, 2000));
+        } else if (i < coordinates.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
-        
+
       } catch (error) {
         console.error(`❌ Failed to post fog map for ${coord}:`, error);
         
@@ -310,69 +364,17 @@ async function postFogOfWarMapsToChannels(guild, fullMapPath, gridSystem, channe
         }
       }
     }
-    
+    } finally {
+      await fog.cleanup();
+    }
+
     // Save safari data with anchor message IDs
     await saveSafariContent(safariData);
-    
+
     console.log(`🎉 Completed fog of war map posting for all ${coordinates.length} locations!`);
-    
+
   } catch (error) {
     console.error('❌ Error in fog of war process:', error);
-  }
-}
-
-/**
- * Create a fog of war version of the map with only one cell visible
- * @param {string} fullMapPath - Path to the complete map with grid
- * @param {MapGridSystem} gridSystem - Initialized grid system
- * @param {string} visibleCoord - The coordinate that should remain visible
- * @param {Array} allCoordinates - Array of all coordinate strings
- * @returns {Buffer} Image buffer of the fog of war map
- */
-async function createFogOfWarMap(fullMapPath, gridSystem, visibleCoord, allCoordinates) {
-  try {
-    // Start with the full map
-    let mapImage = sharp(fullMapPath);
-    
-    // Create a composite array for all the fog overlays
-    const fogOverlays = [];
-    
-    for (const coord of allCoordinates) {
-      // Skip the visible coordinate
-      if (coord === visibleCoord) continue;
-      
-      // Parse coordinate and get pixel boundaries
-      const pos = gridSystem.parseCoordinate(coord);
-      const cellCoords = gridSystem.getCellPixelCoordinatesWithBorder(pos.x, pos.y);
-      
-      // Create a semi-transparent black overlay for this cell
-      const fogOverlay = await sharp({
-        create: {
-          width: Math.round(cellCoords.width),
-          height: Math.round(cellCoords.height),
-          channels: 4,
-          background: { r: 0, g: 0, b: 0, alpha: 0.7 } // 70% transparent black
-        }
-      }).png().toBuffer();
-      
-      fogOverlays.push({
-        input: fogOverlay,
-        top: Math.round(cellCoords.y),
-        left: Math.round(cellCoords.x)
-      });
-    }
-    
-    // Apply all fog overlays at once
-    const foggedMapBuffer = await mapImage
-      .composite(fogOverlays)
-      .png()
-      .toBuffer();
-    
-    return foggedMapBuffer;
-
-  } catch (error) {
-    console.error(`❌ Error creating fog of war map for ${visibleCoord}:`, error);
-    throw error;
   }
 }
 
@@ -998,6 +1000,8 @@ async function createMapExplorerMenu(guildId) {
  * @returns {Object} Result with success status and message
  */
 async function updateMapImage(guild, userId, mapUrl) {
+  const gate = tryBeginMapBuild(guild.id);
+  if (gate.busy) return mapBuildBusyResult(gate);
   try {
     console.log(`🔄 Starting map image update for guild ${guild.id}`);
     
@@ -1181,20 +1185,22 @@ async function updateMapImage(guild, userId, mapUrl) {
     
     const coordinates = Object.keys(mapData.coordinates);
     const { DiscordRequest } = await import('./utils.js');
-    
+
+    const fog = await createFogBuilder(outputPath, gridSystem, coordinates);
+    try {
     for (let i = 0; i < coordinates.length; i++) {
       const coord = coordinates[i];
       const coordData = mapData.coordinates[coord];
-      
+
       if (!coordData.anchorMessageId || !coordData.channelId) {
         console.log(`⏭️ Skipping ${coord} - no anchor message`);
         continue;
       }
-      
+
       try {
         // Create fog of war map for this specific coordinate
-        const fogOfWarBuffer = await createFogOfWarMap(outputPath, gridSystem, coord, coordinates);
-        
+        const fogOfWarBuffer = await fog.render(coord);
+
         // Upload fog map to storage channel
         const storageChannel = await findOrCreateMapStorageChannel(guild);
 
@@ -1227,19 +1233,28 @@ async function updateMapImage(guild, userId, mapUrl) {
         });
         
         console.log(`✅ Updated fog map for ${coord} (${i + 1}/${coordinates.length})`);
-        
-        // Rate limiting
+
+        if ((i + 1) % 10 === 0) {
+          console.log(`📈 Fog update RSS after ${i + 1} coords: ${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`);
+        }
+
+        // Pacing: breathing room for GC every coordinate, longer pause every 5 posts
         if ((i + 1) % 5 === 0 && i < coordinates.length - 1) {
           progressMessages.push(`⏳ Progress: ${i + 1}/${coordinates.length} fog maps updated...`);
           await new Promise(resolve => setTimeout(resolve, 2000));
+        } else if (i < coordinates.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
-        
+
       } catch (error) {
         console.error(`❌ Failed to update fog map for ${coord}:`, error);
         progressMessages.push(`⚠️ Failed to update ${coord}: ${error.message}`);
       }
     }
-    
+    } finally {
+      await fog.cleanup();
+    }
+
     // Save updated safari data
     await saveSafariContent(safariData);
     progressMessages.push('✅ Map data saved');
@@ -1267,6 +1282,8 @@ async function updateMapImage(guild, userId, mapUrl) {
       success: false,
       message: `❌ Error updating map: ${error.message}`
     };
+  } finally {
+    endMapBuild();
   }
 }
 
@@ -1280,6 +1297,8 @@ async function updateMapImage(guild, userId, mapUrl) {
  * @returns {Object} Result with success status and message
  */
 async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7, gridHeight = 7, defaultEmoji = '📍') {
+  const gate = tryBeginMapBuild(guild.id);
+  if (gate.busy) return mapBuildBusyResult(gate);
   try {
     console.log(`🏗️ Creating map grid with custom image for guild ${guild.id} - dimensions: ${gridWidth}x${gridHeight}`);
 
@@ -1341,23 +1360,12 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
     let progressMessages = [];
     progressMessages.push(`🏗️ Starting map creation with custom image (${gridWidth}x${gridHeight})...`);
 
-    // Memory safety check — refuse to process if server is critically low on RAM
-    // Uses MemAvailable from /proc/meminfo (actual usable memory) instead of os.freemem()
-    // which reports misleadingly low values on Linux (doesn't account for reclaimable cache)
-    // See docs/infrastructure-security/InfrastructureArchitecture.md for details
-    const os = await import('os');
-    const nodeFs = await import('fs');
-    let availableMemMB;
-    try {
-      const meminfo = nodeFs.readFileSync('/proc/meminfo', 'utf8');
-      const match = meminfo.match(/MemAvailable:\s+(\d+)/);
-      availableMemMB = match ? parseInt(match[1]) / 1024 : os.freemem() / (1024 * 1024);
-    } catch {
-      availableMemMB = os.freemem() / (1024 * 1024);
-    }
-    const totalMemMB = os.totalmem() / (1024 * 1024);
-    if (availableMemMB < 50) {
-      console.error(`🚨 Low memory: ${availableMemMB.toFixed(0)}MB available of ${totalMemMB.toFixed(0)}MB — refusing map creation`);
+    // Memory hard floor — refuse to process if the server is critically low on RAM.
+    // (The softer pre-flight warning with a Proceed Anyway option lives in the
+    // map_update_modal handler; this 50MB floor also guards the Proceed path.)
+    const availableMemMB = getAvailableMemMB();
+    if (availableMemMB !== null && availableMemMB < 50) {
+      console.error(`🚨 Low memory: ${availableMemMB.toFixed(0)}MB available — refusing map creation`);
       return {
         success: false,
         message: `❌ Server is low on memory (${availableMemMB.toFixed(0)}MB available). Please try again in a few minutes.`
@@ -1701,7 +1709,74 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
       success: false,
       message: `❌ Error creating map: ${error.message}`
     };
+  } finally {
+    endMapBuild();
   }
+}
+
+/**
+ * Ephemeral Components V2 warning shown when a map build is requested under memory pressure.
+ * Offers an explicit Proceed Anyway (map_build_proceed) instead of running blind.
+ * @param {number} availMB - current MemAvailable in MB
+ */
+export function buildLowMemoryWarning(availMB) {
+  return {
+    flags: 64 | (1 << 15), // EPHEMERAL | IS_COMPONENTS_V2
+    components: [{
+      type: 17, // Container
+      components: [
+        {
+          type: 10, // Text Display
+          content: `## ⚠️ Low Memory Warning\n\nCastBot only has **${availMB.toFixed(0)}MB** of memory available — a map build needs roughly 100MB and could crash the bot mid-build.\n\nBest option: try again in a few hours (memory frees up after the nightly restart). Or proceed now at your own risk.`
+        },
+        {
+          type: 1, // Action Row
+          components: [{
+            type: 2, // Button
+            custom_id: 'map_build_proceed',
+            label: 'Proceed Anyway',
+            style: 4, // Danger
+            emoji: { name: '⚠️' }
+          }]
+        }
+      ]
+    }]
+  };
+}
+
+/**
+ * Shared routing for a map build request (modal submit AND the low-memory Proceed Anyway
+ * button both land here): resolves create-vs-update, enforces the no-dimension-change rule,
+ * and runs the build. Returns the build result ({success, message, ...}).
+ * @param {Client} client - Discord client
+ * @param {string} guildId
+ * @param {string} userId
+ * @param {{mapUrl: string, mapColumns: number, mapRows: number, mapEmoji: string}} params
+ */
+export async function executeMapBuild(client, guildId, userId, { mapUrl, mapColumns, mapRows, mapEmoji }) {
+  const safariData = await loadSafariContent();
+  const activeMapId = safariData[guildId]?.maps?.active;
+  const existingMap = activeMapId ? safariData[guildId]?.maps?.[activeMapId] : null;
+
+  if (activeMapId && existingMap) {
+    // Updating: dimensions are immutable (channels/coordinates already exist)
+    const existingWidth = existingMap.gridWidth || existingMap.gridSize || 7;
+    const existingHeight = existingMap.gridHeight || existingMap.gridSize || 7;
+    if (mapColumns !== existingWidth || mapRows !== existingHeight) {
+      return {
+        success: false,
+        message: `❌ Map dimensions cannot be changed (current: ${existingWidth}x${existingHeight}, requested: ${mapColumns}x${mapRows}).\n\nTo use different dimensions, delete the existing map first.`
+      };
+    }
+  }
+
+  const guild = await client.guilds.fetch(guildId);
+  if (activeMapId) {
+    console.log(`🔄 Updating existing map for guild ${guildId}`);
+    return updateMapImage(guild, userId, mapUrl);
+  }
+  console.log(`🏗️ Creating new map with custom image for guild ${guildId} - dimensions: ${mapColumns}x${mapRows}, emoji: ${mapEmoji}`);
+  return createMapGridWithCustomImage(guild, userId, mapUrl, mapColumns, mapRows, mapEmoji);
 }
 
 /**

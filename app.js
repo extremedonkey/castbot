@@ -33033,6 +33033,45 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
       
+    } else if (custom_id === 'map_build_proceed') {
+      // Low-memory pre-flight was declined-then-overridden: run the stashed map build.
+      // Fresh button interaction = fresh 15-min deferred window.
+      return ButtonHandlerFactory.create({
+        id: 'map_build_proceed',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        deferred: true,
+        updateMessage: true, // replace the warning message
+        handler: async (context) => {
+          const wrapResult = (text) => ({
+            components: [{
+              type: 17, // Container
+              components: [{ type: 10, content: text }]
+            }]
+          });
+
+          const key = `${context.guildId}_${context.userId}`;
+          const pending = global.pendingMapBuilds?.get(key);
+          if (!pending || pending.expiresAt < Date.now()) {
+            global.pendingMapBuilds?.delete(key);
+            return wrapResult('⌛ This map build request has expired. Please run Map Create/Update again.');
+          }
+          global.pendingMapBuilds.delete(key);
+
+          const { executeMapBuild, buildMapExplorerResponse } = await import('./mapExplorer.js');
+          const result = await executeMapBuild(context.client, context.guildId, context.userId, pending);
+          if (result && !result.success) {
+            return wrapResult(result.message);
+          }
+          try {
+            return await buildMapExplorerResponse(context.guildId, context.userId, context.client, true);
+          } catch (uiError) {
+            console.log(`⚠️ Could not rebuild Map Explorer UI after proceed: ${uiError.message}`);
+            return wrapResult(result.message);
+          }
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'map_delete_cancel') {
       // Handle cancelled map deletion - return to data_admin
       return ButtonHandlerFactory.create({
@@ -50807,6 +50846,10 @@ Your server is now ready for Tycoons gameplay!`;
       
     } else if (custom_id === 'map_update_modal') {
       // Handle map update modal submission
+      // Declared outside the try — the catch's error followup references hasActiveMap
+      // (was resolved inside the try; any earlier throw became a ReferenceError that
+      // swallowed the real error and left the admin on an eternal "thinking" state)
+      let hasActiveMap = false;
       try {
         const guildId = req.body.guild_id;
         const userId = req.body.member?.user?.id || req.body.user?.id;
@@ -50853,6 +50896,27 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
         
+        // Pre-flight memory check BEFORE deferring — map builds are the most memory-intensive
+        // thing the bot does (RaP 0896: two prod OOM kills on 2026-07-17 were map builds).
+        // Below the threshold, offer an explicit Proceed Anyway instead of running blind.
+        const { getAvailableMemMB, executeMapBuild, buildLowMemoryWarning } = await import('./mapExplorer.js');
+        const availMB = getAvailableMemMB();
+        if (availMB !== null && availMB < 120) {
+          if (!global.pendingMapBuilds) global.pendingMapBuilds = new Map();
+          // Sweep expired stashes so the map can't grow unbounded
+          for (const [k, v] of global.pendingMapBuilds) {
+            if (v.expiresAt < Date.now()) global.pendingMapBuilds.delete(k);
+          }
+          global.pendingMapBuilds.set(`${guildId}_${userId}`, {
+            mapUrl, mapColumns, mapRows, mapEmoji,
+            expiresAt: Date.now() + 10 * 60 * 1000
+          });
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: buildLowMemoryWarning(availMB)
+          });
+        }
+
         // Defer response for long operation
         await res.send({
           type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
@@ -50860,51 +50924,13 @@ Your server is now ready for Tycoons gameplay!`;
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
-        
-        // Check if map exists to determine create vs update
+
+        // Resolve create-vs-update for logging/error copy; executeMapBuild re-checks internally
         const { loadSafariContent } = await import('./safariManager.js');
         const safariData = await loadSafariContent();
-        const hasActiveMap = safariData[guildId]?.maps?.active;
-        const activeMapId = safariData[guildId]?.maps?.active;
-        const existingMap = activeMapId ? safariData[guildId]?.maps?.[activeMapId] : null;
-        
-        // If updating, check if dimensions changed
-        if (hasActiveMap && existingMap) {
-          // Get existing dimensions (with backwards compatibility)
-          const existingWidth = existingMap.gridWidth || existingMap.gridSize || 7;
-          const existingHeight = existingMap.gridHeight || existingMap.gridSize || 7;
-          
-          if (mapColumns !== existingWidth || mapRows !== existingHeight) {
-            // Dimensions changed - block the update
-            const followupUrl = `https://discord.com/api/v10/webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-            await fetch(followupUrl, {
-              method: 'PATCH',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                content: `❌ Map dimensions cannot be changed (current: ${existingWidth}x${existingHeight}, requested: ${mapColumns}x${mapRows}).\n\nTo use different dimensions, delete the existing map first.`,
-                flags: InteractionResponseFlags.EPHEMERAL
-              })
-            });
-            return;
-          }
-        }
-        
-        const guild = await client.guilds.fetch(guildId);
-        let result;
-        
-        if (hasActiveMap) {
-          // Update existing map
-          console.log(`🔄 Updating existing map for guild ${guildId}`);
-          const { updateMapImage } = await import('./mapExplorer.js');
-          result = await updateMapImage(guild, userId, mapUrl);
-        } else {
-          // Create new map with custom image and dimensions
-          console.log(`🏗️ Creating new map with custom image for guild ${guildId} - dimensions: ${mapColumns}x${mapRows}, emoji: ${mapEmoji}`);
-          const { createMapGridWithCustomImage } = await import('./mapExplorer.js');
-          result = await createMapGridWithCustomImage(guild, userId, mapUrl, mapColumns, mapRows, mapEmoji);
-        }
+        hasActiveMap = Boolean(safariData[guildId]?.maps?.active);
+
+        const result = await executeMapBuild(client, guildId, userId, { mapUrl, mapColumns, mapRows, mapEmoji });
         
         // Check if map creation/update failed
         const followupUrl = `https://discord.com/api/v10/webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;

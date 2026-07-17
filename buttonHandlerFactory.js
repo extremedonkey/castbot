@@ -2946,6 +2946,14 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari_map_admin'
   },
+  'map_build_proceed': {
+    label: 'Proceed Anyway',
+    description: 'Run map build despite low-memory warning',
+    emoji: '⚠️',
+    style: 'Danger',
+    category: 'safari_map_admin',
+    requiresPermission: 'ManageRoles'
+  },
   'map_admin_user_select': {
     label: 'User Select',
     description: 'Select player for map administration',
