@@ -4860,7 +4860,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           type: 18, // Label wrapper
           label: isUserInput
             ? (customAction.trigger?.inputLabel || 'Your Input').slice(0, 45)
-            : (customAction.description || 'Your Answer:').slice(0, 45),
+            : 'Enter the secret code',
           ...(isUserInput && customAction.trigger?.inputDescription ? { description: customAction.trigger.inputDescription } : {}),
           component: {
             type: 4, // Text Input
@@ -16042,7 +16042,9 @@ Your server is now ready for Tycoons gameplay!`;
                 components: [{
                   type: 4, // Text Input
                   custom_id: 'answer_input',
-                  label: action.description || 'Enter the secret code:',
+                  label: action.trigger?.type === 'button_input'
+                    ? (action.trigger?.inputLabel || 'Your Input').slice(0, 45)
+                    : 'Enter the secret code',
                   style: 1, // Short
                   required: true,
                   min_length: 1,
