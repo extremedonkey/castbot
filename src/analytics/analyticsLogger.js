@@ -189,6 +189,12 @@ function getButtonLabel(customId, components) {
   
   // Fall back to BUTTON_REGISTRY (has labels/emojis for all registered buttons)
   if (_buttonRegistryCache) {
+    // Exact-key match first (e.g. 'prod_toggle_live_analytics')
+    const exact = _buttonRegistryCache[customId];
+    if (exact) {
+      return exact.emoji ? `${exact.emoji} ${exact.label}` : exact.label;
+    }
+
     for (const registryKey of Object.keys(_buttonRegistryCache)) {
       if (registryKey.endsWith('_*')) {
         const basePattern = registryKey.slice(0, -2);
