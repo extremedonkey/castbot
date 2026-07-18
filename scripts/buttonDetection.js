@@ -305,8 +305,16 @@ function generateSmartButtons(filesChanged, commitMessage, isProduction = false)
       .filter(button => button && validateButton(button))
       .slice(0, 2);
 
+    // Detected features with no mapped entry point (e.g. 'analytics') can leave the
+    // list empty — treat that like no-features, otherwise the caller's zero-buttons
+    // fallback kicks in and drops Pass/Fail from the card entirely
+    if (buttons.length === 0) {
+      console.log('🔍 Detected features have no mapped buttons, using default menu');
+      return [toButton('viral_menu')].filter(Boolean);
+    }
+
     // Always add the general menu as fallback (3rd button)
-    if (buttons.length > 0 && buttons.length < 3 && !seen.has('viral_menu')) {
+    if (buttons.length < 3 && !seen.has('viral_menu')) {
       const menu = toButton('viral_menu');
       if (menu) buttons.push(menu);
     }

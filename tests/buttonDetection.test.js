@@ -78,4 +78,12 @@ describe('buttonDetection — generateDeploymentButtons', () => {
     const buttons = generateDeploymentButtons('README.md', 'docs only');
     assert.ok(buttons.some(b => b.custom_id === 'viral_menu'));
   });
+
+  it('keeps Pass/Fail when detected features have no mapped button (analytics-only change)', () => {
+    const buttons = generateDeploymentButtons('scripts/notify-restart.js', 'tweak notification');
+    const ids = buttons.map(b => b.custom_id);
+    assert.ok(ids.includes('viral_menu'));
+    assert.ok(ids.includes('restart_status_passed'));
+    assert.ok(ids.includes('restart_status_failed'));
+  });
 });
