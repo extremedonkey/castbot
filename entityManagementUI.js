@@ -1131,8 +1131,9 @@ function createStoreItemSelector(items, currentItemIds, storeId, searchTerm, all
         }
     });
     
-    // Sort stocked items alphabetically
-    stockedItemsToShow.sort(([, a], [, b]) => (a.name || '').localeCompare(b.name || ''));
+    // Sort stocked items by most recently updated first
+    stockedItemsToShow.sort(([, a], [, b]) =>
+        (b.metadata?.lastModified || b.metadata?.createdAt || 0) - (a.metadata?.lastModified || a.metadata?.createdAt || 0));
     
     // Add all stocked items to options with clear labeling
     stockedItemsToShow.forEach(([id, item]) => {
@@ -1153,7 +1154,8 @@ function createStoreItemSelector(items, currentItemIds, storeId, searchTerm, all
     if (!searchTerm) {
         const availableItems = Object.entries(items)
             .filter(([id]) => !currentItemIds.has(id))
-            .sort(([, a], [, b]) => (a.name || '').localeCompare(b.name || ''));
+            .sort(([, a], [, b]) =>
+                (b.metadata?.lastModified || b.metadata?.createdAt || 0) - (a.metadata?.lastModified || a.metadata?.createdAt || 0));
             
         // Calculate how many we can add — capped by Discord select max (25) AND store item limit
         const maxAddable = SAFARI_LIMITS.MAX_ITEMS_PER_STORE - currentItemIds.size;
