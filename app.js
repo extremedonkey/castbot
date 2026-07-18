@@ -6567,6 +6567,16 @@ To fix this:
             // Update container accent color based on result
             container.accent_color = isPass ? 0x2ecc71 : 0xe74c3c; // Green for pass, red for fail
 
+            // Tick the 🧪 Test Steps checkboxes to match the verdict — same Unicode
+            // charset as the card renders (☐ U+2610 → ☑ U+2611 pass / ☒ U+2612 fail),
+            // idempotent so toggling Pass↔Fail re-marks every box
+            const tick = isPass ? '☑' : '☒';
+            for (const comp of containerComponents) {
+              if (comp?.type === 10 && /[☐☑☒]/.test(comp.content || '')) {
+                comp.content = comp.content.replace(/[☐☑☒]/g, tick);
+              }
+            }
+
             return { components: messageComponents };
           } catch (error) {
             console.error(`❌ ERROR: ${context.customId} - ${error.message}`);
