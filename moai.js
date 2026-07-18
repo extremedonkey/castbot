@@ -19,6 +19,11 @@ import { runClaudeJob, safeDeliver, formatElapsed, HARD_KILL_MS } from './claude
 const MAX_CHUNK = 3500;
 const ACCENT = 0x808080;
 
+// Reece + test user — same trust boundary as the reeces_stuff menu itself. Unlike Ask
+// CastBot (restricted toolset, meant to go public), the Moai has full tool access and
+// stays gated even when posted as a standing channel button.
+const KEEPER_IDS = ['391415444084490240', '1086246253819613274'];
+
 const FORTUNES = [
   '🥠 *Legacy code is a stronger prompt than any document.*',
   '🥠 *The pre-commit hook is the bouncer. The docs are the dress code nobody reads.*',
@@ -206,6 +211,27 @@ export function buildErrorContainer(message) {
   };
 }
 
+/**
+ * The standing container posted by "Post Moai" — a permanent Ask The Moai button in this
+ * channel. Unlike Ask CastBot's posted button, this does NOT open access to everyone —
+ * the click still routes through the moai_ask handler / handleMoaiModalSubmit's KEEPER_IDS
+ * gate, so only Reece + test user can actually use it. Anyone else gets turned away.
+ */
+export function buildPostedMoaiContainer() {
+  return {
+    type: 17,
+    accent_color: ACCENT,
+    components: [
+      { type: 10, content: `## 🗿 Ask The Moai` },
+      { type: 10, content: `A standing button for the Moai — CastBot's stone advisor. Full codebase context, full tool access, keeper-only.` },
+      { type: 14 },
+      { type: 1, components: [
+        { type: 2, custom_id: 'moai_ask', label: 'Ask The Moai', style: 2, emoji: { name: '🗿' } }
+      ]}
+    ]
+  };
+}
+
 /** Response cache for the Ask Another button (last 10). */
 export function rememberResponse(responseId, payload) {
   if (!global.moaiResponses) global.moaiResponses = new Map();
@@ -238,6 +264,14 @@ export async function handleMoaiModalSubmit(req, res) {
     return res.send({
       type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
       data: { content: '🗿 The Moai requires a question.', flags: InteractionResponseFlags.EPHEMERAL }
+    });
+  }
+  if (!KEEPER_IDS.includes(req.body.member?.user?.id)) {
+    // Authoritative gate — covers every path into this handler (menu button, posted
+    // standing button, message-context button), not just whichever button triggered it.
+    return res.send({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: { content: '🗿 The Moai listens only to its keeper.', flags: InteractionResponseFlags.EPHEMERAL }
     });
   }
 

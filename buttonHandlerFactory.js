@@ -4896,6 +4896,14 @@ export const BUTTON_REGISTRY = {
   },
 
   // === MOAI (Claude Code Integration) ===
+  'moai_post': {
+    label: 'Post Moai',
+    description: 'Post a standing Ask The Moai button into this channel — still keeper-only, posting does not widen access',
+    emoji: '🗿',
+    style: 'Primary',
+    category: 'moai',
+    parent: 'reeces_stuff'
+  },
   'moai_ask': {
     label: 'Ask Moai',
     description: 'Open the Moai prompt modal for Claude Code queries',

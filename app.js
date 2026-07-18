@@ -10719,6 +10719,33 @@ To fix this:
         }
       })(req, res, client);
 
+    } else if (custom_id === 'moai_post') {
+      // 🗿 Post Moai — drop a standing Ask The Moai button into this channel (Reece's Stuff).
+      // Posting it does NOT widen access — the button it posts still routes through the
+      // KEEPER_IDS gate in handleMoaiModalSubmit, so only Reece + test user can use it.
+      return ButtonHandlerFactory.create({
+        id: 'moai_post',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const { isMoaiEnvironment, buildPostedMoaiContainer } = await import('./moai.js');
+          if (!isMoaiEnvironment()) {
+            return { content: '🗿 The Moai does not dwell in production.', ephemeral: true };
+          }
+          await DiscordRequest(`channels/${context.channelId}/messages`, {
+            method: 'POST',
+            body: { components: [buildPostedMoaiContainer()], flags: (1 << 15) }
+          });
+          return {
+            components: [{ type: 17, accent_color: 0x2ecc71, components: [
+              { type: 10, content: `✅ Moai posted to <#${context.channelId}>` },
+              { type: 10, content: `-# Still keeper-only — everyone else who clicks it gets turned away.` }
+            ]}],
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'moai_ask' || custom_id.startsWith('moai_ask_ctx_')) {
       // 🗿 The Moai — Claude Code integration via Discord
       return ButtonHandlerFactory.create({

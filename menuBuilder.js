@@ -157,16 +157,16 @@ export class MenuBuilder {
   static buildReecesStuffMenu(menuConfig, context) {
     const envLabel = process.env.INSTANCE_ROLE === 'test' ? 'Test' : process.env.NODE_ENV === 'production' ? 'Prod' : 'Dev';
     // ⚠️ THIS MENU IS AT DISCORD'S 40-COMPONENT CEILING (exactly 40 as of 2026-07-16).
-    // Adding Post Ask cost 2 (a button + the second row an ActionRow's 5-button cap forced),
-    // so the decorative separator under the title was dropped to pay for it — the section
-    // headers already separate things visually. The NEXT button added here needs a real
-    // reorganisation, not another shave. Verify with countComponents([menu]) before shipping.
+    // Adding Post Moai cost 1 (Msg Test's row had a spare seat), paid for by dropping the
+    // separator that used to sit above the final back-row — the section headers already
+    // separate things visually. The NEXT button added here needs a real reorganisation,
+    // not another shave. Verify with countComponents([menu]) before shipping.
     const components = [
       { type: 10, content: `## ${menuConfig.title}` },
       { type: 10, content: `### \`\`\`🦠 Experimental\`\`\`` },
-      // Two rows: Discord caps an ActionRow at 5 buttons, and Post Ask sits next to Moai
-      // because they're the same family (both drive Claude). Msg Test overflows — it's
-      // the least related of the five.
+      // Two rows: Discord caps an ActionRow at 5 buttons, and Post Ask/Post Moai sit next
+      // to Moai because they're the same family (both drive Claude). Msg Test overflows —
+      // it's the least related of the five.
       {
         type: 1,
         components: [
@@ -180,7 +180,8 @@ export class MenuBuilder {
       {
         type: 1,
         components: [
-          { type: 2, custom_id: 'msg_test', label: 'Msg Test', style: 2, emoji: { name: '💬' } }
+          { type: 2, custom_id: 'msg_test', label: 'Msg Test', style: 2, emoji: { name: '💬' } },
+          { type: 2, custom_id: 'moai_post', label: 'Post Moai', style: 1, emoji: { name: '🗿' } }
         ]
       },
       { type: 10, content: `### \`\`\`🔧 Admin Tools\`\`\`` },
@@ -235,7 +236,6 @@ export class MenuBuilder {
           { type: 2, custom_id: 'tribeplan_open', label: 'Tribe Planner (Mockup)', style: 1, emoji: { name: '🎯' } }
         ]
       },
-      { type: 14 },
       { type: 1, components: [{ type: 2, custom_id: 'castbot_tools', label: '← Tools', style: 2 }] }
     ];
 
