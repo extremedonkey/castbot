@@ -1893,6 +1893,14 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari'
   },
+  'action_post_channel_select_*': {
+    label: 'Post to Channel Select',
+    description: 'Channel select that posts the action button to the chosen channel (Action Editor, deferred)',
+    emoji: '#️⃣',
+    style: 'Secondary',
+    category: 'safari',
+    parent: 'action_post_channel'
+  },
   'action_post_channel_*': {
     label: 'Post to Channel',
     description: 'Post action button to a Discord channel from the Action Editor',
@@ -3742,6 +3750,14 @@ export const BUTTON_REGISTRY = {
     emoji: '📦',
     style: 'Secondary',
     category: 'safari'
+  },
+  'entity_action_post_channel_select_*': {
+    label: 'Post to Channel Select',
+    description: 'Channel select that posts the action button to the chosen channel (Action Visibility, deferred)',
+    emoji: '#️⃣',
+    style: 'Secondary',
+    category: 'safari_management',
+    parent: 'entity_action_post_channel'
   },
   'entity_action_post_channel_*': {
     label: 'Post to Channel',

@@ -31564,30 +31564,39 @@ Your server is now ready for Tycoons gameplay!`;
 
     } else if (custom_id.startsWith('entity_action_post_channel_select_')) {
       // Channel select handler: post custom action button to selected channel (from coords menu)
-      try {
-        const guildId = req.body.guild_id;
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to post actions.')) return;
+      return ButtonHandlerFactory.create({
+        id: 'entity_action_post_channel_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        deferred: true,  // posting to the channel is a REST call that can exceed 3s
+        handler: async (context) => {
+          const actionId = context.customId.replace('entity_action_post_channel_select_', '');
+          const selectedChannelId = context.values[0];
 
-        const actionId = custom_id.replace('entity_action_post_channel_select_', '');
-        const selectedChannelId = req.body.data.values[0];
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const action = safariData[context.guildId]?.buttons?.[actionId];
+          if (!action) {
+            return {
+              flags: (1 << 15),
+              components: [{
+                type: 17, accent_color: 0xe74c3c,
+                components: [{ type: 10, content: '❌ Action not found.' }]
+              }]
+            };
+          }
 
-        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
-        const safariData = await loadSafariContent();
-        const action = safariData[guildId]?.buttons?.[actionId];
-        if (!action) return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Action not found.', flags: InteractionResponseFlags.EPHEMERAL } });
+          const { buildActionChannelCard, trackPostedChannel } = await import('./customActionUI.js');
+          const channelCard = buildActionChannelCard(action, context.guildId, actionId);
+          await DiscordRequest(`channels/${selectedChannelId}/messages`, { method: 'POST', body: { flags: (1 << 15), components: [channelCard] } });
 
-        const { buildActionChannelCard, trackPostedChannel } = await import('./customActionUI.js');
-        const channelCard = buildActionChannelCard(action, guildId, actionId);
-        await DiscordRequest(`channels/${selectedChannelId}/messages`, { method: 'POST', body: { flags: (1 << 15), components: [channelCard] } });
+          if (trackPostedChannel(action, selectedChannelId)) {
+            await saveSafariContent(safariData);
+            console.log(`📌 Tracked channel ${selectedChannelId} for action ${actionId}`);
+          }
 
-        if (trackPostedChannel(action, selectedChannelId)) {
-          await saveSafariContent(safariData);
-          console.log(`📌 Tracked channel ${selectedChannelId} for action ${actionId}`);
-        }
-
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: {
+          return {
             flags: (1 << 15),
             components: [{
               type: 17, accent_color: 0x27ae60,
@@ -31597,12 +31606,9 @@ Your server is now ready for Tycoons gameplay!`;
                 { type: 1, components: [{ type: 2, custom_id: `entity_action_coords_${actionId}`, label: '← Back', style: 2 }] }
               ]
             }]
-          }
-        });
-      } catch (error) {
-        console.error('Error posting custom action to channel:', error);
-        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Error posting action. Please try again.', flags: InteractionResponseFlags.EPHEMERAL } });
-      }
+          };
+        }
+      })(req, res, client);
 
     } else if (custom_id.startsWith('entity_action_post_channel_')) {
       // Show channel select UI for posting custom action button (from coords menu)
@@ -31848,34 +31854,43 @@ Your server is now ready for Tycoons gameplay!`;
       
     } else if (custom_id.startsWith('action_post_channel_select_')) {
       // Channel select from Action Editor Post to Channel → post button and track channel
-      try {
-        const guildId = req.body.guild_id;
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to post actions.')) return;
+      return ButtonHandlerFactory.create({
+        id: 'action_post_channel_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        deferred: true,  // posting to the channel is a REST call that can exceed 3s
+        handler: async (context) => {
+          const actionId = context.customId.replace('action_post_channel_select_', '');
+          const selectedChannelId = context.values[0];
 
-        const actionId = custom_id.replace('action_post_channel_select_', '');
-        const selectedChannelId = req.body.data.values[0];
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const action = safariData[context.guildId]?.buttons?.[actionId];
+          if (!action) {
+            return {
+              flags: (1 << 15),
+              components: [{
+                type: 17, accent_color: 0xe74c3c,
+                components: [{ type: 10, content: '❌ Action not found.' }]
+              }]
+            };
+          }
 
-        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
-        const safariData = await loadSafariContent();
-        const action = safariData[guildId]?.buttons?.[actionId];
-        if (!action) return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Action not found.', flags: InteractionResponseFlags.EPHEMERAL } });
+          const { buildActionChannelCard, trackPostedChannel } = await import('./customActionUI.js');
+          const channelCard = buildActionChannelCard(action, context.guildId, actionId);
+          await DiscordRequest(`channels/${selectedChannelId}/messages`, { method: 'POST', body: { flags: (1 << 15), components: [channelCard] } });
 
-        const { buildActionChannelCard, trackPostedChannel } = await import('./customActionUI.js');
-        const channelCard = buildActionChannelCard(action, guildId, actionId);
-        await DiscordRequest(`channels/${selectedChannelId}/messages`, { method: 'POST', body: { flags: (1 << 15), components: [channelCard] } });
+          if (trackPostedChannel(action, selectedChannelId)) {
+            await saveSafariContent(safariData);
+            console.log(`📌 Tracked channel ${selectedChannelId} for action ${actionId}`);
+          }
 
-        if (trackPostedChannel(action, selectedChannelId)) {
-          await saveSafariContent(safariData);
-          console.log(`📌 Tracked channel ${selectedChannelId} for action ${actionId}`);
+          // Return to action editor
+          const { createCustomActionEditorUI } = await import('./customActionUI.js');
+          return await createCustomActionEditorUI({ guildId: context.guildId, actionId });
         }
-
-        // Return to action editor
-        const { createCustomActionEditorUI } = await import('./customActionUI.js');
-        return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: await createCustomActionEditorUI({ guildId, actionId }) });
-      } catch (error) {
-        console.error('Error posting action to channel:', error);
-        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Error posting action. Please try again.', flags: InteractionResponseFlags.EPHEMERAL } });
-      }
+      })(req, res, client);
 
     } else if (custom_id.startsWith('action_post_channel_')) {
       // Post to Channel button from Action Editor → show channel select

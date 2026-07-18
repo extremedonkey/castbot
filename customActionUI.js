@@ -1925,25 +1925,29 @@ export function buildActionChannelCard(action, guildId, actionId) {
   const buttonStyle = styleMap[action.trigger?.button?.style] || action.style || 1;
   const isModalTrigger = action.trigger?.type === 'button_modal';
 
+  // Action title already renders on the button; description supports markdown
+  // so users can add their own heading if they want one
+  const components = [];
+  if (action.description?.trim()) {
+    components.push({ type: 10, content: action.description });
+  }
+  components.push({
+    type: 1,
+    components: [{
+      type: 2,
+      custom_id: isModalTrigger
+        ? `modal_launcher_${guildId}_${actionId}_${Date.now()}`
+        : `safari_${guildId}_${actionId}`,
+      label: action.name || action.label || 'Activate',
+      style: buttonStyle,
+      ...(action.emoji ? { emoji: parseTextEmoji(action.emoji, '⚡').emoji } : {})
+    }]
+  });
+
   return {
     type: 17,
     accent_color: 0x3498db,
-    components: [
-      { type: 10, content: `## ${action.emoji || '⚡'} ${action.name || action.label || 'Custom Action'}` },
-      { type: 14 },
-      {
-        type: 1,
-        components: [{
-          type: 2,
-          custom_id: isModalTrigger
-            ? `modal_launcher_${guildId}_${actionId}_${Date.now()}`
-            : `safari_${guildId}_${actionId}`,
-          label: action.name || action.label || 'Activate',
-          style: buttonStyle,
-          ...(action.emoji ? { emoji: parseTextEmoji(action.emoji, '⚡').emoji } : {})
-        }]
-      }
-    ]
+    components
   };
 }
 
