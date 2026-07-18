@@ -535,7 +535,8 @@ export async function handleReadWhisper(context, whisperId, targetUserId, client
         senderId: whisperData.senderId,
         senderName: whisperData.senderName,
         location: whisperData.coordinate,
-        channelName: context.channelName
+        channelName: context.channelName,
+        message: whisperData.message
       });
     } catch (logError) {
       logger.error('WHISPER', 'Failed to log whisper read', { error: logError.message });

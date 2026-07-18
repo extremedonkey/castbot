@@ -156,6 +156,46 @@ describe('Activity Log — char-budgeted paging (real module)', () => {
   });
 });
 
+describe('Whisper activity entries — ownership isolation + content preview (real modules)', () => {
+  it('addActivityEntry writes ONLY to the target user\'s history (privacy invariant)', async () => {
+    const { addActivityEntry } = await import('../activityLogger.js');
+    const pd = {
+      G: { players: {
+        SENDER: { safari: { history: [] } },
+        READER: { safari: { history: [] } },
+        BYSTANDER: { safari: { history: [] } }
+      } }
+    };
+    addActivityEntry(pd, 'G', 'SENDER', 'whisper', '**Jun** opened your whisper', { loc: 'E4' });
+    addActivityEntry(pd, 'G', 'READER', 'whisper', '**gabi!** whispered you\n> hey', { loc: 'E4' });
+
+    assert.equal(pd.G.players.SENDER.safari.history.length, 1);
+    assert.equal(pd.G.players.SENDER.safari.history[0].desc, '**Jun** opened your whisper');
+    assert.equal(pd.G.players.READER.safari.history.length, 1);
+    assert.ok(pd.G.players.READER.safari.history[0].desc.includes('whispered you'));
+    assert.equal(pd.G.players.BYSTANDER.safari.history.length, 0, 'no entry may leak to a third player');
+  });
+
+  it('addActivityEntry is a no-op for players without a safari record (never creates one)', async () => {
+    const { addActivityEntry } = await import('../activityLogger.js');
+    const pd = { G: { players: { X: {} } } };
+    addActivityEntry(pd, 'G', 'X', 'whisper', 'test', {});
+    addActivityEntry(pd, 'G', 'GHOST', 'whisper', 'test', {});
+    assert.ok(!pd.G.players.X.safari);
+    assert.ok(!pd.G.players.GHOST);
+  });
+
+  it('formatWhisperPreview: caps at 150 chars, quotes every line, empty-safe', async () => {
+    const { formatWhisperPreview } = await import('../safariLogger.js');
+    assert.equal(formatWhisperPreview(''), '');
+    assert.equal(formatWhisperPreview(null), '');
+    assert.equal(formatWhisperPreview('hi\nthere'), '\n> hi\n> there');
+    const long = 'x'.repeat(200);
+    const out = formatWhisperPreview(long);
+    assert.equal(out, '\n> ' + 'x'.repeat(147) + '...');
+  });
+});
+
 describe('Safari Log — backfill parser still matches new movement lines', () => {
   it('parses the player segment with stamina tag and via-pane suffix', () => {
     const playerSegment = '**gabi!** moved from **F1** (#🏘️f1-street) to **E2** (#🎭e2-theater) (⚡2/999 → 1/999 ♻️11h 59m) [via G1 pane]';

@@ -60,26 +60,46 @@ export async function logWhisper({ guildId, senderId, senderName, senderDisplayN
 
   // Include the message in the sender's activity log (guild-Safari-Log style),
   // quoted per line and capped so playerData entries stay bounded
+  addActivityEntryAndSave(guildId, senderId, ACTIVITY_TYPES.whisper, `Whispered to ${recipientName}${formatWhisperPreview(message)}`, { loc: location });
+}
+
+/**
+ * Cap + blockquote a whisper message for activity-log entries. 150-char cap keeps
+ * playerData entries bounded (history is capped at 200 entries but entries are stored
+ * in the hot-path file). Pure — unit-tested.
+ * @param {string} message
+ * @returns {string} '' or '\n> line\n> line...'
+ */
+export function formatWhisperPreview(message) {
   const preview = message && message.length > 150 ? message.slice(0, 147) + '...' : (message || '');
-  const quoted = preview ? '\n' + preview.split('\n').map(l => `> ${l}`).join('\n') : '';
-  addActivityEntryAndSave(guildId, senderId, ACTIVITY_TYPES.whisper, `Whispered to ${recipientName}${quoted}`, { loc: location });
+  return preview ? '\n' + preview.split('\n').map(l => `> ${l}`).join('\n') : '';
 }
 
 /**
  * Log a whisper being READ (recipient opened the Read Message button).
  * Posts to the env analytics log + guild Safari Log (incl. the dedicated whisper
- * log channel — reads are whisper-domain spectator content). No activity entry.
+ * log channel — reads are whisper-domain spectator content), and writes two
+ * activity entries: a lightweight read receipt in the SENDER's log and the
+ * received content (capped preview) in the READER's log.
+ *
+ * PRIVACY INVARIANT: activity logs are viewable by their owner + admins ONLY
+ * (player_view_logs is hard-wired to the clicker; admin_view_logs_* is
+ * ManageRoles-gated). Entry ownership below uses only VERIFIED ids: readerId is
+ * enforced by handleReadWhisper's recipient check, senderId comes from the stored
+ * whisper record — never from user-controllable input.
+ *
  * @param {Object} params
  * @param {string} params.guildId
- * @param {string} params.readerId - User who opened the whisper
+ * @param {string} params.readerId - User who opened the whisper (verified recipient)
  * @param {string} params.readerName - Reader username
  * @param {string} params.readerDisplayName - Reader display name
  * @param {string} params.senderId - Original whisper sender
  * @param {string} params.senderName - Original sender display name
  * @param {string} params.location - Coordinate the whisper was sent at
  * @param {string} params.channelName - Channel the read happened in
+ * @param {string} [params.message] - Whisper content (for the reader's activity entry)
  */
-export async function logWhisperRead({ guildId, readerId, readerName, readerDisplayName, senderId, senderName, location, channelName }) {
+export async function logWhisperRead({ guildId, readerId, readerName, readerDisplayName, senderId, senderName, location, channelName, message }) {
   const safariContent = {
     senderId,
     senderName,
@@ -99,6 +119,11 @@ export async function logWhisperRead({ guildId, readerId, readerName, readerDisp
     readerDisplayName,
     safariContent
   );
+
+  // Sender's log: read receipt, no content echo (sender already has it in the send entry)
+  addActivityEntryAndSave(guildId, senderId, ACTIVITY_TYPES.whisper, `**${readerDisplayName}** opened your whisper`, { loc: location });
+  // Reader's log: who whispered them + the content they read (capped preview)
+  addActivityEntryAndSave(guildId, readerId, ACTIVITY_TYPES.whisper, `**${senderName}** whispered you${formatWhisperPreview(message)}`, { loc: location });
 }
 
 /**
