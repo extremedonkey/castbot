@@ -6513,9 +6513,10 @@ To fix this:
             const statusText = isPass ? 'PASSED' : 'FAILED';
             const statusLine = `${statusEmoji} **${statusText}** by <@${context.userId}> at \`${timeStr}\``;
 
-            // Extract commit info for logging
+            // Extract commit info for logging (new LEAN heading, with legacy fallback
+            // so Pass/Fail on pre-refresh cards still logs the change name)
             const containerContent = messageComponents[0]?.components?.[0]?.content || '';
-            const changeMatch = containerContent.match(/## :gem: Change\n(.+?)(?:\n|$)/);
+            const changeMatch = containerContent.match(/(?:💎 Change```|## :gem: Change)\n(.+?)(?:\n|$)/);
             const changeName = changeMatch ? changeMatch[1] : 'unknown';
             console.log(`📊 TEST RESULT: ${statusText} by ${context.userId} for "${changeName}"`);
 

@@ -384,30 +384,25 @@ export class PM2ErrorLogger {
       }
 
       if (logs.length > 0) {
-        // Get the Discord channel
-        const channel = await this.client.channels.fetch(this.channelId);
-        if (!channel) {
-          console.error('[PM2Logger] Could not find #error channel');
-          return;
-        }
-
-        // Format with environment tag and timestamp
-        const tag = env === 'prod' ? '🔴 **[PM2-PROD]**' : env === 'test' ? '🟦 **[PM2-TEST]**' : '🟡 **[PM2-DEV]**';
         const timestamp = new Date().toLocaleTimeString('en-US', {
           hour: '2-digit',
           minute: '2-digit',
           hour12: true
         });
 
-        // Truncate if too long for Discord (2000 char limit)
-        let logContent = logs.slice(0, 100).join('\n');
-        if (logContent.length > 1900) {
-          logContent = logContent.substring(0, 1900) + '\n... [truncated]';
-        }
+        const container = buildErrorLogContainer({
+          env,
+          timeString: timestamp,
+          logContent: logs.slice(0, 100).join('\n')
+        });
 
-        const message = `${tag} ${timestamp}\n\`\`\`\n${logContent}\n\`\`\``;
-
-        await channel.send(message);
+        // Raw REST, not channel.send — discord.js cannot normalize raw Components V2
+        // JSON (same lesson as the ProdWatchdog alert button, commit 89c40cc0).
+        const { DiscordRequest } = await import('../../utils.js');
+        await DiscordRequest(`channels/${this.channelId}/messages`, {
+          method: 'POST',
+          body: { components: [container], flags: (1 << 15) } // IS_COMPONENTS_V2
+        });
         console.log(`[PM2Logger] 📋 PM2 logs posted to Discord (${logs.length} lines)`);
       }
 

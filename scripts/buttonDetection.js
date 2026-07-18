@@ -13,91 +13,76 @@
  * - Silent error handling
  */
 
+import { BUTTON_REGISTRY } from '../buttonHandlerFactory.js';
+
 /**
- * Safe menu buttons that can be tested without context
- * Maps feature patterns to their safe menu entry points
+ * Safe menu entry points per feature area — custom_id + priority ONLY.
+ *
+ * Labels, emojis and styles are deliberately NOT stored here: they are resolved from
+ * BUTTON_REGISTRY at generation time (see toButton). This map drifted badly when it
+ * duplicated that metadata inline — deprecated ids and stale labels shipped on every
+ * deploy card for months. Now a button that leaves the registry drops off the card
+ * automatically instead of silently pointing at a dead handler.
  */
 const SAFE_TEST_BUTTONS = {
-  // Feature area -> Safe menu button mapping
-  'actions': {
-    custom_id: 'safari_action_editor',
-    label: '⚡ Actions',
-    style: 1, // Primary (blue)
-    priority: 1
-  },
-  'safari': {
-    custom_id: 'safari_map_explorer',
-    label: '🗺️ Safari',
-    style: 3, // Success (green)
-    priority: 2
-  },
-  'ranking': {
-    custom_id: 'season_app_ranking',
-    label: '🏆 Casting',
-    style: 1, // Primary (blue)
-    priority: 2
-  },
-  'castlist': {
-    custom_id: 'show_castlist2_default',
-    label: '📋 Castlist',
-    style: 2, // Secondary (grey)
-    priority: 3
-  },
-  'data': {
-    custom_id: 'data_admin',  // The actual Data menu button
-    label: '🧮 Data',
-    style: 2, // Secondary (grey)
-    priority: 4
-  },
-  'server_stats': {
-    custom_id: 'prod_server_usage_stats',
-    label: '📈 Server Stats',
-    style: 2, // Secondary (grey)
-    priority: 6
-  },
-  'applications': {
-    custom_id: 'season_management_menu',
-    label: '📝 Applications',
-    style: 1, // Primary (blue)
-    priority: 5
-  },
-  'season_planner': {
-    custom_id: 'season_manager',
-    label: '📝 Season Planner',
-    style: 1, // Primary (blue)
-    priority: 2
-  },
-  'richcard': {
-    custom_id: 'richcard_demo',
-    label: '🎴 Rich Card',
-    style: 1, // Primary (blue)
-    priority: 2
-  },
-  'experimental': {
-    custom_id: 'reeces_stuff',
-    label: "🐧 Reece's Stuff",
-    style: 1, // Primary (blue)
-    priority: 3
-  },
-  'challenges': {
-    custom_id: 'challenge_screen_new',
-    label: '🏃 Challenges',
-    style: 1, // Primary (blue)
-    priority: 2
-  },
-  'player_card': {
-    custom_id: 'pcard_open',
-    label: '🪪 Player Card',
-    style: 1, // Primary (blue)
-    priority: 1
-  },
-  'menu': {
-    custom_id: 'viral_menu',
-    label: '📋 Prod Menu',
-    style: 2, // Secondary (grey)
-    priority: 10 // Lowest priority
-  }
+  'actions': { custom_id: 'safari_action_editor', priority: 1 },
+  'safari': { custom_id: 'safari_map_explorer', priority: 2 },
+  'ranking': { custom_id: 'season_app_ranking', priority: 2 },
+  'castlist': { custom_id: 'show_castlist2_default', priority: 3 },
+  'data': { custom_id: 'data_admin', priority: 4 },
+  'server_stats': { custom_id: 'prod_server_usage_stats', priority: 6 },
+  // season_management_menu is DEPRECATED — Season Manager owns Apps now
+  'applications': { custom_id: 'season_manager', priority: 5 },
+  'season_planner': { custom_id: 'season_manager', priority: 2 },
+  'richcard': { custom_id: 'richcard_demo', priority: 2 },
+  'experimental': { custom_id: 'reeces_stuff', priority: 3 },
+  'challenges': { custom_id: 'challenge_screen_new', priority: 2 },
+  'player_card': { custom_id: 'pcard_open', priority: 1 },
+  'menu': { custom_id: 'viral_menu', priority: 10 } // Lowest priority fallback
 };
+
+/** Registry style names → Discord button style ints. */
+const STYLE_MAP = { Primary: 1, Secondary: 2, Success: 3, Danger: 4, Link: 5 };
+
+/**
+ * Find the BUTTON_REGISTRY entry for a custom_id — exact key first, then `_*`
+ * wildcard prefixes (same matching the app.js router uses for dynamic buttons).
+ * @param {string} customId
+ * @returns {Object|null}
+ */
+export function resolveRegistryEntry(customId) {
+  if (BUTTON_REGISTRY[customId]) return BUTTON_REGISTRY[customId];
+  for (const key of Object.keys(BUTTON_REGISTRY)) {
+    if (key.endsWith('_*') && customId.startsWith(key.slice(0, -1))) return BUTTON_REGISTRY[key];
+  }
+  return null;
+}
+
+/**
+ * Build a Discord button from the registry, or null if the id is stale.
+ * Some registry labels bake the emoji into the label text — strip it when the
+ * emoji field would render it a second time.
+ * @param {string} customId
+ * @returns {Object|null}
+ */
+export function toButton(customId) {
+  const entry = resolveRegistryEntry(customId);
+  if (!entry) {
+    console.log(`🔍 Dropping stale button ${customId} — no BUTTON_REGISTRY entry`);
+    return null;
+  }
+  let label = entry.label || customId;
+  if (entry.emoji && label.startsWith(entry.emoji)) {
+    label = label.slice(entry.emoji.length).trim();
+  }
+  return {
+    type: 2,
+    custom_id: customId,
+    label,
+    style: STYLE_MAP[entry.style] || 2,
+    ...(entry.emoji ? { emoji: { name: entry.emoji } } : {})
+  };
+}
 
 /**
  * Patterns to detect feature areas from file paths and content
@@ -297,58 +282,49 @@ function detectAffectedFeatures(filesChanged, commitMessage) {
  */
 function generateSmartButtons(filesChanged, commitMessage, isProduction = false) {
   console.log('🔍 Starting smart button detection...');
-  
+
   try {
     // Detect affected features
     const features = detectAffectedFeatures(filesChanged, commitMessage);
-    
+
     // If no features detected, return default menu button
     if (features.size === 0) {
       console.log('🔍 No specific features detected, using default menu');
-      return [{
-        type: 2, // Button type
-        custom_id: 'viral_menu',
-        label: '📋 Open Prod Menu',
-        style: 2 // Secondary
-      }];
+      return [toButton('viral_menu')].filter(Boolean);
     }
-    
-    // Map features to buttons and sort by priority
+
+    // Map features to registry-resolved buttons: dedupe by custom_id (several
+    // features share an entry point), sort by priority, keep the top 2
+    const seen = new Set();
     const buttons = Array.from(features)
       .map(feature => SAFE_TEST_BUTTONS[feature])
-      .filter(button => button && validateButton(button))
+      .filter(Boolean)
       .sort((a, b) => a.priority - b.priority)
-      .slice(0, 2) // Max 2 smart buttons
-      .map(button => ({
-        type: 2, // Button type
-        custom_id: button.custom_id,
-        label: button.label,
-        style: button.style || 2
-      }));
-    
+      .filter(({ custom_id }) => !seen.has(custom_id) && seen.add(custom_id))
+      .map(({ custom_id }) => toButton(custom_id))
+      .filter(button => button && validateButton(button))
+      .slice(0, 2);
+
     // Always add the general menu as fallback (3rd button)
-    if (buttons.length > 0 && buttons.length < 3) {
-      buttons.push({
-        type: 2,
-        custom_id: 'viral_menu',
-        label: '📋 Prod Menu',
-        style: 2
-      });
+    if (buttons.length > 0 && buttons.length < 3 && !seen.has('viral_menu')) {
+      const menu = toButton('viral_menu');
+      if (menu) buttons.push(menu);
     }
-    
+
     console.log(`🔍 Generated ${buttons.length} smart buttons: ${buttons.map(b => b.label).join(', ')}`);
     return buttons;
-    
+
   } catch (error) {
     console.log(`🔍 Smart button generation failed: ${error.message}`);
     console.log('🔍 Falling back to default menu button');
-    
-    // Ultimate fallback - just the menu button
+
+    // Ultimate fallback - just the menu button (literal: registry itself may have thrown)
     return [{
       type: 2,
       custom_id: 'viral_menu',
-      label: '📋 Open Prod Menu',
-      style: 2
+      label: 'Open Prod Menu',
+      style: 2,
+      emoji: { name: '📋' }
     }];
   }
 }
@@ -376,20 +352,11 @@ export function generateDeploymentButtons(filesChanged, commitMessage, isProduct
       }];
     }
     
-    // Add standard buttons that should always be present
+    // Add standard buttons that should always be present (registry-resolved, with
+    // literal fallbacks — Pass/Fail must never vanish from a deploy card)
     const standardButtons = [
-      {
-        type: 2,
-        custom_id: 'restart_status_passed',
-        label: '✅ Pass',
-        style: 2 // Will start as grey
-      },
-      {
-        type: 2,
-        custom_id: 'restart_status_failed',
-        label: '❌ Fail',
-        style: 2 // Will start as grey
-      }
+      toButton('restart_status_passed') || { type: 2, custom_id: 'restart_status_passed', label: 'Pass', style: 2, emoji: { name: '✅' } },
+      toButton('restart_status_failed') || { type: 2, custom_id: 'restart_status_failed', label: 'Fail', style: 2, emoji: { name: '❌' } }
     ];
     
     // Combine smart buttons with standard buttons (max 5 total)

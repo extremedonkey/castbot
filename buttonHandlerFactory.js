@@ -4923,6 +4923,24 @@ export const BUTTON_REGISTRY = {
     category: 'moai',
     parent: 'moai_ask'
   },
+
+  // === RESTART-NOTIFICATION SMART BUTTONS (registry gaps found 2026-07-18) ===
+  // These had live app.js routes but no registry entry — buttonDetection.js now
+  // resolves every deploy-card button from this registry, so entries are required.
+  'season_app_ranking': {
+    label: 'Casting',
+    description: 'Open the Casting view (1-5 scoring, cast decisions) — Season Manager Casting tab',
+    emoji: '🏆',
+    style: 'Primary',
+    category: 'seasons'
+  },
+  'challenge_screen_new': {
+    label: 'Challenges',
+    description: 'Open the Challenges screen (configurable challenge/rounds system)',
+    emoji: '🏃',
+    style: 'Primary',
+    category: 'challenges'
+  },
   'moai_share_*': {
     label: 'Share',
     description: 'Share Moai response publicly in channel',

@@ -29,51 +29,6 @@ const testSummary = process.argv[6]; // Fifth argument - test results (e.g. "29 
 const testDeployStatus = process.argv[7]; // Sixth - test-instance deploy result: deployed|skipped|failed
 
 /**
- * Analyze files changed and provide risk assessment
- */
-function analyzeChanges(filesChanged, commitMessage) {
-    if (!filesChanged) return null;
-    
-    const files = filesChanged.split(',').filter(f => f.length > 0);
-    const analysis = {
-        riskLevel: 'low',
-        warnings: [],
-        insights: []
-    };
-    
-    // Risk assessment based on files
-    if (files.includes('app.js')) {
-        analysis.riskLevel = 'high';
-        analysis.warnings.push('Core app.js modified - test all interactions');
-    }
-    
-    if (files.some(f => f.includes('safariManager'))) {
-        analysis.riskLevel = 'medium';
-        analysis.insights.push('Safari system changes - check player data');
-    }
-    
-    if (files.some(f => f.includes('.json'))) {
-        analysis.insights.push('Data structure changes detected');
-    }
-    
-    if (files.some(f => f.includes('button') || f.includes('Button'))) {
-        analysis.insights.push('Button system changes - verify handlers');
-    }
-    
-    // Feature detection
-    const features = [];
-    if (files.some(f => f.includes('safari'))) features.push('Safari');
-    if (files.some(f => f.includes('menu'))) features.push('Menu');
-    if (files.some(f => f.includes('command'))) features.push('Commands');
-    
-    if (features.length > 0) {
-        analysis.insights.push(`Affects: ${features.join(', ')}`);
-    }
-    
-    return analysis;
-}
-
-/**
  * Generate file summary
  */
 function generateFileSummary(filesChanged, gitStats) {
@@ -113,59 +68,36 @@ async function sendRestartNotification() {
             timeZone: 'Asia/Singapore'
         });
 
-        // Build message content with new formatting
-        let messageContent = `> # \`🖥️ ${environment} Server Restart                                                \`
-
-<@391415444084490240>
-
-## :clock1: Time
-\`${timeString}\``;
+        // Build message content — LEAN layout (triple-backtick section headings,
+        // -# small-text metadata). The old giant "## Time" / "## Risk Level" sections
+        // were mostly noise (app.js is in nearly every commit, so risk was always HIGH).
+        let messageContent = `## 🖥️ ${environment} Server Restart\n-# 🕐 ${timeString} · <@391415444084490240>`;
 
         // Add git commit message if provided
         if (commitMessage) {
-            messageContent += `\n\n## :gem: Change\n${commitMessage}`;
-            
-            // Add file summary
+            messageContent += `\n### \`\`\`💎 Change\`\`\`\n${commitMessage}`;
+
             const fileSummary = generateFileSummary(filesChanged, gitStats);
             if (fileSummary) {
-                messageContent += `\n\n## :file_folder: Files Changed\n${fileSummary}`;
-                
-                if (gitStats) {
-                    messageContent += `\n*${gitStats}*`;
-                }
+                messageContent += `\n-# 📁 ${fileSummary}${gitStats ? ` — ${gitStats}` : ''}`;
             }
-            
-            // Add risk analysis
-            const analysis = analyzeChanges(filesChanged, commitMessage);
-            if (analysis) {
-                const riskEmoji = analysis.riskLevel === 'high' ? ':red_circle:' : 
-                                analysis.riskLevel === 'medium' ? ':yellow_circle:' : ':green_circle:';
-                messageContent += `\n\n## ${riskEmoji} Risk Level: ${analysis.riskLevel.toUpperCase()}`;
-                
-                if (analysis.warnings.length > 0) {
-                    messageContent += `\n**⚠️ Warnings:**\n${analysis.warnings.map(w => `• ${w}`).join('\n')}`;
-                }
-                
-                if (analysis.insights.length > 0) {
-                    messageContent += `\n**💡 Insights:**\n${analysis.insights.map(i => `• ${i}`).join('\n')}`;
-                }
-            }
-            
         }
 
-        // Add test results if tests were run
+        // Compact status line: unit tests + deploy targets
+        const statusBits = [];
         if (testSummary) {
-            messageContent += `\n\n## :white_check_mark: Unit Tests\n\`${testSummary}\``;
+            statusBits.push(`🧪 ${testSummary}`);
         }
-
-        // Show where this change was deployed (dev-restart deploys to dev + test by default)
         if (testDeployStatus) {
             const targets = {
-                deployed: '🖥️ dev + 🟦 test',
-                skipped: '🖥️ dev only (`-dev-only`)',
-                failed: '🖥️ dev — ⚠️ TEST deploy FAILED (run `npm run deploy-test`)'
+                deployed: '🎯 🖥️ dev + 🟦 test',
+                skipped: '🎯 🖥️ dev only (`-dev-only`)',
+                failed: '🎯 🖥️ dev — ⚠️ TEST deploy FAILED (run `npm run deploy-test`)'
             };
-            messageContent += `\n\n## :dart: Deployed To\n${targets[testDeployStatus] || testDeployStatus}`;
+            statusBits.push(targets[testDeployStatus] || `🎯 ${testDeployStatus}`);
+        }
+        if (statusBits.length > 0) {
+            messageContent += `\n\n-# ${statusBits.join(' · ')}`;
         }
 
         // Add custom message only if explicitly provided
@@ -191,53 +123,32 @@ async function sendRestartNotification() {
                     {
                         type: 1, // Action Row
                         components: (() => {
+                            // Context-aware Ask Moai: prefills the modal with THIS card's
+                            // text (commit, files, test results). DEV/TEST only — the Moai
+                            // has no Claude CLI in production.
+                            const moaiButton = environment !== 'PRODUCTION' ? [{
+                                type: 2,
+                                custom_id: 'moai_ask_msg',
+                                label: 'Ask Moai',
+                                style: 2,
+                                emoji: { name: '🗿' }
+                            }] : [];
                             try {
-                                // Generate smart buttons based on changes
+                                // Generate smart buttons based on changes (registry-resolved)
                                 console.log('🔍 Generating smart deployment buttons...');
                                 const smartButtons = generateDeploymentButtons(filesChanged, commitMessage, isProduction);
-                                
-                                // Always add Moai first
-                                const moaiButton = {
-                                    type: 2,
-                                    custom_id: "moai_ask",
-                                    label: "🗿 Moai",
-                                    style: 2
-                                };
-
-                                // Combine fixed buttons with smart buttons (max 5 total)
-                                const allButtons = [moaiButton, ...smartButtons].slice(0, 5);
+                                const allButtons = [...moaiButton, ...smartButtons].slice(0, 5);
                                 console.log(`🔍 Using ${allButtons.length} buttons: ${allButtons.map(b => b.label).join(', ')}`);
                                 return allButtons;
-                                
                             } catch (error) {
                                 console.log(`🔍 Button generation failed, using defaults: ${error.message}`);
-                                // Fallback to original buttons if smart detection fails
+                                // Fallback if smart detection fails
                                 return [
-                                    {
-                                        type: 2,
-                                        custom_id: "moai_ask",
-                                        label: "🗿 Moai",
-                                        style: 2
-                                    },
-                                    {
-                                        type: 2,
-                                        custom_id: "viral_menu",
-                                        label: "📋 Prod Menu",
-                                        style: 2
-                                    },
-                                    {
-                                        type: 2,
-                                        custom_id: "restart_status_passed",
-                                        label: "✅ Pass",
-                                        style: 2
-                                    },
-                                    {
-                                        type: 2,
-                                        custom_id: "restart_status_failed",
-                                        label: "❌ Fail",
-                                        style: 2
-                                    }
-                                ];
+                                    ...moaiButton,
+                                    { type: 2, custom_id: 'viral_menu', label: 'Prod Menu', style: 2, emoji: { name: '📋' } },
+                                    { type: 2, custom_id: 'restart_status_passed', label: 'Pass', style: 2, emoji: { name: '✅' } },
+                                    { type: 2, custom_id: 'restart_status_failed', label: 'Fail', style: 2, emoji: { name: '❌' } }
+                                ].slice(0, 5);
                             }
                         })()
                     }

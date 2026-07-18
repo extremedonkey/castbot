@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { PM2ErrorLogger, isCriticalLine, isBenignStderrLine, stripZeroCountTokens } from '../src/monitoring/pm2ErrorLogger.js';
+import { PM2ErrorLogger, isCriticalLine, isBenignStderrLine, stripZeroCountTokens, buildErrorLogContainer } from '../src/monitoring/pm2ErrorLogger.js';
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pm2logger-test-'));
 const logger = new PM2ErrorLogger(null);
@@ -138,5 +138,47 @@ describe('PM2ErrorLogger — noise filters (false positives in #error channel)',
   it('blank lines are never critical', () => {
     assert.equal(isCriticalLine(''), false);
     assert.equal(isCriticalLine('   '), false);
+  });
+});
+
+describe('PM2ErrorLogger — buildErrorLogContainer (Components V2 card)', () => {
+  const base = { env: 'dev', timeString: '10:23 AM', logContent: 'TypeError: boom' };
+
+  it('builds a Container with header, fenced log, and env accent color', () => {
+    const c = buildErrorLogContainer({ ...base, askEnabled: false });
+    assert.equal(c.type, 17);
+    assert.equal(c.accent_color, 0xf1c40f); // dev = yellow
+    const [header, log] = c.components;
+    assert.equal(header.type, 10);
+    assert.ok(header.content.includes('PM2 Errors · DEV'));
+    assert.ok(header.content.includes('10:23 AM'));
+    assert.equal(log.type, 10);
+    assert.ok(log.content.startsWith('```\n'));
+    assert.ok(log.content.includes('TypeError: boom'));
+  });
+
+  it('prod is red, test is blue, unknown env gets a neutral fallback', () => {
+    assert.equal(buildErrorLogContainer({ ...base, env: 'prod', askEnabled: false }).accent_color, 0xe74c3c);
+    assert.equal(buildErrorLogContainer({ ...base, env: 'test', askEnabled: false }).accent_color, 0x3498db);
+    assert.equal(buildErrorLogContainer({ ...base, env: 'mystery', askEnabled: false }).accent_color, 0x95a5a6);
+  });
+
+  it('appends the Ask Moai row only when askEnabled (DEV/TEST — no Claude in prod)', () => {
+    const withAsk = buildErrorLogContainer({ ...base, askEnabled: true });
+    const row = withAsk.components.find(c => c.type === 1);
+    assert.ok(row, 'expected an Action Row');
+    assert.equal(row.components[0].custom_id, 'moai_ask_msg');
+    assert.equal(row.components[0].emoji.name, '🗿');
+
+    const withoutAsk = buildErrorLogContainer({ ...base, askEnabled: false });
+    assert.equal(withoutAsk.components.some(c => c.type === 1), false);
+    assert.equal(withoutAsk.components.some(c => c.type === 14), false); // no orphan separator
+  });
+
+  it('caps the log body inside the 4000-char total Text Display budget', () => {
+    const c = buildErrorLogContainer({ ...base, logContent: 'x'.repeat(10000), askEnabled: false });
+    const total = c.components.filter(x => x.type === 10).reduce((n, x) => n + x.content.length, 0);
+    assert.ok(total <= 4000, `total text ${total} exceeds 4000`);
+    assert.ok(c.components[1].content.includes('[truncated]'));
   });
 });
