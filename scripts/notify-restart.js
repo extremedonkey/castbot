@@ -137,7 +137,14 @@ async function sendRestartNotification() {
                                 // Generate smart buttons based on changes (registry-resolved)
                                 console.log('🔍 Generating smart deployment buttons...');
                                 const smartButtons = generateDeploymentButtons(filesChanged, commitMessage, isProduction);
-                                const allButtons = [...moaiButton, ...smartButtons].slice(0, 5);
+                                // Row cap is 5: overflow sheds the lowest-priority SMART
+                                // buttons — never Pass/Fail (the card's whole point) or Moai
+                                let allButtons = [...moaiButton, ...smartButtons];
+                                if (allButtons.length > 5) {
+                                    const passFail = allButtons.filter(b => b.custom_id.startsWith('restart_status_'));
+                                    const rest = allButtons.filter(b => !b.custom_id.startsWith('restart_status_'));
+                                    allButtons = [...rest.slice(0, 5 - passFail.length), ...passFail];
+                                }
                                 console.log(`🔍 Using ${allButtons.length} buttons: ${allButtons.map(b => b.label).join(', ')}`);
                                 return allButtons;
                             } catch (error) {
