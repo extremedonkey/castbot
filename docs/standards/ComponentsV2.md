@@ -143,6 +143,7 @@ Components V2 is Discord's new component system that provides enhanced layout ca
 - **Purpose**: Display formatted text
 - **Features**: Full markdown support
 - **Usage**: Replaces traditional `content` field
+- **🚨 CHAR LIMIT**: **4000 characters COMBINED across ALL Text Display components in a message** (not per component). Budget list-style UIs by measured rendered length, not entry count — see `activityLogger.js` `getActivityPage` (char-packed pages, `PAGE_CHAR_BUDGET`) for the pattern.
 
 ```javascript
 {

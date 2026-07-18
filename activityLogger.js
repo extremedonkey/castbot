@@ -9,7 +9,13 @@ import { loadPlayerData, savePlayerData, withStorageLock } from './storage.js';
 // --- Constants ---
 
 const MAX_ENTRIES = 200;
-const DEFAULT_PAGE_SIZE = 15;
+// Pages are packed by rendered characters, not a fixed count: Discord allows 4000 chars
+// COMBINED across all Text Display components in a message. ~600 is reserved for the
+// header/location/stamina/legend/page-line displays, so the log display gets ~3400 —
+// typically 25-30 mixed entries per page (was a fixed 15, which used barely half the
+// budget AND could overflow it with action-heavy entries).
+const PAGE_CHAR_BUDGET = 3400;
+const MAX_PAGE_ENTRIES = 30;
 const FLUSH_DELAY_MS = 2000; // Batch activity entries, flush every 2s
 
 export const ACTIVITY_TYPES = {
@@ -132,21 +138,38 @@ export function addActivityEntryAndSave(guildId, userId, type, desc, opts = {}) 
 }
 
 /**
- * Get a page of activity entries (newest first).
+ * Get a page of activity entries (newest first), packed by rendered character size so
+ * each page fills — but never overflows — the Text Display budget (see PAGE_CHAR_BUDGET).
+ * Page boundaries are deterministic for a given history, so page N is stable across
+ * Prev/Next clicks until new entries arrive.
  * @returns {{ entries: Array, page: number, totalPages: number, totalEntries: number }}
  */
-export function getActivityPage(playerData, guildId, userId, page = 1, perPage = DEFAULT_PAGE_SIZE) {
+export function getActivityPage(playerData, guildId, userId, page = 1) {
   const history = playerData[guildId]?.players?.[userId]?.safari?.history || [];
   const totalEntries = history.length;
-  const totalPages = Math.max(1, Math.ceil(totalEntries / perPage));
+
+  // Newest first, packed into char-budgeted pages
+  const reversed = [...history].reverse();
+  const pages = [];
+  let current = [];
+  let chars = 0;
+  for (const entry of reversed) {
+    const len = formatActivityEntry(entry).length + 1; // +1 for the joining newline
+    if (current.length > 0 && (chars + len > PAGE_CHAR_BUDGET || current.length >= MAX_PAGE_ENTRIES)) {
+      pages.push(current);
+      current = [];
+      chars = 0;
+    }
+    current.push(entry); // an oversized single entry still gets its own page
+    chars += len;
+  }
+  if (current.length > 0) pages.push(current);
+  if (pages.length === 0) pages.push([]);
+
+  const totalPages = pages.length;
   const safePage = Math.max(1, Math.min(page, totalPages));
 
-  // Newest first
-  const reversed = [...history].reverse();
-  const start = (safePage - 1) * perPage;
-  const entries = reversed.slice(start, start + perPage);
-
-  return { entries, page: safePage, totalPages, totalEntries };
+  return { entries: pages[safePage - 1], page: safePage, totalPages, totalEntries };
 }
 
 /**
