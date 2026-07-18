@@ -10,7 +10,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { DiscordRequest } from '../utils.js';
-import { generateDeploymentButtons } from './buttonDetection.js';
+import { generateDeploymentButtons, generateTestSteps } from './buttonDetection.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
@@ -82,6 +82,15 @@ async function sendRestartNotification() {
                 messageContent += `\n-# 📁 ${fileSummary}${gitStats ? ` — ${gitStats}` : ''}`;
             }
         }
+
+        // TLDR test checklist — one line per detected feature area, plus a
+        // regression floor. The smart buttons below are the deep-links for these.
+        const testSteps = generateTestSteps(filesChanged, commitMessage);
+        messageContent += `\n### \`\`\`🧪 Test Steps\`\`\`\n`;
+        messageContent += testSteps.length > 0
+            ? testSteps.map(s => `☐ ${s}`).join('\n')
+            : '☐ Click the smart buttons below — each should open its screen cleanly';
+        messageContent += `\n-# Regression: /menu opens · no new noise in #error`;
 
         // Compact status line: unit tests + deploy targets
         const statusBits = [];

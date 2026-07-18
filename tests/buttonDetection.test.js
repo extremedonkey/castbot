@@ -9,6 +9,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   generateDeploymentButtons,
+  generateTestSteps,
   detectAffectedFeatures,
   validateButton,
   resolveRegistryEntry,
@@ -85,5 +86,33 @@ describe('buttonDetection — generateDeploymentButtons', () => {
     assert.ok(ids.includes('viral_menu'));
     assert.ok(ids.includes('restart_status_passed'));
     assert.ok(ids.includes('restart_status_failed'));
+  });
+});
+
+describe('buttonDetection — generateTestSteps (🧪 Test Steps card section)', () => {
+  it('every detectable feature has a test step (ratchet)', () => {
+    // Each feature name that detection can emit must produce a step when detected
+    // alone — a silent gap means that feature ships with no checklist line.
+    const probes = {
+      safari: 'safariManager.js', castlist: 'castlistV2.js', actions: 'customActionUI.js',
+      analytics: 'scripts/notify-restart.js', applications: 'applicationManager.js',
+      challenges: 'challengeManager.js'
+    };
+    for (const [feature, file] of Object.entries(probes)) {
+      const features = detectAffectedFeatures(file, '');
+      assert.ok(features.has(feature), `probe file '${file}' no longer detects '${feature}'`);
+      const steps = generateTestSteps(file, '');
+      assert.ok(steps.length > 0, `feature '${feature}' produced no test step`);
+    }
+  });
+
+  it('returns one deduped step per feature, capped at 4', () => {
+    const steps = generateTestSteps('safariManager.js,castlistV2.js,challengeManager.js,applicationManager.js,customActionUI.js', 'big change');
+    assert.ok(steps.length <= 4);
+    assert.equal(new Set(steps).size, steps.length);
+  });
+
+  it('returns empty for a docs-only change (caller renders generic line)', () => {
+    assert.deepEqual(generateTestSteps('README.md', 'docs only'), []);
   });
 });

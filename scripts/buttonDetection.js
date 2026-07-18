@@ -85,6 +85,49 @@ export function toButton(customId) {
 }
 
 /**
+ * TLDR light-touch test steps per feature area — rendered as the 🧪 Test Steps
+ * section on the restart card. One line each: what to click, what "working" looks
+ * like. Keyed by the same feature names as FEATURE_PATTERNS so detection drives
+ * both the smart buttons AND the checklist.
+ */
+const FEATURE_TEST_STEPS = {
+  actions: '⚡ Action Editor → open an Action → edit an outcome → save sticks',
+  safari: '🗺️ Map Explorer loads → move a player → location + channel update',
+  ranking: '🏆 Casting → score an applicant → reopen, score persisted',
+  castlist: '📋 `/castlist` renders → nav/paging buttons work',
+  analytics: '📊 Deploy + #error cards render with working buttons',
+  server_stats: '📈 Server Stats renders counts without error',
+  applications: '📅 Season Manager → Apps tab loads, applicant list renders',
+  season_planner: '📅 Season Manager → Planner tab loads',
+  richcard: '🎴 Rich Card demo renders',
+  challenges: '🏃 Challenges screen loads → a round card renders',
+  player_card: '🪪 Player Card opens from /menu',
+  experimental: "🐧 Reece's Stuff opens",
+  menu: '📋 /menu opens (admin + player views)'
+};
+
+/**
+ * Build the tldr test checklist for a deploy: one step per detected feature,
+ * deduped, capped at 4 lines. Empty array when nothing matched (caller renders
+ * a generic regression line instead).
+ * @param {string} filesChanged - comma-separated changed files
+ * @param {string} commitMessage
+ * @returns {string[]}
+ */
+export function generateTestSteps(filesChanged, commitMessage) {
+  try {
+    const features = detectAffectedFeatures(filesChanged, commitMessage);
+    const steps = Array.from(features)
+      .map(f => FEATURE_TEST_STEPS[f])
+      .filter(Boolean);
+    return [...new Set(steps)].slice(0, 4);
+  } catch (error) {
+    console.log(`🔍 Test step generation failed: ${error.message}`);
+    return [];
+  }
+}
+
+/**
  * Patterns to detect feature areas from file paths and content
  */
 const FEATURE_PATTERNS = {
