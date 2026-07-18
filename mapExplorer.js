@@ -1378,7 +1378,7 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
       console.error(`🚨 Low memory: ${availableMemMB.toFixed(0)}MB available — refusing map creation`);
       return {
         success: false,
-        message: `❌ Server is low on memory (${availableMemMB.toFixed(0)}MB available). Please try again in a few minutes.`
+        message: `❌ CastBot is under very heavy ORG usage right now and can't safely build a map. Please try again in a few hours.`
       };
     }
 
@@ -1730,6 +1730,8 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
  * @param {number} availMB - current MemAvailable in MB
  */
 export function buildLowMemoryWarning(availMB) {
+  // Real numbers go to the log only — user-facing copy stays "high usage" (no internals)
+  console.warn(`⚠️ Map build pre-flight: ${availMB.toFixed(0)}MB available (<120MB) — showing High Usage warning`);
   return {
     flags: 64 | (1 << 15), // EPHEMERAL | IS_COMPONENTS_V2
     components: [{
@@ -1737,7 +1739,7 @@ export function buildLowMemoryWarning(availMB) {
       components: [
         {
           type: 10, // Text Display
-          content: `## ⚠️ Low Memory Warning\n\nCastBot only has **${availMB.toFixed(0)}MB** of memory available — a map build needs roughly 100MB and could crash the bot mid-build.\n\nBest option: try again in a few hours (memory frees up after the nightly restart). Or proceed now at your own risk.`
+          content: `## ⚠️ High Usage\n\nCastBot is under heavy ORG usage currently.\n\nBest option: try again in a few hours. Or proceed now at your own risk.`
         },
         {
           type: 1, // Action Row
