@@ -44554,12 +44554,6 @@ Your server is now ready for Tycoons gameplay!`;
           }
         }
         
-        // Log admin activity (player history + Safari channel)
-        try {
-          const { addActivityEntry, ACTIVITY_TYPES } = await import('./activityLogger.js');
-          addActivityEntry(playerData, guildId, userId, ACTIVITY_TYPES.admin, `[ADMIN] Set ${itemName} x${quantity}`);
-        } catch (e) { console.error('Activity log error:', e); }
-
         // Save player data
         await savePlayerData(playerData);
 
@@ -44567,15 +44561,14 @@ Your server is now ready for Tycoons gameplay!`;
         const guild = await client.guilds.fetch(guildId);
         const targetMember = await guild.members.fetch(userId);
 
-        // Post to Safari log channel (fire-and-forget)
+        // Log admin edit (player history + Safari log channel + castbot-wide log)
         try {
-          const { logItemPickup } = await import('./safariLogger.js');
-          await logItemPickup({
+          const { logItemAdminEdit } = await import('./safariLogger.js');
+          await logItemAdminEdit({
             guildId, userId, username: targetMember.user?.username, displayName: targetMember.displayName,
-            location: 'Admin', itemId, itemName, itemEmoji: item?.emoji, quantity,
-            source: `[ADMIN] Set to ${quantity} (was ${previousQuantity})`, channelName: 'admin'
+            itemId, itemName, itemEmoji: item?.emoji, quantity, previousQuantity, channelName: 'admin'
           });
-        } catch (e) { /* Safari log is optional */ }
+        } catch (e) { console.error('Item admin edit log error:', e); }
 
         // Create confirmation message
         let changeText = '';
@@ -45849,24 +45842,18 @@ Your server is now ready for Tycoons gameplay!`;
           inventory[itemId] = { quantity, numAttacksAvailable: 0 };
         }
 
-        try {
-          const { addActivityEntry, ACTIVITY_TYPES } = await import('./activityLogger.js');
-          addActivityEntry(playerData, guildId, userId, ACTIVITY_TYPES.admin, `[ADMIN] Set ${itemName} x${quantity}`);
-        } catch (e) { console.error('Activity log error:', e); }
-
         await savePlayerData(playerData);
 
         const guild = await client.guilds.fetch(guildId);
         const targetMember = await guild.members.fetch(userId);
 
         try {
-          const { logItemPickup } = await import('./safariLogger.js');
-          await logItemPickup({
+          const { logItemAdminEdit } = await import('./safariLogger.js');
+          await logItemAdminEdit({
             guildId, userId, username: targetMember.user?.username, displayName: targetMember.displayName,
-            location: 'Admin', itemId, itemName, itemEmoji: item?.emoji, quantity,
-            source: `[ADMIN] Set to ${quantity} (was ${previousQuantity})`, channelName: 'admin'
+            itemId, itemName, itemEmoji: item?.emoji, quantity, previousQuantity, channelName: 'admin'
           });
-        } catch (e) { /* Safari log is optional */ }
+        } catch (e) { console.error('Item admin edit log error:', e); }
 
         // Rebuild the Super Player Menu (inventory category active) and PATCH @original.
         const ui = await createPlayerManagementUI({

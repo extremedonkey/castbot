@@ -171,6 +171,52 @@ export async function logItemPickup({ guildId, userId, username, displayName, lo
 }
 
 /**
+ * Log an admin inventory quantity edit (Items admin qty modal / Player Manager).
+ * Distinct from logItemPickup — this is a host directly setting a player's stock,
+ * not the player finding/collecting it, so the log text must not read like a pickup.
+ * @param {Object} params
+ * @param {string} params.guildId - Guild ID
+ * @param {string} params.userId - Player whose inventory was edited
+ * @param {string} params.username - Username
+ * @param {string} params.displayName - Display name
+ * @param {string} params.itemId - Item ID
+ * @param {string} params.itemName - Item name
+ * @param {string} params.itemEmoji - Item emoji
+ * @param {number} params.quantity - New quantity
+ * @param {number} params.previousQuantity - Quantity before the edit
+ * @param {string} params.channelName - Channel name
+ * @param {string} [params.channelId]
+ */
+export async function logItemAdminEdit({ guildId, userId, username, displayName, itemId, itemName, itemEmoji, quantity, previousQuantity, channelName, channelId }) {
+  const safariContent = {
+    location: 'Admin',
+    itemId,
+    itemName,
+    itemEmoji: itemEmoji || '📦',
+    quantity,
+    previousQuantity,
+    channelName,
+    channelId,
+    username
+  };
+
+  await logInteraction(
+    userId,
+    guildId,
+    'SAFARI_ITEM_ADMIN_EDIT',
+    `Edit ${itemName} Qty ${quantity}x`,
+    username,
+    null,
+    null,
+    channelName,
+    displayName,
+    safariContent
+  );
+
+  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.admin, `Edit ${formatEmojiForText(itemEmoji) || '📦'} ${itemName} Qty ${quantity}x`, { loc: 'Admin' });
+}
+
+/**
  * Log an item being used (consumed)
  * @param {Object} params - Item use parameters
  * @param {string} params.guildId - Guild ID

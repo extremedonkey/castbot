@@ -984,6 +984,7 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
       'SAFARI_WHISPER': 'whispers',
       'SAFARI_WHISPER_READ': 'whispers',
       'SAFARI_ITEM_PICKUP': 'itemPickups',
+      'SAFARI_ITEM_ADMIN_EDIT': 'itemPickups',
       'SAFARI_CURRENCY': 'currencyChanges',
       'SAFARI_PURCHASE': 'storeTransactions',
       'SAFARI_BUTTON': 'buttonActions',
@@ -1117,6 +1118,10 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
         
       case 'SAFARI_ITEM_PICKUP':
         logMessage = `🧰 **ITEM PICKUP** | [${timestamp}] | **${userDisplayName}** (${safariContent.username || userDisplayName}) at ${safariContent.channelId ? `<#${safariContent.channelId}>` : `**${safariContent.location}**${channelDisplay}`}\n> Collected: ${safariContent.itemEmoji} **${safariContent.itemName}** (x${safariContent.quantity})`;
+        break;
+
+      case 'SAFARI_ITEM_ADMIN_EDIT':
+        logMessage = `🔧 **ADMIN EDIT** | [${timestamp}] | **${userDisplayName}** (${safariContent.username || userDisplayName})\n> Set: ${safariContent.itemEmoji} **${safariContent.itemName}** to x${safariContent.quantity} (was x${safariContent.previousQuantity})`;
         break;
 
       case 'SAFARI_ITEM_USE': {

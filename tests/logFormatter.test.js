@@ -80,6 +80,13 @@ describe('logFormatter — Safari other actions', () => {
     assert.equal(line, `${TS} 🧰 **Item** (B2) — **gabi!** collected 🪓 **Axe** x2`);
   });
 
+  it('item admin edit reads as an edit, not a pickup, and shows the prior quantity', () => {
+    const line = fmt('SAFARI_ITEM_ADMIN_EDIT', { location: 'Admin', itemEmoji: '🧪', itemName: 'Stamina Potion', quantity: 2, previousQuantity: 0 });
+    assert.equal(line, `${TS} 🔧 **Admin Edit** (Admin) — **gabi!** edited 🧪 **Stamina Potion** to x2 (was x0)`);
+    assert.ok(!line.includes('collected'));
+    assert.ok(!line.includes('Picked up'));
+  });
+
   it('item use with snapshot uses code tags; without falls back to before→after', () => {
     const withSnap = fmt('SAFARI_ITEM_USE', { location: 'B2', itemEmoji: '🍖', itemName: 'Ration', quantity: 1, staminaBoost: 1, staminaSnapshot: { after: 3, max: 3, regenTime: 'Full' } });
     assert.ok(withSnap.includes('used 🍖 **Ration** x1 → +1 stamina `⚡3/3` `cd: MAX`'));

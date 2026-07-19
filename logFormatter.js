@@ -17,6 +17,7 @@ const ACTION_STYLE = {
   SAFARI_WHISPER: { emoji: '🤫', label: 'Whisper' },
   SAFARI_WHISPER_READ: { emoji: '🤫', label: 'Whisper Read' },
   SAFARI_ITEM_PICKUP: { emoji: '🧰', label: 'Item' },
+  SAFARI_ITEM_ADMIN_EDIT: { emoji: '🔧', label: 'Admin Edit' },
   SAFARI_ITEM_USE: { emoji: '⚡', label: 'Item' },
   SAFARI_CURRENCY: { emoji: '🪙', label: 'Currency' },
   SAFARI_PURCHASE: { emoji: '🛒', label: 'Purchase' },
@@ -175,6 +176,9 @@ export function formatEnhancedSafariLog(action, userDisplayName, safariContent =
 
     case 'SAFARI_ITEM_PICKUP':
       return `${ts} 🧰 **Item**${loc} — ${name} collected ${safariContent.itemEmoji || '📦'} **${safariContent.itemName}** x${safariContent.quantity}`;
+
+    case 'SAFARI_ITEM_ADMIN_EDIT':
+      return `${ts} 🔧 **Admin Edit**${loc} — ${name} edited ${safariContent.itemEmoji || '📦'} **${safariContent.itemName}** to x${safariContent.quantity} (was x${safariContent.previousQuantity})`;
 
     case 'SAFARI_ITEM_USE': {
       const snapTags = safariContent.staminaSnapshot
