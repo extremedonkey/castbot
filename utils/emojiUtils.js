@@ -207,6 +207,14 @@ const _rejectedUnicodeEmojis = new Set([
 
 function safeComponentEmoji(emoji, fallback = '📦') {
     if (!emoji || typeof emoji !== 'object') return emoji;
+    // Discord rejects U+FE0F (emoji variation selector) after codepoints ≥ U+1F000 — those are
+    // already emoji-presentation by default (🎣️ → 400 COMPONENT_INVALID_EMOJI). FE0F after BMP
+    // text-default symbols (❤️ U+2764, ☀️ U+2600) IS accepted, so only strip the redundant ones.
+    if (!emoji.id && typeof emoji.name === 'string' && emoji.name.includes('\uFE0F')) {
+        const cps = [...emoji.name];
+        const cleaned = cps.filter((c, i) => !(c === '\uFE0F' && i > 0 && cps[i - 1].codePointAt(0) >= 0x1F000)).join('');
+        if (cleaned !== emoji.name) emoji = { ...emoji, name: cleaned };
+    }
     // Learned bad Unicode emoji (Discord rejected it before) → fall back proactively
     if (!emoji.id && typeof emoji.name === 'string' && _rejectedUnicodeEmojis.has(emoji.name)) {
         return { name: fallback };

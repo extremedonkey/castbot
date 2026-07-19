@@ -23,6 +23,12 @@ function resolveEmoji(str, fallback = '📦') {
 function makeSanitizer(validate) {
   function safe(emoji, fallback = '📦') {
     if (!emoji || typeof emoji !== 'object') return emoji;
+    // Strip U+FE0F only when it follows a codepoint ≥ U+1F000 (Discord rejects those)
+    if (!emoji.id && typeof emoji.name === 'string' && emoji.name.includes('️')) {
+      const cps = [...emoji.name];
+      const cleaned = cps.filter((c, i) => !(c === '️' && i > 0 && cps[i - 1].codePointAt(0) >= 0x1F000)).join('');
+      if (cleaned !== emoji.name) emoji = { ...emoji, name: cleaned };
+    }
     if (!emoji.id && typeof emoji.name === 'string' && (emoji.name.includes('<') || /^:\w+:$/.test(emoji.name))) {
       return validate(resolveEmoji(emoji.name, fallback), fallback);
     }
@@ -83,6 +89,21 @@ describe('sanitizeComponentEmojis', () => {
     assert.deepEqual(tree[0].components[0].components[0].emoji, { name: '📦' });
     assert.deepEqual(tree[0].components[1].accessory.emoji, { name: '📦' });
     assert.deepEqual(tree[0].components[2].component.emoji, { name: '📦' });
+  });
+
+  it('strips U+FE0F after emoji-presentation codepoints (≥U+1F000), keeps it after BMP symbols', () => {
+    // Discord 400s 🎣+FE0F (COMPONENT_INVALID_EMOJI) but accepts ❤+FE0F / ☀+FE0F — verified live 2026-07-19
+    const node = { type: 1, components: [
+      { type: 2, emoji: { name: '\u{1F3A3}️' } }, // 🎣️ → 🎣
+      { type: 2, emoji: { name: '❤️' } },    // ❤️ kept as-is (BMP text-default base)
+      { type: 2, emoji: { name: '☀️' } },    // ☀️ kept as-is
+      { type: 2, emoji: { name: '❤️‍\u{1F525}' } } // ❤️‍🔥 ZWJ seq — FE0F follows BMP, kept
+    ]};
+    sanitize(node);
+    assert.deepEqual(node.components[0].emoji, { name: '\u{1F3A3}' });
+    assert.deepEqual(node.components[1].emoji, { name: '❤️' });
+    assert.deepEqual(node.components[2].emoji, { name: '☀️' });
+    assert.deepEqual(node.components[3].emoji, { name: '❤️‍\u{1F525}' });
   });
 
   it('is a no-op on null/empty and components without emoji', () => {
