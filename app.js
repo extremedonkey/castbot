@@ -16327,6 +16327,21 @@ Your server is now ready for Tycoons gameplay!`;
           return interfaceData;
         }
       })(req, res, client);
+    } else if (custom_id === 'castbot_general') {
+      // Settings → General — guild-wide settings modal (Image Uploads mode)
+      return ButtonHandlerFactory.create({
+        id: 'castbot_general',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        requiresModal: true,
+        handler: async (context) => {
+          const { getImageUploadMode, buildGeneralSettingsModal } = await import('./src/settings/generalSettings.js');
+          return {
+            type: InteractionResponseType.MODAL,
+            data: buildGeneralSettingsModal(await getImageUploadMode(context.guildId))
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'castbot_roles_security') {
       return ButtonHandlerFactory.create({
         id: 'castbot_roles_security',
@@ -29491,7 +29506,9 @@ Your server is now ready for Tycoons gameplay!`;
               }
               
               console.log(`🔍 DEBUG: Creating modal for ${entityType} ${entityId} fieldGroup ${fieldGroup}`);
-              const modalResponse = createFieldGroupModal(entityType, entityId, fieldGroup, entity);
+              const { getImageUploadMode } = await import('./src/settings/generalSettings.js');
+              const modalResponse = createFieldGroupModal(entityType, entityId, fieldGroup, entity,
+                { imageUploadMode: await getImageUploadMode(context.guildId) });
               
               if (!modalResponse) {
                 console.error(`🚨 No modal created for ${entityType} ${fieldGroup}`);
@@ -32514,7 +32531,9 @@ Your server is now ready for Tycoons gameplay!`;
         if (!entity) throw new Error('Entity not found');
         
         // Create modal
-        const modal = createFieldGroupModal(entityType, entityId, fieldGroup, entity);
+        const { getImageUploadMode } = await import('./src/settings/generalSettings.js');
+        const modal = createFieldGroupModal(entityType, entityId, fieldGroup, entity,
+          { imageUploadMode: await getImageUploadMode(guildId) });
         if (!modal) {
           throw new Error('Invalid field group');
         }
@@ -47566,6 +47585,20 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    } else if (custom_id === 'castbot_general_modal') {
+      // General settings modal submit — save Image Uploads mode, refresh Settings menu
+      try {
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to change CastBot settings.')) return;
+        const { handleGeneralSettingsSubmit } = await import('./src/settings/generalSettings.js');
+        const customizationUI = await handleGeneralSettingsSubmit(req.body.guild_id, req.body.data.components);
+        return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: customizationUI });
+      } catch (error) {
+        console.error('Error updating general settings:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { content: `❌ Error updating general settings: ${error.message}`, flags: InteractionResponseFlags.EPHEMERAL }
+        });
+      }
     } else if (custom_id === 'safari_player_menu_config_modal') {
       // Handle Player Menu configuration modal submission
       try {
@@ -49397,6 +49430,15 @@ Your server is now ready for Tycoons gameplay!`;
         // it can never hold up the UI refresh.
         res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
         deferredModalSubmit = true;
+
+        // Image Uploads pilot: resolve a File Upload image (if any) into a re-hosted
+        // #🗺️castbot-images URL BEFORE saving; always strips the raw attachment snowflake.
+        if (entityType === 'map_cell' && fieldGroup === 'info') {
+          const { resolveUploadedImageField } = await import('./src/images/modalImageUpload.js');
+          const guild = await client.guilds.fetch(guildId);
+          await resolveUploadedImageField({ fields, data, guild, context: `${entityId.toLowerCase()}_location`,
+            description: `Location image for ${entityId} (${guild.name})` });
+        }
 
         // Update entity
         await updateEntityFields(guildId, entityType, entityId, fields);

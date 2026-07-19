@@ -23,7 +23,7 @@ Whitelisted roles receive **channel permission overwrites at channel-creation ti
 | Season Applications (`applicationManager.js`) | Application channel | On "Apply" (creation) | ViewChannel, SendMessages, ReadMessageHistory | `APPLICATION_CHANNEL_ACCESS` |
 | Safari Map create (`mapExplorer.js`) | Map location channels (`#📍a1`…), 🗺️ Map Explorer categories incl. overflow "Group N" categories | At channel creation (overwrites ride `channels.create()`) | ViewChannel, SendMessages, ManageChannels | `SAFARI_CHANNEL_ACCESS` |
 | Safari Map **update** (`updateMapImage`) | All existing location channels + their categories | Merged onto existing channels via per-role `permissionOverwrites.edit()` (`🔐 [MAP_UPDATE]` logs) | ViewChannel, SendMessages, ManageChannels | `SAFARI_CHANNEL_ACCESS` |
-| 🗺️map-storage (`findOrCreateMapStorageChannel`) | Hidden image-storage channel | At creation **and ensured on find** — the channel survives map deletion, so creation-only could never reach existing guilds (`🔐 [MAP_STORAGE]` logs) | ViewChannel, SendMessages, ManageChannels | `SAFARI_CHANNEL_ACCESS` |
+| 🗺️castbot-images (`findOrCreateImageStorageChannel` in [src/images/imageStorageChannel.js](../../src/images/imageStorageChannel.js); formerly 🗺️map-storage — legacy-named channels are adopted and renamed on find) | Hidden image-storage channel | At creation **and ensured on find** — the channel survives map deletion, so creation-only could never reach existing guilds (`🔐 [CASTBOT_IMAGES]` logs) | ViewChannel, SendMessages, ManageChannels | `SAFARI_CHANNEL_ACCESS` |
 
 Location channels do **not** sync permissions from their category — every channel carries explicit overwrites, so the grant is applied at each creation site individually.
 
@@ -36,7 +36,7 @@ Grants are applied **during CastBot channel operations** — create a map, updat
 - No surprise mass-mutation of live game channels on a Settings click
 - No rate-limit burst outside an operation the admin explicitly triggered
 
-To push a new whitelist onto an existing Safari map, run **Map Explorer → Update Map** (it merges grants onto all existing location channels, categories, and map-storage before regenerating images). The ensure path (`ensureRoleAccessOnChannels`) uses per-role `permissionOverwrites.edit()` merges with a cache pre-check — already-granted roles cost zero API calls, and player/member overwrites are never disturbed. Player-level permission changes (movement, pause, deinit) likewise use per-member `.edit()` merges and **never disturb** role overwrites.
+To push a new whitelist onto an existing Safari map, run **Map Explorer → Update Map** (it merges grants onto all existing location channels, categories, and the 🗺️castbot-images storage channel before regenerating images). The ensure path (`ensureRoleAccessOnChannels`) uses per-role `permissionOverwrites.edit()` merges with a cache pre-check — already-granted roles cost zero API calls, and player/member overwrites are never disturbed. Player-level permission changes (movement, pause, deinit) likewise use per-member `.edit()` merges and **never disturb** role overwrites.
 
 ## System Flow
 
@@ -47,7 +47,7 @@ flowchart TD
 
     D[Season App 'Apply'] --> H
     E[Map create / Map update] --> H
-    F[🗺️map-storage create] --> H
+    F[🗺️castbot-images create] --> H
 
     C --> H{getRoleAccessOverwrites\nutils/roleAccessUtils.js}
     H --> I[guild.roles.fetch + validate]
@@ -88,7 +88,7 @@ permissionOverwrites: [
 - **`@everyone` in the whitelist**: filtered by the helper. Load-bearing — a stored `guild.id` would collide with the caller's `@everyone` deny entry (duplicate overwrite ID) and fail the entire `channels.create()` call, bricking map creation.
 - **Bot must hold granted bits**: Discord requires the creator to hold any permission it allows in overwrites. Map creation's pre-flight (`createMapGridWithCustomImage`) requires ManageChannels + ManageRoles before any channel is created. Storage-channel creation outside the map flow shares the same failure class that private-channel creation already has (50013) — no new failure mode.
 - **Zero rate-limit cost**: overwrites ride the existing `channels.create()` calls; the only extra API call is one `guild.roles.fetch()` per operation, and only when the whitelist is non-empty.
-- **Spoiler surface**: whitelisted roles can see 🗺️map-storage (full map originals + per-cell fog maps). Intentional — the whitelist is for trusted production staff.
+- **Spoiler surface**: whitelisted roles can see 🗺️castbot-images (full map originals + per-cell fog maps + uploaded location images). Intentional — the whitelist is for trusted production staff.
 
 ## Future Work
 

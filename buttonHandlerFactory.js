@@ -2157,6 +2157,15 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'settings'
   },
+  'castbot_general': {
+    label: 'General',
+    description: 'General guild settings modal — Image Uploads mode (Paste URL vs Upload Component)',
+    emoji: '⚙️',
+    style: 'Secondary',
+    parent: 'castbot_settings',
+    category: 'settings',
+    requiresModal: true
+  },
   'castbot_roles_security': {
     label: 'Roles & Security',
     description: 'Configure which roles have full CastBot access',

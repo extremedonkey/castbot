@@ -67,14 +67,13 @@ async function storeRawImport(guildId, importJson, importData, context) {
             return;
         }
 
-        // Find map-storage channel (backwards compatible)
+        // Find image storage channel (backwards compatible incl. legacy names)
         const guild = await client.guilds.fetch(guildId);
-        const mapStorageChannel = guild.channels.cache.find(
-            ch => ch.name === '🗺️map-storage' || ch.name === 'map-storage' || ch.name === 'safari-storage'
-        );
+        const { findImageStorageChannel } = await import('./src/images/imageStorageChannel.js');
+        const mapStorageChannel = findImageStorageChannel(guild, { extraNames: ['safari-storage'] });
 
         if (!mapStorageChannel) {
-            console.log('ℹ️ No map-storage channel found - skipping raw import storage');
+            console.log('ℹ️ No image storage channel found - skipping raw import storage');
             return;
         }
 

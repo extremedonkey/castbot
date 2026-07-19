@@ -16,6 +16,7 @@ import {
 } from 'discord.js';
 import { SAFARI_LIMITS } from './config/safariLimits.js';
 import { getFieldGroups } from './entityManagementUI.js';
+import { filenameFromImageUrl, IMAGE_UPLOAD_COMPONENT_ID } from './src/images/modalImageUpload.js';
 
 /**
  * Create modal for field group editing
@@ -23,16 +24,20 @@ import { getFieldGroups } from './entityManagementUI.js';
  * @param {string} entityId - Entity ID
  * @param {string} fieldGroupId - Field group ID
  * @param {Object} currentValues - Current entity values
+ * @param {Object} [options] - Modal options
+ * @param {string} [options.imageUploadMode] - guild Image Uploads mode ('textUrl' |
+ *   'uploadComponent'); 'uploadComponent' swaps image-URL text inputs for a
+ *   File Upload component (pilot: map_cell info)
  * @returns {Object} Modal response
  */
-export function createFieldGroupModal(entityType, entityId, fieldGroupId, currentValues) {
+export function createFieldGroupModal(entityType, entityId, fieldGroupId, currentValues, options = {}) {
     const fieldGroups = getFieldGroups(entityType);
     const group = fieldGroups[fieldGroupId];
-    
+
     if (!group) {
         throw new Error(`Unknown field group: ${fieldGroupId}`);
     }
-    
+
     // Create modal based on entity type and field group
     switch (entityType) {
         case 'item':
@@ -44,7 +49,7 @@ export function createFieldGroupModal(entityType, entityId, fieldGroupId, curren
         case 'enemy':
             return createEnemyFieldModal(entityId, fieldGroupId, group, currentValues);
         case 'map_cell':
-            return createMapCellFieldModal(entityId, fieldGroupId, group, currentValues);
+            return createMapCellFieldModal(entityId, fieldGroupId, group, currentValues, options);
         default:
             throw new Error(`Unknown entity type: ${entityType}`);
     }
@@ -778,9 +783,52 @@ export function validateFields(fields, entityType) {
 }
 
 /**
+ * Build the image field for the map cell info modal. Paste-URL mode (default)
+ * keeps the legacy text input; Upload Component mode swaps in a File Upload
+ * (type 19). The Label's description carries the existing-image state — labels
+ * don't consume modal component budget, so no extra component is needed.
+ * 0 files uploaded = keep current image (no clearing in upload mode; switch the
+ * guild back to Paste URL to clear a field).
+ */
+function buildMapCellImageField(currentValues, imageUploadMode) {
+    const currentImage = currentValues.baseContent?.image || '';
+    if (imageUploadMode !== 'uploadComponent') {
+        return {
+            type: 18, // Label
+            label: 'Image URL (Displays under map)',
+            description: 'Upload to Discord first, then paste the CDN link. Leave empty to remove.',
+            component: {
+                type: 4, // Text Input
+                custom_id: 'image',
+                style: 2, // Paragraph
+                value: currentImage,
+                required: false,
+                max_length: 500,
+                placeholder: 'https://cdn.discordapp.com/attachments/...'
+            }
+        };
+    }
+    const currentName = currentImage ? filenameFromImageUrl(currentImage, 45) : null;
+    return {
+        type: 18, // Label
+        label: 'Location Image (Displays under map)',
+        description: currentName
+            ? `Current: ${currentName} — uploading replaces it.`
+            : 'Upload an image to display under the map.',
+        component: {
+            type: 19, // File Upload — resolved on submit via resolveUploadedImageField
+            custom_id: IMAGE_UPLOAD_COMPONENT_ID,
+            min_values: 0,
+            max_values: 1,
+            required: false
+        }
+    };
+}
+
+/**
  * Create modal for map cell field editing
  */
-function createMapCellFieldModal(entityId, fieldGroupId, group, currentValues) {
+function createMapCellFieldModal(entityId, fieldGroupId, group, currentValues, options = {}) {
     const customId = `entity_modal_submit_map_cell_${entityId}_${fieldGroupId}`;
     const title = `Edit ${entityId} Details`;
 
@@ -832,20 +880,7 @@ function createMapCellFieldModal(entityId, fieldGroupId, group, currentValues) {
                                 max_length: 1000
                             }
                         },
-                        {
-                            type: 18, // Label
-                            label: 'Image URL (Displays under map)',
-                            description: 'Upload to Discord first, then paste the CDN link. Leave empty to remove.',
-                            component: {
-                                type: 4, // Text Input
-                                custom_id: 'image',
-                                style: 2, // Paragraph
-                                value: currentValues.baseContent?.image || '',
-                                required: false,
-                                max_length: 500,
-                                placeholder: 'https://cdn.discordapp.com/attachments/...'
-                            }
-                        }
+                        buildMapCellImageField(currentValues, options.imageUploadMode)
                     ]
                 }
             };

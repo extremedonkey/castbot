@@ -118,38 +118,15 @@ function getGridDimensions(mapData) {
 }
 
 /**
- * Find (or create) the hidden 🗺️map-storage channel. Backwards compatible —
- * renames a legacy "map-storage" channel if found. On CREATE, whitelisted
- * Roles & Security roles are granted ViewChannel + ManageChannels.
+ * Find (or create) the hidden 🗺️castbot-images channel (formerly 🗺️map-storage —
+ * legacy-named channels are adopted and renamed in place). Delegates to the shared
+ * image-storage module, which applies Roles & Security grants on create AND find.
  * @param {Guild} guild - Discord guild object
  * @returns {Promise<TextChannel>} The storage channel
  */
 async function findOrCreateMapStorageChannel(guild) {
-  let storageChannel = guild.channels.cache.find(ch => (ch.name === '🗺️map-storage' || ch.name === 'map-storage') && ch.type === 0);
-  if (storageChannel && storageChannel.name === 'map-storage') {
-    try { await storageChannel.setName('🗺️map-storage'); } catch (e) { /* rate limited or no perms */ }
-  }
-  if (!storageChannel) {
-    const roleAccessEntries = await getRoleAccessOverwrites(guild, SAFARI_CHANNEL_ACCESS, { logPrefix: 'MAP_STORAGE' });
-    storageChannel = await guild.channels.create({
-      name: '🗺️map-storage',
-      type: 0, // Text channel
-      topic: 'Storage for map images - do not delete',
-      permissionOverwrites: [
-        {
-          id: guild.roles.everyone.id,
-          deny: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages]
-        },
-        ...roleAccessEntries
-      ]
-    });
-  } else {
-    // Storage channel survives map deletion, so creation-time grants can never
-    // reach guilds where it already exists — merge whitelist grants in on find.
-    // No-op (cache check only) when grants are already present.
-    await ensureRoleAccessOnChannels(guild, [storageChannel], SAFARI_CHANNEL_ACCESS, { logPrefix: 'MAP_STORAGE' });
-  }
-  return storageChannel;
+  const { findOrCreateImageStorageChannel } = await import('./src/images/imageStorageChannel.js');
+  return findOrCreateImageStorageChannel(guild);
 }
 
 /**
@@ -1099,7 +1076,7 @@ async function updateMapImage(guild, userId, mapUrl) {
           content: `🖼️ Original pre-map image for ${guild.name} (updated ${new Date().toISOString().split('T')[0]})`,
           files: [origAttachment]
         });
-        progressMessages.push('🖼️ Original image saved to map-storage');
+        progressMessages.push('🖼️ Original image saved to #🗺️castbot-images');
       }
     } catch (e) {
       console.log(`⚠️ Could not post original image to storage: ${e.message}`);
@@ -1501,7 +1478,7 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
         content: `🖼️ Original pre-map image for ${guild.name} (created ${new Date().toISOString().split('T')[0]})`,
         files: [origAttachment]
       });
-      progressMessages.push('🖼️ Original image saved to map-storage');
+      progressMessages.push('🖼️ Original image saved to #🗺️castbot-images');
     } catch (e) {
       console.log(`⚠️ Could not post original image to storage: ${e.message}`);
     }

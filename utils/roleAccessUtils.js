@@ -10,10 +10,10 @@
 import { PermissionFlagsBits, PermissionsBitField } from 'discord.js';
 import { loadPlayerData } from '../storage.js';
 
-/** Bits granted on Safari channels (map locations, categories, 🗺️map-storage).
- * SendMessages is explicit because 🗺️map-storage denies it at @everyone level —
- * without it, whitelisted roles could see the channel but not post (locations
- * only deny ViewChannel, so Send falls through to base perms there). */
+/** Bits granted on Safari channels (map locations, categories, 🗺️castbot-images —
+ * formerly 🗺️map-storage). SendMessages is explicit because 🗺️castbot-images denies
+ * it at @everyone level — without it, whitelisted roles could see the channel but
+ * not post (locations only deny ViewChannel, so Send falls through to base perms). */
 export const SAFARI_CHANNEL_ACCESS = [
   PermissionFlagsBits.ViewChannel,
   PermissionFlagsBits.SendMessages,
@@ -109,8 +109,8 @@ export function hasAllRequiredBits(existingAllow, requiredBits) {
  * MERGE the whitelist's grants onto EXISTING channels via per-role
  * permissionOverwrites.edit() (never .set() — player/member overwrites are
  * untouched). Complements creation-time grants for channels that outlive
- * creation: the 🗺️map-storage channel survives map deletion, and Map Update
- * refreshes maps whose channels may predate the whitelist.
+ * creation: the 🗺️castbot-images channel (formerly 🗺️map-storage) survives map
+ * deletion, and Map Update refreshes maps whose channels may predate the whitelist.
  *
  * Skips roles whose overwrite already carries all required bits (cache check,
  * no API call), so repeat invocations are cheap no-ops.

@@ -6,6 +6,8 @@
 
 import { EDIT_CONFIGS, EDIT_TYPES } from './editFramework.js';
 import { loadPlayerData } from './storage.js';
+import { getBotEmoji } from './botEmojis.js';
+import { getImageUploadMode, IMAGE_UPLOAD_MODES } from './src/settings/generalSettings.js';
 
 /**
  * Create Roles & Security configuration UI
@@ -121,6 +123,7 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
         { type: 14 },
         { type: 10, content: `### \`\`\`🎛️ CastBot-Wide Settings\`\`\`` },
         { type: 1, components: [
+            { type: 2, custom_id: 'castbot_general', label: 'General', style: 2, emoji: getBotEmoji('castbot_logo') || { name: '⚙️' } },
             { type: 2, custom_id: 'safari_player_menu_config', label: 'Player Menu', style: 2, emoji: { name: '🕹️' } },
             { type: 2, custom_id: 'prod_manage_pronouns_timezones', label: 'Reaction Roles', style: 2, emoji: { name: '💜' } }
         ] },
@@ -314,8 +317,13 @@ async function createCurrentSettingsDisplay(guildId, config) {
     const inventoryName = config.inventoryName || 'Inventory';
     const inventoryEmoji = config.inventoryEmoji || '🧰';
 
+    // --- General (guild-wide, stored in playerData) ---
+    const imageUploadMode = await getImageUploadMode(guildId);
+    let display = `**⚙️ General**\n`;
+    display += `• Image Uploads: ${imageUploadMode === IMAGE_UPLOAD_MODES.UPLOAD_COMPONENT ? '🖼️ Upload Component' : '🔗 Paste URL'}\n\n`;
+
     // --- Currency & Inventory ---
-    let display = `**🪙 Currency & Inventory**\n`;
+    display += `**🪙 Currency & Inventory**\n`;
     display += `• Currency Name: ${currencyName}\n`;
     display += `• Currency Emoji: ${currencyEmoji}\n`;
     display += `• Inventory Name: ${inventoryName}\n`;
