@@ -217,6 +217,55 @@ export async function logItemAdminEdit({ guildId, userId, username, displayName,
 }
 
 /**
+ * Log an admin store items edit (store_items_multiselect — items added/removed from a store's catalog).
+ * Safari Log ONLY — this is a catalog change, not a player-owned event, so it does not
+ * belong in any player's activity history the way logItemAdminEdit's inventory edit does.
+ * @param {Object} params
+ * @param {string} params.guildId - Guild ID
+ * @param {string} params.userId - Admin who made the edit
+ * @param {string} params.username - Admin username
+ * @param {string} params.displayName - Admin display name
+ * @param {string} params.storeId - Store ID
+ * @param {string} params.storeName - Store name
+ * @param {string} params.storeEmoji - Store emoji
+ * @param {Array<{itemId:string,name:string,emoji:string}>} params.itemsAdded
+ * @param {Array<{itemId:string,name:string,emoji:string}>} params.itemsRemoved
+ * @param {string} params.channelName - Channel name
+ * @param {string} [params.channelId]
+ */
+export async function logStoreItemsEdit({ guildId, userId, username, displayName, storeId, storeName, storeEmoji, itemsAdded = [], itemsRemoved = [], channelName, channelId }) {
+  const safariContent = {
+    storeId,
+    storeName,
+    storeEmoji,
+    itemsAdded,
+    itemsRemoved,
+    channelName,
+    channelId,
+    username
+  };
+
+  const addedNames = itemsAdded.map(i => i.name).join(', ');
+  const removedNames = itemsRemoved.map(i => i.name).join(', ');
+  const summaryParts = [];
+  if (addedNames) summaryParts.push(`+${addedNames}`);
+  if (removedNames) summaryParts.push(`-${removedNames}`);
+
+  await logInteraction(
+    userId,
+    guildId,
+    'SAFARI_STORE_ITEMS_EDIT',
+    `Edited ${storeName} items (${summaryParts.join(', ')})`,
+    username,
+    null,
+    null,
+    channelName,
+    displayName,
+    safariContent
+  );
+}
+
+/**
  * Log an item being used (consumed)
  * @param {Object} params - Item use parameters
  * @param {string} params.guildId - Guild ID

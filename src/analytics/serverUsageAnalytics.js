@@ -189,6 +189,7 @@ function parseLogLine(line) {
             normalizedActionType === 'SAFARI_MOVEMENT' ||
             normalizedActionType === 'SAFARI_ITEM_PICKUP' ||
             normalizedActionType === 'SAFARI_ITEM_ADMIN_EDIT' ||
+            normalizedActionType === 'SAFARI_STORE_ITEMS_EDIT' ||
             normalizedActionType === 'SAFARI_ITEM_USE' ||
             normalizedActionType === 'SAFARI_CURRENCY' ||
             normalizedActionType === 'SAFARI_WHISPER' ||

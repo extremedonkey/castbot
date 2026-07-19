@@ -985,6 +985,7 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
       'SAFARI_WHISPER_READ': 'whispers',
       'SAFARI_ITEM_PICKUP': 'itemPickups',
       'SAFARI_ITEM_ADMIN_EDIT': 'itemPickups',
+      'SAFARI_STORE_ITEMS_EDIT': 'storeTransactions',
       'SAFARI_CURRENCY': 'currencyChanges',
       'SAFARI_PURCHASE': 'storeTransactions',
       'SAFARI_BUTTON': 'buttonActions',
@@ -1123,6 +1124,15 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
       case 'SAFARI_ITEM_ADMIN_EDIT':
         logMessage = `🔧 **ADMIN EDIT** | [${timestamp}] | **${userDisplayName}** (${safariContent.username || userDisplayName})\n> Set: ${safariContent.itemEmoji} **${safariContent.itemName}** to x${safariContent.quantity} (was x${safariContent.previousQuantity})`;
         break;
+
+      case 'SAFARI_STORE_ITEMS_EDIT': {
+        const addedList = (safariContent.itemsAdded || []).map(i => `${i.emoji || '📦'} ${i.name}`).join(', ');
+        const removedList = (safariContent.itemsRemoved || []).map(i => `${i.emoji || '📦'} ${i.name}`).join(', ');
+        logMessage = `🏪 **STORE ITEMS EDIT** | [${timestamp}] | **${userDisplayName}** (${safariContent.username || userDisplayName})\n> Store: ${safariContent.storeEmoji || '🏪'} **${safariContent.storeName}**`;
+        if (addedList) logMessage += `\n> Added: ${addedList}`;
+        if (removedList) logMessage += `\n> Removed: ${removedList}`;
+        break;
+      }
 
       case 'SAFARI_ITEM_USE': {
         let itemUseStaminaTag = '';

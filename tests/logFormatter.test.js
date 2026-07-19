@@ -87,6 +87,23 @@ describe('logFormatter — Safari other actions', () => {
     assert.ok(!line.includes('Picked up'));
   });
 
+  it('store items edit lists added and removed items, omitting empty sides', () => {
+    const both = fmt('SAFARI_STORE_ITEMS_EDIT', {
+      storeName: 'Tribal Supplies', storeEmoji: '🏪',
+      itemsAdded: [{ name: 'Axe', emoji: '🪓' }],
+      itemsRemoved: [{ name: 'Rope', emoji: '🪢' }]
+    });
+    assert.equal(both, `${TS} 🏪 **Store Edit** — **gabi!** updated 🏪 **Tribal Supplies**\n> Added: 🪓 Axe\n> Removed: 🪢 Rope`);
+
+    const addOnly = fmt('SAFARI_STORE_ITEMS_EDIT', {
+      storeName: 'Tribal Supplies', storeEmoji: '🏪',
+      itemsAdded: [{ name: 'Axe', emoji: '🪓' }],
+      itemsRemoved: []
+    });
+    assert.equal(addOnly, `${TS} 🏪 **Store Edit** — **gabi!** updated 🏪 **Tribal Supplies**\n> Added: 🪓 Axe`);
+    assert.ok(!addOnly.includes('Removed'));
+  });
+
   it('item use with snapshot uses code tags; without falls back to before→after', () => {
     const withSnap = fmt('SAFARI_ITEM_USE', { location: 'B2', itemEmoji: '🍖', itemName: 'Ration', quantity: 1, staminaBoost: 1, staminaSnapshot: { after: 3, max: 3, regenTime: 'Full' } });
     assert.ok(withSnap.includes('used 🍖 **Ration** x1 → +1 stamina `⚡3/3` `cd: MAX`'));

@@ -18483,9 +18483,33 @@ Your server is now ready for Tycoons gameplay!`;
         store.items = updatedItems;
         store.metadata = { ...(store.metadata || {}), lastModified: Date.now() };
         await saveSafariContent(safariData);
-        
+
         console.log(`✅ DEBUG: Store ${storeId} updated - now has ${updatedItems.length} items`);
-        
+
+        // Log to Safari log (guild-specific, not player log — this is a catalog edit, not a player event)
+        if (itemsToAdd.length > 0 || itemsToRemove.length > 0) {
+          try {
+            const { logStoreItemsEdit } = await import('./safariLogger.js');
+            const resolveItem = (itemId) => {
+              const item = safariData[guildId]?.items?.[itemId];
+              return { itemId, name: item?.name || itemId, emoji: item?.emoji || '📦' };
+            };
+            await logStoreItemsEdit({
+              guildId,
+              userId: member.user.id,
+              username: member.user.username,
+              displayName: member.nick || member.user.global_name || member.user.username,
+              storeId,
+              storeName: store.name,
+              storeEmoji: store.emoji,
+              itemsAdded: itemsToAdd.map(resolveItem),
+              itemsRemoved: itemsToRemove.map(resolveItem),
+              channelName: req.body.channel?.name,
+              channelId: req.body.channel?.id
+            });
+          } catch (e) { console.error('Store items edit log error:', e); }
+        }
+
         // Refresh UI
         const uiResponse = await createStoreItemManagementUI({
           storeId: storeId,

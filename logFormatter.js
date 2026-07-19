@@ -18,6 +18,7 @@ const ACTION_STYLE = {
   SAFARI_WHISPER_READ: { emoji: '🤫', label: 'Whisper Read' },
   SAFARI_ITEM_PICKUP: { emoji: '🧰', label: 'Item' },
   SAFARI_ITEM_ADMIN_EDIT: { emoji: '🔧', label: 'Admin Edit' },
+  SAFARI_STORE_ITEMS_EDIT: { emoji: '🏪', label: 'Store Edit' },
   SAFARI_ITEM_USE: { emoji: '⚡', label: 'Item' },
   SAFARI_CURRENCY: { emoji: '🪙', label: 'Currency' },
   SAFARI_PURCHASE: { emoji: '🛒', label: 'Purchase' },
@@ -179,6 +180,15 @@ export function formatEnhancedSafariLog(action, userDisplayName, safariContent =
 
     case 'SAFARI_ITEM_ADMIN_EDIT':
       return `${ts} 🔧 **Admin Edit**${loc} — ${name} edited ${safariContent.itemEmoji || '📦'} **${safariContent.itemName}** to x${safariContent.quantity} (was x${safariContent.previousQuantity})`;
+
+    case 'SAFARI_STORE_ITEMS_EDIT': {
+      const addedList = (safariContent.itemsAdded || []).map(i => `${i.emoji || '📦'} ${i.name}`).join(', ');
+      const removedList = (safariContent.itemsRemoved || []).map(i => `${i.emoji || '📦'} ${i.name}`).join(', ');
+      const parts = [];
+      if (addedList) parts.push(`Added: ${addedList}`);
+      if (removedList) parts.push(`Removed: ${removedList}`);
+      return `${ts} 🏪 **Store Edit** — ${name} updated ${safariContent.storeEmoji || '🏪'} **${safariContent.storeName}**${parts.length ? '\n> ' + parts.join('\n> ') : ''}`;
+    }
 
     case 'SAFARI_ITEM_USE': {
       const snapTags = safariContent.staminaSnapshot
