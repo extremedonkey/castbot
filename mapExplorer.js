@@ -2,7 +2,7 @@ import { ChannelType, PermissionFlagsBits } from 'discord.js';
 import sharp from 'sharp';
 // No libvips cache — ~0% hit rate, starves the 448MB prod box (RaP 0903)
 sharp.cache(false);
-import { promises as fs, readFileSync } from 'fs';
+import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -39,20 +39,11 @@ function mapBuildBusyResult(gate) {
   };
 }
 
-/**
- * MemAvailable from /proc/meminfo in MB (actual usable memory — os.freemem() misleads on
- * Linux by ignoring reclaimable cache; see docs/infrastructure-security/InfrastructureArchitecture.md).
- * @returns {number|null} available MB, or null when unreadable (non-Linux dev boxes → skip checks)
- */
-export function getAvailableMemMB() {
-  try {
-    const meminfo = readFileSync('/proc/meminfo', 'utf8');
-    const match = meminfo.match(/MemAvailable:\s+(\d+)/);
-    return match ? parseInt(match[1]) / 1024 : null;
-  } catch {
-    return null;
-  }
-}
+// Memory pre-flight primitives now live in the shared guard (utils/memoryGuard.js) so
+// other expensive interactions (bulk analytics, incident 06) use the same checks.
+// Re-exported here because the map-build flow in app.js imports them from this module.
+import { getAvailableMemMB, buildHighUsageWarning } from './utils/memoryGuard.js';
+export { getAvailableMemMB };
 
 // Import loadSafariContent and saveSafariContent from safariManager to benefit from caching
 import { loadSafariContent, saveSafariContent } from './safariManager.js';
@@ -1732,28 +1723,7 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
 export function buildLowMemoryWarning(availMB) {
   // Real numbers go to the log only — user-facing copy stays "high usage" (no internals)
   console.warn(`⚠️ Map build pre-flight: ${availMB.toFixed(0)}MB available (<120MB) — showing High Usage warning`);
-  return {
-    flags: 64 | (1 << 15), // EPHEMERAL | IS_COMPONENTS_V2
-    components: [{
-      type: 17, // Container
-      components: [
-        {
-          type: 10, // Text Display
-          content: `## ⚠️ High Usage\n\nCastBot is under heavy ORG usage currently.\n\nBest option: try again in a few hours. Or proceed now at your own risk.`
-        },
-        {
-          type: 1, // Action Row
-          components: [{
-            type: 2, // Button
-            custom_id: 'map_build_proceed',
-            label: 'Proceed Anyway',
-            style: 4, // Danger
-            emoji: { name: '⚠️' }
-          }]
-        }
-      ]
-    }]
-  };
+  return buildHighUsageWarning({ proceedCustomId: 'map_build_proceed' });
 }
 
 /**
