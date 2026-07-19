@@ -68,7 +68,10 @@ export function extractMessageText(message) {
     }
   };
   walk(message?.components);
-  return out.join('\n').trim();
+  const text = out.join('\n').trim();
+  // Strip the Test Steps checklist — it's a manual QA aid for Reece, not context the Moai
+  // needs. Cutting it frees up the 4000-char modal cap for the change/error text that matters.
+  return text.replace(/\n### ```🧪 Test Steps```[\s\S]*?(?=\n\n|$)/, '').trim();
 }
 
 /** Modal text inputs cap at 4000 chars; leave room for the truncation ellipsis. */

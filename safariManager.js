@@ -1139,7 +1139,7 @@ async function executeGiveCurrency(config, userId, guildId, interaction, buttonI
                         accent_color: 0xE74C3C,
                         components: [{
                             type: 10,
-                            content: `❌⏰ **${customTerms.currencyEmoji || '🪙'} ${amountStr} ${customTerms.currencyName}** — You can only claim this every **${formatPeriod(config.limit.periodMs)}**. Wait **${formatPeriod(remainingMs)}**.`
+                            content: `❌⏰ **Unable to claim** — **${customTerms.currencyEmoji || '🪙'} ${amountStr} ${customTerms.currencyName}** — You can only claim this every **${formatPeriod(config.limit.periodMs)}**. Wait **${formatPeriod(remainingMs)}**.`
                         }]
                     }]
                 };
