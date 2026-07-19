@@ -377,6 +377,18 @@ export async function createAnchorMessageComponents(coordData, guildId, coord, f
   components.push(navRow);
 
   const result = [{ type: 17, components }];
+
+  // Defense-in-depth: run the finished anchor tree through the central emoji sanitizer.
+  // Store/drop button emojis come from createSafeEmoji(), which validates FORMAT but not
+  // render-time reachability — a store carrying a custom emoji from another guild, a deleted
+  // emoji, or a brand-new Unicode codepoint yields a button emoji Discord rejects with
+  // COMPONENT_INVALID_EMOJI (50035), failing the whole anchor. DiscordRequest sanitizes the
+  // PATCH path, but anchors also ship via channel.send() (repostAnchorMessage) which bypasses
+  // it. Sanitizing here — at the single source both paths share — falls bad emojis back to 📦
+  // so adding a store to a channel can never take down the anchor. See utils/emojiUtils.js.
+  const { sanitizeComponentEmojis } = await import('./utils/emojiUtils.js');
+  sanitizeComponentEmojis(result);
+
   const totalCount = countComponents(result, { enableLogging: false });
   console.log(`📋 Anchor ${coord}: ${totalCount}/40 components (${allButtons.length} buttons)`);
 
