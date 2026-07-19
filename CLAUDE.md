@@ -728,6 +728,23 @@ When in doubt, create the document - disk space is cheap, context is expensive.
     - `git log`, `git show`, `git diff`, `git status` (read-only git operations)
     - `pm2 list`, `pm2 status`, `pm2 info`, `pm2 logs` (read-only PM2 monitoring)
 
+### 🗿 Prod Access from the Test Box (castbot-blue)
+
+The box has its own dedicated prod key: `~/.ssh/castbot-prod` (ed25519, comment `moai@castbot-blue prod access`), used via the `castbot-prod` SSH alias → `bitnami@13.238.148.170`. It is a full-shell key — but **the key existing is not permission to use it for writes**. Check it's live with `ssh castbot-prod 'echo ok'`.
+
+**✅ Allowed freely (read-only, no permission needed):** the same read-only whitelist as above (`cat`/`grep`/`tail`/`head`/`ls`/`find`/`wc`/`stat`/`sed -n`/`awk`, read-only `git log|show|diff|status`, `pm2 list|status|info|logs`, `node -e` with `console.log`/`readFileSync` only), plus `curl -I https://castbotaws.reecewagner.com/interactions` (health check).
+
+**🔴 Requires Reece's explicit word IN THE CURRENT conversation — every time:**
+- `pm2 restart castbot-pm` (the only approved mutation, and only when asked)
+- ANY prod file write: `scp` TO prod, `>`/`>>` redirects, `tee`, `sed -i`, `rm`, `mv`, `cp`
+- `git pull`/`checkout`/`reset` (anything changing the prod working tree), `npm install`, `sudo` anything, Apache/nginx restarts
+
+**⛔ NEVER from the box, even if asked casually:** deploying code to prod (that goes through the laptop's `npm run deploy-remote-wsl` only); `pm2 delete`/`pm2 start` (loses env); editing prod `.env`; touching prod data files.
+
+**One authorization = one action.** "Restart prod" authorizes ONE restart, not a session of them. If a fix needs prod changes: verify on test, then Reece deploys.
+
+**Revocation:** delete the `moai@castbot-blue` line from prod's `~/.ssh/authorized_keys` — the box is locked out instantly, no key rotation needed.
+
 ## 📐 app.js Organization
 
 ### Key Imports

@@ -3,12 +3,17 @@
  * Discord-ready markdown chunks. Extracted verbatim from the prod_live_analytics
  * handler in app.js (router, not processor — CLAUDE.md golden rule).
  *
- * NOTE: generateLiveAnalyticsChunks reads the ENTIRE analytics log into memory —
- * callers must run a memory pre-flight first (utils/memoryGuard.js, incident 06).
+ * NOTE: generateLiveAnalyticsChunks tail-reads the analytics log (bounded, see
+ * LIVE_TAIL_MAX_BYTES) — callers should still run a memory pre-flight first
+ * (utils/memoryGuard.js, incident 06).
  */
 
-import fs from 'fs';
 import { getLogFilePath } from './analyticsLogger.js';
+import { readFileTail } from '../../utils/fileTail.js';
+
+// Bounded tail-read budget (incident 06): the 1-day view needs recent lines only.
+// 2MB ≈ 4× the busiest day observed (Jul 2026, two live safari seasons ≈ 500KB/day).
+const LIVE_TAIL_MAX_BYTES = 2 * 1024 * 1024;
 
 // Default buttons to filter out (same as liveAnalytics.js)
 const DEFAULT_FILTERED_BUTTONS = [
@@ -153,11 +158,13 @@ export function chunkOutput(formattedOutput, maxLength = 1900) {
 }
 
 /**
- * Read the analytics log and return the last-N-days report as Discord message chunks.
- * ⚠️ Reads the whole log file — run checkExpensiveOpHeadroom() before calling.
+ * Read the analytics log tail and return the last-N-days report as Discord message chunks.
+ * Bounded read (LIVE_TAIL_MAX_BYTES) — still run checkExpensiveOpHeadroom() before calling.
  */
-export function generateLiveAnalyticsChunks(days = 1) {
-  const logFile = getLogFilePath();
-  const logContent = fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8') : null;
-  return chunkOutput(buildLiveAnalyticsOutput(logContent, days).trim());
+export async function generateLiveAnalyticsChunks(days = 1) {
+  const tail = await readFileTail(getLogFilePath(), LIVE_TAIL_MAX_BYTES);
+  if (tail?.truncated) {
+    console.log(`🔴 Live analytics: tail-read last ${(tail.text.length / 1048576).toFixed(1)}MB of ${(tail.fileSize / 1048576).toFixed(1)}MB log`);
+  }
+  return chunkOutput(buildLiveAnalyticsOutput(tail ? tail.text : null, days).trim());
 }

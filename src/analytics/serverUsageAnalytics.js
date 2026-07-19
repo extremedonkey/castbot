@@ -8,8 +8,16 @@
 import fs from 'fs';
 import path from 'path';
 import { formatBotEmoji } from '../../botEmojis.js';
+import { readFileTail } from '../../utils/fileTail.js';
 
 const USER_ANALYTICS_LOG = './logs/user-analytics.log';
+
+// Bounded tail-read budget (incident 06): the log keeps FULL history on disk, but we
+// never materialize the whole file — 15MB comfortably covers the 42-day analysis
+// window (~6MB at Jul 2026 traffic; ~2.5× headroom) while capping the parse cost as
+// the archive grows. If the truncation log below fires AND rankings look short, the
+// window outgrew the budget — raise this, don't remove it.
+const ANALYTICS_TAIL_MAX_BYTES = 15 * 1024 * 1024;
 
 /**
  * Parse timestamp from log line
@@ -229,14 +237,16 @@ function parseLogLine(line) {
  */
 async function parseUserAnalyticsLog() {
   try {
-    if (!fs.existsSync(USER_ANALYTICS_LOG)) {
+    const tail = await readFileTail(USER_ANALYTICS_LOG, ANALYTICS_TAIL_MAX_BYTES);
+    if (!tail) {
       console.warn(`Analytics log file not found: ${USER_ANALYTICS_LOG}`);
       return [];
     }
-    
-    const logData = await fs.promises.readFile(USER_ANALYTICS_LOG, 'utf8');
-    const lines = logData.split('\n').filter(line => line.trim());
-    
+    if (tail.truncated) {
+      console.log(`📈 Bounded tail-read: last ${(tail.text.length / 1048576).toFixed(1)}MB of ${(tail.fileSize / 1048576).toFixed(1)}MB analytics log (older lines skipped — full history preserved on disk)`);
+    }
+    const lines = tail.text.split('\n').filter(line => line.trim());
+
     console.log(`📈 DEBUG: Found ${lines.length} lines in analytics log`);
     
     const parsedEntries = [];
@@ -791,13 +801,13 @@ function calculateOptimalServerLimit(rankedServers) {
  */
 async function parseRecentServerInstalls(limit = 5, playerData = null) {
   try {
-    if (!fs.existsSync(USER_ANALYTICS_LOG)) {
+    // Bounded tail (incident 06): "most recent N installs" are by definition in the tail
+    const tail = await readFileTail(USER_ANALYTICS_LOG, ANALYTICS_TAIL_MAX_BYTES);
+    if (!tail) {
       return [];
     }
-    
-    const logData = await fs.promises.readFile(USER_ANALYTICS_LOG, 'utf8');
-    const lines = logData.split('\n').filter(line => line.trim());
-    
+    const lines = tail.text.split('\n').filter(line => line.trim());
+
     const serverInstalls = [];
     
     for (const line of lines) {

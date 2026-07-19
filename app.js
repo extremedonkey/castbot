@@ -13982,8 +13982,8 @@ Your server is now ready for Tycoons gameplay!`;
             };
           }
 
-          // Memory pre-flight (incident 06): reads the ENTIRE analytics log (~20MB+) into
-          // V8 heap — fatal when run near the heap ceiling. Decline politely instead.
+          // Memory pre-flight (incident 06): tail-reads + formats the last day of the
+          // analytics log — still a chunky parse; decline politely near the heap ceiling.
           const { checkExpensiveOpHeadroom, buildHighUsageWarning } = await import('./utils/memoryGuard.js');
           const headroom = checkExpensiveOpHeadroom({ minHeapHeadroomMB: 150, minAvailableMB: 50, label: 'prod_live_analytics' });
           if (!headroom.ok) {
@@ -13993,7 +13993,7 @@ Your server is now ready for Tycoons gameplay!`;
           console.log('✅ DEBUG: Live analytics user authorized...');
 
           const { generateLiveAnalyticsChunks } = await import('./src/analytics/liveAnalyticsReport.js');
-          const chunks = generateLiveAnalyticsChunks(1);
+          const chunks = await generateLiveAnalyticsChunks(1);
 
           console.log('✅ DEBUG: Sending live analytics response with', chunks.length, 'chunks, content length:', chunks[0].length);
           
@@ -14056,8 +14056,8 @@ Your server is now ready for Tycoons gameplay!`;
             };
           }
 
-          // Memory pre-flight (incident 06): parses the ENTIRE analytics log (~100k lines)
-          // into entry objects — this exact button was the killing blow on 2026-07-19.
+          // Memory pre-flight (incident 06): tail-reads up to 15MB of analytics log into
+          // ~80k entry objects — this exact button was the killing blow on 2026-07-19.
           const { checkExpensiveOpHeadroom, buildHighUsageWarning } = await import('./utils/memoryGuard.js');
           const headroom = checkExpensiveOpHeadroom({ minHeapHeadroomMB: 150, minAvailableMB: 50, label: 'prod_server_usage_stats' });
           if (!headroom.ok) {
@@ -14378,8 +14378,8 @@ Your server is now ready for Tycoons gameplay!`;
             };
           }
 
-          // Memory pre-flight (incident 06): every page navigation re-parses the entire
-          // analytics log (the 2026-07-19 fatal was a page click 20s after the first parse).
+          // Memory pre-flight (incident 06): every page navigation re-runs the bounded
+          // tail parse (the 2026-07-19 fatal was a page click 20s after the first parse).
           const { checkExpensiveOpHeadroom, buildHighUsageWarning } = await import('./utils/memoryGuard.js');
           const headroom = checkExpensiveOpHeadroom({ minHeapHeadroomMB: 150, minAvailableMB: 50, label: 'server_stats_page' });
           if (!headroom.ok) {

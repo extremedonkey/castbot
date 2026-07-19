@@ -80,14 +80,14 @@ Ultramonitor/health checks are cheap in-process metric reads — not a factor.
 
 ## Recommended Actions (priority order)
 
-| # | Action | Type | Effort |
+| # | Action | Type | Status |
 |---|---|---|---|
-| 1 | **Shorten 🌙 Auto-Restart interval 24h → 12h** (Data menu modal — no code, no deploy) | Config | 1 min |
-| 2 | **Delete the 1.1GB `core`; disable core dumps** for the PM2 unit (`LimitCORE=0` in `pm2-bitnami.service` or `kernel.core_pattern`) — it contains live Discord tokens | Prod ops (permission) | 5 min |
-| 3 | **Rotate `user-analytics.log`** (logrotate daily/weekly, keep ~42 days to match the analytics window) + make Server Stats read a bounded tail instead of the whole file, with a heap-headroom pre-flight like map builds | Ops + code | small |
-| 4 | **playerData in-memory cache with mtime invalidation** — incident 03's P1, three months overdue and now the dominant churn source (3,338 parses/day) | Code (careful, cache-adjacent — needs Reece sign-off per prior incidents) | medium |
-| 5 | **Compact JSON in prod** (`JSON.stringify(data)` env-gated) — the open decision from RaP 0903; at 5.3MB it's now worth ~1.5–2MB per parse/save | Code (Reece decides) | tiny |
-| 6 | **1GB+ Lightsail migration** — the box is now genuinely under-provisioned for the workload; verify static-IP reattach path (RaP 0896 §F) | Infra | planned window |
+| 1 | **Shorten 🌙 Auto-Restart interval 24h → 12h** (Data menu modal — no code, no deploy) | Config | ⏳ Reece |
+| 2 | **Delete the 1.1GB `core`; disable core dumps** — it contained live Discord tokens and added ~40s to crash recovery | Prod ops | ✅ **Done 2026-07-19**: core deleted (disk 61% → 7.4GB free); `LimitCORE=0` drop-in at `pm2-bitnami.service.d/50-no-coredump.conf` + `prlimit --core=0:0` applied to the running PM2 daemon AND bot (immediate effect; drop-in covers reboots) |
+| 3 | **Bounded tail-read for bulk analytics** + heap pre-flight like map builds. ~~logrotate~~ — **rotation declined by Reece: full history stays on disk by design** (archive is valued); readers are bounded instead (`utils/fileTail.js`: 15MB server stats / 2MB live analytics) | Code | ✅ Done 2026-07-19 (pre-flight: `utils/memoryGuard.js` — box-RAM + V8-heap budgets — on all three bulk analytics buttons). Full history also mirrored to the Windows dev tree `logs/user-analytics.log` |
+| 4 | **playerData in-memory cache with mtime invalidation** — incident 03's P1, three months overdue and now the dominant churn source (3,338 parses/day) | Code (careful, cache-adjacent — needs Reece sign-off per prior incidents) | ⏳ |
+| 5 | **Compact JSON in prod** (`JSON.stringify(data)` env-gated) — the open decision from RaP 0903; at 5.3MB it's now worth ~1.5–2MB per parse/save | Code (Reece decides) | ⏳ |
+| 6 | **1GB+ Lightsail migration** — the box is now genuinely under-provisioned for the workload; verify static-IP reattach path (RaP 0896 §F) | Infra | ⏳ planned window |
 
 ## Related
 
