@@ -10752,6 +10752,7 @@ To fix this:
         id: 'moai_ask',
         requiresModal: true,
         handler: async (context) => {
+          const { buildModelSelectField, DEFAULT_MODEL } = await import('./claudeRunner.js');
           const prevResponseId = custom_id.startsWith('moai_ask_ctx_') ? custom_id.replace('moai_ask_ctx_', '') : null;
           const prevContext = prevResponseId ? global.moaiResponses?.get(prevResponseId) : null;
           return {
@@ -10760,6 +10761,7 @@ To fix this:
               custom_id: prevResponseId ? `moai_ask_modal_${prevResponseId}` : 'moai_ask_modal',
               title: '🗿 Ask The Moai',
               components: [
+                buildModelSelectField('moai_model', prevContext?.model || DEFAULT_MODEL),
                 ...(prevContext ? [{
                   type: 18,
                   label: 'Previous conversation (context for the Moai)',

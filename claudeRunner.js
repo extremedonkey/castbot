@@ -28,6 +28,54 @@ import { existsSync } from 'fs';
 import path from 'path';
 import os from 'os';
 
+/**
+ * Model choice offered in the Moai / Ask CastBot modals. Values are bare CLI aliases, not
+ * dated model IDs — the `claude` CLI resolves each alias to its own current highest-version
+ * snapshot (e.g. picks Sonnet 5.1 over 5.0 the moment it ships), so this list never needs
+ * updating when Anthropic ships a new point release. That resolution IS the "which version"
+ * logic; we don't duplicate it here.
+ */
+export const MODEL_OPTIONS = [
+  { value: 'haiku', label: 'Haiku', description: 'Fastest, cheapest — quick lookups', emoji: { name: '🍃' } },
+  { value: 'sonnet', label: 'Sonnet', description: 'Balanced speed and intelligence', emoji: { name: '⚖️' }, default: true },
+  { value: 'opus', label: 'Opus', description: 'Most capable — hard problems', emoji: { name: '🧠' } },
+  { value: 'fable', label: 'Fable', description: "Anthropic's most capable model", emoji: { name: '📖' } }
+];
+
+export const DEFAULT_MODEL = 'sonnet';
+const MODEL_VALUES = new Set(MODEL_OPTIONS.map(m => m.value));
+
+/** Guard a modal-supplied model value against forgery or a stale option — fall back to sonnet. */
+export function resolveModelChoice(value) {
+  return MODEL_VALUES.has(value) ? value : DEFAULT_MODEL;
+}
+
+/** Display label for the response footer, e.g. "Sonnet". */
+export function modelLabel(value) {
+  return (MODEL_OPTIONS.find(m => m.value === value) || MODEL_OPTIONS.find(m => m.value === DEFAULT_MODEL)).label;
+}
+
+/**
+ * Build the Label+StringSelect modal field for picking a model.
+ * @param {string} customId - unique within the modal (e.g. 'moai_model', 'askcb_model')
+ * @param {string} [chosen] - re-selects the prior pick on a Follow Up / Ask Another
+ */
+export function buildModelSelectField(customId, chosen = DEFAULT_MODEL) {
+  return {
+    type: 18,
+    label: 'Model',
+    description: 'Which Claude model should answer?',
+    component: {
+      type: 3,
+      custom_id: customId,
+      required: false,
+      options: MODEL_OPTIONS.map(({ value, label, description, emoji }) => ({
+        value, label, description, emoji, default: value === chosen
+      }))
+    }
+  };
+}
+
 /** Discord interaction tokens are valid for 15 minutes after the deferred response. */
 export const TOKEN_LIFETIME_MS = 15 * 60 * 1000;
 /** Reserve time to render + PATCH the answer before the token dies. */
@@ -103,22 +151,40 @@ export function describeActivity(event) {
  * @param {string} [opts.tools]                - hard allowlist for --tools (omit = CLI default)
  * @param {string[]} [opts.deny]               - --disallowed-tools rules
  * @param {string} [opts.cwd]                  - working directory
+ * @param {string} [opts.model]                - CLI --model value (e.g. 'sonnet', 'opus'); omit for CLI default
  * @param {Function} [opts.onHeartbeat]        - ({elapsedMs, activity, toolCount}) => void|Promise
  * @param {number} [opts.heartbeatMs]
  * @param {number} [opts.hardKillMs]
  * @returns {Promise<{text: string, durationMs: number, numTurns: number, denials: Array, costUsd: number|null}>}
  */
-export function runClaudeJob({
+export async function runClaudeJob(opts) {
+  const { model } = opts || {};
+  try {
+    return await spawnClaudeJob(opts);
+  } catch (error) {
+    // A picked model that's misspelled, retired, or not yet recognized by this CLI install
+    // shouldn't kill the whole request — retry once on the safe default before giving up.
+    if (model && model !== DEFAULT_MODEL) {
+      console.warn(`⚠️ Claude CLI failed with model "${model}" (${error.message}) — retrying with ${DEFAULT_MODEL}`);
+      return spawnClaudeJob({ ...opts, model: DEFAULT_MODEL });
+    }
+    throw error;
+  }
+}
+
+function spawnClaudeJob({
   prompt,
   tools,
   deny = [],
   cwd = process.cwd(),
+  model,
   onHeartbeat,
   heartbeatMs = HEARTBEAT_MS,
   hardKillMs = HARD_KILL_MS
 } = {}) {
   return new Promise((resolve, reject) => {
     const args = ['--print', '--output-format', 'stream-json', '--verbose'];
+    if (model) args.push('--model', model);
     if (tools) args.push('--tools', tools);
     if (deny.length) args.push('--disallowed-tools', ...deny);
     args.push('-p', prompt);

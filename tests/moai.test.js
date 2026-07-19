@@ -62,12 +62,14 @@ describe('Moai — extractMessageText', () => {
 });
 
 describe('Moai — buildContextAskModal', () => {
-  it('reuses the moai_ask_modal submit route and Label-wraps both inputs', () => {
+  it('reuses the moai_ask_modal submit route and Label-wraps the model select plus both inputs', () => {
     const modal = buildContextAskModal('some error text');
     assert.equal(modal.custom_id, 'moai_ask_modal');
-    assert.equal(modal.components.length, 2);
+    assert.equal(modal.components.length, 3);
     for (const label of modal.components) assert.equal(label.type, 18); // Label, not ActionRow
-    const [ctx, query] = modal.components.map(l => l.component);
+    const [model, ctx, query] = modal.components.map(l => l.component);
+    assert.equal(model.type, 3); // String Select
+    assert.equal(model.custom_id, 'moai_model');
     assert.equal(ctx.type, 4);
     assert.equal(ctx.custom_id, 'moai_msg_context');
     assert.equal(ctx.required, false);
@@ -76,15 +78,22 @@ describe('Moai — buildContextAskModal', () => {
     assert.equal(query.required, true);
   });
 
+  it('defaults the model select to sonnet, or re-selects a prior pick', () => {
+    const fresh = buildContextAskModal('text').components[0].component;
+    assert.equal(fresh.options.find(o => o.default).value, 'sonnet');
+    const carried = buildContextAskModal('text', 'opus').components[0].component;
+    assert.equal(carried.options.find(o => o.default).value, 'opus');
+  });
+
   it('truncates long context under the 4000-char input cap', () => {
     const modal = buildContextAskModal('x'.repeat(5000));
-    const ctx = modal.components[0].component;
+    const ctx = modal.components[1].component;
     assert.ok(ctx.value.length <= ctx.max_length);
     assert.ok(ctx.value.endsWith('...'));
   });
 
   it('omits value entirely when the message had no text', () => {
-    const ctx = buildContextAskModal('').components[0].component;
+    const ctx = buildContextAskModal('').components[1].component;
     assert.equal('value' in ctx, false);
     assert.ok(ctx.placeholder);
   });

@@ -14,7 +14,7 @@
 
 import fs from 'fs';
 import { InteractionResponseType, InteractionResponseFlags } from 'discord-interactions';
-import { runClaudeJob, safeDeliver, formatElapsed, HARD_KILL_MS } from './claudeRunner.js';
+import { runClaudeJob, safeDeliver, formatElapsed, HARD_KILL_MS, buildModelSelectField, resolveModelChoice, modelLabel, DEFAULT_MODEL } from './claudeRunner.js';
 
 const MAX_CHUNK = 3500;
 const ACCENT = 0x808080;
@@ -79,14 +79,16 @@ const MODAL_CONTEXT_MAX = 3500;
  * custom_id reuses `moai_ask_modal` so the existing MODAL_SUBMIT route handles it —
  * the field scrape there picks up `moai_msg_context` with zero new routing.
  * @param {string} contextText - output of extractMessageText()
+ * @param {string} [chosenModel] - re-selects the prior pick on a Follow Up
  * @returns {Object} modal `data` payload
  */
-export function buildContextAskModal(contextText) {
+export function buildContextAskModal(contextText, chosenModel = DEFAULT_MODEL) {
   const value = truncate(String(contextText || ''), MODAL_CONTEXT_MAX);
   return {
     custom_id: 'moai_ask_modal',
     title: '🗿 Ask The Moai',
     components: [
+      buildModelSelectField('moai_model', chosenModel),
       {
         type: 18,
         label: 'Context (auto-filled from the message)',
@@ -169,7 +171,7 @@ export function buildProgressContainer(query, progress = null) {
   return { type: 17, accent_color: ACCENT, components: lines };
 }
 
-export function buildFirstContainer({ query, chunk, elapsed, chunkCount, responseId }) {
+export function buildFirstContainer({ query, chunk, elapsed, chunkCount, responseId, model }) {
   return {
     type: 17,
     accent_color: ACCENT,
@@ -179,7 +181,7 @@ export function buildFirstContainer({ query, chunk, elapsed, chunkCount, respons
       { type: 14 },
       { type: 10, content: chunk },
       { type: 14 },
-      { type: 10, content: `-# 🗿 ${elapsed}${chunkCount > 1 ? ` · ${chunkCount} parts` : ''}` },
+      { type: 10, content: `-# 🗿 ${elapsed}${chunkCount > 1 ? ` · ${chunkCount} parts` : ''} · ${modelLabel(model)}` },
       ...(chunkCount === 1 ? [actionRow(responseId)] : [])
     ]
   };
@@ -250,9 +252,11 @@ export async function handleMoaiModalSubmit(req, res) {
   const fields = {};
   for (const comp of (req.body.data.components || [])) {
     const inner = comp?.component || comp?.components?.[0];
-    if (inner?.custom_id) fields[inner.custom_id] = inner.value;
+    // Text inputs carry `value`; String Selects (the model picker) carry `values: [...]`.
+    if (inner?.custom_id) fields[inner.custom_id] = inner.value ?? inner.values?.[0];
   }
   const query = fields.moai_query;
+  const model = resolveModelChoice(fields.moai_model);
 
   if (!isMoaiEnvironment()) {
     return res.send({
@@ -291,18 +295,19 @@ export async function handleMoaiModalSubmit(req, res) {
     // No tools/deny: the Moai is allowed to change code. That's its job.
     const { text: response, durationMs } = await runClaudeJob({
       prompt: buildPrompt(query, fields.moai_prev_context, fields.moai_msg_context),
+      model,
       onHeartbeat: (progress) => deliver({ components: [buildProgressContainer(query, progress)] })
     });
 
     const elapsed = formatElapsed(durationMs);
-    console.log(`🗿 Moai responded (${response.length} chars, ${elapsed})`);
+    console.log(`🗿 Moai responded (${response.length} chars, ${elapsed}, ${model})`);
 
     const responseId = Date.now().toString(36);
-    rememberResponse(responseId, { response, query, elapsed });
+    rememberResponse(responseId, { response, query, elapsed, model });
 
     const chunks = chunkResponse(response);
     await deliver({
-      components: [buildFirstContainer({ query, chunk: chunks[0], elapsed, chunkCount: chunks.length, responseId })]
+      components: [buildFirstContainer({ query, chunk: chunks[0], elapsed, chunkCount: chunks.length, responseId, model })]
     });
     for (let i = 1; i < chunks.length; i++) {
       await createFollowupMessage(token, {

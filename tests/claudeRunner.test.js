@@ -123,6 +123,88 @@ describe('claudeRunner — describeActivity', () => {
   });
 });
 
+// --- model selection (Moai / Ask CastBot model dropdown) ---
+const MODEL_OPTIONS = [
+  { value: 'haiku', label: 'Haiku', description: 'Fastest, cheapest — quick lookups', emoji: { name: '🍃' } },
+  { value: 'sonnet', label: 'Sonnet', description: 'Balanced speed and intelligence', emoji: { name: '⚖️' }, default: true },
+  { value: 'opus', label: 'Opus', description: 'Most capable — hard problems', emoji: { name: '🧠' } },
+  { value: 'fable', label: 'Fable', description: "Anthropic's most capable model", emoji: { name: '📖' } }
+];
+const DEFAULT_MODEL = 'sonnet';
+const MODEL_VALUES = new Set(MODEL_OPTIONS.map(m => m.value));
+
+function resolveModelChoice(value) {
+  return MODEL_VALUES.has(value) ? value : DEFAULT_MODEL;
+}
+
+function modelLabel(value) {
+  return (MODEL_OPTIONS.find(m => m.value === value) || MODEL_OPTIONS.find(m => m.value === DEFAULT_MODEL)).label;
+}
+
+function buildModelSelectField(customId, chosen = DEFAULT_MODEL) {
+  return {
+    type: 18,
+    label: 'Model',
+    description: 'Which Claude model should answer?',
+    component: {
+      type: 3,
+      custom_id: customId,
+      required: false,
+      options: MODEL_OPTIONS.map(({ value, label, description, emoji }) => ({
+        value, label, description, emoji, default: value === chosen
+      }))
+    }
+  };
+}
+
+describe('Model selection — resolveModelChoice', () => {
+  it('accepts every known variant', () => {
+    assert.equal(resolveModelChoice('haiku'), 'haiku');
+    assert.equal(resolveModelChoice('sonnet'), 'sonnet');
+    assert.equal(resolveModelChoice('opus'), 'opus');
+    assert.equal(resolveModelChoice('fable'), 'fable');
+  });
+
+  it('falls back to sonnet for a forged, stale, or missing value', () => {
+    assert.equal(resolveModelChoice('claude-3-opus-20240229'), DEFAULT_MODEL);
+    assert.equal(resolveModelChoice('__proto__'), DEFAULT_MODEL);
+    assert.equal(resolveModelChoice(undefined), DEFAULT_MODEL);
+    assert.equal(resolveModelChoice(''), DEFAULT_MODEL);
+  });
+});
+
+describe('Model selection — modelLabel', () => {
+  it('renders the display label for each variant', () => {
+    assert.equal(modelLabel('haiku'), 'Haiku');
+    assert.equal(modelLabel('opus'), 'Opus');
+    assert.equal(modelLabel('fable'), 'Fable');
+  });
+
+  it('falls back to the Sonnet label for an unknown value', () => {
+    assert.equal(modelLabel('not-a-model'), 'Sonnet');
+    assert.equal(modelLabel(undefined), 'Sonnet');
+  });
+});
+
+describe('Model selection — buildModelSelectField', () => {
+  it('marks the chosen option as default and no other', () => {
+    const field = buildModelSelectField('moai_model', 'opus');
+    const opts = field.component.options;
+    assert.equal(opts.find(o => o.value === 'opus').default, true);
+    assert.equal(opts.filter(o => o.default).length, 1);
+  });
+
+  it('defaults to sonnet when no prior choice exists', () => {
+    const field = buildModelSelectField('askcb_model');
+    assert.equal(field.component.options.find(o => o.value === 'sonnet').default, true);
+  });
+
+  it('uses the given custom_id so multiple modals do not collide', () => {
+    const field = buildModelSelectField('askcb_model', 'haiku');
+    assert.equal(field.component.custom_id, 'askcb_model');
+  });
+});
+
 // --- route detection (Tools menu vs posted button) ---
 const isPublicRoute = (customId) => String(customId || '').startsWith('askcb_pub_modal');
 

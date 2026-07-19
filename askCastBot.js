@@ -28,7 +28,7 @@
 
 import fs from 'fs';
 import { InteractionResponseType, InteractionResponseFlags } from 'discord-interactions';
-import { runClaudeJob, safeDeliver, formatElapsed, HARD_KILL_MS } from './claudeRunner.js';
+import { runClaudeJob, safeDeliver, formatElapsed, HARD_KILL_MS, buildModelSelectField, resolveModelChoice, modelLabel, DEFAULT_MODEL } from './claudeRunner.js';
 
 /** Guilds where any CastBot admin may use Ask CastBot. */
 export const ALLOWED_GUILD_IDS = [
@@ -271,10 +271,12 @@ export function buildAskModal(prevContext = null, prevResponseId = null, isPubli
   // A Follow Up re-defaults to the level the asker picked last time — re-choosing it on
   // every turn would be busywork. Falls back to Balanced for a fresh question.
   const chosen = prevContext?.complexity || DEFAULT_COMPLEXITY;
+  const chosenModel = prevContext?.model || DEFAULT_MODEL;
   return {
     custom_id: prevResponseId ? `${stem}_${prevResponseId}` : stem,
     title: '👾 Ask CastBot',
     components: [
+      buildModelSelectField('askcb_model', chosenModel),
       {
         type: 18,
         label: 'Response Complexity',
@@ -368,10 +370,11 @@ ${query}`;
  * @param {string} prompt
  * @param {string[]} deny - resolved via resolveDenyRules()
  * @param {Function} [onHeartbeat] - ({elapsedMs, activity, toolCount}) => void
+ * @param {string} [model] - CLI --model value; omit for CLI default
  * @returns {Promise<{text: string, durationMs: number, denials: Array}>}
  */
-export function runAskCastBot(prompt, deny, onHeartbeat) {
-  return runClaudeJob({ prompt, tools: CLI_TOOLS, deny, onHeartbeat });
+export function runAskCastBot(prompt, deny, onHeartbeat, model) {
+  return runClaudeJob({ prompt, tools: CLI_TOOLS, deny, onHeartbeat, model });
 }
 
 /**
@@ -394,7 +397,7 @@ export function buildActionRow(responseId, isPublic = false) {
 }
 
 /** Container for the first (deferred) chunk. */
-export function buildFirstContainer({ query, chunk, elapsed, chunkCount, responseId, isPublic = false }) {
+export function buildFirstContainer({ query, chunk, elapsed, chunkCount, responseId, isPublic = false, model }) {
   return {
     type: 17,
     accent_color: ACCENT,
@@ -404,7 +407,7 @@ export function buildFirstContainer({ query, chunk, elapsed, chunkCount, respons
       { type: 14 },
       { type: 10, content: neutralizeMentions(chunk) },
       { type: 14 },
-      { type: 10, content: `-# 👾 ${elapsed}${chunkCount > 1 ? ` · ${chunkCount} parts` : ''}` },
+      { type: 10, content: `-# 👾 ${elapsed}${chunkCount > 1 ? ` · ${chunkCount} parts` : ''} · ${modelLabel(model)}` },
       ...(chunkCount === 1 ? [buildActionRow(responseId, isPublic)] : [])
     ]
   };
@@ -524,6 +527,7 @@ export async function handleAskModalSubmit(req, res) {
   }
   const query = fields.askcb_query;
   const complexity = fields.askcb_complexity || DEFAULT_COMPLEXITY;
+  const model = resolveModelChoice(fields.askcb_model);
   const userId = req.body.member?.user?.id || req.body.user?.id;
   // A modal opened from a POSTED Ask button is deliberately open to anyone who can see
   // that channel (Reece places them in limited areas). The whitelist only guards the
@@ -571,7 +575,7 @@ export async function handleAskModalSubmit(req, res) {
   const deliver = (data) => safeDeliver({ token, channelId, data, messageId: progressMsgId, userId });
 
   try {
-    console.log(`👾 Ask CastBot query from ${req.body.member?.user?.username} (${inFlight}/${MAX_CONCURRENT} in flight, ${complexity}): "${truncate(query, 80)}"`);
+    console.log(`👾 Ask CastBot query from ${req.body.member?.user?.username} (${inFlight}/${MAX_CONCURRENT} in flight, ${complexity}, ${model}): "${truncate(query, 80)}"`);
 
     // Message 2 starts as "starting up" so there's never a silent gap.
     const progressMsg = await createFollowupMessage(token, { components: [buildProgressContainer(query)] });
@@ -582,7 +586,8 @@ export async function handleAskModalSubmit(req, res) {
     const { text: answer, durationMs, denials } = await runAskCastBot(
       buildPrompt(query, fields.askcb_prev_context, superRead, complexity),
       resolveDenyRules(guildId, isPublicRoute),
-      (progress) => beat({ components: [buildProgressContainer(query, progress)] })
+      (progress) => beat({ components: [buildProgressContainer(query, progress)] }),
+      model
     );
 
     const elapsed = formatElapsed(durationMs);
@@ -590,11 +595,11 @@ export async function handleAskModalSubmit(req, res) {
     if (denials?.length) console.warn(`👾 Ask CastBot deny rules fired ${denials.length}x — someone probed a blocked path`);
 
     const responseId = Date.now().toString(36);
-    rememberResponse(responseId, { response: answer, query, elapsed, complexity });
+    rememberResponse(responseId, { response: answer, query, elapsed, complexity, model });
 
     const chunks = chunkResponse(answer);
     await deliver({
-      components: [buildFirstContainer({ query, chunk: chunks[0], elapsed, chunkCount: chunks.length, responseId, isPublic: isPublicRoute })]
+      components: [buildFirstContainer({ query, chunk: chunks[0], elapsed, chunkCount: chunks.length, responseId, isPublic: isPublicRoute, model })]
     });
     for (let i = 1; i < chunks.length; i++) {
       await createFollowupMessage(token, {
