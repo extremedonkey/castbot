@@ -669,13 +669,15 @@ export function buildExportSelectionUI() {
                         min_values: 1,
                         max_values: 6,
                         placeholder: 'Select components to export...',
+                        // No default:true here — Discord only fires the select on a CHANGE,
+                        // so an all-preselected menu could never be submitted as-is (UX bug)
                         options: [
-                            { label: 'Stores', value: 'stores', description: 'Store definitions and their item listings', emoji: { name: '🏪' }, default: true },
-                            { label: 'Items', value: 'items', description: 'Item definitions incl. combat/stamina/attribute fields', emoji: { name: '📦' }, default: true },
-                            { label: 'Actions', value: 'actions', description: 'Actions, triggers, outcomes, conditions, usage limits', emoji: { name: '⚡' }, default: true },
-                            { label: 'Settings', value: 'settings', description: 'Safari config — currency, events, rounds, stamina, crafting', emoji: { name: '⚙️' }, default: true },
-                            { label: 'Map Data', value: 'mapData', description: 'Grid layout, cell content, blacklist (no channels)', emoji: { name: '🗺️' }, default: true },
-                            { label: 'Map Image', value: 'mapImage', description: 'Bundle the map image → downloads as a .zip package', emoji: { name: '🖼️' }, default: true }
+                            { label: 'Stores', value: 'stores', description: 'Store definitions and their item listings', emoji: { name: '🏪' } },
+                            { label: 'Items', value: 'items', description: 'Item definitions incl. combat/stamina/attribute fields', emoji: { name: '📦' } },
+                            { label: 'Actions', value: 'actions', description: 'Actions, triggers, outcomes, conditions, usage limits', emoji: { name: '⚡' } },
+                            { label: 'Settings', value: 'settings', description: 'Safari config — currency, events, rounds, stamina, crafting', emoji: { name: '⚙️' } },
+                            { label: 'Map Data', value: 'mapData', description: 'Grid layout, cell content, blacklist (no channels)', emoji: { name: '🗺️' } },
+                            { label: 'Map Image', value: 'mapImage', description: 'Bundle the map image → downloads as a .zip package', emoji: { name: '🖼️' } }
                         ]
                     }]
                 },
