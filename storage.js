@@ -12,6 +12,25 @@ const requestCache = new Map();
 let cacheHits = 0;
 let cacheMisses = 0;
 
+// Generation counter: bumped on every successful playerData save. Guards the cache
+// against stale in-flight reads (docs/incidents/07-CachePoisonedLostMove.md): a
+// readFile that opened the file before a save's rename returns PRE-save content but
+// can complete AFTER onSaved's cache clear — caching that snapshot poisons the cache
+// for every later reader, including withStorageLock cycles (which is how a player's
+// committed map move was erased by its own activity-log flush).
+let dataGeneration = 0;
+
+// Cache a read result only if no save landed while the read was in flight.
+// genAtRead must be captured BEFORE the first await of the read path.
+function cacheIfFresh(cacheKey, value, genAtRead) {
+    if (genAtRead === dataGeneration) {
+        requestCache.set(cacheKey, value);
+        return true;
+    }
+    console.warn(`⚠️ Stale playerData read discarded from cache (gen ${genAtRead}→${dataGeneration}) — a save landed mid-read`);
+    return false;
+}
+
 /**
  * Wrap a playerData load-modify-save cycle so only one runs at a time.
  *
@@ -44,6 +63,12 @@ let cacheMisses = 0;
  * Wrapped examples: setPlayerLocation (mapMovement.js), updateCurrency /
  * addItemToInventory / removeItemFromInventory (safariManager.js).
  *
+ * The request cache is dropped at cycle entry, so fn's loadPlayerData() always reads
+ * disk: the shared cache can hold a pre-save snapshot repopulated by a concurrent
+ * interaction's in-flight read (docs/incidents/07) and a locked cycle must never
+ * mutate one. Costs one extra parse per locked cycle — locked cycles are write paths,
+ * which are rare relative to reads.
+ *
  * @param {Function} fn - async function receiving no args, expected to load/save internally
  */
 export function withStorageLock(fn) {
@@ -54,7 +79,13 @@ export function withStorageLock(fn) {
     const next = new Promise(r => { resolve = r; });
     const prev = _saveQueue;
     _saveQueue = next;
-    return prev.then(fn).finally(resolve);
+    return prev.then(() => {
+        if (requestCache.size > 0) {
+            console.log(`🔒 Storage lock: dropped ${requestCache.size} cached entries for fresh cycle`);
+            requestCache.clear();
+        }
+        return fn();
+    }).finally(resolve);
 }
 
 // Local mutex for withStorageLock (atomicSave has its own for writes)
@@ -73,9 +104,22 @@ export function withSafariLock(fn) {
     const next = new Promise(r => { resolve = r; });
     const prev = _safariQueue;
     _safariQueue = next;
-    return prev.then(fn).finally(resolve);
+    return prev.then(() => {
+        // Same cache-poisoning defence as withStorageLock (docs/incidents/07), for the
+        // safari cache. The cache lives in safariManager.js, which imports this module —
+        // it registers its drop function here to avoid a circular import. Every
+        // withSafariLock caller reaches it via safariManager, so the hook is always
+        // registered before first use.
+        if (_safariCacheDrop) _safariCacheDrop();
+        return fn();
+    }).finally(resolve);
 }
 let _safariQueue = Promise.resolve();
+
+let _safariCacheDrop = null;
+export function registerSafariCacheDrop(fn) {
+    _safariCacheDrop = fn;
+}
 
 // Clear the request cache (called at start of each Discord interaction)
 export function clearRequestCache() {
@@ -94,8 +138,9 @@ async function ensureStorageFile() {
         cacheHits++;
         return requestCache.get(cacheKey);
     }
-    
+
     cacheMisses++;
+    const genAtRead = dataGeneration; // must be captured before the first await
     try {
         let data;
         const exists = await fs.access(STORAGE_FILE).then(() => true).catch(() => false);
@@ -166,8 +211,9 @@ async function ensureStorageFile() {
             };
         }
         
-        // Cache the full data before returning
-        requestCache.set(cacheKey, data);
+        // Cache the full data before returning — unless a save landed while we were
+        // reading, in which case this snapshot is stale and must not be cached
+        cacheIfFresh(cacheKey, data, genAtRead);
         return data;
     } catch (error) {
         console.error('Error in ensureStorageFile:', error);
@@ -192,14 +238,15 @@ export async function loadPlayerData(guildId, { forceFresh = false } = {}) {
     }
 
     cacheMisses++;
+    const genAtRead = dataGeneration; // guard: don't cache if a save lands mid-read
     const data = await ensureStorageFile();
-    
+
     if (!guildId) {
         // Cache the full data
-        requestCache.set(cacheKey, data);
+        cacheIfFresh(cacheKey, data, genAtRead);
         return data;
     }
-    
+
     // Initialize structure if it doesn't exist
     if (!data[guildId]) {
         data[guildId] = {
@@ -213,9 +260,9 @@ export async function loadPlayerData(guildId, { forceFresh = false } = {}) {
             timezones: {}
         };
     }
-    
+
     // Cache the guild-specific data
-    requestCache.set(cacheKey, data[guildId]);
+    cacheIfFresh(cacheKey, data[guildId], genAtRead);
     return data[guildId];
 }
 
@@ -229,9 +276,22 @@ export async function savePlayerData(data) {
                 ? { ok: true }
                 : { ok: false, reason: `only ${guildCount} guilds (expected 10+)` };
         },
-        onSaved: () => requestCache.clear(),
+        onSaved: () => {
+            dataGeneration++; // invalidates any read currently in flight (see cacheIfFresh)
+            requestCache.clear();
+        },
     });
 }
+
+// Test-only seam (tests/storageCacheGuard.test.js): exposes cache internals so the
+// lock-entry cache drop and the generation guard can be asserted against the REAL
+// implementation without reading/writing playerData.json on disk.
+export const __storageInternals = {
+    requestCache,
+    getGeneration: () => dataGeneration,
+    bumpGeneration: () => { dataGeneration++; },
+    cacheIfFresh,
+};
 
 export async function updatePlayer(guildId, playerId, data) {
     const storage = await ensureStorageFile();

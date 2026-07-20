@@ -14,7 +14,7 @@ import {
     InteractionResponseFlags
 } from 'discord-interactions';
 import { DiscordRequest, countComponents, validateComponentLimit } from './utils.js';
-import { loadPlayerData, savePlayerData, withStorageLock, withSafariLock } from './storage.js';
+import { loadPlayerData, savePlayerData, withStorageLock, withSafariLock, registerSafariCacheDrop } from './storage.js';
 import { initializeGuildSafariData } from './safariInitialization.js';
 import { detectBundles, formatActionsWithBundleIndicators } from './safariActionBundler.js';
 import { parseTextEmoji, parseAndValidateEmoji } from './utils/emojiUtils.js';
@@ -138,6 +138,10 @@ const safariRequestCache = new Map();
 let safariCacheHits = 0;
 let safariCacheMisses = 0;
 
+// Generation counter — same stale-in-flight-read guard as storage.js's playerData
+// cache (docs/incidents/07-CachePoisonedLostMove.md), for safariContent.json.
+let safariGeneration = 0;
+
 /**
  * Clear the safari request cache (called at start of each Discord interaction)
  */
@@ -149,6 +153,15 @@ export function clearSafariCache() {
     safariCacheHits = 0;
     safariCacheMisses = 0;
 }
+
+// withSafariLock (storage.js) drops this cache at cycle entry so locked
+// safariContent cycles never mutate a poisoned snapshot (docs/incidents/07).
+registerSafariCacheDrop(() => {
+    if (safariRequestCache.size > 0) {
+        console.log(`🔒 Safari lock: dropped ${safariRequestCache.size} cached entries for fresh cycle`);
+        safariRequestCache.clear();
+    }
+});
 
 /**
  * Clear the player name cache (call at the start of new operations)
@@ -536,10 +549,16 @@ async function loadSafariContent() {
     }
     
     safariCacheMisses++;
+    const genAtRead = safariGeneration; // guard: don't cache if a save lands mid-read
     const data = await ensureSafariContentFile();
-    
-    // Cache the data for this request
-    safariRequestCache.set(cacheKey, data);
+
+    // Cache the data for this request — unless a save landed while we were reading,
+    // in which case this snapshot is stale and must not be cached (incident 07)
+    if (genAtRead === safariGeneration) {
+        safariRequestCache.set(cacheKey, data);
+    } else {
+        console.warn(`⚠️ Stale safariContent read discarded from cache (gen ${genAtRead}→${safariGeneration}) — a save landed mid-read`);
+    }
     return data;
 }
 
@@ -557,7 +576,10 @@ async function saveSafariContent(data) {
                 ? { ok: true }
                 : { ok: false, reason: `no guild data found` };
         },
-        onSaved: () => safariRequestCache.clear(),
+        onSaved: () => {
+            safariGeneration++; // invalidates any read currently in flight
+            safariRequestCache.clear();
+        },
     });
 }
 

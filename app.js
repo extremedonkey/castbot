@@ -50828,8 +50828,10 @@ Your server is now ready for Tycoons gameplay!`;
 
         console.log(`🔄 DEBUG: Map update modal submitted - guild: ${guildId}, url: ${mapUrl}, dimensions: ${mapColumns}x${mapRows}`);
         
-        // Basic URL validation
-        if (!mapUrl || !mapUrl.startsWith('https://cdn.discordapp.com/attachments/')) {
+        // Basic URL validation — PASTED URLs only. Upload-derived URLs come from
+        // Discord's own resolved payload (already MIME/size validated above) and use
+        // the /ephemeral-attachments/ CDN path, which this prefix would wrongly reject.
+        if (!mapUrl || (intent.action !== 'upload' && !mapUrl.startsWith('https://cdn.discordapp.com/attachments/'))) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {

@@ -89,3 +89,30 @@ describe('Map Update Modal — collectModalFields (replaces positional parsing)'
         assert.deepEqual(collectModalFields([{ type: 10, content: 'hi' }]), {});
     });
 });
+
+// ── Replicated from app.js map_update_modal URL guard ──
+// Pasted URLs must be cdn.discordapp.com/attachments; upload-derived URLs skip the
+// prefix check because modal File Uploads resolve to /ephemeral-attachments/ (found
+// the hard way on TEST 2026-07-20 — the unforked guard rejected every upload).
+function mapUrlRejected(mapUrl, intentAction) {
+    return !mapUrl || (intentAction !== 'upload' && !mapUrl.startsWith('https://cdn.discordapp.com/attachments/'));
+}
+
+describe('Map Update Modal — URL guard fork (pasted vs upload)', () => {
+    it('pasted URLs still require the /attachments/ CDN prefix', () => {
+        assert.equal(mapUrlRejected('https://cdn.discordapp.com/attachments/1/2/map.png', 'none'), false);
+        assert.equal(mapUrlRejected('https://example.com/map.png', 'none'), true);
+        assert.equal(mapUrlRejected('https://cdn.discordapp.com/ephemeral-attachments/1/2/map.png', 'none'), true,
+            'a hand-pasted ephemeral URL is still rejected (it will dangle after the source interaction)');
+    });
+
+    it('upload-derived URLs pass despite the /ephemeral-attachments/ path', () => {
+        assert.equal(mapUrlRejected('https://cdn.discordapp.com/ephemeral-attachments/1/2/DEVMap.png?ex=6a5f&is=6a5e&hm=d1d1', 'upload'), false);
+        assert.equal(mapUrlRejected('https://cdn.discordapp.com/attachments/1/2/map.png', 'upload'), false);
+    });
+
+    it('a missing URL is rejected in either mode', () => {
+        assert.equal(mapUrlRejected(undefined, 'upload'), true);
+        assert.equal(mapUrlRejected('', 'none'), true);
+    });
+});
