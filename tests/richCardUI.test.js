@@ -139,6 +139,43 @@ describe('buildRichCardModal', () => {
 });
 
 // ---------------------------------------------------------------------------
+// buildRichCardModal — Image Uploads mode (type 19 swap)
+// ---------------------------------------------------------------------------
+describe('buildRichCardModal — imageUploadMode', () => {
+  it('uploadComponent swaps ONLY the image field for a File Upload', () => {
+    const modal = buildRichCardModal({
+      customId: 'x', modalTitle: 'X', imageUploadMode: 'uploadComponent',
+      values: { image: 'https://cdn.discordapp.com/attachments/1/2/pic.png' }
+    });
+    const comps = modal.data.components;
+    const imageField = comps.find(c => c.component?.type === 19);
+    assert.ok(imageField, 'image field is a File Upload');
+    assert.equal(imageField.component.custom_id, 'image_upload');
+    assert.equal(imageField.component.required, false);
+    assert.match(imageField.description, /Current: pic\.png/);
+    assert.equal(comps.filter(c => c.component?.type === 4).length, 3, 'title/content/color stay text inputs');
+    assert.ok(!comps.some(c => c.component?.custom_id === 'image'), 'no image text input in upload mode');
+  });
+
+  it('textUrl / omitted mode keeps the image text input unchanged', () => {
+    for (const mode of [undefined, 'textUrl']) {
+      const modal = buildRichCardModal({ customId: 'x', modalTitle: 'X', imageUploadMode: mode });
+      const image = modal.data.components.find(c => c.component?.custom_id === 'image');
+      assert.equal(image.component.type, 4, `mode=${mode}`);
+    }
+  });
+
+  it('legacy useLabelWrap:false ignores upload mode (File Upload requires a Label)', () => {
+    const modal = buildRichCardModal({
+      customId: 'x', modalTitle: 'X', imageUploadMode: 'uploadComponent', useLabelWrap: false
+    });
+    const rows = modal.data.components;
+    assert.ok(rows.every(r => r.type === 1), 'all rows remain ActionRows');
+    assert.ok(rows.some(r => r.components?.[0]?.custom_id === 'image'), 'image stays a text input');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // extractRichCardValues
 // ---------------------------------------------------------------------------
 describe('extractRichCardValues', () => {

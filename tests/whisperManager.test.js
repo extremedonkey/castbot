@@ -6,10 +6,25 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-// Replicated from whisperManager.js preloadWhisperStore prune logic
+// Replicated from whisperManager.js shouldPruneWhisper (RaP 0893: read whispers
+// persist for a 24h re-read window instead of being deleted on read)
 const WHISPER_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const READ_RETENTION_MS = 24 * 60 * 60 * 1000;
 function shouldPrune(whisper, nowMs) {
-  return !whisper?.timestamp || nowMs - whisper.timestamp > WHISPER_MAX_AGE_MS;
+  if (!whisper?.timestamp) return true;
+  if (whisper.readAt) return nowMs - whisper.readAt > READ_RETENTION_MS;
+  return nowMs - whisper.timestamp > WHISPER_MAX_AGE_MS;
+}
+
+// Replicated from whisperManager.js claimWhisper (RaP 0893: sync check+mark —
+// closes the double-click race that produced duplicate read receipts)
+function claimWhisper(store, whisperId, nowMs) {
+  const data = store.get(whisperId);
+  if (!data) return { status: 'missing' };
+  if (data.readAt) return { status: 'already', data };
+  data.readAt = nowMs;
+  store.set(whisperId, data);
+  return { status: 'unread', data };
 }
 
 // Replicated from app.js whisper_read_* custom_id parsing:
@@ -34,6 +49,57 @@ describe('Whisper store — stale-entry pruning', () => {
   it('prunes malformed entries with no timestamp', () => {
     assert.equal(shouldPrune({}, now), true);
     assert.equal(shouldPrune(null, now), true);
+  });
+
+  it('keeps read whispers inside the 24h re-read window', () => {
+    assert.equal(shouldPrune({ timestamp: now - 60000, readAt: now - 23 * 60 * 60 * 1000 }, now), false);
+  });
+
+  it('prunes read whispers past the 24h retention', () => {
+    assert.equal(shouldPrune({ timestamp: now - 60000, readAt: now - 25 * 60 * 60 * 1000 }, now), true);
+  });
+
+  it('a FRESH but read whisper still prunes on readAt, not timestamp', () => {
+    // read retention governs read whispers even when the whisper itself is recent
+    assert.equal(shouldPrune({ timestamp: now - 2 * 60 * 60 * 1000, readAt: now - 25 * 60 * 60 * 1000 }, now), true);
+  });
+});
+
+describe('Whisper read — claim idempotency (RaP 0893)', () => {
+  const now = 1780000000000;
+  const freshStore = () => {
+    const m = new Map();
+    m.set('w_1', { senderId: 's', targetUserId: 't', message: 'hi', timestamp: now - 1000 });
+    return m;
+  };
+
+  it('first claim marks readAt and reports unread', () => {
+    const store = freshStore();
+    const claim = claimWhisper(store, 'w_1', now);
+    assert.equal(claim.status, 'unread');
+    assert.equal(store.get('w_1').readAt, now);
+  });
+
+  it('second claim re-delivers the same data without re-claiming (double-click)', () => {
+    const store = freshStore();
+    claimWhisper(store, 'w_1', now);
+    const second = claimWhisper(store, 'w_1', now + 500);
+    assert.equal(second.status, 'already');
+    assert.equal(second.data.message, 'hi');
+    assert.equal(store.get('w_1').readAt, now, 'readAt must not be overwritten by re-clicks');
+  });
+
+  it('N rapid claims produce exactly ONE unread (one receipt, one notification delete)', () => {
+    // Models the prod 4-clicks-in-2.2s burst: only the first click may trigger side effects
+    const store = freshStore();
+    const results = [1, 2, 3, 4].map(i => claimWhisper(store, 'w_1', now + i).status);
+    assert.deepEqual(results.filter(s => s === 'unread').length, 1);
+    assert.deepEqual(results.filter(s => s === 'already').length, 3);
+  });
+
+  it('missing whisper reports missing (pruned or lost)', () => {
+    const store = freshStore();
+    assert.equal(claimWhisper(store, 'nope', now).status, 'missing');
   });
 });
 

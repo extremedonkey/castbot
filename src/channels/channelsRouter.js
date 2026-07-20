@@ -71,8 +71,10 @@ export async function routeChannelsButton({ context, req }) {
       const { buildMsgModal } = await import('./channelsView.js');
       const configId = customId.replace('channels_msg_edit_', '');
       const { loadPlayerData } = await import('../../storage.js');
-      const draft = (await loadPlayerData())[guildId]?.channelAdmin?.[configId]?.broadcast || {};
-      return buildMsgModal({ configId, draft });
+      const { getImageUploadMode } = await import('../settings/generalSettings.js');
+      const playerData = await loadPlayerData();
+      const draft = playerData[guildId]?.channelAdmin?.[configId]?.broadcast || {};
+      return buildMsgModal({ configId, draft, imageUploadMode: await getImageUploadMode(guildId, playerData) });
     }
     if (customId.startsWith('channels_msg_send_')) {
       return await H.planBroadcast({ configId: customId.replace('channels_msg_send_', ''), guildId, userId, client });

@@ -139,30 +139,109 @@ export function filenameFromImageUrl(url, maxLength = 60) {
 }
 
 /**
+ * Build the image field Label for a modal, honoring the guild's Image Uploads mode.
+ * Shared by every converted display-URL field (enemy, rich card, dice results, tips):
+ * - textUrl (default): Label + Text Input — the legacy paste-a-CDN-link field.
+ * - uploadComponent: Label + File Upload (type 19, 0-1 files); the Label's
+ *   description carries the existing-image state ("Current: name.png — uploading
+ *   replaces it.") since 0 files submitted = keep the current image.
+ *
+ * @param {Object} p
+ * @param {string} p.label - Label text for BOTH modes (override upload via uploadLabel)
+ * @param {string} [p.uploadLabel] - Label text in upload mode (defaults to label)
+ * @param {string} [p.textCustomId='image'] - Text Input custom_id (upload mode always
+ *   uses IMAGE_UPLOAD_COMPONENT_ID — pass the matching fieldKey to the resolver)
+ * @param {string} [p.currentUrl=''] - currently stored image URL (prefill / Current: text)
+ * @param {string} [p.imageUploadMode] - guild mode; anything but 'uploadComponent' = text
+ * @param {string} [p.textDescription] - Label description in text mode
+ * @param {string} [p.textPlaceholder] - Text Input placeholder
+ * @param {number} [p.textStyle=2] - Text Input style (2 paragraph fits long CDN URLs)
+ * @param {number} [p.maxLength=500] - Text Input max_length
+ * @param {string} [p.uploadEmptyDescription] - upload-mode description when no image set
+ * @returns {Object} Label (type 18) component
+ */
+export function buildImageFieldLabel({
+    label,
+    uploadLabel,
+    textCustomId = 'image',
+    currentUrl = '',
+    imageUploadMode,
+    textDescription,
+    textPlaceholder = 'https://cdn.discordapp.com/attachments/...',
+    textStyle = 2,
+    maxLength = 500,
+    uploadEmptyDescription = 'Upload an image (optional).'
+}) {
+    if (imageUploadMode === 'uploadComponent') {
+        const currentName = currentUrl ? filenameFromImageUrl(currentUrl, 45) : null;
+        return {
+            type: 18, // Label
+            label: uploadLabel || label,
+            description: currentUrl
+                ? `Current: ${currentName || 'image set'} — uploading replaces it.`
+                : uploadEmptyDescription,
+            component: {
+                type: 19, // File Upload — resolved on submit via resolveUploadedImageField
+                custom_id: IMAGE_UPLOAD_COMPONENT_ID,
+                min_values: 0,
+                max_values: 1,
+                required: false
+            }
+        };
+    }
+    const labelComp = {
+        type: 18, // Label
+        label,
+        component: {
+            type: 4, // Text Input
+            custom_id: textCustomId,
+            style: textStyle,
+            required: false,
+            max_length: maxLength,
+            placeholder: textPlaceholder,
+            ...(currentUrl ? { value: currentUrl } : {})
+        }
+    };
+    if (textDescription) labelComp.description = textDescription;
+    return labelComp;
+}
+
+/**
  * Resolve an upload-mode image field on modal submit, mutating `fields` in place:
  * - Always strips the raw File Upload key so the attachment snowflake can never
  *   reach entity storage via parseModalSubmission's generic path.
- * - No file uploaded → leaves fields.image untouched (keep current image).
+ * - No File Upload component in the modal at all → text mode, nothing to do.
+ * - No file uploaded → fields[fieldKey] = currentValue when provided (explicit
+ *   keep-current, for handlers that treat '' as "clear"); otherwise untouched.
  * - File uploaded → validates, downloads, re-hosts in #🗺️castbot-images, and sets
- *   fields.image to the hosted CDN URL (plain string, same shape as pasted URLs).
+ *   fields[fieldKey] to the hosted CDN URL (plain string, same shape as pasted URLs).
  *
  * Throws on any failure (invalid type, too large, download/upload error) — callers
  * run this BEFORE saving so a bad image aborts the submit with nothing persisted.
- * Must be called AFTER the interaction is deferred (network work inside).
+ * Network work inside (fetch + channel post) — call after deferring where possible.
  *
  * @param {Object} p
- * @param {Object} p.fields - parseModalSubmission output (mutated)
+ * @param {Object} p.fields - parsed modal fields (mutated)
  * @param {Object} p.data - modal submit interaction data (components + resolved)
  * @param {import('discord.js').Guild} p.guild
  * @param {string} p.context - filename context slug, e.g. 'a2_location'
  * @param {string} [p.description] - storage message text (defaults to context)
- * @returns {Promise<void>}
+ * @param {string} [p.fieldKey='image'] - which fields key receives the URL
+ * @param {string} [p.currentValue] - currently stored URL; when provided, a 0-file
+ *   submit explicitly writes it back (keep-current for ''-clears handlers)
+ * @returns {Promise<boolean>} true when a new image was uploaded and re-hosted
  */
-export async function resolveUploadedImageField({ fields, data, guild, context, description }) {
+export async function resolveUploadedImageField({ fields, data, guild, context, description, fieldKey = 'image', currentValue }) {
     delete fields[IMAGE_UPLOAD_COMPONENT_ID];
+    if (fields.extra) delete fields.extra[IMAGE_UPLOAD_COMPONENT_ID];
+
+    if (!findModalComponentByType(data?.components, 19)) return false; // text mode
 
     const intent = extractImageUploadIntent(data?.components, data?.resolved?.attachments);
-    if (intent.action !== 'upload') return;
+    if (intent.action !== 'upload') {
+        if (currentValue !== undefined) fields[fieldKey] = currentValue;
+        return false;
+    }
 
     const check = validateImageAttachment(intent.attachment);
     if (!check.ok) throw new Error(check.error);
@@ -184,6 +263,7 @@ export async function resolveUploadedImageField({ fields, data, guild, context, 
         filename,
         description || `Image for ${context} (uploaded via CastBot)`
     );
-    fields.image = url;
+    fields[fieldKey] = url;
     console.log(`🖼️ [CASTBOT_IMAGES] Re-hosted upload as ${filename} for guild ${guild.id}: ${url}`);
+    return true;
 }

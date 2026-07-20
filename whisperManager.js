@@ -35,18 +35,50 @@ function getWhisperStore() {
   return whisperStorePromise;
 }
 
-// Unread whispers only shrink on read — prune anything this old at startup
+// Unread whispers are pruned at this age. Read whispers (readAt set) are kept
+// briefly so a lost/failed delivery can be re-read (RaP 0893), then pruned.
 const WHISPER_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const READ_RETENTION_MS = 24 * 60 * 60 * 1000;
+
+// TEST-ONLY stress simulator (RaP 0893 smoke drill): injects delay into the
+// send/read handler work to reproduce under-load timing in calm conditions.
+// The deferred ack has already gone out when this runs, so post-fix nothing
+// fails — pre-fix the same delay guaranteed "This interaction failed".
+const SIM_LATENCY_MS = Math.min(parseInt(process.env.WHISPER_SIM_LATENCY_MS || '0', 10) || 0, 8000);
+if (SIM_LATENCY_MS > 0) {
+  logger.warn('WHISPER', `SIMULATED LATENCY ACTIVE: ${SIM_LATENCY_MS}ms per whisper operation — unset WHISPER_SIM_LATENCY_MS for normal operation`);
+}
+const simLatency = () => SIM_LATENCY_MS > 0 ? new Promise(r => setTimeout(r, SIM_LATENCY_MS)) : Promise.resolve();
+
+// Prune decision (logic mirrored in tests/whisperManager.test.js)
+export function shouldPruneWhisper(whisper, nowMs) {
+  if (!whisper?.timestamp) return true;
+  if (whisper.readAt) return nowMs - whisper.readAt > READ_RETENTION_MS;
+  return nowMs - whisper.timestamp > WHISPER_MAX_AGE_MS;
+}
+
+// Claim a whisper for reading. The check+mark is SYNCHRONOUS on the in-memory
+// store, so two concurrent read handlers can never both see 'unread' — the race
+// behind duplicate read receipts and the "Unknown Message" delete error
+// (four clicks in 2.2s produced three concurrent reads on prod, 2026-07-20).
+export function claimWhisper(store, whisperId, nowMs = Date.now()) {
+  const data = store.get(whisperId);
+  if (!data) return { status: 'missing' };
+  if (data.readAt) return { status: 'already', data };
+  data.readAt = nowMs;
+  store.set(whisperId, data);
+  return { status: 'unread', data };
+}
 
 /**
  * Eagerly load the whisper store (call from the ready handler) and prune
- * stale unread whispers.
+ * stale entries (old unread whispers, read whispers past retention).
  */
 export async function preloadWhisperStore() {
   const store = await getWhisperStore();
   let pruned = 0;
   for (const [id, whisper] of store.entries()) {
-    if (!whisper?.timestamp || Date.now() - whisper.timestamp > WHISPER_MAX_AGE_MS) {
+    if (shouldPruneWhisper(whisper, Date.now())) {
       store.delete(id);
       pruned++;
     }
@@ -216,6 +248,8 @@ export async function sendWhisper(context, targetUserId, coordinate, message, cl
   });
   
   try {
+    await simLatency();
+
     // Verify both players are still at the same location
     const { sameLocation, coordinate: currentCoord } = await arePlayersAtSameLocation(
       context.guildId, 
@@ -313,9 +347,11 @@ export async function sendWhisper(context, targetUserId, coordinate, message, cl
       messageId: notificationMessage.id 
     });
     
-    // Log whisper to Safari Log channel
+    // Log whisper to Safari Log channel — DETACHED (RaP 0893): the log fan-out
+    // (up to two channels, rate-limited) was adding seconds before the ack and
+    // is best-effort by design. Nothing the sender waits on depends on it.
     const { logWhisper } = await import('./safariLogger.js');
-    await logWhisper({
+    logWhisper({
       guildId: context.guildId,
       senderId: context.userId,
       senderName: context.username,
@@ -325,6 +361,8 @@ export async function sendWhisper(context, targetUserId, coordinate, message, cl
       location: coordinate,
       message,
       channelName: context.channelName
+    }).catch(logError => {
+      logger.error('WHISPER', 'Failed to log whisper send', { error: logError.message });
     });
     
     // Post detection messages (temporarily disabled for debugging)
@@ -464,34 +502,40 @@ export async function handleReadWhisper(context, whisperId, targetUserId, client
   });
   
   try {
-    // Check if clicker is the intended recipient
+    await simLatency();
+
+    // Check if clicker is the intended recipient (previously a silent branch —
+    // shared-channel notifications invite other players' clicks, log them)
     if (context.userId !== targetUserId) {
+      logger.warn('WHISPER', 'Read clicked by non-recipient', { clickerId: context.userId, whisperId, targetUserId });
       return {
         content: '❌ This whisper is not for you.',
         flags: InteractionResponseFlags.EPHEMERAL
       };
     }
-    
-    // Get whisper data from persistent store
+
+    // Claim the whisper (sync check+mark — see claimWhisper). Reads no longer
+    // delete: a re-click RE-DELIVERS the same content instead of "already read",
+    // so a lost delivery is retryable and double-clicks can't duplicate receipts.
     const store = await getWhisperStore();
-    if (!store.has(whisperId)) {
-      logger.warn('WHISPER', 'Read clicked for unknown whisperId (read already, pruned, or lost)', { whisperId, targetUserId });
+    const claim = claimWhisper(store, whisperId);
+    if (claim.status === 'missing') {
+      logger.warn('WHISPER', 'Read clicked for unknown whisperId (pruned or lost)', { whisperId, targetUserId });
       return {
-        content: '❌ This whisper has expired or already been read.',
+        content: '❌ This whisper has expired. If a whisper log is configured, the message is preserved there.',
         flags: InteractionResponseFlags.EPHEMERAL
       };
     }
+    const whisperData = claim.data;
+    const alreadyRead = claim.status === 'already';
 
-    const whisperData = store.get(whisperId);
-    
-    // Prepare whisper content (using same pattern as player select)
     const whisperContent = {
       components: [{
         type: 17, // Container
         components: [
           {
             type: 10, // Text Display
-            content: `## 💬 ${whisperData.senderName} whispers to you\n\n> **${whisperData.senderName}:** ${whisperData.message}`
+            content: `## 💬 ${whisperData.senderName} whispers to you\n\n> **${whisperData.senderName}:** ${whisperData.message}${alreadyRead ? '\n-# Already read — showing it again.' : ''}`
           },
           { type: 14 }, // Separator
           {
@@ -509,43 +553,48 @@ export async function handleReadWhisper(context, whisperId, targetUserId, client
       flags: (1 << 15), // IS_COMPONENTS_V2
       ephemeral: true
     };
-    
-    // Delete the notification message
-    try {
-      const channel = await client.channels.fetch(whisperData.channelId);
-      const message = await channel.messages.fetch(whisperData.messageId);
-      await message.delete();
-      logger.info('WHISPER', 'Deleted notification message', { messageId: whisperData.messageId });
-    } catch (error) {
-      logger.error('WHISPER', 'Failed to delete notification', { error: error.message });
-    }
-    
-    // Clean up whisper data — write-through so a restart can't resurrect a read whisper
-    store.delete(whisperId);
-    await store.flush();
 
-    // Log the read to the env analytics log + guild Safari Log / whisper log channel
-    try {
-      const { logWhisperRead } = await import('./safariLogger.js');
-      await logWhisperRead({
-        guildId: context.guildId,
-        readerId: context.userId,
-        readerName: context.username,
-        readerDisplayName: context.displayName || context.username,
-        senderId: whisperData.senderId,
-        senderName: whisperData.senderName,
-        location: whisperData.coordinate,
-        channelName: context.channelName,
-        message: whisperData.message
-      });
-    } catch (logError) {
-      logger.error('WHISPER', 'Failed to log whisper read', { error: logError.message });
+    if (!alreadyRead) {
+      // Persist the claim before delivery — a crash here at worst leaves the
+      // whisper re-readable for its retention window, never lost
+      await store.flush();
+
+      // One-time side effects run DETACHED, after delivery. Pre-RaP-0893 these
+      // 4-6 REST calls ran BEFORE the ack: a slow log post consumed the whisper
+      // and deleted its notification while the reader saw "interaction failed".
+      (async () => {
+        try {
+          const channel = await client.channels.fetch(whisperData.channelId);
+          const message = await channel.messages.fetch(whisperData.messageId);
+          await message.delete();
+          logger.info('WHISPER', 'Deleted notification message', { messageId: whisperData.messageId });
+        } catch (error) {
+          logger.error('WHISPER', 'Failed to delete notification', { error: error.message });
+        }
+        try {
+          const { logWhisperRead } = await import('./safariLogger.js');
+          await logWhisperRead({
+            guildId: context.guildId,
+            readerId: context.userId,
+            readerName: context.username,
+            readerDisplayName: context.displayName || context.username,
+            senderId: whisperData.senderId,
+            senderName: whisperData.senderName,
+            location: whisperData.coordinate,
+            channelName: context.channelName,
+            message: whisperData.message
+          });
+        } catch (logError) {
+          logger.error('WHISPER', 'Failed to log whisper read', { error: logError.message });
+        }
+      })();
     }
 
-    // Deliver the whisper content
     logger.info('WHISPER', 'Delivering whisper content', {
       recipientId: context.userId,
-      senderId: whisperData.senderId
+      senderId: whisperData.senderId,
+      whisperId,
+      alreadyRead
     });
 
     return whisperContent;

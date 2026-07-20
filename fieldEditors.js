@@ -16,7 +16,7 @@ import {
 } from 'discord.js';
 import { SAFARI_LIMITS } from './config/safariLimits.js';
 import { getFieldGroups } from './entityManagementUI.js';
-import { filenameFromImageUrl, IMAGE_UPLOAD_COMPONENT_ID } from './src/images/modalImageUpload.js';
+import { filenameFromImageUrl, buildImageFieldLabel, IMAGE_UPLOAD_COMPONENT_ID } from './src/images/modalImageUpload.js';
 
 /**
  * Create modal for field group editing
@@ -47,7 +47,7 @@ export function createFieldGroupModal(entityType, entityId, fieldGroupId, curren
         case 'safari_button':
             return createButtonFieldModal(entityId, fieldGroupId, group, currentValues);
         case 'enemy':
-            return createEnemyFieldModal(entityId, fieldGroupId, group, currentValues);
+            return createEnemyFieldModal(entityId, fieldGroupId, group, currentValues, options);
         case 'map_cell':
             return createMapCellFieldModal(entityId, fieldGroupId, group, currentValues, options);
         default:
@@ -436,7 +436,7 @@ function createButtonFieldModal(buttonId, fieldGroupId, group, currentValues) {
 /**
  * Create modal for enemy field editing
  */
-function createEnemyFieldModal(enemyId, fieldGroupId, group, currentValues) {
+function createEnemyFieldModal(enemyId, fieldGroupId, group, currentValues, options = {}) {
     const components = [];
 
     // Handle new enemy creation
@@ -491,10 +491,14 @@ function createEnemyFieldModal(enemyId, fieldGroupId, group, currentValues) {
                 type: 18, label: 'Description', description: 'Shown to players during combat.',
                 component: { type: 4, custom_id: 'description', style: 2, value: currentValues.description || '', placeholder: 'Describe the enemy...', required: false, max_length: SAFARI_LIMITS.MAX_ENEMY_DESCRIPTION_LENGTH }
             });
-            components.push({
-                type: 18, label: 'Image URL', description: 'Shown during combat. Upload to Discord first, then paste the CDN link.',
-                component: { type: 4, custom_id: 'image', style: 2, value: currentValues.image || '', placeholder: 'https://cdn.discordapp.com/attachments/...', required: false, max_length: 500 }
-            });
+            components.push(buildImageFieldLabel({
+                label: 'Image URL',
+                uploadLabel: 'Enemy Image',
+                currentUrl: currentValues.image || '',
+                imageUploadMode: options.imageUploadMode,
+                textDescription: 'Shown during combat. Upload to Discord first, then paste the CDN link.',
+                uploadEmptyDescription: 'Shown during combat. Upload an image (optional).'
+            }));
             break;
 
         case 'combat':

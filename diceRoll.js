@@ -9,6 +9,7 @@
  */
 
 import { buildRichCardContainer, parseAccentColor } from './richCardUI.js';
+import { buildImageFieldLabel } from './src/images/modalImageUpload.js';
 
 // ─── Utilities ───
 function pickRandomItem(array) {
@@ -312,8 +313,11 @@ export function buildD20ConfigUI(actionId, conditionIndex, config = {}) {
 
 /**
  * Build the Set Probability modal (for pass or fail).
+ * Also reused (with a rewritten custom_id) for the D20 result card modal.
+ * @param {string} [imageUploadMode] - guild Image Uploads mode; 'uploadComponent'
+ *   swaps the result image URL input for a File Upload
  */
-export function buildProbabilityModal(actionId, conditionIndex, side = 'pass', currentConfig = {}) {
+export function buildProbabilityModal(actionId, conditionIndex, side = 'pass', currentConfig = {}, imageUploadMode = undefined) {
   const isPass = side === 'pass';
   const currentPercent = isPass ? (currentConfig.passPercent ?? 50) : (100 - (currentConfig.passPercent ?? 50));
   const resultConfig = isPass ? (currentConfig.passResult || {}) : (currentConfig.failResult || {});
@@ -361,17 +365,17 @@ export function buildProbabilityModal(actionId, conditionIndex, side = 'pass', c
             ...(resultConfig.description ? { value: resultConfig.description } : {})
           }
         },
-        {
-          type: 18,
+        buildImageFieldLabel({
           label: 'Image URL (optional)',
-          description: 'Image shown in the result card',
-          component: {
-            type: 4, custom_id: 'result_image', style: 1,
-            placeholder: 'https://...',
-            required: false, max_length: 500,
-            ...(resultConfig.image ? { value: resultConfig.image } : {})
-          }
-        },
+          uploadLabel: `${label} Result Image (optional)`,
+          textCustomId: 'result_image',
+          currentUrl: resultConfig.image || '',
+          imageUploadMode,
+          textDescription: 'Image shown in the result card',
+          textPlaceholder: 'https://...',
+          textStyle: 1,
+          uploadEmptyDescription: 'Image shown in the result card.'
+        }),
         {
           type: 18,
           label: 'Accent Color',

@@ -1,6 +1,6 @@
 # 🖼️ Image Uploads (Media Gallery Migration)
 
-**Status**: 🟡 **Active — infrastructure shipped, migration in progress.** Two fields converted: map cell location image (pilot, display-URL archetype) and map create/update image (download-source archetype). Full backlog of remaining legacy fields: [RaP 0894 § Migration Backlog](../01-RaP/0894_20260720_ImageUploadComponent_Analysis.md#-migration-backlog--every-remaining-image-url-modal-input-swept-2026-07-20). Deployed to **TEST only** (castbot-blue). **Not on prod.**
+**Status**: 🟡 **Active — infrastructure shipped, migration mostly done.** Converted: map cell location image (pilot), map create/update (download-source), enemy image, rich card shared def (+ challenges and channels consumers), dice/d20 result images, tips showcase. Remaining legacy: custom-action Display Text image (+ its legacy twin), Season App question images, and the legacy map-cell editor (retirement candidate) — see [RaP 0894 § Migration Backlog](../01-RaP/0894_20260720_ImageUploadComponent_Analysis.md#-migration-backlog--every-remaining-image-url-modal-input-swept-2026-07-20). Deployed to **TEST only** (castbot-blue). **Not on prod.**
 
 **Read this if**: you're picking up the "convert legacy Image URL fields to native Discord uploads" work with no other context — a fresh Claude Code session, a new contributor, or future-you in six months.
 
@@ -11,8 +11,8 @@
 ## TL;DR for a cold-start agent
 
 1. **The infrastructure is done and reusable.** A per-guild toggle (Settings → General), a renamed shared image-storage channel (`#🗺️castbot-images`, was `#🗺️map-storage`), and a resolve-on-submit helper all exist and work for *any* image field you want to convert next.
-2. **Only TWO fields have actually been converted**: the Safari map cell "Location Image" (display-URL archetype) and the map create/update image (`map_update_modal`, download-source archetype). Every other image-URL text field in CastBot (enemy info, custom-action display images, etc.) is **still legacy paste-URL only** — the toggle doesn't affect them yet; the full inventory lives in [RaP 0894 § Migration Backlog](../01-RaP/0894_20260720_ImageUploadComponent_Analysis.md#-migration-backlog--every-remaining-image-url-modal-input-swept-2026-07-20).
-3. **Your likely next task** is converting another field. Skip to [§ How to Convert the Next Field](#-how-to-convert-the-next-field) — it's a checklist against the working examples (one per archetype).
+2. **Converted so far**: map cell location image (pilot), map create/update image (download-source), enemy image, the rich-card shared modal def (cascading to challenges + channels msg composer), dice/d20 result images, and the tips showcase image. **Still legacy paste-URL**: custom-action "Display Text" image (modern + legacy twin), Season App question images, and the legacy `map_grid_edit_modal_` editor (retirement candidate) — inventory in [RaP 0894 § Migration Backlog](../01-RaP/0894_20260720_ImageUploadComponent_Analysis.md#-migration-backlog--every-remaining-image-url-modal-input-swept-2026-07-20).
+3. **Converting another field** is a checklist against the working examples — see [§ How to Convert the Next Field](#-how-to-convert-the-next-field). The shared building blocks are `buildImageFieldLabel()` (modal side) and `resolveUploadedImageField({ fieldKey, currentValue })` (submit side), both in [src/images/modalImageUpload.js](../../src/images/modalImageUpload.js).
 4. Nothing here has touched prod. Verify on TEST (`CastBot Test` in Discord) before ever asking to deploy further.
 
 ---
@@ -131,14 +131,17 @@ This is the recipe, generalized from the one working example above. The next obv
    const { getImageUploadMode } = await import('./src/settings/generalSettings.js');
    const modal = createYourFieldModal(..., { imageUploadMode: await getImageUploadMode(guildId) });
    ```
-3. **Write a `buildYourFieldImageField(currentValues, imageUploadMode)` helper** modeled on `fieldEditors.js:793` — same branch: `textUrl` keeps the Text Input verbatim, `uploadComponent` emits a Label wrapping `{ type: 19, custom_id: IMAGE_UPLOAD_COMPONENT_ID, min_values: 0, max_values: 1, required: false }`, with the Label description built from `filenameFromImageUrl(currentImage, <budget>)` (Label description max is 100 chars — leave room for your static prefix text).
-4. **In the submit handler**, after the interaction is deferred (never before — network calls inside `resolveUploadedImageField` can exceed Discord's 3s ack window) and before the entity save, call:
+3. **Use the shared `buildImageFieldLabel(...)`** (src/images/modalImageUpload.js) for the field itself — it handles both modes, the `Current: name.png — uploading replaces it.` description, custom text-input ids (`textCustomId`), and per-mode labels (`uploadLabel`). See the enemy field (fieldEditors.js), `buildProbabilityModal` (diceRoll.js), and the tips opener (app.js `edit_tip_`) for usage. Rich-card-based modals get it for free via `buildRichCardModal({ imageUploadMode })`.
+4. **In the submit handler**, before the save, call:
    ```js
    const { resolveUploadedImageField } = await import('./src/images/modalImageUpload.js');
    const guild = await client.guilds.fetch(guildId);
-   await resolveUploadedImageField({ fields, data, guild, context: '<your_entity>_<field>', description: '...' });
+   await resolveUploadedImageField({ fields, data, guild, context: '<your_entity>_<field>',
+     fieldKey: 'image',            // whichever key your handler reads (result_image, image_url, ...)
+     currentValue: existingUrl,    // REQUIRED if your save treats '' as "clear" — 0 files then keeps current
+     description: '...' });
    ```
-   Pick a `context` slug that's unique enough to be a useful filename in `#🗺️castbot-images` (mirrors the fog-map convention, e.g. `a2_fogmap.png` → `a2_location.png`).
+   Prefer a deferred handler (network inside); non-deferred is acceptable for admin-only flows where the responder can't be deferred (see the dice submits). Pick a `context` slug that's a useful filename in `#🗺️castbot-images` (fog-map convention: `a2_location.png`). Omit `currentValue` only when an absent key means "leave stored value untouched" (the entity-framework path).
 5. **Nothing else changes** — no new storage field, no new display logic — *if and only if* your target field is already a plain URL string consumed the same way everywhere. If it isn't (e.g. an array of images, or a field that also feeds some non-URL-consuming code path), stop and design that separately; this pattern assumes 1:1 URL-string replacement.
 6. **Write tests** mirroring `tests/modalImageUpload.test.js` for anything genuinely new; the shared helpers (`extractImageUploadIntent`, `validateImageAttachment`, `buildImageStorageFilename`, `filenameFromImageUrl`) are already covered and don't need re-testing per field.
 7. **Verify on TEST** per the manual script below before running `win-restart.js` / `dev-restart.sh`.

@@ -12,7 +12,9 @@ import {
     extractImageUploadIntent,
     validateImageAttachment,
     buildImageStorageFilename,
-    filenameFromImageUrl
+    buildImageFieldLabel,
+    filenameFromImageUrl,
+    resolveUploadedImageField
 } from '../src/images/modalImageUpload.js';
 
 const ATTACHMENT = {
@@ -97,6 +99,95 @@ describe('Modal Image Upload — buildImageStorageFilename', () => {
         assert.equal(buildImageStorageFilename({ context: '../../etc/passwd', originalName: 'x' }), 'etc_passwd.png');
         assert.equal(buildImageStorageFilename({ context: '' }), 'image.png');
         assert.equal(buildImageStorageFilename({ context: '!!!' }), 'image.png');
+    });
+});
+
+describe('Modal Image Upload — buildImageFieldLabel', () => {
+    it('text mode (default): Label + Text Input with prefill and custom id', () => {
+        const label = buildImageFieldLabel({
+            label: 'Image URL', textCustomId: 'result_image', currentUrl: 'https://x/y.png',
+            textDescription: 'desc', textStyle: 1
+        });
+        assert.equal(label.type, 18);
+        assert.equal(label.label, 'Image URL');
+        assert.equal(label.description, 'desc');
+        assert.equal(label.component.type, 4);
+        assert.equal(label.component.custom_id, 'result_image');
+        assert.equal(label.component.style, 1);
+        assert.equal(label.component.value, 'https://x/y.png');
+    });
+
+    it('text mode omits value when no current URL; garbage mode falls back to text', () => {
+        assert.ok(!('value' in buildImageFieldLabel({ label: 'X' }).component));
+        assert.equal(buildImageFieldLabel({ label: 'X', imageUploadMode: 'junk' }).component.type, 4);
+    });
+
+    it('upload mode: Label + optional File Upload with Current: filename description', () => {
+        const label = buildImageFieldLabel({
+            label: 'Image URL', uploadLabel: 'Enemy Image', imageUploadMode: 'uploadComponent',
+            currentUrl: 'https://cdn.discordapp.com/attachments/1/2/octopus.png?ex=1'
+        });
+        assert.equal(label.label, 'Enemy Image');
+        assert.match(label.description, /Current: octopus\.png — uploading replaces it\./);
+        assert.equal(label.component.type, 19);
+        assert.equal(label.component.custom_id, IMAGE_UPLOAD_COMPONENT_ID);
+        assert.equal(label.component.min_values, 0);
+        assert.equal(label.component.required, false);
+    });
+
+    it('upload mode with no current image uses the empty description', () => {
+        const label = buildImageFieldLabel({
+            label: 'X', imageUploadMode: 'uploadComponent', uploadEmptyDescription: 'Upload one.'
+        });
+        assert.equal(label.description, 'Upload one.');
+    });
+});
+
+describe('Modal Image Upload — resolveUploadedImageField (pure paths, no network)', () => {
+    const guild = { id: 'g1' }; // never touched on these paths
+
+    it('text mode (no File Upload in modal): returns false, fields untouched', async () => {
+        const fields = { image: 'https://pasted' };
+        const data = { components: [{ type: 18, component: { type: 4, custom_id: 'image', value: 'https://pasted' } }] };
+        const uploaded = await resolveUploadedImageField({ fields, data, guild, context: 'x', currentValue: 'ignored' });
+        assert.equal(uploaded, false);
+        assert.equal(fields.image, 'https://pasted');
+    });
+
+    it('upload mode, 0 files: writes currentValue back (keep-current for \'\'-clears handlers)', async () => {
+        const fields = { result_image: '' };
+        const data = { components: [{ type: 18, component: { type: 19, custom_id: IMAGE_UPLOAD_COMPONENT_ID, values: [] } }] };
+        const uploaded = await resolveUploadedImageField({
+            fields, data, guild, context: 'x', fieldKey: 'result_image', currentValue: 'https://keep-me.png'
+        });
+        assert.equal(uploaded, false);
+        assert.equal(fields.result_image, 'https://keep-me.png');
+    });
+
+    it('upload mode, 0 files, no currentValue: leaves the field absent (entity keep-current)', async () => {
+        const fields = {};
+        const data = { components: [{ type: 18, component: { type: 19, custom_id: IMAGE_UPLOAD_COMPONENT_ID, values: [] } }] };
+        await resolveUploadedImageField({ fields, data, guild, context: 'x' });
+        assert.ok(!('image' in fields));
+    });
+
+    it('always strips the raw upload key from fields and fields.extra', async () => {
+        const fields = { [IMAGE_UPLOAD_COMPONENT_ID]: '111', extra: { [IMAGE_UPLOAD_COMPONENT_ID]: '111' } };
+        await resolveUploadedImageField({ fields, data: { components: [] }, guild, context: 'x' });
+        assert.ok(!(IMAGE_UPLOAD_COMPONENT_ID in fields));
+        assert.ok(!(IMAGE_UPLOAD_COMPONENT_ID in fields.extra));
+    });
+
+    it('rejects a non-image upload before any network work', async () => {
+        const fields = {};
+        const data = {
+            components: [{ type: 18, component: { type: 19, custom_id: IMAGE_UPLOAD_COMPONENT_ID, values: ['1'] } }],
+            resolved: { attachments: { 1: { content_type: 'application/zip', size: 10, url: 'https://x' } } }
+        };
+        await assert.rejects(
+            resolveUploadedImageField({ fields, data, guild, context: 'x' }),
+            /must be an image/
+        );
     });
 });
 

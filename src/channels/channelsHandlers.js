@@ -136,7 +136,19 @@ export async function saveMsgTargets({ configId, guildId, client, values }) {
 /** The compose modal submit — persist the card fields, then re-render. */
 export async function saveMsgDraft({ configId, guildId, client, data }) {
   const { extractRichCardValues } = await import('../../richCardUI.js');
-  const { title, content, color, image } = extractRichCardValues(data);
+  const values = extractRichCardValues(data);
+
+  // Upload-mode image: re-host to #🗺️castbot-images; 0 files = keep the draft's
+  // current image (the patch below would otherwise clear it with ''). Runs inside
+  // an already-deferred handler (channels_modal_submit), so network here is safe.
+  const { resolveUploadedImageField } = await import('../images/modalImageUpload.js');
+  const currentImage = (await getDraft(guildId, configId)).image || '';
+  const guild = await client.guilds.fetch(guildId);
+  await resolveUploadedImageField({ fields: values, data, guild,
+    context: `channels_msg_${configId}`, currentValue: currentImage,
+    description: `Channels broadcast image (${configId})` });
+
+  const { title, content, color, image } = values;
   // `targets` is deliberately absent from the patch so the channel selection survives an edit.
   await flushDeltas(guildId, [{ kind: 'broadcast', configId, patch: { title, content, color, image } }]);
   return await handleMsgComposer({ configId, guildId, client });

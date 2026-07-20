@@ -377,14 +377,19 @@ export async function buildChallengeStatusScreen(guildId, challengeId) {
 
 /**
  * Build the create/edit challenge modal.
+ * @param {string|null} challengeId - null = create
+ * @param {Object|null} existing - existing challenge (prefill)
+ * @param {string} [imageUploadMode] - guild Image Uploads mode (Settings → General);
+ *   'uploadComponent' swaps the image URL input for a File Upload
  */
-export function buildChallengeModal(challengeId = null, existing = null) {
+export function buildChallengeModal(challengeId = null, existing = null, imageUploadMode = undefined) {
   const customId = challengeId ? `challenge_modal_edit:${challengeId}` : 'challenge_modal_create';
   const title = challengeId ? 'Edit Challenge' : 'Create Challenge';
 
   const modal = buildRichCardModal({
     customId,
     modalTitle: title,
+    imageUploadMode,
     values: existing ? {
       title: existing.title || '',
       content: existing.description || '',

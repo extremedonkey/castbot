@@ -7,6 +7,7 @@
  */
 
 import { expandBotEmojis } from './botEmojis.js';
+import { buildImageFieldLabel } from './src/images/modalImageUpload.js';
 
 // ---------------------------------------------------------------------------
 // Color parsing (consolidates 5+ copies across the codebase)
@@ -57,6 +58,12 @@ export function parseAccentColor(input) {
  * @param {Object}  [options.fields]    - Per-field overrides (label, placeholder, required, maxLength, style)
  * @param {Array}   [options.extraFields] - Additional { customId, label, placeholder, ... } appended after the 4 core fields
  * @param {boolean} [options.useLabelWrap=true] - Use type-18 Label wrapper (Components V2 modal style). Set false for legacy ActionRow+TextInput.
+ * @param {string}  [options.imageUploadMode] - Guild Image Uploads mode ('textUrl' | 'uploadComponent').
+ *   'uploadComponent' swaps the image URL text input for a File Upload (type 19) —
+ *   submit handlers must then run resolveUploadedImageField (src/images/modalImageUpload.js)
+ *   with the current image as currentValue, since extractRichCardValues will return
+ *   image: '' when no file was uploaded (0 files = keep current). Ignored when
+ *   useLabelWrap is false (File Upload requires a Label wrapper).
  * @returns {{ type: 9, data: Object }} Ready-to-return modal interaction response
  */
 export function buildRichCardModal({
@@ -66,6 +73,7 @@ export function buildRichCardModal({
   fields = {},
   extraFields = [],
   useLabelWrap = true,
+  imageUploadMode,
 }) {
   const fieldDefs = [
     {
@@ -132,6 +140,16 @@ export function buildRichCardModal({
   // Build components
   const components = fieldDefs.map((def) => {
     const val = def.value !== undefined ? def.value : (values[def.id] || '');
+
+    // Image Uploads mode: the image field becomes a File Upload (Label-wrapped only)
+    if (def.id === 'image' && useLabelWrap && imageUploadMode === 'uploadComponent') {
+      return buildImageFieldLabel({
+        label: def.label,
+        currentUrl: val,
+        imageUploadMode,
+        uploadEmptyDescription: 'Upload an image (optional).'
+      });
+    }
 
     if (useLabelWrap) {
       // Components V2 modal style (type 18 Label)

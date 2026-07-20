@@ -4768,6 +4768,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       
       return ButtonHandlerFactory.create({
         id: 'safari_whisper',
+        deferred: true, // playerData+safariContent parses + member fetches (RaP 0893)
         ephemeral: true,
         handler: async (context) => {
           console.log(`💬 START: safari_whisper - user ${context.userId}, coordinate ${coordinate}`);
@@ -4812,6 +4813,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       
       return ButtonHandlerFactory.create({
         id: 'whisper_read',
+        deferred: true, // REST calls + store flush + log fan-out; late ack destroyed unread whispers (RaP 0893)
         ephemeral: true,
         handler: async (context) => {
           console.log(`💬 START: whisper_read - user ${context.userId} reading whisper ${whisperId}`);
@@ -8878,7 +8880,8 @@ To fix this:
           const { buildChallengeScreen, buildChallengeModal } = await import('./challengeManager.js');
 
           if (selectedValue === 'challenge_create_new') {
-            return buildChallengeModal();
+            const { getImageUploadMode } = await import('./src/settings/generalSettings.js');
+            return buildChallengeModal(null, null, await getImageUploadMode(context.guildId));
           }
           if (selectedValue === 'challenge_search') {
             // Show search modal
@@ -8915,9 +8918,10 @@ To fix this:
         handler: async (context) => {
           const { loadPlayerData } = await import('./storage.js');
           const { buildChallengeModal } = await import('./challengeManager.js');
+          const { getImageUploadMode } = await import('./src/settings/generalSettings.js');
           const playerData = await loadPlayerData();
           const challenge = playerData[context.guildId]?.challenges?.[challengeId];
-          return buildChallengeModal(challengeId, challenge); // Already returns { type: 9, data: {...} }
+          return buildChallengeModal(challengeId, challenge, await getImageUploadMode(context.guildId, playerData)); // Already returns { type: 9, data: {...} }
         }
       })(req, res, client);
     } else if (custom_id.startsWith('challenge_round_select_')) {
@@ -12360,6 +12364,9 @@ To fix this:
 
           // Get current URL for this environment
           const currentUrl = currentTip.urls?.[env] || '';
+          const { getImageUploadMode } = await import('./src/settings/generalSettings.js');
+          const { buildImageFieldLabel } = await import('./src/images/modalImageUpload.js');
+          const imageUploadMode = await getImageUploadMode(context.guildId);
 
           console.log(`✏️ Admin ${userId} editing tip ${tipIndex + 1} (${env})`);
 
@@ -12410,20 +12417,16 @@ To fix this:
                   style: 2  // Paragraph (multi-line)
                 }
               },
-              {
-                type: 18,  // Label
+              buildImageFieldLabel({
                 label: `Image URL (${env})`,
-                description: "Discord CDN URL - leave empty to keep existing",
-                component: {
-                  type: 4,  // Text Input
-                  custom_id: "image_url",
-                  value: currentUrl,
-                  placeholder: "https://cdn.discordapp.com/attachments/...",
-                  max_length: 500,
-                  required: false,  // Empty = keep existing
-                  style: 1  // Short (single line)
-                }
-              }
+                uploadLabel: `Tip Image (${env})`,
+                textCustomId: 'image_url',
+                currentUrl,
+                imageUploadMode,
+                textDescription: 'Discord CDN URL - leave empty to keep existing',
+                textStyle: 1,
+                uploadEmptyDescription: 'Upload the showcase image for this tip.'
+              })
             ]
           };
 
@@ -28453,8 +28456,10 @@ Your server is now ready for Tycoons gameplay!`;
           const { buildProbabilityModal } = await import('./diceRoll.js');
           const safariData = await loadSafariContent();
           const condition = safariData[context.guildId]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+          const { getImageUploadMode } = await import('./src/settings/generalSettings.js');
           // Reuse probability modal but with d20-specific custom_id
-          const modal = buildProbabilityModal(actionId, conditionIndex, isPass ? 'pass' : 'fail', condition?.config || {});
+          const modal = buildProbabilityModal(actionId, conditionIndex, isPass ? 'pass' : 'fail', condition?.config || {},
+            await getImageUploadMode(context.guildId));
           modal.data.custom_id = `d20_result_modal_${isPass ? 'pass' : 'fail'}_${actionId}_${conditionIndex}`;
           modal.data.title = isPass ? '🟢 Success Result' : '🔴 Failure Result';
           // Remove the probability % field (first component) — D20 uses DC not %
@@ -28505,7 +28510,9 @@ Your server is now ready for Tycoons gameplay!`;
           const action = safariData[context.guildId]?.buttons?.[actionId];
           const condition = action?.conditions?.[conditionIndex];
 
-          return buildProbabilityModal(actionId, conditionIndex, isPass ? 'pass' : 'fail', condition?.config || {});
+          const { getImageUploadMode } = await import('./src/settings/generalSettings.js');
+          return buildProbabilityModal(actionId, conditionIndex, isPass ? 'pass' : 'fail', condition?.config || {},
+            await getImageUploadMode(context.guildId));
         }
       })(req, res, client);
     } else if (custom_id.startsWith('prob_display_mode_')) {
@@ -40311,6 +40318,11 @@ Your server is now ready for Tycoons gameplay!`;
           if (!condition.config) condition.config = {};
           const key = side === 'pass' ? 'passResult' : 'failResult';
           if (!condition.config[key]) condition.config[key] = {};
+          // Upload-mode image: re-host; 0 files = keep current (assignment below clears on '')
+          const { resolveUploadedImageField } = await import('./src/images/modalImageUpload.js');
+          await resolveUploadedImageField({ fields, data, guild: await context.client.guilds.fetch(context.guildId),
+            fieldKey: 'result_image', context: `${actionId}_d20_${side}`, currentValue: condition.config[key].image || '',
+            description: `D20 ${side} result image (${actionId})` });
           condition.config[key].title = fields.result_title || '';
           condition.config[key].description = fields.result_description || '';
           condition.config[key].image = fields.result_image || '';
@@ -40365,6 +40377,11 @@ Your server is now ready for Tycoons gameplay!`;
           // Save result card
           const resultKey = side === 'pass' ? 'passResult' : 'failResult';
           if (!config[resultKey]) config[resultKey] = {};
+          // Upload-mode image: re-host; 0 files = keep current (assignment below clears on '')
+          const { resolveUploadedImageField } = await import('./src/images/modalImageUpload.js');
+          await resolveUploadedImageField({ fields, data, guild: await context.client.guilds.fetch(context.guildId),
+            fieldKey: 'result_image', context: `${actionId}_prob_${side}`, currentValue: config[resultKey].image || '',
+            description: `Probability ${side} result image (${actionId})` });
           config[resultKey].title = fields.result_title || '';
           config[resultKey].description = fields.result_description || '';
           config[resultKey].image = fields.result_image || '';
@@ -40501,10 +40518,12 @@ Your server is now ready for Tycoons gameplay!`;
       })(req, res, client);
 
     } else if (custom_id === 'challenge_modal_create' || custom_id.startsWith('challenge_modal_edit:')) {
-      // Challenges — create or edit modal submit
+      // Challenges — create or edit modal submit. Deferred: upload-mode image re-hosting
+      // (resolveUploadedImageField) fetches + posts to #🗺️castbot-images.
       return ButtonHandlerFactory.create({
         id: 'challenge_modal_submit',
         updateMessage: true,
+        deferred: true,
         handler: async (context) => {
           const { extractRichCardValues } = await import('./richCardUI.js');
           const { createChallenge, updateChallenge, buildChallengeScreen } = await import('./challengeManager.js');
@@ -40519,10 +40538,21 @@ Your server is now ready for Tycoons gameplay!`;
             }
           }
 
-          if (custom_id.startsWith('challenge_modal_edit:')) {
-            const challengeId = custom_id.split(':')[1];
-            await updateChallenge(context.guildId, challengeId, values);
-            return buildChallengeScreen(context.guildId, challengeId);
+          const editId = custom_id.startsWith('challenge_modal_edit:') ? custom_id.split(':')[1] : null;
+
+          // Upload-mode image: re-host to #🗺️castbot-images; 0 files = keep current
+          // (currentValue needed because updateChallenge treats image:'' as a clear)
+          const { resolveUploadedImageField } = await import('./src/images/modalImageUpload.js');
+          const { loadPlayerData } = await import('./storage.js');
+          const currentImage = editId ? ((await loadPlayerData())[context.guildId]?.challenges?.[editId]?.image || '') : '';
+          const guild = await context.client.guilds.fetch(context.guildId);
+          await resolveUploadedImageField({ fields: values, data, guild,
+            context: `${editId || 'challenge_new'}`, currentValue: currentImage,
+            description: `Challenge image (${values.title || editId || 'new challenge'})` });
+
+          if (editId) {
+            await updateChallenge(context.guildId, editId, values);
+            return buildChallengeScreen(context.guildId, editId);
           } else {
             const challengeId = await createChallenge(context.guildId, context.userId, values);
             return buildChallengeScreen(context.guildId, challengeId);
@@ -40697,28 +40727,25 @@ Your server is now ready for Tycoons gameplay!`;
         data: { components: [card] }
       });
     } else if (custom_id.startsWith('whisper_send_modal_')) {
-      // Handle whisper modal submission
+      // Whisper modal submission — deferred (RaP 0893): sendWhisper does store
+      // writes, a notification POST and log fan-out; pre-ack this blew the 3s
+      // deadline, showing "interaction failed" on successful sends → duplicates.
       // Format: whisper_send_modal_targetUserId_coordinate
       const parts = custom_id.split('_');
       const targetUserId = parts[3];
       const coordinate = parts.slice(4).join('_'); // Handle coordinates with underscores
-      const message = components[0].components[0].value;
-      const userId = req.body.member?.user?.id || req.body.user?.id;
-      const guildId = req.body.guild_id;
-      
-      console.log(`💬 Whisper modal submitted - sender: ${userId}, target: ${targetUserId}, coord: ${coordinate}`);
-      
-      const { sendWhisper } = await import('./whisperManager.js');
-      const result = await sendWhisper({
-        userId,
-        guildId,
-        token: req.body.token
-      }, targetUserId, coordinate, message, client);
-      
-      return res.send({
-        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-        data: result
-      });
+      return ButtonHandlerFactory.create({
+        id: 'whisper_send_modal',
+        deferred: true,
+        ephemeral: true,
+        security: 'public', // player feature — sendWhisper enforces same-location + initialized player
+        handler: async (context) => {
+          const message = components[0].components[0].value;
+          console.log(`💬 Whisper modal submitted - sender: ${context.userId}, target: ${targetUserId}, coord: ${coordinate}`);
+          const { sendWhisper } = await import('./whisperManager.js');
+          return await sendWhisper(context, targetUserId, coordinate, message, client);
+        }
+      })(req, res, client);
 
     } else if (custom_id.startsWith('modal_item_attr_edit_')) {
       // Phase 5: Edit existing item attribute modifier
@@ -41459,11 +41486,13 @@ Your server is now ready for Tycoons gameplay!`;
       // Parse tip index
       const tipIndex = parseInt(custom_id.replace('save_tip_', ''));
 
-      // Extract values from modal (Label components type 18)
-      const title = components[0].component.value?.trim();
-      const description = components[1].component.value?.trim();
-      const showcase = components[2].component.value?.trim();
-      const imageUrl = components[3]?.component?.value?.trim() || '';
+      // Parse by custom_id — the image field's shape varies by Image Uploads mode
+      const { collectModalFields, resolveUploadedImageField } = await import('./src/images/modalImageUpload.js');
+      const tipFields = collectModalFields(components);
+      const title = tipFields.title?.trim();
+      const description = tipFields.description?.trim();
+      const showcase = tipFields.showcase?.trim();
+      let imageUrl = (typeof tipFields.image_url === 'string' ? tipFields.image_url.trim() : '') || '';
 
       // Validate required fields
       if (!title || !description || !showcase) {
@@ -41491,6 +41520,14 @@ Your server is now ready for Tycoons gameplay!`;
       const { loadTipsConfig, saveTipsConfig, getCurrentEnvironment } = await import('./tipsGalleryManager.js');
       const config = await loadTipsConfig();
       const env = getCurrentEnvironment();
+
+      // Upload-mode image: re-host to #🗺️castbot-images (tips display forever — an
+      // ephemeral attachment URL would rot). 0 files → imageUrl stays '' → keep existing.
+      const tipImage = { image_url: imageUrl };
+      await resolveUploadedImageField({ fields: tipImage, data, guild: await client.guilds.fetch(req.body.guild_id),
+        fieldKey: 'image_url', context: `tip_${tipIndex + 1}_${env}`, currentValue: imageUrl,
+        description: `Tips showcase image (tip ${tipIndex + 1}, ${env})` });
+      imageUrl = tipImage.image_url;
 
       if (!config.tips[tipIndex]) {
         return res.send({
@@ -49371,13 +49408,14 @@ Your server is now ready for Tycoons gameplay!`;
         res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
         deferredModalSubmit = true;
 
-        // Image Uploads pilot: resolve a File Upload image (if any) into a re-hosted
+        // Image Uploads: resolve a File Upload image (if any) into a re-hosted
         // #🗺️castbot-images URL BEFORE saving; always strips the raw attachment snowflake.
-        if (entityType === 'map_cell' && fieldGroup === 'info') {
+        if ((entityType === 'map_cell' || entityType === 'enemy') && fieldGroup === 'info') {
           const { resolveUploadedImageField } = await import('./src/images/modalImageUpload.js');
           const guild = await client.guilds.fetch(guildId);
-          await resolveUploadedImageField({ fields, data, guild, context: `${entityId.toLowerCase()}_location`,
-            description: `Location image for ${entityId} (${guild.name})` });
+          const slug = `${entityId.toLowerCase()}_${entityType === 'map_cell' ? 'location' : 'enemy'}`;
+          await resolveUploadedImageField({ fields, data, guild, context: slug,
+            description: `${entityType === 'map_cell' ? 'Location' : 'Enemy'} image for ${entityId} (${guild.name})` });
         }
 
         // Update entity

@@ -151,10 +151,11 @@ export function buildMsgComposer({ configId, draft = {}, targetSummary = null })
 }
 
 /** The 📨 Msg Category edit modal — reuses the shared rich card modal, pre-filled with the draft. */
-export function buildMsgModal({ configId, draft = {} }) {
+export function buildMsgModal({ configId, draft = {}, imageUploadMode }) {
   return buildRichCardModal({
     customId: `channels_msg_modal_${configId}`,
     modalTitle: '📨 Compose Message',
+    imageUploadMode,
     values: { title: draft.title, content: draft.content, color: draft.color, image: draft.image },
     fields: {
       content: { label: 'Message', placeholder: 'What every selected channel will receive...', required: true }
