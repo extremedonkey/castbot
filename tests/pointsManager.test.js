@@ -549,6 +549,49 @@ function summarize(points, timeText, regenerationAmount) {
 }
 const cardFormat = (r) => !r ? 'MAX' : r.amountLabel === 'to full' ? r.timeText : `${r.amountLabel} in ${r.timeText}`;
 
+// ─── Missing config guard (prod bug 2026-07-20) ───────────────────────────────
+// Repro: Fight Enemy calls getEntityPoints(guildId, entityId, 'hp') before the admin has
+// enabled the HP attribute (Tools > Attributes). With no attributeDefinitions.hp entry, no
+// legacy pointsConfig entry, and no built-in default (getDefaultPointsConfig only has
+// 'stamina'), config resolved to undefined and was handed straight to
+// calculateRegenerationWithCharges, crashing on `config.defaultMax`. Replicates the
+// resolveEntityPointsCore guard: missing config must short-circuit to undefined points
+// instead of reaching the regen calculation.
+function resolvePointsCore(pointData, config) {
+    if (!config) return { points: undefined, changed: false };
+    // Real code proceeds into calculateRegenerationWithCharges here — guard above prevents
+    // ever calling it with an undefined config.
+    return { points: pointData, changed: false };
+}
+
+function hasEnoughPointsLogic(points, amount) {
+    return !!points && points.current >= amount;
+}
+
+describe('Missing points config — attribute not enabled (not a crash)', () => {
+    it('returns undefined points instead of crashing when config cannot be resolved', () => {
+        const pointData = { current: 100, max: 100, lastUse: 1, lastRegeneration: 1 };
+        const result = resolvePointsCore(pointData, undefined);
+        assert.deepEqual(result, { points: undefined, changed: false });
+    });
+
+    it('resolves normally once config is present', () => {
+        const pointData = { current: 5, max: 10, lastUse: 1, lastRegeneration: 1 };
+        const config = makeConfig(10, 'max');
+        const result = resolvePointsCore(pointData, config);
+        assert.equal(result.points, pointData);
+    });
+
+    it('hasEnoughPoints treats undefined points (not-enabled attribute) as insufficient, not a throw', () => {
+        assert.equal(hasEnoughPointsLogic(undefined, 1), false);
+    });
+
+    it('hasEnoughPoints still compares normally once points exist', () => {
+        assert.equal(hasEnoughPointsLogic({ current: 5, max: 10 }, 3), true);
+        assert.equal(hasEnoughPointsLogic({ current: 2, max: 10 }, 3), false);
+    });
+});
+
 describe('Stamina regen display summary (navigate pane + player card)', () => {
     it('below max in drip mode → "+N in T"', () => {
         const r = summarize({ current: 2, max: 3 }, '5h 12m', 1);

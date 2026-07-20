@@ -286,6 +286,15 @@ async function resolveEntityPointsCore(safariData, guildId, entityId, pointType)
         }
     }
 
+    // No attrDef, no legacy pointsConfig entry, no built-in default (e.g. 'hp' before the
+    // admin enables it via Tools > Attributes) — this is an expected "not enabled" state,
+    // not a bug. Signal it via undefined points rather than crashing on config.defaultMax
+    // below; callers (e.g. executeFightEnemy) already treat missing points as "not configured".
+    if (!config) {
+        console.warn(`📊 No points config for '${pointType}' (guild ${guildId}, entity ${entityId}) — attribute not enabled`);
+        return { points: undefined, changed: false };
+    }
+
     // Apply regeneration based on elapsed time
     const regenerated = await calculateRegenerationWithCharges(pointData, config, guildId, entityId, pointType);
 
@@ -477,7 +486,7 @@ export async function usePoints(guildId, entityId, pointType, amount) {
 // Check if entity has enough points
 export async function hasEnoughPoints(guildId, entityId, pointType, amount) {
     const points = await getEntityPoints(guildId, entityId, pointType);
-    return points.current >= amount;
+    return !!points && points.current >= amount;
 }
 
 // Get time until next regeneration (for display)
