@@ -1,8 +1,8 @@
 # 🖼️ Image Uploads: Media Gallery Transition (Pilot: Safari Image Anchor)
 
-**Status**: Implemented — pilot live on TEST (map cell location image)
+**Status**: Implemented — pilot live on TEST (map cell location image). **Living feature reference (architecture, file index, "how to convert the next field" recipe) has moved to [docs/03-features/ImageUploads.md](../03-features/ImageUploads.md) — read that first if you're continuing this work.** This document remains as the historical design record (original prompt, rationale for each decision).
 **Date**: 2026-07-20
-**Related**: [Image Handling Techniques (0980)](0980_20251106_ImageHandling_TechnicalAnalysis.md) · [Map Image Oversize OOM (incident 01)](../incidents/01-MapImageOversizeOOM.md) · [RolesSecurity](../03-features/RolesSecurity.md)
+**Related**: [ImageUploads.md (current feature doc)](../03-features/ImageUploads.md) · [Image Handling Techniques (0980)](0980_20251106_ImageHandling_TechnicalAnalysis.md) · [Map Image Oversize OOM (incident 01)](../incidents/01-MapImageOversizeOOM.md) · [RolesSecurity](../03-features/RolesSecurity.md)
 
 ## 🤔 Plain English
 
@@ -103,4 +103,24 @@ flowchart TD
 
 ## 🚀 Rollout Path (converting more fields later)
 
-Each future conversion is: (1) thread `getImageUploadMode(guildId)` into the modal builder, (2) swap the image Text Input for a Label-wrapped type-19 (`IMAGE_UPLOAD_COMPONENT_ID`) with a `Current: <filenameFromImageUrl(...)>` description, (3) call `resolveUploadedImageField` post-defer in the submit with a contextual filename slug. Obvious next adopter: the **enemy** info modal (identical image-as-text-input pattern in fieldEditors.js).
+Each future conversion is: (1) thread `getImageUploadMode(guildId)` into the modal builder, (2) swap the image Text Input for a Label-wrapped type-19 (`IMAGE_UPLOAD_COMPONENT_ID`) with a `Current: <filenameFromImageUrl(...)>` description, (3) call `resolveUploadedImageField` post-defer in the submit with a contextual filename slug — **unless** the field is a *download-source* (the pipeline fetches the URL and re-hosts its own artifacts), in which case pass `attachment.url` straight through with no re-hosting (see [ImageUploads.md](../03-features/ImageUploads.md) archetypes). Obvious next adopter: the **enemy** info modal (identical image-as-text-input pattern in fieldEditors.js).
+
+## 📋 Migration Backlog — every remaining image-URL modal input (swept 2026-07-20)
+
+Comprehensive scan (`Image URL`, `image_url`, `custom_id: 'image'`, cdn placeholders across all modal builders). ✅ = converted; numbered = still legacy paste-URL regardless of the guild toggle.
+
+| # | Field | Modal site(s) | Stored at | Archetype | Notes |
+|---|---|---|---|---|---|
+| ✅ | Map cell location image | [fieldEditors.js:793](../../fieldEditors.js#L793) `buildMapCellImageField` | `maps[].coordinates[].baseContent.image` | Display-URL | The pilot |
+| ✅ | Map create/update image | [src/maps/mapUpdateModal.js](../../src/maps/mapUpdateModal.js) | consumed by `executeMapBuild` (pipeline re-hosts its own artifacts) | Download-source | Attachment URL passed straight through; Proceed-Anyway stash unaffected |
+| 1 | **Enemy image** | [fieldEditors.js:495-496](../../fieldEditors.js#L495-L496) (enemy `info` group) | `enemy.image` (root) | Display-URL | **Recommended next** — identical shape to the pilot, same `entity_modal_submit_*` handler; shown in combat |
+| 2 | Custom Action "Display Text" image | [customActionUI.js:4615](../../customActionUI.js#L4615) (`action_image`) | `action.config.image` | Display-URL | Modern Label modal |
+| 3 | Custom Action "Display Text" image — **legacy twin** | [app.js:22552](../../app.js#L22552) (`action_image`, old ModalBuilder) | same data as #2 | Display-URL | Second writer for the same field — convert together with #2, or retire this editor first |
+| 4 | Rich Card image (shared field def) | [richCardUI.js:97](../../richCardUI.js#L97) (`id: 'image'`) | per consumer | Display-URL | Shared definition — converting here cascades to its consumers (incl. src/channels views) |
+| 5 | Dice Roll result images | [diceRoll.js:366](../../diceRoll.js#L366) | dice pass/fail result config | Display-URL | One image per result card |
+| 6 | Challenge image | [challengeManager.js:398](../../challengeManager.js#L398) | challenge config | Display-URL | Field def carries the cdn placeholder |
+| 7 | Season App question image | app.js:11174 / 11267 / 11404 (`imageURL`) | `question.imageURL` | Display-URL | Three modal variants (new / edit / completion) share the field shape |
+| 8 | Legacy map cell editor | [app.js:35774](../../app.js#L35774) (`map_grid_edit_modal_`) | `baseContent.image` — **same data as the pilot** | Display-URL | Old second writer for already-converted data; enforces a cdn prefix on submit (app.js:44507). Consider **retiring** rather than converting |
+| 9 | Tips showcase image | app.js:12415 (`image_url`, per-env) | tips config | Display-URL | Reece-only dev tooling (cdn validation app.js:41484) — lowest priority |
+
+Related, not modal inputs: [editFramework.js:114](../../editFramework.js#L114) MAP_CELL `image` property metadata (informational field def); the Map Explorer no-map instructions ([mapExplorer.js:2212](../../mapExplorer.js#L2212)) are now mode-aware (upload mode says "upload your image directly in the form").

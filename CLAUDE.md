@@ -519,6 +519,7 @@ When a feature is **deployed to production and working**, move/rename its doc in
 - **📦 ITEMS** → [docs/03-features/SafariImportExport.md](docs/03-features/SafariImportExport.md) - Items, stock management, import/export
 - **📊 ATTRIBUTES** → [docs/03-features/Attributes.md](docs/03-features/Attributes.md) - Player stats, resources, regeneration
 - **🗺️ MAP** → [docs/03-features/SafariMapSystem.md](docs/03-features/SafariMapSystem.md) - Map system ([Technical](docs/03-features/SafariMapTechnical.md), [Explorer](docs/03-features/SafariMapExplorer.md), [Movement](docs/03-features/SafariMapMovement.md))
+- **🖼️ IMAGE UPLOADS** → [docs/03-features/ImageUploads.md](docs/03-features/ImageUploads.md) - Per-guild toggle (Settings → General) migrating legacy paste-URL image fields to native modal File Upload; shared `#🗺️castbot-images` storage channel (renamed from `#🗺️map-storage`); pilot converted: Safari map cell location image. **Migration in progress** — most image fields are still paste-URL only
 - **📍 LOCATION NAMING** → [docs/03-features/SafariLocationNaming.md](docs/03-features/SafariLocationNaming.md) - Emoji channels, auto-rename, bulk update
 - **💬 WHISPER** → [docs/03-features/WhisperSystem.md](docs/03-features/WhisperSystem.md)
 - **⌨️ PLAYER COMMANDS** → [docs/03-features/PlayerCommands.md](docs/03-features/PlayerCommands.md) - Text-based Custom Action invocation

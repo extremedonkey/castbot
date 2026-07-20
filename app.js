@@ -32834,79 +32834,19 @@ Your server is now ready for Tycoons gameplay!`;
         permissionName: 'Manage Roles',
         handler: async (context) => {
           console.log(`🔄 START: map_update - user ${context.userId}`);
-          
-          // Create modal using ModalBuilder for consistency
-          const { ModalBuilder, TextInputBuilder, ActionRowBuilder } = await import('discord.js');
-          
-          // Check if map exists to determine modal title
+
           const { loadSafariContent } = await import('./safariManager.js');
           const safariData = await loadSafariContent();
-          const hasActiveMap = safariData[context.guildId]?.maps?.active;
-          
-          // Get existing map dimensions if updating
           const activeMapId = safariData[context.guildId]?.maps?.active;
           const existingMap = activeMapId ? safariData[context.guildId]?.maps?.[activeMapId] : null;
-          
-          const modal = new ModalBuilder()
-            .setCustomId('map_update_modal')
-            .setTitle(hasActiveMap ? 'Update Map Image' : 'Upload New Safari Map');
 
-          const urlInput = new TextInputBuilder()
-            .setCustomId('map_url')
-            .setLabel('Discord Image URL')
-            .setStyle(2) // Paragraph
-            .setRequired(true)
-            .setPlaceholder('Paste Discord CDN URL here (e.g., https://cdn.discordapp.com/attachments/...)')
-            .setMinLength(20)
-            .setMaxLength(500);
+          const { getImageUploadMode } = await import('./src/settings/generalSettings.js');
+          const { buildMapUpdateModal } = await import('./src/maps/mapUpdateModal.js');
+          const modal = buildMapUpdateModal(Boolean(activeMapId), existingMap,
+            await getImageUploadMode(context.guildId));
 
-          // Add row input (height)
-          const rowInput = new TextInputBuilder()
-            .setCustomId('map_rows')
-            .setLabel('Number of Map Rows')
-            .setStyle(1) // Short
-            .setRequired(true)
-            .setPlaceholder('Enter how many rows you want in your map')
-            .setValue(existingMap?.gridHeight?.toString() || existingMap?.gridSize?.toString() || '7')
-            .setMinLength(1)
-            .setMaxLength(3);
-
-          // Add column input (width)
-          const colInput = new TextInputBuilder()
-            .setCustomId('map_columns')
-            .setLabel('Number of Map Columns')
-            .setStyle(1) // Short
-            .setRequired(true)
-            .setPlaceholder('Enter how many columns you want in your map')
-            .setValue(existingMap?.gridWidth?.toString() || existingMap?.gridSize?.toString() || '7')
-            .setMinLength(1)
-            .setMaxLength(3);
-
-          const actionRow1 = new ActionRowBuilder().addComponents(urlInput);
-          const actionRow2 = new ActionRowBuilder().addComponents(rowInput);
-          const actionRow3 = new ActionRowBuilder().addComponents(colInput);
-          modal.addComponents(actionRow1, actionRow2, actionRow3);
-
-          // Default emoji field (only on new map creation, not updates)
-          if (!hasActiveMap) {
-            const emojiInput = new TextInputBuilder()
-              .setCustomId('map_emoji')
-              .setLabel('Default Location Emoji')
-              .setStyle(1) // Short
-              .setRequired(false)
-              .setPlaceholder('📍')
-              .setValue('📍')
-              .setMaxLength(8);
-            modal.addComponents(new ActionRowBuilder().addComponents(emojiInput));
-          }
-          
           console.log(`✅ SUCCESS: map_update - modal created`);
-          
-          // Return modal response for ButtonHandlerFactory to send
-          return {
-            type: InteractionResponseType.MODAL,
-            data: modal.toJSON()
-          };
+          return { type: InteractionResponseType.MODAL, data: modal };
         }
       })(req, res, client);
       
@@ -50858,11 +50798,34 @@ Your server is now ready for Tycoons gameplay!`;
       try {
         const guildId = req.body.guild_id;
         const userId = req.body.member?.user?.id || req.body.user?.id;
-        const mapUrl = components[0].components[0].value?.trim();
-        const mapRows = parseInt(components[1].components[0].value?.trim());
-        const mapColumns = parseInt(components[2].components[0].value?.trim());
-        const mapEmoji = components[3]?.components?.[0]?.value?.trim() ?? '📍';
-        
+
+        // Parse by custom_id (Label or legacy ActionRow shapes) — the modal's shape
+        // varies by Image Uploads mode, so positional indexes are no longer stable.
+        const { collectModalFields, extractImageUploadIntent, validateImageAttachment } =
+          await import('./src/images/modalImageUpload.js');
+        const fields = collectModalFields(components);
+        const mapRows = parseInt(fields.map_rows?.trim?.());
+        const mapColumns = parseInt(fields.map_columns?.trim?.());
+        const mapEmoji = (typeof fields.map_emoji === 'string' && fields.map_emoji.trim()) || '📍';
+
+        // Upload mode: the attachment URL feeds the build pipeline exactly like a
+        // pasted URL — the pipeline downloads and re-hosts its own artifacts, so no
+        // pre-hosting here (docs/03-features/ImageUploads.md, download-source archetype).
+        let mapUrl;
+        const intent = extractImageUploadIntent(components, req.body.data?.resolved?.attachments);
+        if (intent.action === 'upload') {
+          const check = validateImageAttachment(intent.attachment);
+          if (!check.ok) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: { content: `❌ ${check.error}`, flags: InteractionResponseFlags.EPHEMERAL }
+            });
+          }
+          mapUrl = intent.attachment.url.trim().replace(/&+$/, '');
+        } else {
+          mapUrl = typeof fields.map_url === 'string' ? fields.map_url.trim() : undefined;
+        }
+
         console.log(`🔄 DEBUG: Map update modal submitted - guild: ${guildId}, url: ${mapUrl}, dimensions: ${mapColumns}x${mapRows}`);
         
         // Basic URL validation

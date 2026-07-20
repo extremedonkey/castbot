@@ -43,6 +43,27 @@ export function findModalComponentByType(components, type) {
 }
 
 /**
+ * Pure — collect every modal-submit field into a { custom_id: value } map,
+ * handling both Label (row.component) and legacy ActionRow (row.components)
+ * wrappers. Selects/File Uploads deliver their values array; text inputs their
+ * string. Use this instead of positional `components[0].components[0].value`
+ * parsing — indexes shift the moment a modal's shape varies by mode.
+ * @param {Array} components - modal submit data.components
+ * @returns {Object} custom_id → string | array
+ */
+export function collectModalFields(components) {
+    const fields = {};
+    for (const row of components || []) {
+        for (const comp of (row?.component ? [row.component] : (row?.components || []))) {
+            if (comp?.custom_id) {
+                fields[comp.custom_id] = Array.isArray(comp.values) ? comp.values : comp.value;
+            }
+        }
+    }
+    return fields;
+}
+
+/**
  * Pure — determine what the user asked for via the File Upload component.
  * 0 files uploaded = keep the current image (there is deliberately no clearing in
  * upload mode — switch the guild setting back to Paste URL to clear a field).

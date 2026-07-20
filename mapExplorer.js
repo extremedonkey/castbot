@@ -2209,7 +2209,12 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
 
     headerText = `# 🗺️ Map Explorer\n\n**Active Map:** ${guildName}\n**Grid Size:** ${gridW}x${gridH}\n**Status:** ${statusText}\n**Source Images:** <#${activeMap.mapStorageChannelId || ''}> (don't delete!)`;
   } else {
-    headerText = `# 🗺️ Map Explorer\n\n**No active map**\nCastBot will create a map, grid and channels for you - all you need to do is:\n1. Upload an image to any Discord channel\n2. Right click / long press the image\n3. Click **Copy Link** (computer) / **Copy Media Link** (phone)\n4. Click the **Create / Update Map** button below and paste it into the Discord Image URL text input.`;
+    // Instructions differ by the guild's Image Uploads mode (Settings → General)
+    const { getImageUploadMode } = await import('./src/settings/generalSettings.js');
+    const uploadMode = (await getImageUploadMode(guildId)) === 'uploadComponent';
+    headerText = uploadMode
+      ? `# 🗺️ Map Explorer\n\n**No active map**\nCastBot will create a map, grid and channels for you - all you need to do is:\n1. Click the **Create / Update Map** button below\n2. Upload your map image directly in the form`
+      : `# 🗺️ Map Explorer\n\n**No active map**\nCastBot will create a map, grid and channels for you - all you need to do is:\n1. Upload an image to any Discord channel\n2. Right click / long press the image\n3. Click **Copy Link** (computer) / **Copy Media Link** (phone)\n4. Click the **Create / Update Map** button below and paste it into the Discord Image URL text input.`;
   }
 
   // Build container components starting with text display
