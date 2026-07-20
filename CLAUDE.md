@@ -429,7 +429,7 @@ Bot not responding?
 
 ## 🔴 CRITICAL: playerData Writes — Use the Storage Lock
 
-Concurrent `loadPlayerData → mutate → savePlayerData` cycles silently erase each other (last save wins — a real player's map move was destroyed this way: [incident 05](docs/incidents/05-LostMovementRace.md)). `atomicSave` only serializes the writes, not the cycles.
+Concurrent `loadPlayerData → mutate → savePlayerData` cycles silently erase each other (last save wins — a real player's map move was destroyed this way: [incident 05](docs/incidents/05-LostMovementRace.md)). `atomicSave` only serializes the writes, not the cycles. The lock now also drops the request cache at cycle entry and reads are generation-guarded — a stale in-flight read once poisoned the cache and erased a committed move *through* the lock ([incident 07](docs/incidents/07-CachePoisonedLostMove.md)); scan any log for that signature with `node scripts/detect-stale-reads.js <logfile>`.
 
 **USE `withStorageLock` (from storage.js) whenever your function does load + mutate + save of playerData in one flow:**
 ```javascript

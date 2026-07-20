@@ -27,7 +27,12 @@ function cacheIfFresh(cacheKey, value, genAtRead) {
         requestCache.set(cacheKey, value);
         return true;
     }
-    console.warn(`⚠️ Stale playerData read discarded from cache (gen ${genAtRead}→${dataGeneration}) — a save landed mid-read`);
+    // Suppressed under node --test: stdout writes from test-exercised hot paths
+    // interleave with the runner's IPC stream and cause flaky 'Unable to
+    // deserialize cloned data' failures (same guard as botEmojis.js).
+    if (!process.env.NODE_TEST_CONTEXT) {
+        console.warn(`⚠️ Stale playerData read discarded from cache (gen ${genAtRead}→${dataGeneration}) — a save landed mid-read`);
+    }
     return false;
 }
 
@@ -81,7 +86,10 @@ export function withStorageLock(fn) {
     _saveQueue = next;
     return prev.then(() => {
         if (requestCache.size > 0) {
-            console.log(`🔒 Storage lock: dropped ${requestCache.size} cached entries for fresh cycle`);
+            // NODE_TEST_CONTEXT guard: see cacheIfFresh — avoids flaky test-runner IPC corruption
+            if (!process.env.NODE_TEST_CONTEXT) {
+                console.log(`🔒 Storage lock: dropped ${requestCache.size} cached entries for fresh cycle`);
+            }
             requestCache.clear();
         }
         return fn();
