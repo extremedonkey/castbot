@@ -12,6 +12,7 @@ import {
 import { InteractionResponseFlags } from 'discord-interactions';
 import { loadPlayerData, savePlayerData } from './storage.js';
 import { getRoleAccessOverwrites, APPLICATION_CHANNEL_ACCESS } from './utils/roleAccessUtils.js';
+import { buildImageFieldLabel } from './src/images/modalImageUpload.js';
 import fetch from 'node-fetch';
 
 /**
@@ -53,6 +54,51 @@ export function buildApplicationWelcome({ userId, productionRoleId, withdrawn = 
       { type: 10, content: "-# You can update this information from any channel at any time by typing `/menu`" }
     ]
   };
+}
+
+/**
+ * Pure — the season-app question create/edit modal DATA (wrap in {type: 9, data} or
+ * res.send yourself). Shared by every opener: question_add_, question_select_ edit,
+ * question_completion_select_ edit, and the legacy stale-message openers — replaces
+ * five drifting inline copies in app.js. The image field honors the guild's
+ * imageUploadMode (paste-URL text input or File Upload type 19).
+ * @param {Object} p
+ * @param {string} p.customId - season_new_question_modal_* or season_edit_question_modal_*
+ * @param {string} p.title - modal title
+ * @param {Object} [p.question] - existing question for prefills (omit when creating)
+ * @param {string} [p.imageUploadMode] - 'textUrl' (default) | 'uploadComponent'
+ * @returns {Object} modal data { custom_id, title, components }
+ */
+export function buildQuestionModal({ customId, title, question = null, imageUploadMode }) {
+    return {
+        custom_id: customId,
+        title,
+        components: [
+            { type: 18, label: 'Question Title', description: 'Short label shown above the answer field', component: {
+                type: 4, custom_id: 'questionTitle', style: 1,
+                required: true, max_length: 100,
+                ...(question ? { value: question.questionTitle || '' } : {}),
+                placeholder: 'e.g., Why do you want to play?'
+            }},
+            { type: 18, label: 'Question Text', description: 'The full question applicants will answer', component: {
+                type: 4, custom_id: 'questionText', style: question?.questionStyle || 2,
+                required: true, max_length: 1000,
+                ...(question ? { value: question.questionText || '' } : {}),
+                placeholder: 'Enter the full question...'
+            }},
+            buildImageFieldLabel({
+                label: 'Image URL (Optional)',
+                uploadLabel: 'Question Image (Optional)',
+                textCustomId: 'imageURL',
+                currentUrl: question?.imageURL || '',
+                imageUploadMode,
+                textDescription: 'Link to an image to display with this question',
+                textPlaceholder: 'https://...',
+                textStyle: 1,
+                uploadEmptyDescription: 'Upload an image shown with this question (optional).'
+            })
+        ]
+    };
 }
 
 // Button style mapping for Discord API

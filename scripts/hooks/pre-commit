@@ -6,8 +6,8 @@
 # See: docs/enablers/ButtonHandlerFactory.md
 # See: CLAUDE.md "Button Handler Factory" section
 
-BASELINE=102  # Legacy handler count as of 2026-07-15 (bouncer sweep). Includes completion_edit modal exception. Only goes DOWN.
-APP_JS_LINES_MAX=52850  # app.js line-count ratchet as of 2026-07-19 (actual: 52796, live-analytics extraction). Only goes DOWN. Extract more than you add.
+BASELINE=100  # Legacy handler count as of 2026-07-21 (map_grid_edit retirement). Includes completion_edit modal exception. Only goes DOWN.
+APP_JS_LINES_MAX=52458  # app.js line-count ratchet as of 2026-07-21 (actual: 52458, image-upload backlog + dead-code retirement). Only goes DOWN. Extract more than you add.
 
 # ── Auto-sync: keep installed hook in sync with source ──
 SOURCE_HOOK="scripts/hooks/pre-commit"

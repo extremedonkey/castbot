@@ -95,9 +95,21 @@ Whether the URL got there by paste or by upload is invisible to every consumer (
 
 ---
 
-## The one converted field: Safari map cell "Location Image"
+## Converted fields — migration COMPLETE (2026-07-21)
 
-This is your reference implementation. Full flow, with current line numbers (as of commit `ef4ced37`):
+Every image-URL modal input from the RaP 0894 sweep is now converted (or the editor retired). The full per-field table with dates and mechanics lives in the [RaP 0894 Migration Backlog](../01-RaP/0894_20260720_ImageUploadComponent_Analysis.md#-migration-backlog--every-remaining-image-url-modal-input-swept-2026-07-20); the short list:
+
+- **Map cell "Location Image"** (the pilot, below) · **Enemy image** (same entity-resolver gate)
+- **Map create/update** (download-source archetype — attachment URL passed straight to the build pipeline)
+- **Rich Card shared modal** (`buildRichCardModal`) → wired consumers: **challenges**, **channels msg composer**
+- **Dice/D20 result images** · **Tips showcase image**
+- **Custom Action "Display Text" image** (`buildDisplayTextModal` in customActionUI.js) — the legacy `safari_action_modal_*_display_text` twin now **delegates** to the modern modal
+- **Season app question image** (`buildQuestionModal` in applicationManager.js — replaced five inline modal copies; both submits parse via `collectModalFields` + resolver)
+- **Retired outright**: the dead `map_grid_edit_` / `map_grid_edit_modal_` legacy map editor (zero emitters)
+
+## The reference implementation: Safari map cell "Location Image"
+
+This is the pilot conversion. Full flow, with line numbers as of commit `ef4ced37` (line numbers have since drifted — the shape is what matters):
 
 1. **Modal opener** — `entity_field_group_map_cell_{coord}_info` button, two call sites both threading the mode through:
    - Factory opener: [app.js:29509-29511](../../app.js#L29509-L29511)

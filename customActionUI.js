@@ -7,6 +7,7 @@ import { loadSafariContent, getCustomTerms } from './safariManager.js';
 import { scheduler } from './scheduler.js';
 import { formatPeriod, formatCountdown, buildLimitOptions } from './utils/periodUtils.js';
 import { parseTextEmoji, resolveEmoji } from './utils/emojiUtils.js';
+import { buildImageFieldLabel, collectModalFields, resolveUploadedImageField } from './src/images/modalImageUpload.js';
 
 /**
  * Shared outcome type options for the "Add Outcome" select menus.
@@ -4581,7 +4582,18 @@ export async function handleDisplayTextEdit(guildId, userId, customId) {
   }
   
   // Build modal with raw JSON (Label type 18 wrappers — converted from ModalBuilder for consistency)
+  const { getImageUploadMode } = await import('./src/settings/generalSettings.js');
+  const imageUploadMode = await getImageUploadMode(guildId);
   console.log(`✅ SUCCESS: safari_display_text_edit - showing edit modal for ${buttonId}[${actionIndex}]`);
+  return buildDisplayTextModal(buttonId, actionIndex, action, imageUploadMode);
+}
+
+/**
+ * Pure — the Display Text outcome create/edit modal. The image field honors the
+ * guild's imageUploadMode: paste-URL text input or File Upload (type 19).
+ * Submits to safari_display_text_save_{buttonId}_{actionIndex}.
+ */
+export function buildDisplayTextModal(buttonId, actionIndex, action, imageUploadMode) {
   return {
     type: 9, // MODAL
     data: {
@@ -4612,54 +4624,47 @@ export async function handleDisplayTextEdit(guildId, userId, customId) {
             value: action?.config?.color || action?.color || '',
             placeholder: 'e.g., #3498db or ff5722'
         }},
-        { type: 18, label: 'Image URL (optional)',
-          description: 'Direct link to an image uploaded to Discord.',
-          component: {
-            type: 4, custom_id: 'action_image', style: 1,
-            required: false, max_length: 500,
-            value: action?.config?.image || action?.image || '',
-            placeholder: 'Enter link of an image you have uploaded to Discord.'
-        }}
+        buildImageFieldLabel({
+          label: 'Image URL (optional)',
+          uploadLabel: 'Image (optional)',
+          textCustomId: 'action_image',
+          currentUrl: action?.config?.image || action?.image || '',
+          imageUploadMode,
+          textDescription: 'Direct link to an image uploaded to Discord.',
+          textPlaceholder: 'Enter link of an image you have uploaded to Discord.',
+          textStyle: 1,
+          uploadEmptyDescription: 'Upload an image shown with the text (optional).'
+        })
       ]
     }
   };
 }
 
-export async function handleDisplayTextSave(guildId, customId, formData) {
+export async function handleDisplayTextSave(guildId, customId, formData, client) {
   // Parse buttonId and actionIndex from custom_id: safari_display_text_save_buttonId_actionIndex
   const parts = customId.replace('safari_display_text_save_', '').split('_');
   const actionIndex = parseInt(parts[parts.length - 1]);
   const buttonId = parts.slice(0, -1).join('_');
-  
-  console.log(`💾 SAVE: safari_display_text_save - saving display_text for ${buttonId}[${actionIndex}]`);
-  
-  // Extract form data from Label (type 18) components by custom_id
-  const components = formData.components;
-  let title = '', content = '', color = '', image = '';
 
-  for (const comp of components) {
-    if (comp.type !== 18 || !comp.component) continue;
-    const inner = comp.component;
-    switch (inner.custom_id) {
-      case 'action_title': title = inner.value?.trim() || ''; break;
-      case 'action_content': content = inner.value?.trim() || ''; break;
-      case 'action_color': color = inner.value?.trim() || ''; break;
-      case 'action_image': image = inner.value?.trim() || ''; break;
-    }
-  }
-  
+  console.log(`💾 SAVE: safari_display_text_save - saving display_text for ${buttonId}[${actionIndex}]`);
+
+  const fields = collectModalFields(formData.components);
+  const title = fields.action_title?.trim() || '';
+  const content = fields.action_content?.trim() || '';
+  const color = fields.action_color?.trim() || '';
+
   if (!content) {
     return {
       content: '❌ Content is required for display text actions.',
       ephemeral: true
     };
   }
-  
+
   // Load and update safari data
   const { saveSafariContent } = await import('./safariManager.js');
   const safariData = await loadSafariContent();
   const button = safariData[guildId]?.buttons?.[buttonId];
-  
+
   if (!button) {
     console.error(`❌ Button ${buttonId} not found during save operation for guild ${guildId}`);
     return {
@@ -4668,20 +4673,34 @@ export async function handleDisplayTextSave(guildId, customId, formData) {
     };
   }
   
+  const existingAction = button.actions?.[actionIndex];
+
+  // Upload mode: re-host an uploaded file and write its URL into fields.action_image
+  // (0 files = keep current). Text mode: fields.action_image is the pasted URL, '' clears.
+  const guild = client.guilds.cache.get(guildId) || await client.guilds.fetch(guildId);
+  await resolveUploadedImageField({
+    fields,
+    data: formData,
+    guild,
+    context: `${buttonId}_display`,
+    fieldKey: 'action_image',
+    currentValue: existingAction?.config?.image || existingAction?.image || ''
+  });
+  const image = fields.action_image?.trim() || '';
+
   // Create or update the action
   const actionConfig = {
     title: title,
     content: content,
     image: image
   };
-  
+
   // Only include color if it's not empty
   if (color && color.trim() !== '') {
     actionConfig.color = color;
   }
-  
+
   // Preserve existing executeOn value, check pendingExecuteOn for new outcomes, or default to 'true'
-  const existingAction = button.actions?.[actionIndex];
   const pendingKey = `${guildId}_${buttonId}`;
   const pendingExecuteOn = global.pendingExecuteOn?.get(pendingKey);
   const executeOnValue = existingAction?.executeOn || pendingExecuteOn || 'true';

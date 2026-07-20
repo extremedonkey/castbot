@@ -66,6 +66,7 @@ import {
   saveApplicationConfig,
   createApplicationButton,
   createApplicationSetupContainer,
+  buildQuestionModal,
   BUTTON_STYLES
 } from './applicationManager.js';
 import { logInteraction, setDiscordClient } from './src/analytics/analyticsLogger.js';
@@ -11158,30 +11159,15 @@ To fix this:
         const completionIdx = config.questions.findIndex(q => q.questionType === 'completion');
         const actualIdx = completionIdx >= 0 ? completionIdx : config.questions.length - 1;
         console.log(`🏁 Completion edit modal: idx=${actualIdx}, title="${completion?.questionTitle}"`);
-        // Use EXACT same modal structure as working question_select edit (line 9060)
+        const { getImageUploadMode } = await import('./src/settings/generalSettings.js');
         return res.send({
           type: InteractionResponseType.MODAL,
-          data: {
-            custom_id: `season_edit_question_modal_${completionConfigId}_${actualIdx}`,
+          data: buildQuestionModal({
+            customId: `season_edit_question_modal_${completionConfigId}_${actualIdx}`,
             title: 'Edit Question',
-            components: [
-              { type: 18, label: 'Question Title', description: 'Short label shown above the answer field', component: {
-                type: 4, custom_id: 'questionTitle', style: 1,
-                required: true, max_length: 100, value: completion?.questionTitle || '',
-                placeholder: 'e.g., Why do you want to play?'
-              }},
-              { type: 18, label: 'Question Text', description: 'The full question applicants will answer', component: {
-                type: 4, custom_id: 'questionText', style: 2,
-                required: true, max_length: 1000, value: completion?.questionText || '',
-                placeholder: 'Enter the full question...'
-              }},
-              { type: 18, label: 'Image URL (Optional)', description: 'Link to an image to display with this question', component: {
-                type: 4, custom_id: 'imageURL', style: 1,
-                required: false, max_length: 500, value: completion?.imageURL || '',
-                placeholder: 'https://...'
-              }}
-            ]
-          }
+            question: completion,
+            imageUploadMode: await getImageUploadMode(req.body.guild_id, playerData)
+          })
         });
       }
 
@@ -11252,29 +11238,15 @@ To fix this:
             // Show edit modal — matches create modal fields
             const question = config.questions[questionIndex];
             if (!question) return { content: '❌ Question not found' };
+            const { getImageUploadMode } = await import('./src/settings/generalSettings.js');
             return res.send({
               type: InteractionResponseType.MODAL,
-              data: {
-                custom_id: `season_edit_question_modal_${qConfigId}_${questionIndex}`,
+              data: buildQuestionModal({
+                customId: `season_edit_question_modal_${qConfigId}_${questionIndex}`,
                 title: 'Edit Question',
-                components: [
-                  { type: 18, label: 'Question Title', description: 'Short label shown above the answer field', component: {
-                    type: 4, custom_id: 'questionTitle', style: 1,
-                    required: true, max_length: 100, value: question.questionTitle || '',
-                    placeholder: 'e.g., Why do you want to play?'
-                  }},
-                  { type: 18, label: 'Question Text', description: 'The full question applicants will answer', component: {
-                    type: 4, custom_id: 'questionText', style: question.questionStyle || 2,
-                    required: true, max_length: 1000, value: question.questionText || '',
-                    placeholder: 'Enter the full question...'
-                  }},
-                  { type: 18, label: 'Image URL (Optional)', description: 'Link to an image to display with this question', component: {
-                    type: 4, custom_id: 'imageURL', style: 1,
-                    required: false, max_length: 500, value: question.imageURL || '',
-                    placeholder: 'https://...'
-                  }}
-                ]
-              }
+                question,
+                imageUploadMode: await getImageUploadMode(context.guildId, playerData)
+              })
             });
           }
 
@@ -11390,27 +11362,14 @@ To fix this:
         requiresModal: true,
         handler: async (context) => {
           const qConfigId = context.customId.replace('question_add_', '');
-          const questionStyle = 2; // Always paragraph
+          const { getImageUploadMode } = await import('./src/settings/generalSettings.js');
           return {
             type: 9,
-            data: {
-              custom_id: `season_new_question_modal_${qConfigId}_0`,
+            data: buildQuestionModal({
+              customId: `season_new_question_modal_${qConfigId}_0`,
               title: 'New Question',
-              components: [
-                { type: 18, label: 'Question Title', description: 'Short label shown above the answer field', component: {
-                  type: 4, custom_id: 'questionTitle', style: 1,
-                  required: true, max_length: 100, placeholder: 'e.g., Why do you want to play?'
-                }},
-                { type: 18, label: 'Question Text', description: 'The full question applicants will answer', component: {
-                  type: 4, custom_id: 'questionText', style: questionStyle,
-                  required: true, max_length: 1000, placeholder: 'Enter the full question...'
-                }},
-                { type: 18, label: 'Image URL (Optional)', description: 'Link to an image to display with this question', component: {
-                  type: 4, custom_id: 'imageURL', style: 1,
-                  required: false, max_length: 500, placeholder: 'https://...'
-                }}
-              ]
-            }
+              imageUploadMode: await getImageUploadMode(context.guildId)
+            })
           };
         }
       })(req, res, client);
@@ -11540,55 +11499,15 @@ To fix this:
           
           console.log(`✅ SUCCESS: season_question_edit - modal created`);
 
-          // Show edit modal using modern Label components (Type 18)
+          const { getImageUploadMode } = await import('./src/settings/generalSettings.js');
           return {
             type: InteractionResponseType.MODAL,
-            data: {
-              custom_id: `season_edit_question_modal_${configId}_${questionIndex}`,
+            data: buildQuestionModal({
+              customId: `season_edit_question_modal_${configId}_${questionIndex}`,
               title: 'Edit Question',
-              components: [
-                {
-                  type: 18, // Label component
-                  label: 'Question Title',
-                  description: 'Short, descriptive title for this question',
-                  component: {
-                    type: 4, // Text Input
-                    custom_id: 'questionTitle',
-                    style: 1, // Short
-                    value: question.questionTitle || '',
-                    required: true,
-                    max_length: 100
-                  }
-                },
-                {
-                  type: 18, // Label component
-                  label: 'Question Text',
-                  description: 'The full question applicants will answer',
-                  component: {
-                    type: 4, // Text Input
-                    custom_id: 'questionText',
-                    style: 2, // Paragraph
-                    value: question.questionText || '',
-                    required: true,
-                    max_length: 1000
-                  }
-                },
-                {
-                  type: 18, // Label component
-                  label: 'Question Image Link (Optional)',
-                  description: 'Shows image when player loads the question. To use, upload image to discord then select \'Copy Link\'.',
-                  component: {
-                    type: 4, // Text Input
-                    custom_id: 'imageURL',
-                    style: 1, // Short
-                    placeholder: 'Must be a discord URL e.g. https://cdn.discordapp.com/...',
-                    value: question.imageURL || '',
-                    required: false,
-                    max_length: 500
-                  }
-                }
-              ]
-            }
+              question,
+              imageUploadMode: await getImageUploadMode(guildId, playerData)
+            })
           };
         }
       })(req, res, client);
@@ -11967,54 +11886,14 @@ To fix this:
           
           console.log(`✅ SUCCESS: season_new_question_config - modal created`);
 
-          // Show new question modal using modern Label components (Type 18)
+          const { getImageUploadMode } = await import('./src/settings/generalSettings.js');
           return {
             type: InteractionResponseType.MODAL,
-            data: {
-              custom_id: `season_new_question_modal_${configId}_${currentPage}`,
+            data: buildQuestionModal({
+              customId: `season_new_question_modal_${configId}_${currentPage}`,
               title: 'Create New Question',
-              components: [
-                {
-                  type: 18, // Label component
-                  label: 'Question Title',
-                  description: 'Short, descriptive title for this question',
-                  component: {
-                    type: 4, // Text Input
-                    custom_id: 'questionTitle',
-                    style: 1, // Short
-                    placeholder: 'Why do you want to join our season?',
-                    required: true,
-                    max_length: 100
-                  }
-                },
-                {
-                  type: 18, // Label component
-                  label: 'Question Text',
-                  description: 'The full question applicants will answer',
-                  component: {
-                    type: 4, // Text Input
-                    custom_id: 'questionText',
-                    style: 2, // Paragraph
-                    placeholder: 'Please provide a detailed explanation about...',
-                    required: true,
-                    max_length: 1000
-                  }
-                },
-                {
-                  type: 18, // Label component
-                  label: 'Question Image Link (Optional)',
-                  description: 'Shows image when player loads the question. To use, upload image to discord then select \'Copy Link\'.',
-                  component: {
-                    type: 4, // Text Input
-                    custom_id: 'imageURL',
-                    style: 1, // Short
-                    placeholder: 'Must be a discord URL e.g. https://cdn.discordapp.com/...',
-                    required: false,
-                    max_length: 500
-                  }
-                }
-              ]
-            }
+              imageUploadMode: await getImageUploadMode(context.guildId)
+            })
           };
         }
       })(req, res, client);
@@ -22522,65 +22401,14 @@ Your server is now ready for Tycoons gameplay!`;
           
           // Show appropriate modal based on action type
           if (actionType === 'display_text') {
-            const modal = new ModalBuilder()
-              .setCustomId(`safari_action_modal_${fullButtonId}_display_text`)
-              .setTitle('Add Text Display Action');
-
-            const titleInput = new TextInputBuilder()
-              .setCustomId('action_title')
-              .setLabel('Title (optional)')
-              .setPlaceholder('e.g., "Welcome to the Adventure!"')
-              .setStyle(TextInputStyle.Short)
-              .setRequired(false)
-              .setMaxLength(100);
-
-            const contentInput = new TextInputBuilder()
-              .setCustomId('action_content')
-              .setLabel('Content')
-              .setPlaceholder('The text to display when the button is clicked...')
-              .setStyle(TextInputStyle.Paragraph)
-              .setRequired(true)
-              .setMaxLength(2000);
-
-            const colorInput = new TextInputBuilder()
-              .setCustomId('action_color')
-              .setLabel('Accent Color (optional)')
-              .setPlaceholder('e.g., #3498db or 3447003')
-              .setStyle(TextInputStyle.Short)
-              .setRequired(false)
-              .setMaxLength(10);
-
-            const imageInput = new TextInputBuilder()
-              .setCustomId('action_image')
-              .setLabel('Image URL (Optional)')
-              .setPlaceholder('Enter link of an image you have uploaded to Discord.')
-              .setStyle(TextInputStyle.Short)
-              .setRequired(false)
-              .setMaxLength(500);
-
-            const executeOnInput = new TextInputBuilder()
-              .setCustomId('action_execute_on')
-              .setLabel('Execute when conditions are (true/false)')
-              .setPlaceholder('Type true to execute if all conditions are met, type false to execute if conditions are not met')
-              .setStyle(TextInputStyle.Short)
-              .setRequired(false)
-              .setMaxLength(10)
-              .setValue(global.pendingExecuteOn?.get(`${context.guildId}_${buttonId}`) || 'true');
-
-            modal.addComponents(
-              new ActionRowBuilder().addComponents(titleInput),
-              new ActionRowBuilder().addComponents(contentInput),
-              new ActionRowBuilder().addComponents(executeOnInput),
-              new ActionRowBuilder().addComponents(colorInput),
-              new ActionRowBuilder().addComponents(imageInput)
-            );
-            
-            console.log(`✅ SUCCESS: safari_add_action - showing display_text modal`);
-            return {
-              type: InteractionResponseType.MODAL,
-              data: modal.toJSON()
-            };
-            
+            // Delegate to the modern Label-based modal (create + edit, honors imageUploadMode);
+            // it submits to safari_display_text_save_* — the legacy safari_action_modal_ path is retired
+            const { loadSafariContent } = await import('./safariManager.js');
+            const safariData = await loadSafariContent();
+            const nextIndex = safariData[context.guildId]?.buttons?.[fullButtonId]?.actions?.length || 0;
+            const { handleDisplayTextEdit } = await import('./customActionUI.js');
+            console.log(`✅ SUCCESS: safari_add_action - delegating display_text to modern modal`);
+            return handleDisplayTextEdit(context.guildId, context.userId, `safari_display_text_edit_${fullButtonId}_${nextIndex}`);
           } else if (actionType === 'update_currency') {
             const modal = new ModalBuilder()
               .setCustomId(`safari_action_modal_${fullButtonId}_update_currency`)
@@ -35729,102 +35557,6 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
       
-    } else if (custom_id.startsWith('map_grid_edit_')) {
-      // Handle grid content editing
-      try {
-        const guildId = req.body.guild_id;
-        const userId = req.body.member?.user?.id || req.body.user?.id;
-        const coord = custom_id.replace('map_grid_edit_', '');
-        
-        console.log(`🔍 DEBUG: Processing map_grid_edit for coord ${coord} by user ${userId}`);
-        
-        // Load safari content to get current data
-        const { loadSafariContent } = await import('./mapExplorer.js');
-        const safariData = await loadSafariContent();
-        const activeMapId = safariData[guildId]?.maps?.active;
-        const mapData = safariData[guildId]?.maps?.[activeMapId];
-        const coordData = mapData?.coordinates?.[coord];
-        
-        if (!coordData) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Location not found.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        // Show edit modal
-        const modal = new ModalBuilder()
-          .setCustomId(`map_grid_edit_modal_${coord}`)
-          .setTitle(`Edit Content for Location ${coord}`);
-          
-        const titleInput = new TextInputBuilder()
-          .setCustomId('title')
-          .setLabel('Location Title')
-          .setStyle(TextInputStyle.Short)
-          .setValue(coordData.baseContent?.title || `📍 Location ${coord}`)
-          .setRequired(true)
-          .setMaxLength(100);
-          
-        const descriptionInput = new TextInputBuilder()
-          .setCustomId('description')
-          .setLabel('Location Description')
-          .setStyle(TextInputStyle.Paragraph)
-          .setValue(coordData.baseContent?.description || '')
-          .setRequired(true)
-          .setMaxLength(1000);
-          
-        const imageInput = new TextInputBuilder()
-          .setCustomId('image')
-          .setLabel('Image URL (Discord CDN only)')
-          .setPlaceholder('https://cdn.discordapp.com/...')
-          .setStyle(TextInputStyle.Short)
-          .setValue(coordData.baseContent?.image || '')
-          .setRequired(false)
-          .setMaxLength(500);
-          
-        const cluesInput = new TextInputBuilder()
-          .setCustomId('clues')
-          .setLabel('Clues (one per line)')
-          .setStyle(TextInputStyle.Paragraph)
-          .setValue((coordData.baseContent?.clues || []).join('\n'))
-          .setRequired(false)
-          .setMaxLength(500);
-          
-        const cellTypeInput = new TextInputBuilder()
-          .setCustomId('cellType')
-          .setLabel('Cell Type')
-          .setPlaceholder('unexplored, village, forest, mountain, water, desert, special')
-          .setStyle(TextInputStyle.Short)
-          .setValue(coordData.cellType || 'unexplored')
-          .setRequired(true)
-          .setMaxLength(50);
-          
-        modal.addComponents(
-          new ActionRowBuilder().addComponents(titleInput),
-          new ActionRowBuilder().addComponents(descriptionInput),
-          new ActionRowBuilder().addComponents(imageInput),
-          new ActionRowBuilder().addComponents(cluesInput),
-          new ActionRowBuilder().addComponents(cellTypeInput)
-        );
-        
-        return res.send({
-          type: InteractionResponseType.MODAL,
-          data: modal.toJSON()
-        });
-        
-      } catch (error) {
-        console.error('Error in map_grid_edit handler:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ An error occurred. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
     } else if (custom_id.startsWith('map_grid_view_')) {
       // Handle grid content viewing
       try {
@@ -42121,54 +41853,15 @@ Your server is now ready for Tycoons gameplay!`;
         const components = req.body.data.components;
         
         if (actionType === 'display_text') {
-          const title = components[0].components[0].value?.trim() || null;
-          const content = components[1].components[0].value?.trim();
-          const executeOnStr = components[2].components[0].value?.trim() || 'true';
-          const colorStr = components[3].components[0].value?.trim();
-          const imageUrl = components[4].components[0].value?.trim() || null;
-          
-          // Parse executeOn value - accept true/TRUE/1 for true, false/FALSE/0 for false
-          executeOn = (['true', 'TRUE', '1'].includes(executeOnStr)) ? 'true' : 
-                     (['false', 'FALSE', '0'].includes(executeOnStr)) ? 'false' : 'true';
-          
-          if (!content) {
-            return res.send({
-              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-              data: {
-                content: '❌ Content is required for text display actions.',
-                flags: InteractionResponseFlags.EPHEMERAL
-              }
-            });
-          }
-          
-          actionConfig = {
-            title: title,
-            content: content
-          };
-          
-          // Add imageUrl if provided
-          if (imageUrl) {
-            actionConfig.imageUrl = imageUrl;
-          }
-          
-          // Parse color if provided, or set default green
-          if (colorStr) {
-            let accentColor = null;
-            if (colorStr.startsWith('#')) {
-              accentColor = parseInt(colorStr.slice(1), 16);
-            } else if (/^[0-9a-fA-F]{6}$/.test(colorStr)) {
-              accentColor = parseInt(colorStr, 16);
-            } else if (/^\d+$/.test(colorStr)) {
-              accentColor = parseInt(colorStr);
+          // Retired: display_text now goes through safari_display_text_save_* (modern modal).
+          // Only a stale modal opened before a deploy can land here — bail instead of saving junk.
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ This editor was updated — please reopen the action and try again.',
+              flags: InteractionResponseFlags.EPHEMERAL
             }
-            if (accentColor !== null && !isNaN(accentColor) && accentColor >= 0 && accentColor <= 0xFFFFFF) {
-              actionConfig.accentColor = accentColor;
-            }
-          } else {
-            // Set default green accent color
-            actionConfig.accentColor = 0x57F287; // Nice green color
-          }
-          
+          });
         } else if (actionType === 'update_currency') {
           const amountStr = components[0].components[0].value?.trim();
           const message = components[1].components[0].value?.trim();
@@ -43716,7 +43409,7 @@ Your server is now ready for Tycoons gameplay!`;
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to edit actions.')) return;
 
         const { handleDisplayTextSave } = await import('./customActionUI.js');
-        const result = await handleDisplayTextSave(guildId, custom_id, req.body.data);
+        const result = await handleDisplayTextSave(guildId, custom_id, req.body.data, client);
         
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
@@ -43901,12 +43594,21 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         const components = req.body.data.components;
 
-        // Parse values from Label components (Type 18)
-        // Label structure: components[i].component.value (singular 'component')
-        const questionTitle = components[0].component.value;
-        const questionText = components[1].component.value;
-        const imageURL = components[2].component.value;
-        
+        // Parse by custom_id (Label or legacy ActionRow shapes) — positional indexes shift
+        // when the image field is a File Upload; resolver re-hosts an upload into fields.imageURL
+        const { collectModalFields, resolveUploadedImageField } = await import('./src/images/modalImageUpload.js');
+        const fields = collectModalFields(components);
+        const questionTitle = fields.questionTitle;
+        const questionText = fields.questionText;
+        const questionGuild = client.guilds.cache.get(guildId) || await client.guilds.fetch(guildId);
+        await resolveUploadedImageField({
+          fields, data: req.body.data, guild: questionGuild,
+          context: `appq_${configId.slice(-8)}`,
+          fieldKey: 'imageURL',
+          currentValue: ''
+        });
+        const imageURL = fields.imageURL;
+
         // Load player data
         const playerData = await loadPlayerData();
         const config = playerData[guildId]?.applicationConfigs?.[configId];
@@ -44041,17 +43743,18 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         const components = req.body.data.components;
 
-        // Parse values — supports Label (Type 18) and legacy ActionRow formats
-        // Edit modal has 2 fields (title, text), completion edit also 2
-        const questionTitle = components[0]?.component?.value || components[0]?.components?.[0]?.value;
-        const questionText = components[1]?.component?.value || components[1]?.components?.[0]?.value;
-        const imageURL = components[2]?.component?.value || components[2]?.components?.[0]?.value || '';
+        // Parse by custom_id (Label or legacy ActionRow shapes) — positional indexes shift
+        // when the image field is a File Upload
+        const { collectModalFields, resolveUploadedImageField } = await import('./src/images/modalImageUpload.js');
+        const fields = collectModalFields(components);
+        const questionTitle = fields.questionTitle;
+        const questionText = fields.questionText;
 
         // Load player data
         const playerData = await loadPlayerData();
         const config = playerData[guildId]?.applicationConfigs?.[configId];
         const question = config?.questions?.[questionIndex];
-        
+
         if (!question) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -44061,7 +43764,17 @@ Your server is now ready for Tycoons gameplay!`;
             }
           });
         }
-        
+
+        // Upload mode: re-host into fields.imageURL (0 files = keep current); text mode: '' clears
+        const questionGuild = client.guilds.cache.get(guildId) || await client.guilds.fetch(guildId);
+        await resolveUploadedImageField({
+          fields, data: req.body.data, guild: questionGuild,
+          context: `appq_${configId.slice(-8)}`,
+          fieldKey: 'imageURL',
+          currentValue: question.imageURL || ''
+        });
+        const imageURL = fields.imageURL;
+
         // Update question
         question.questionTitle = questionTitle;
         question.questionText = questionText;
@@ -44516,102 +44229,6 @@ Your server is now ready for Tycoons gameplay!`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error setting item quantity.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
-    } else if (custom_id.startsWith('map_grid_edit_modal_')) {
-      // Handle map grid edit modal submission
-      try {
-        const guildId = req.body.guild_id;
-        const coord = custom_id.replace('map_grid_edit_modal_', '');
-        const components = req.body.data.components;
-        
-        // Extract values from modal
-        const title = components[0].components[0].value;
-        const description = components[1].components[0].value;
-        const imageURL = components[2].components[0].value;
-        const cluesText = components[3].components[0].value;
-        const cellType = components[4].components[0].value;
-        
-        console.log(`🗺️ DEBUG: Processing map grid edit for ${coord}`);
-        
-        // Validate image URL if provided
-        if (imageURL && !imageURL.startsWith('https://cdn.discordapp.com/')) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ **Invalid Image URL**\n\nImages must be hosted on Discord CDN (https://cdn.discordapp.com/...)',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        // Parse clues (one per line)
-        const clues = cluesText
-          .split('\n')
-          .map(line => line.trim())
-          .filter(line => line.length > 0);
-        
-        // Load and update safari content
-        const { loadSafariContent, saveSafariContent } = await import('./mapExplorer.js');
-        const safariData = await loadSafariContent();
-        const activeMapId = safariData[guildId]?.maps?.active;
-        const mapData = safariData[guildId]?.maps?.[activeMapId];
-        
-        if (!mapData || !mapData.coordinates[coord]) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Location not found.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        // Update coordinate data
-        mapData.coordinates[coord].baseContent = {
-          title: title,
-          description: description,
-          image: imageURL || null,
-          clues: clues
-        };
-        mapData.coordinates[coord].cellType = cellType;
-        
-        // Save updated data
-        await saveSafariContent(safariData);
-        
-        // Create confirmation message
-        let confirmationParts = [
-          `✅ **Location ${coord} Updated!**`,
-          '',
-          `**Title:** ${title}`,
-          `**Cell Type:** ${cellType}`,
-          `**Description:** ${description.substring(0, 100)}${description.length > 100 ? '...' : ''}`
-        ];
-        
-        if (clues.length > 0) {
-          confirmationParts.push(`**Clues:** ${clues.length} clue(s) added`);
-        }
-        
-        if (imageURL) {
-          confirmationParts.push(`**Image:** Image URL saved`);
-        }
-        
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: confirmationParts.join('\n'),
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error in map_grid_edit_modal handler:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error updating location content.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
