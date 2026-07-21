@@ -1115,13 +1115,13 @@ export const BUTTON_REGISTRY = {
   'prod_menu_back': {
     label: '← Menu',
     description: 'Return to main production menu',
-    style: 'Secondary',
+    style: 'Primary',
     category: 'navigation'
   },
   'prod_production_menu': {
     label: '← Back',
     description: 'Return to main production menu (from Settings)',
-    style: 'Secondary',
+    style: 'Primary',
     category: 'navigation'
   },
 

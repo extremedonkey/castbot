@@ -646,7 +646,7 @@ export async function buildPlannerSelector(guildId) {
       { type: 1, components: [selector.toJSON()] },
       { type: 14 },
       { type: 1, components: [
-        { type: 2, custom_id: 'prod_menu_back', label: '← Menu', style: 2 },
+        { type: 2, custom_id: 'prod_menu_back', label: '← Menu', style: 1 },
         { type: 2, custom_id: 'season_delete_mode', label: 'Delete Mode', style: 4, emoji: { name: '🗑️' } }
       ]}
     ]

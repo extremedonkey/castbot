@@ -39132,7 +39132,7 @@ Your server is now ready for Tycoons gameplay!`;
                   components: [
                     { type: 10, content: `## ✅ Application Button Posted!\n\n📝 **${tempConfig.buttonText}** posted to <#${targetChannel.id}>\n> **Category:** ${category.name}\n> **Style:** ${tempConfig.buttonStyle}` },
                     { type: 14 },
-                    { type: 1, components: [{ type: 2, custom_id: 'prod_menu_back', label: '← Menu', style: 2 }] }
+                    { type: 1, components: [{ type: 2, custom_id: 'prod_menu_back', label: '← Menu', style: 1 }] }
                   ]
                 }]
               };
@@ -39183,7 +39183,7 @@ Your server is now ready for Tycoons gameplay!`;
                   components: [
                     { type: 10, content: `## ✅ Season Application Button Posted!\n\n📝 **${tempConfig.buttonText}** posted to <#${targetChannel.id}>\n> **Category:** ${category.name}\n> **Style:** ${tempConfig.buttonStyle}\n\nApplicants will now go through your configured questions when they apply.` },
                     { type: 14 },
-                    { type: 1, components: [{ type: 2, custom_id: 'prod_menu_back', label: '← Menu', style: 2 }] }
+                    { type: 1, components: [{ type: 2, custom_id: 'prod_menu_back', label: '← Menu', style: 1 }] }
                   ]
                 }]
               };
