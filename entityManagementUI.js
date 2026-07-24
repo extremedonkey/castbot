@@ -13,6 +13,7 @@ import { EDIT_CONFIGS } from './editFramework.js';
 import { SAFARI_LIMITS } from './config/safariLimits.js';
 import { parseTextEmoji, parseAndValidateEmoji, resolveEmoji } from './utils/emojiUtils.js';
 import { countComponents } from './utils.js';
+import { hasPermission, PERMISSIONS } from './utils/permissionUtils.js';
 
 /**
  * Create item selection UI for map locations
@@ -147,6 +148,7 @@ export async function createEntityManagementUI(options) {
     const {
         entityType,          // 'item', 'store', 'safari_button'
         guildId,
+        member = null,       // Discord member object — gates map_cell's admin-only sections (see isAdmin below)
         selectedId = null,
         activeFieldGroup = null,  // For grouped modal editing
         searchTerm = '',
@@ -154,44 +156,55 @@ export async function createEntityManagementUI(options) {
         userId = null,       // Discord user ID for conditional UI elements
         client = null        // Discord client for emoji validation
     } = options;
-    
+
+    // map_cell is the only entity type with a legitimate player-facing render
+    // (the anchor "Explore" button) — every other type is only ever reached
+    // through admin-gated buttons upstream, so isAdmin is unconditionally true
+    // for them. For map_cell it defaults CLOSED: no member passed ⇒ player view,
+    // not admin view. This is deliberate — see docs/incidents/04-AnchorMenuAdminExposure.md
+    // ("guard the builder, not just the callers" — opt-in security becomes opt-out).
+    // Admin-only sections gated on this flag: title, entity selector, Edit/Stores
+    // buttons, and the Location Actions select + Quick Create buttons (the latter
+    // is the security-sensitive one — it enumerates guild-wide action names/
+    // descriptions, not just this coordinate's — never let a non-admin see it).
+    const isAdmin = entityType === 'map_cell' ? !!hasPermission(member, PERMISSIONS.MANAGE_ROLES) : true;
+
     // Load entity data
     const safariData = await loadSafariContent();
     const guildData = safariData[guildId] || {};
     const entities = getEntitiesForType(guildData, entityType);
     const config = EDIT_CONFIGS[entityType];
-    
+
     if (!config) {
         throw new Error(`Unknown entity type: ${entityType}`);
     }
-    
+
     // Get selected entity
     const selectedEntity = selectedId ? entities[selectedId] : null;
-    
+
     // Filter entities if search term provided
     const filteredEntities = filterEntities(entities, searchTerm);
-    
+
     // Build Components V2 UI
     const components = [{
         type: 17, // Container
         accent_color: 0xf39c12, // Orange like Safari menu
         components: [
-            // Title
-            {
-                type: 10, // Text Display
-                content: `## ${config.displayName}`
-            },
-
-            // Entity selector
-            createEntitySelector(filteredEntities, selectedId, entityType, searchTerm),
+            // Title + entity selector — admin only for map_cell (the selector is a
+            // jump-list across every location on the map; players find locations by
+            // navigating, not by picking from a list)
+            ...(isAdmin ? [
+                { type: 10, content: `## ${config.displayName}` },
+                createEntitySelector(filteredEntities, selectedId, entityType, searchTerm)
+            ] : []),
 
             // Show entity details if selected, with a Location Info header + field
-            // group buttons (map_cell only) leading into the details
+            // group buttons (map_cell admin only) leading into the details
             ...(selectedEntity ? [
                 ...(entityType !== 'map_cell' ? [{ type: 14 }] : []), // Separator (map_cell has its own header instead)
                 ...(entityType === 'map_cell' ? [
                     { type: 10, content: '### ```🖼️ Location Information```' },
-                    ...createFieldGroupButtons('map_cell', selectedId, activeFieldGroup, selectedEntity)
+                    ...(isAdmin ? createFieldGroupButtons('map_cell', selectedId, activeFieldGroup, selectedEntity) : [])
                 ] : []),
                 createEntityDisplay(selectedEntity, entityType, guildData.safariConfig),
                 // Area image, if one is set — shown for every render of this screen
@@ -207,7 +220,7 @@ export async function createEntityManagementUI(options) {
             ] : []),
 
             // Mode-specific UI
-            ...(selectedEntity ? await createModeSpecificUI(mode, entityType, selectedId, selectedEntity, activeFieldGroup, guildId, userId) : [])
+            ...(selectedEntity ? await createModeSpecificUI(mode, entityType, selectedId, selectedEntity, activeFieldGroup, guildId, userId, isAdmin) : [])
         ]
     }];
 
@@ -222,23 +235,29 @@ export async function createEntityManagementUI(options) {
 }
 
 /**
- * Build the full admin Location Manager UI for a map coordinate, with the
- * Navigate/Inventory buttons injected into the Enter Command row.
+ * Build the full Location Manager UI for a map coordinate — admin or player,
+ * with the Navigate/Inventory buttons injected into the Enter Command row.
  *
  * Single source of truth for this screen — shared by the
- * `map_location_actions_{coord}` entry point (anchor message context button,
- * new ephemeral message) and the `entity_select_map_cell` dropdown (switching
- * locations in-place via UPDATE_MESSAGE). Both must render the identical
- * screen; previously entity_select_map_cell rendered a different, much
- * smaller "Actions for {coord}" list instead of reloading this screen.
+ * `map_location_actions_{coord}` entry point (anchor "Explore" button, new
+ * ephemeral message; both admins AND players land here) and the
+ * `entity_select_map_cell` dropdown (admin-only, switching locations in-place
+ * via UPDATE_MESSAGE). All three must render the identical screen shape,
+ * differing only by what createEntityManagementUI's isAdmin gate hides.
+ *
+ * Security: pass `member` so createEntityManagementUI can compute isAdmin
+ * itself — do not compute isAdmin here and only pass a boolean through,
+ * per docs/incidents/04-AnchorMenuAdminExposure.md ("guard the builder").
+ * Omitting `member` fails closed to the player view (see createEntityManagementUI).
  *
  * @param {Object} options
  * @param {string} options.guildId
  * @param {string} options.userId - for the Navigate button's custom_id
  * @param {string} options.coord - map coordinate (e.g. "B1")
+ * @param {Object} [options.member] - Discord member object; omit only for known-player call sites
  * @returns {Promise<Object|null>} Discord Components V2 response, or null if the coordinate has no data
  */
-export async function buildLocationManagerUI({ guildId, userId, coord }) {
+export async function buildLocationManagerUI({ guildId, userId, coord, member = null }) {
     const safariData = await loadSafariContent();
     const activeMapId = safariData[guildId]?.maps?.active;
     const coordData = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
@@ -251,6 +270,7 @@ export async function buildLocationManagerUI({ guildId, userId, coord }) {
     const ui = await createEntityManagementUI({
         entityType: 'map_cell',
         guildId,
+        member,
         selectedId: coord,
         mode: 'edit'
     });
@@ -296,17 +316,15 @@ export async function buildLocationManagerUI({ guildId, userId, coord }) {
                                 };
 
                                 // Find existing buttons
-                                const safariButton = subComponent.components.find(btn => btn.custom_id === 'prod_safari_menu');
                                 const enterCommandButton = subComponent.components.find(btn => btn.custom_id && btn.custom_id.startsWith('player_enter_command_'));
                                 const whisperButton = subComponent.components.find(btn => btn.custom_id && btn.custom_id.startsWith('safari_whisper_'));
 
-                                // Rebuild components in desired order: Safari, Navigate, Inventory, Enter Command, Whisper
+                                // Rebuild components in desired order: Navigate, Enter Command, Whisper, Inventory (last)
                                 subComponent.components = [];
-                                if (safariButton) subComponent.components.push(safariButton);
                                 subComponent.components.push(navigateButton);
-                                subComponent.components.push(inventoryButton);
                                 if (enterCommandButton) subComponent.components.push(enterCommandButton);
                                 if (whisperButton) subComponent.components.push(whisperButton);
+                                subComponent.components.push(inventoryButton);
 
                                 console.log(`🔍 DEBUG: Reordered buttons (after: ${subComponent.components.length} buttons)`);
                                 break;
@@ -598,14 +616,14 @@ function createEntityDisplay(entity, entityType, safariConfig) {
 /**
  * Create mode-specific UI elements
  */
-async function createModeSpecificUI(mode, entityType, entityId, entity, activeFieldGroup, guildId, userId) {
+async function createModeSpecificUI(mode, entityType, entityId, entity, activeFieldGroup, guildId, userId, isAdmin = true) {
     switch (mode) {
         case 'delete_confirm':
             return createDeleteConfirmUI(entityType, entityId, entity, userId);
         case 'edit':
         default:
             // Always default to edit mode - no separate view mode
-            return await createEditModeUI(entityType, entityId, entity, activeFieldGroup, guildId);
+            return await createEditModeUI(entityType, entityId, entity, activeFieldGroup, guildId, isAdmin);
     }
 }
 
@@ -613,15 +631,17 @@ async function createModeSpecificUI(mode, entityType, entityId, entity, activeFi
 /**
  * Create edit mode UI
  */
-async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, guildId) {
+async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, guildId, isAdmin = true) {
     const components = [
         ...(entityType !== 'map_cell' ? [{ type: 14 }, ...createFieldGroupButtons(entityType, entityId, activeFieldGroup)] : []),
     ];
 
     // Add the shared action manager section (header + select + Quick Create rows)
     // for map cells — same builder the standalone Actions screen uses
-    // (action_manager), so the two stay in sync automatically.
-    if (entityType === 'map_cell' && guildId) {
+    // (action_manager), so the two stay in sync automatically. Admin only: the
+    // embedded select enumerates guild-wide action names/descriptions (not just
+    // this coordinate's), and the Quick Create buttons mutate game content.
+    if (entityType === 'map_cell' && guildId && isAdmin) {
         try {
             const safariData = await loadSafariContent();
             const activeMapId = safariData[guildId]?.maps?.active;

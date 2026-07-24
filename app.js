@@ -22560,6 +22560,7 @@ Your server is now ready for Tycoons gameplay!`;
           const { createEntityManagementUI } = await import('./entityManagementUI.js');
           const ui = await createEntityManagementUI({
             entityType: 'map_cell',
+            member: context.member,
             guildId: context.guildId,
             selectedId: coordinate,
             mode: 'edit'
@@ -28672,7 +28673,7 @@ Your server is now ready for Tycoons gameplay!`;
             if (entityType === 'map_cell') {
               // selectedValue is the coordinate (e.g., "B3")
               const { buildLocationManagerUI } = await import('./entityManagementUI.js');
-              const ui = await buildLocationManagerUI({ guildId: context.guildId, userId: context.userId, coord: selectedValue });
+              const ui = await buildLocationManagerUI({ guildId: context.guildId, userId: context.userId, coord: selectedValue, member: context.member });
 
               if (!ui) {
                 return res.send({
@@ -29591,6 +29592,7 @@ Your server is now ready for Tycoons gameplay!`;
               const { createEntityManagementUI } = await import('./entityManagementUI.js');
               const ui = await createEntityManagementUI({
                 entityType: 'map_cell',
+                member: context.member,
                 guildId: context.guildId,
                 selectedId: coordinate,
                 mode: 'edit'
@@ -33052,81 +33054,24 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
 
+    // Location Actions ("Explore") button — same screen for admins and players,
+    // just filtered. buildLocationManagerUI/createEntityManagementUI compute
+    // isAdmin themselves from `member` (fail-closed if omitted) and hide the
+    // admin-only sections (title, location selector, Edit/Stores buttons,
+    // Location Actions select + Quick Create buttons) — see
+    // docs/incidents/04-AnchorMenuAdminExposure.md for why the gate lives in
+    // the builder, not here. Do NOT reintroduce a separate hand-rolled player UI.
     } else if (custom_id.startsWith('map_location_actions_')) {
-      // Handle Location Actions button
       return ButtonHandlerFactory.create({
         id: 'map_location_actions',
         ephemeral: true,
         handler: async (context) => {
           const coord = custom_id.replace('map_location_actions_', '');
-          
-          console.log(`📍 START: map_location_actions - user ${context.userId}, coord ${coord}`);
-          
-          // Check admin permissions and show appropriate UI
-          if (!hasPermission(context.member, PermissionFlagsBits.ManageRoles)) {
-            console.log(`👤 Non-admin user ${context.userId} accessing location actions for ${coord}`);
-            
-            // Show player command interface
-            const { ButtonBuilder, ActionRowBuilder } = await import('discord.js');
-            
-            // Get location name
-            const { loadSafariContent } = await import('./safariManager.js');
-            const safariData = await loadSafariContent();
-            const activeMapId = safariData[context.guildId]?.maps?.active;
-            const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
-            const locationName = coordData?.baseContent?.title || `Location ${coord}`;
-            
-            // Create Enter Command button with joystick emoji
-            const enterCommandButton = new ButtonBuilder()
-              .setCustomId(`player_enter_command_${coord}`)
-              .setLabel('Enter Command')
-              .setEmoji('🕹️')
-              .setStyle(2); // Secondary
-            
-            // Create Navigate button
-            const navigateButton = new ButtonBuilder()
-              .setCustomId(`safari_navigate_${context.userId}_${coord}`)
-              .setLabel('Navigate')
-              .setEmoji('🗺️')
-              .setStyle(2); // Secondary
-            
-            // Create Whisper button — hidden when whispers are disabled for the guild
-            // (safariConfig.whispersEnabled: ABSENT means ON — always compare !== false)
-            const whispersOn = safariData[context.guildId]?.safariConfig?.whispersEnabled !== false;
-            const rowButtons = [navigateButton, enterCommandButton];
-            if (whispersOn) {
-              const whisperButton = new ButtonBuilder()
-                .setCustomId(`safari_whisper_${coord}`)
-                .setLabel('Whisper')
-                .setEmoji('💬')
-                .setStyle(2); // Secondary
-              rowButtons.push(whisperButton);
-            }
 
-            const buttonRow = new ActionRowBuilder().addComponents(rowButtons);
-            
-            return {
-              components: [{
-                type: 17, // Container
-                accent_color: 0x5865f2,
-                components: [
-                  {
-                    type: 10, // Text Display
-                    content: `## ${locationName} Actions\n\nInteract with this location by entering commands.`
-                  },
-                  { type: 14 }, // Separator
-                  buttonRow.toJSON()
-                ]
-              }],
-              flags: (1 << 15), // IS_COMPONENTS_V2
-              ephemeral: true
-            };
-          }
-          
-          // Build the Location Manager UI (shared with entity_select_map_cell —
-          // both must render the identical screen)
+          console.log(`📍 START: map_location_actions - user ${context.userId}, coord ${coord}`);
+
           const { buildLocationManagerUI } = await import('./entityManagementUI.js');
-          const ui = await buildLocationManagerUI({ guildId: context.guildId, userId: context.userId, coord });
+          const ui = await buildLocationManagerUI({ guildId: context.guildId, userId: context.userId, coord, member: context.member });
 
           if (!ui) {
             return {
@@ -33135,7 +33080,8 @@ Your server is now ready for Tycoons gameplay!`;
             };
           }
 
-          console.log(`✅ SUCCESS: map_location_actions - showing entity UI with admin buttons and Navigate for ${coord}`);
+          const isAdmin = !!hasPermission(context.member, PermissionFlagsBits.ManageRoles);
+          console.log(`✅ SUCCESS: map_location_actions - showing ${isAdmin ? 'admin' : 'player'} entity UI for ${coord}`);
 
           return {
             ...ui,
@@ -33421,6 +33367,7 @@ Your server is now ready for Tycoons gameplay!`;
           const { createEntityManagementUI } = await import('./entityManagementUI.js');
           const ui = await createEntityManagementUI({
             entityType: 'map_cell',
+            member: context.member,
             guildId: context.guildId,
             selectedId: coord,
             mode: 'edit'
@@ -34833,6 +34780,7 @@ Your server is now ready for Tycoons gameplay!`;
           const { createEntityManagementUI } = await import('./entityManagementUI.js');
           const ui = await createEntityManagementUI({
             entityType: 'map_cell',
+            member: context.member,
             guildId: context.guildId,
             selectedId: coord,
             activeFieldGroup: 'items',
@@ -34880,6 +34828,7 @@ Your server is now ready for Tycoons gameplay!`;
           const { createEntityManagementUI } = await import('./entityManagementUI.js');
           const ui = await createEntityManagementUI({
             entityType: 'map_cell',
+            member: context.member,
             guildId: context.guildId,
             selectedId: coord,
             activeFieldGroup: 'items',
@@ -35010,6 +34959,7 @@ Your server is now ready for Tycoons gameplay!`;
           const { createEntityManagementUI } = await import('./entityManagementUI.js');
           const ui = await createEntityManagementUI({
             entityType: 'map_cell',
+            member: context.member,
             guildId: context.guildId,
             selectedId: coord,
             mode: 'edit'
@@ -35054,6 +35004,7 @@ Your server is now ready for Tycoons gameplay!`;
           const { createEntityManagementUI } = await import('./entityManagementUI.js');
           const ui = await createEntityManagementUI({
             entityType: 'map_cell',
+            member: context.member,
             guildId: context.guildId,
             selectedId: coord,
             mode: 'edit'
@@ -35135,6 +35086,7 @@ Your server is now ready for Tycoons gameplay!`;
           const { createEntityManagementUI } = await import('./entityManagementUI.js');
           const ui = await createEntityManagementUI({
             entityType: 'map_cell',
+            member: context.member,
             guildId: context.guildId,
             selectedId: coord,
             mode: 'edit',
@@ -35180,6 +35132,7 @@ Your server is now ready for Tycoons gameplay!`;
           const { createEntityManagementUI } = await import('./entityManagementUI.js');
           const ui = await createEntityManagementUI({
             entityType: 'map_cell',
+            member: context.member,
             guildId: context.guildId,
             selectedId: coord,
             mode: 'edit',
@@ -35290,6 +35243,7 @@ Your server is now ready for Tycoons gameplay!`;
           const { createEntityManagementUI } = await import('./entityManagementUI.js');
           const ui = await createEntityManagementUI({
             entityType: 'map_cell',
+            member: context.member,
             guildId: context.guildId,
             selectedId: coord,
             mode: 'edit'
@@ -36090,6 +36044,7 @@ Your server is now ready for Tycoons gameplay!`;
           
           const ui = await createEntityManagementUI({
             entityType: 'map_cell',
+            member: context.member,
             guildId: context.guildId,
             mode: 'edit'
           });
@@ -44095,6 +44050,7 @@ Your server is now ready for Tycoons gameplay!`;
         const { createEntityManagementUI } = await import('./entityManagementUI.js');
         const ui = await createEntityManagementUI({
           entityType: 'map_cell',
+          member: req.body.member,
           guildId: guildId,
           selectedId: coord,
           mode: 'edit',
@@ -44560,6 +44516,7 @@ Your server is now ready for Tycoons gameplay!`;
         const { createEntityManagementUI } = await import('./entityManagementUI.js');
         const ui = await createEntityManagementUI({
           entityType: 'map_cell',
+          member: req.body.member,
           guildId: guildId,
           selectedId: coord,
           mode: 'edit'

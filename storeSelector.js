@@ -346,6 +346,7 @@ export async function handleStoreToggle(context, client) {
     const { createEntityManagementUI } = await import('./entityManagementUI.js');
     return await createEntityManagementUI({
       entityType: 'map_cell',
+      member: context.member,
       guildId: context.guildId,
       selectedId: entityId,
       mode: 'edit'
@@ -387,6 +388,7 @@ export async function handleStoreToggle(context, client) {
   const { createEntityManagementUI } = await import('./entityManagementUI.js');
   const ui = await createEntityManagementUI({
     entityType: 'map_cell',
+    member: context.member,
     guildId: context.guildId,
     selectedId: entityId,
     mode: 'edit'
