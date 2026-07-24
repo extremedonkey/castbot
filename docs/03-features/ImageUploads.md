@@ -101,7 +101,7 @@ Every image-URL modal input from the RaP 0894 sweep is now converted (or the edi
 
 - **Map cell "Location Image"** (the pilot, below) · **Enemy image** (same entity-resolver gate)
 - **Map create/update** (download-source archetype — attachment URL passed straight to the build pipeline)
-- **Rich Card shared modal** (`buildRichCardModal`) → wired consumers: **challenges**, **channels msg composer**
+- **Rich Card shared modal** (`buildRichCardModal`) → wired consumers: **challenges**, **channels msg composer**, **[Category Post](CategoryPost.md)** (upload-only — the paste-URL variant is removed there entirely; it replaced the old Rich Card demo)
 - **Dice/D20 result images** · **Tips showcase image**
 - **Custom Action "Display Text" image** (`buildDisplayTextModal` in customActionUI.js) — the legacy `safari_action_modal_*_display_text` twin now **delegates** to the modern modal
 - **Season app question image** (`buildQuestionModal` in applicationManager.js — replaced five inline modal copies; both submits parse via `collectModalFields` + resolver)

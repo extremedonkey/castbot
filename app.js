@@ -10939,97 +10939,23 @@ To fix this:
         }
       })(req, res, client);
 
-    } else if (custom_id === 'richcard_demo') {
-      // Rich Card UI reference implementation — demo of buildRichCardModal + buildRichCardContainer
+    } else if (custom_id === 'category_post' || custom_id.startsWith('catpost_')) {
+      // 🖼️ Category Post — saved rich cards posted to channels/categories (Tools → Special Features).
+      // One route for the whole family; bodies live in src/posts/categoryPost.js (CategoryPost.md).
       return ButtonHandlerFactory.create({
-        id: 'richcard_demo',
-        updateMessage: true,
+        id: 'catpost_route',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        // Modal openers ack with the modal itself (a deferred ack can't be followed by a MODAL);
+        // exec defers (paced multi-minute send); everything else is a fast message update.
+        ...(custom_id === 'catpost_new' || /^catpost_(edit|post)_/.test(custom_id)
+          ? { requiresModal: true }
+          : custom_id.startsWith('catpost_exec_')
+            ? { deferred: true, updateMessage: true }
+            : { updateMessage: true }),
         handler: async (context) => {
-          const { buildRichCardContainer } = await import('./richCardUI.js');
-          const demoCard = buildRichCardContainer({
-            title: 'Rich Card Demo',
-            content: 'This card was built with `buildRichCardContainer()` from **richCardUI.js**.\n\nEdit it via the button below to see `buildRichCardModal()` in action.',
-            color: '#9b59b6',
-            extraComponents: [
-              { type: 14 },
-              { type: 10, content: '### Extra Components Demo' },
-              {
-                type: 1, // String select — demonstrates extraComponents for domain-specific controls
-                components: [{
-                  type: 3,
-                  custom_id: 'richcard_demo_select',
-                  placeholder: 'Demo select (does nothing)',
-                  options: [
-                    { label: 'Option A', value: 'a', description: 'Demonstrates extraComponents', emoji: { name: '🅰️' }, default: true },
-                    { label: 'Option B', value: 'b', description: 'Domain-specific controls go here', emoji: { name: '🅱️' } }
-                  ]
-                }]
-              },
-              { type: 14 },
-              {
-                type: 1,
-                components: [
-                  { type: 2, custom_id: 'reeces_stuff', label: "← Reece's Stuff", style: 2 },
-                  { type: 2, custom_id: 'richcard_demo_edit', label: 'Edit Card', style: 1, emoji: { name: '✏️' } },
-                  { type: 2, custom_id: 'richcard_demo_delete', label: 'Delete', style: 4, emoji: { name: '🗑️' } }
-                ]
-              }
-            ]
-          });
-          return { components: [demoCard] };
-        }
-      })(req, res, client);
-    } else if (custom_id === 'richcard_demo_select') {
-      // Demo select — no-op, just re-renders the demo card with selection feedback
-      return ButtonHandlerFactory.create({
-        id: 'richcard_demo_select',
-        updateMessage: true,
-        handler: async (context) => {
-          const selected = req.body.data.values?.[0] || 'unknown';
-          return { components: [{
-            type: 17, accent_color: 0x9b59b6,
-            components: [
-              { type: 10, content: `## 🎴 Rich Card Demo\nYou selected **${selected}** — this is just a demo, no data was changed.\n\n-# String selects, delete buttons, and other domain-specific controls live in \`extraComponents\`.` },
-              { type: 14 },
-              { type: 1, components: [
-                { type: 2, custom_id: 'richcard_demo', label: '← Back', style: 2 }
-              ]}
-            ]
-          }]};
-        }
-      })(req, res, client);
-    } else if (custom_id === 'richcard_demo_delete') {
-      // Demo delete — no-op, just shows confirmation pattern
-      return ButtonHandlerFactory.create({
-        id: 'richcard_demo_delete',
-        updateMessage: true,
-        handler: async (context) => {
-          return { components: [{
-            type: 17, accent_color: 0xed4245,
-            components: [
-              { type: 10, content: '## ⚠️ Delete Rich Card' },
-              { type: 14 },
-              { type: 10, content: '**This is a demo** — nothing will actually be deleted.\n\nThis pattern follows the Critical Deletion UI Standard from LeanUserInterfaceDesign.md.' },
-              { type: 14 },
-              { type: 1, components: [
-                { type: 2, custom_id: 'richcard_demo', label: 'Cancel', style: 2, emoji: { name: '❌' } },
-                { type: 2, custom_id: 'richcard_demo', label: 'Yes, Delete', style: 4, emoji: { name: '🗑️' } }
-              ]}
-            ]
-          }]};
-        }
-      })(req, res, client);
-    } else if (custom_id === 'richcard_demo_edit') {
-      // Rich Card edit modal — demonstrates buildRichCardModal with blank values (no pre-populated image)
-      return ButtonHandlerFactory.create({
-        id: 'richcard_demo_edit',
-        requiresModal: true,
-        handler: async (context) => {
-          const { buildRichCardModal } = await import('./richCardUI.js');
-          return buildRichCardModal({
-            customId: 'richcard_demo_save',
-            modalTitle: 'Edit Rich Card Demo',
-          });
+          const CP = await import('./src/posts/categoryPost.js');
+          return await CP.routeCatpostButton({ context, req, client });
         }
       })(req, res, client);
     } else if (custom_id === 'prod_manage_tribes_legacy_debug') {
@@ -40435,29 +40361,21 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
 
-    } else if (custom_id === 'richcard_demo_save') {
-      // Rich Card demo — modal save handler using extractRichCardValues + buildRichCardContainer
-      const { extractRichCardValues, buildRichCardContainer } = await import('./richCardUI.js');
-      const values = extractRichCardValues(data);
-      const card = buildRichCardContainer({
-        ...values,
-        extraComponents: [
-          { type: 14 },
-          { type: 10, content: `-# Card rendered from modal values via richCardUI.js` },
-          { type: 14 },
-          {
-            type: 1,
-            components: [
-              { type: 2, custom_id: 'reeces_stuff', label: "← Reece's Stuff", style: 2 },
-              { type: 2, custom_id: 'richcard_demo_edit', label: 'Edit Again', style: 1, emoji: { name: '✏️' } }
-            ]
-          }
-        ]
-      });
-      return res.send({
-        type: InteractionResponseType.UPDATE_MESSAGE,
-        data: { components: [card] }
-      });
+    } else if (custom_id.startsWith('catpost_')) {
+      // 🖼️ Category Post modal submits: catpost_save_* (image re-host), catpost_post_modal_*
+      // (category expansion + confirm plan) — both deferred; catpost_search_modal is a fast re-render.
+      return ButtonHandlerFactory.create({
+        id: 'catpost_modal_route',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        ...(custom_id === 'catpost_search_modal'
+          ? { updateMessage: true }
+          : { deferred: true, updateMessage: true }),
+        handler: async (context) => {
+          const CP = await import('./src/posts/categoryPost.js');
+          return await CP.routeCatpostModalSubmit({ context, data, client });
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('whisper_send_modal_')) {
       // Whisper modal submission — deferred (RaP 0893): sendWhisper does store
       // writes, a notification POST and log fan-out; pre-ack this blew the 3s

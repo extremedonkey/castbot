@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ssh -i ~/.ssh/castbot-key.pem -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new bitnami@13.238.148.170 \"cd /opt/bitnami/projects/castbot && git log --oneline -1 && git status --short | head -5\")"
+    ]
+  }
+}

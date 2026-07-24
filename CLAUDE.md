@@ -538,6 +538,7 @@ When a feature is **deployed to production and working**, move/rename its doc in
 - **🌙 SCHEDULED AUTO-RESTART** → [docs/03-features/ScheduledRestart.md](docs/03-features/ScheduledRestart.md) - Planned, cancellable heap-reset restarts (Data menu → Auto-Restart; T-30 warning + Cancel button; ships disabled). Module: [restartScheduler.js](src/monitoring/restartScheduler.js). Design: [RaP 0903](docs/01-RaP/0903_20260706_MemoryFootprint_Analysis.md)
 - **📊 ANALYTICS** → [docs/infrastructure-security/Analytics.md](docs/infrastructure-security/Analytics.md)
 - **📂 CHANNEL ARCHIVE** → [docs/03-features/ChannelArchive.md](docs/03-features/ChannelArchive.md) - Archive a channel/category's full history as on-Discord HTML (rate-limit-safe REST fetch, type-13 file, htmlpreview link). Code: [channelExportFetcher.js](channelExportFetcher.js), [channelExport.js](channelExport.js)
+- **🖼️ CATEGORY POST** → [docs/03-features/CategoryPost.md](docs/03-features/CategoryPost.md) - Saved rich cards posted to chosen channels/whole categories (Tools → Special Features): confirm screen with expanded blast radius, paced streamed send, upload-only image. Module: [src/posts/categoryPost.js](src/posts/categoryPost.js). Replaced the Rich Card demo
 
 **Enablers & Frameworks:**
 - **🔘 BUTTON HANDLER FACTORY** (MANDATORY) → [docs/enablers/ButtonHandlerFactory.md](docs/enablers/ButtonHandlerFactory.md)

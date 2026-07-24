@@ -688,42 +688,72 @@ export const BUTTON_REGISTRY = {
     parent: 'castbot_settings',
     category: 'safari'
   },
-  'richcard_demo': {
-    label: 'Rich Card',
-    description: 'Rich Card UI reference implementation demo',
-    emoji: '🎴',
-    style: 'Primary',
-    parent: 'reeces_stuff',
-    restrictedUser: '391415444084490240',
-    category: 'experimental'
-  },
-  'richcard_demo_edit': {
-    label: 'Edit Card',
-    description: 'Edit rich card demo via modal',
-    emoji: '✏️',
-    style: 'Primary',
-    parent: 'richcard_demo',
-    restrictedUser: '391415444084490240',
-    requiresModal: true,
-    category: 'experimental'
-  },
-  'richcard_demo_select': {
-    label: 'Demo Select',
-    description: 'Demo string select showing extraComponents pattern',
-    emoji: '📋',
+  'category_post': {
+    label: 'Category Post',
+    description: 'Saved rich cards posted to chosen channels or whole categories',
+    emoji: '🖼️',
     style: 'Secondary',
-    parent: 'richcard_demo',
-    restrictedUser: '391415444084490240',
-    category: 'experimental'
+    parent: 'setup_menu',
+    category: 'posts'
   },
-  'richcard_demo_delete': {
+  'catpost_select': {
+    label: 'Post Select',
+    description: 'Pick a saved Category Post to preview/edit/post',
+    emoji: '🖼️',
+    style: 'Secondary',
+    parent: 'category_post',
+    category: 'posts'
+  },
+  'catpost_new': {
+    label: 'New',
+    description: 'Create a new Category Post (card modal, upload-only image)',
+    emoji: '➕',
+    style: 'Primary',
+    parent: 'category_post',
+    requiresModal: true,
+    category: 'posts'
+  },
+  'catpost_edit_*': {
+    label: 'Edit',
+    description: 'Edit a saved Category Post via the card modal',
+    emoji: '✏️',
+    style: 'Secondary',
+    parent: 'category_post',
+    requiresModal: true,
+    category: 'posts'
+  },
+  'catpost_delete_*': {
     label: 'Delete',
-    description: 'Demo delete confirmation following LEAN deletion standard',
+    description: 'Delete a saved Category Post (two-step confirm)',
     emoji: '🗑️',
     style: 'Danger',
-    parent: 'richcard_demo',
-    restrictedUser: '391415444084490240',
-    category: 'experimental'
+    parent: 'category_post',
+    category: 'posts'
+  },
+  'catpost_delete_confirm_*': {
+    label: 'Yes, Delete',
+    description: 'Confirm deletion of a saved Category Post',
+    emoji: '🗑️',
+    style: 'Danger',
+    parent: 'category_post',
+    category: 'posts'
+  },
+  'catpost_post_*': {
+    label: 'Post',
+    description: 'Pick target channels/categories for a Category Post',
+    emoji: '#️⃣',
+    style: 'Primary',
+    parent: 'category_post',
+    requiresModal: true,
+    category: 'posts'
+  },
+  'catpost_exec_*': {
+    label: 'Confirm Post',
+    description: 'Execute a planned Category Post broadcast (paced, streamed)',
+    emoji: '🖼️',
+    style: 'Danger',
+    parent: 'category_post',
+    category: 'posts'
   },
   'prod_live_analytics': {
     label: 'Print Logs',

@@ -81,6 +81,7 @@ export class MenuBuilder {
     // whitelisted guilds + users. The handlers re-check — this is display, not security.
     const specialFeatures = [
       { type: 2, custom_id: 'attribute_management', label: 'Attributes', style: 2, emoji: { name: '📊' } },
+      { type: 2, custom_id: 'category_post', label: 'Category Post', style: 2, emoji: { name: '🖼️' } },
       { type: 2, custom_id: 'safari_manage_enemies', label: 'Enemies', style: 2, emoji: { name: '🐙' } },
       { type: 2, custom_id: 'tycoons_legacy', label: 'Tycoons', style: 2, emoji: { name: '💼' } }
     ];
@@ -156,11 +157,9 @@ export class MenuBuilder {
    */
   static buildReecesStuffMenu(menuConfig, context) {
     const envLabel = process.env.INSTANCE_ROLE === 'test' ? 'Test' : process.env.NODE_ENV === 'production' ? 'Prod' : 'Dev';
-    // ⚠️ THIS MENU IS AT DISCORD'S 40-COMPONENT CEILING (exactly 40 as of 2026-07-16).
-    // Adding Post Moai cost 1 (Msg Test's row had a spare seat), paid for by dropping the
-    // separator that used to sit above the final back-row — the section headers already
-    // separate things visually. The NEXT button added here needs a real reorganisation,
-    // not another shave. Verify with countComponents([menu]) before shipping.
+    // ⚠️ THIS MENU RUNS NEAR DISCORD'S 40-COMPONENT CEILING (39 as of 2026-07-21 — the
+    // Rich Card demo graduated into Tools → Special Features → 🖼️ Category Post, freeing
+    // one seat). Verify with countComponents([menu]) before adding anything here.
     const components = [
       { type: 10, content: `## ${menuConfig.title}` },
       { type: 10, content: `### \`\`\`🦠 Experimental\`\`\`` },
@@ -173,8 +172,7 @@ export class MenuBuilder {
           { type: 2, custom_id: 'poc_menu_button', label: 'Menu', style: 1, emoji: getBotEmoji('cb_transparent') },
           { type: 2, custom_id: 'moai_ask', label: 'Moai', style: 2, emoji: { name: '🗿' } },
           { type: 2, custom_id: 'askcb_post', label: 'Post Ask', style: 1, emoji: { name: '👾' } },
-          { type: 2, custom_id: 'pcard_open', label: 'Player Card', style: 2, emoji: { name: '🪪' } },
-          { type: 2, custom_id: 'richcard_demo', label: 'Rich Card', style: 2, emoji: { name: '🎴' } }
+          { type: 2, custom_id: 'pcard_open', label: 'Player Card', style: 2, emoji: { name: '🪪' } }
         ]
       },
       {

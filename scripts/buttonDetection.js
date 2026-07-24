@@ -34,7 +34,7 @@ const SAFE_TEST_BUTTONS = {
   // season_management_menu is DEPRECATED — Season Manager owns Apps now
   'applications': { custom_id: 'season_manager', priority: 5 },
   'season_planner': { custom_id: 'season_manager', priority: 2 },
-  'richcard': { custom_id: 'richcard_demo', priority: 2 },
+  'richcard': { custom_id: 'category_post', priority: 2 },
   'experimental': { custom_id: 'reeces_stuff', priority: 3 },
   'challenges': { custom_id: 'challenge_screen_new', priority: 2 },
   'player_card': { custom_id: 'pcard_open', priority: 1 },
