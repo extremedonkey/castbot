@@ -25,7 +25,7 @@ import { BUTTON_REGISTRY } from '../buttonHandlerFactory.js';
  * automatically instead of silently pointing at a dead handler.
  */
 const SAFE_TEST_BUTTONS = {
-  'actions': { custom_id: 'safari_action_editor', priority: 1 },
+  'actions': { custom_id: 'action_manager', priority: 1 },
   'safari': { custom_id: 'safari_map_explorer', priority: 2 },
   'ranking': { custom_id: 'season_app_ranking', priority: 2 },
   'castlist': { custom_id: 'show_castlist2_default', priority: 3 },

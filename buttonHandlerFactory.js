@@ -2061,9 +2061,9 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari'
   },
-  'safari_action_editor': {
-    label: 'Action Editor',
-    description: 'Manage actions across all locations',
+  'action_manager': {
+    label: 'Actions',
+    description: 'Select an action to manage, or create a new one (global)',
     emoji: '⚡',
     style: 'Secondary',
     category: 'safari'

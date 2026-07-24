@@ -261,8 +261,8 @@ const progressUI = await createSafariProgressUI(context.guildId, prevRow, client
 const mapAdminButtons = [
   // ... existing buttons
   new ButtonBuilder()
-    .setCustomId('safari_action_editor')
-    .setLabel('Action Editor')
+    .setCustomId('action_manager')
+    .setLabel('Actions')
     .setStyle(ButtonStyle.Secondary)
     .setEmoji('⚡'),
   new ButtonBuilder()              // ← NEW: Added here

@@ -88,7 +88,7 @@ The Clone Action feature allows admins to duplicate existing Custom Actions, cop
 
 3. **Coordinate context**:
    - From map location (e.g., `entity_field_group_map_cell_A1_interaction`): `coordinates: ['A1']`
-   - From global view (`safari_action_editor`): `coordinates: []`
+   - From global view (`action_manager`): `coordinates: []`
 
 ## Custom ID Patterns
 

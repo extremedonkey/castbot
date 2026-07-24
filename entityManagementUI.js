@@ -188,12 +188,22 @@ export async function createEntityManagementUI(options) {
             // Show entity details if selected, with a Location Info header + field
             // group buttons (map_cell only) leading into the details
             ...(selectedEntity ? [
-                { type: 14 }, // Separator
+                ...(entityType !== 'map_cell' ? [{ type: 14 }] : []), // Separator (map_cell has its own header instead)
                 ...(entityType === 'map_cell' ? [
                     { type: 10, content: '### ```🖼️ Location Info```' },
                     ...createFieldGroupButtons('map_cell', selectedId, activeFieldGroup)
                 ] : []),
-                createEntityDisplay(selectedEntity, entityType, guildData.safariConfig)
+                createEntityDisplay(selectedEntity, entityType, guildData.safariConfig),
+                // Area image, if one is set — shown for every render of this screen
+                // (initial load, location switch, and modal-submit updates) since they
+                // all route back through this single function.
+                ...(entityType === 'map_cell' && selectedEntity.baseContent?.image ? [{
+                    type: 12, // Media Gallery
+                    items: [{
+                        media: { url: selectedEntity.baseContent.image },
+                        description: selectedEntity.baseContent?.title || `Location ${selectedId}`
+                    }]
+                }] : [])
             ] : []),
 
             // Mode-specific UI
@@ -605,96 +615,23 @@ async function createModeSpecificUI(mode, entityType, entityId, entity, activeFi
  */
 async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, guildId) {
     const components = [
-        { type: 14 }, // Separator
-        ...(entityType !== 'map_cell' ? createFieldGroupButtons(entityType, entityId, activeFieldGroup) : []),
+        ...(entityType !== 'map_cell' ? [{ type: 14 }, ...createFieldGroupButtons(entityType, entityId, activeFieldGroup)] : []),
     ];
 
-    // Add action select + Quick Create row for map cells
+    // Add the shared action manager section (header + select + Quick Create rows)
+    // for map cells — same builder the standalone Actions screen uses
+    // (action_manager), so the two stay in sync automatically.
     if (entityType === 'map_cell' && guildId) {
         try {
-            const { getCustomTerms } = await import('./safariManager.js');
-            const customTerms = await getCustomTerms(guildId);
-            const currencyLabel = `Quick ${customTerms.currencyName || 'Currency'}`;
-
-            // Embed action string select directly in the Location Manager
             const safariData = await loadSafariContent();
             const activeMapId = safariData[guildId]?.maps?.active;
             if (activeMapId) {
-                const { buildActionSelectRow } = await import('./customActionUI.js');
-                const actionSelectRow = await buildActionSelectRow({
-                    guildId,
-                    coordinate: entityId,
-                    mapId: activeMapId
-                });
-                components.push({ type: 10, content: '### ```⚡ Location Actions```' });
-                components.push(actionSelectRow);
+                const { buildActionManagerSection } = await import('./customActionUI.js');
+                const actionSection = await buildActionManagerSection({ guildId, coordinate: entityId, mapId: activeMapId });
+                components.push(...actionSection);
             }
-
-            // Quick Create row 1: Text / Item / ItemText / Currency
-            // Quick Create row 2: Crafting / Command / Enemy
-            const craftingLabel = `Quick ${customTerms.craftingName || 'Crafting'}`;
-            const craftingEmoji = resolveEmoji(customTerms.craftingEmoji || '🛠️', '🛠️');
-            components.push({
-                type: 1, // ActionRow
-                components: [
-                    {
-                        type: 2, // Button
-                        style: 2,
-                        label: 'Quick Text',
-                        custom_id: `quick_text_${entityId}`,
-                        emoji: { name: '📃' }
-                    },
-                    {
-                        type: 2, // Button
-                        style: 2,
-                        label: 'Quick Item',
-                        custom_id: `quick_item_${entityId}`,
-                        emoji: { name: '📦' }
-                    },
-                    {
-                        type: 2, // Button
-                        style: 2,
-                        label: 'Quick ItemText',
-                        custom_id: `quick_itemtext_${entityId}`,
-                        emoji: { name: '📦' }
-                    },
-                    {
-                        type: 2, // Button
-                        style: 2,
-                        label: currencyLabel,
-                        custom_id: `quick_currency_${entityId}`,
-                        emoji: parseTextEmoji(customTerms.currencyEmoji || '🪙', '🪙').emoji
-                    }
-                ]
-            });
-            components.push({
-                type: 1, // ActionRow
-                components: [
-                    {
-                        type: 2, // Button
-                        style: 2,
-                        label: craftingLabel,
-                        custom_id: `quick_crafting_${entityId}`,
-                        emoji: craftingEmoji
-                    },
-                    {
-                        type: 2, // Button
-                        style: 2,
-                        label: 'Quick Command',
-                        custom_id: `quick_command_${entityId}`,
-                        emoji: { name: '❗' }
-                    },
-                    {
-                        type: 2, // Button
-                        style: 2,
-                        label: 'Quick Enemy',
-                        custom_id: `quick_enemy_${entityId}`,
-                        emoji: { name: '🐙' }
-                    }
-                ]
-            });
         } catch (error) {
-            console.error('Error building Quick Create row:', error);
+            console.error('Error building action manager section:', error);
         }
     }
 

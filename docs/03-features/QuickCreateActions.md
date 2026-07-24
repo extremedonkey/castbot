@@ -46,24 +46,26 @@ Row 1:  [📃 Quick Text] [📦 Quick Item] [📦 Quick ItemText] [🪙 Quick Cu
 Row 2:  [🛠️ Quick {CraftingName}] [❗ Quick Command] [🐙 Quick Enemy]
 ```
 
-Buttons in `entityManagementUI.js` `createEditModeUI()`, inside `if (entityType === 'map_cell')`. Actions created here are automatically assigned to the coordinate (and the anchor message is updated via `afterAddCoordinate`).
-
-**Quick ItemText is currently map-coordinate-only** — it does not appear on the Global Actions screen (below). This was a deliberate initial scope decision, not a technical limitation; the modal/handler (`buildQuickItemTextModal`/`handleQuickItemTextSubmit`) already accepts `coordinate === 'global'` like every other Quick Create action, so adding a `quick_itemtext_global` button to the global screen later is a small, low-risk follow-up (mirror the existing `quick_item_global` wiring) rather than new engineering.
+Buttons in `entityManagementUI.js` `createEditModeUI()`, inside `if (entityType === 'map_cell')`, via `buildActionManagerSection()` (see below). Actions created here are automatically assigned to the coordinate (and the anchor message is updated via `afterAddCoordinate`).
 
 ### Global Actions Screen — 2 rows
 
 ```
-## ⚡ Actions
-Row 1:  [📃 Quick Text] [🪙 Quick Currency] [📦 Quick Item] [🐙 Quick Enemy]
-Row 2:  [❗ Quick Command] [🛠️ Quick {CraftingName}]
+### ```⚡ Actions```
 [Select an action to manage...                                    ▼]
+Row 1:  [📃 Quick Text] [📦 Quick Item] [📦 Quick ItemText] [🪙 Quick Currency]
+Row 2:  [🛠️ Quick {CraftingName}] [❗ Quick Command] [🐙 Quick Enemy]
+─────────────────
+[← Menu]
 ```
 
-Buttons in `customActionUI.js` → `createCustomActionSelectionUI()`, shown only when `coordinate === null` (global view). Actions created here have no coordinates — they're global (usable from Player Menu, Crafting menu, commands, item links, etc.). **Note this row keeps its original order and set** (no Quick ItemText) — the two screens are not currently kept in sync by shared code, so a future reorder of one does not automatically apply to the other.
+Reached via the `action_manager` button (renamed from `safari_action_editor` — this screen is an action *selector*, not an editor; the editor is the subsequent `entity_custom_action_list_global` screen). Actions created here have no coordinates — they're global (usable from Player Menu, Crafting menu, commands, item links, etc.).
 
-**Custom IDs**: `quick_text_global`, `quick_currency_global`, `quick_item_global`, `quick_enemy_global`, `quick_command_global`, `quick_crafting_global` (no `quick_itemtext_global` yet — see above)
+**As of the Location Manager UI-duplication fix, this screen and the Map Coordinate Screen share one builder** — `buildActionManagerSection({ guildId, coordinate, mapId })` in `customActionUI.js` — so they can no longer drift apart. `coordinate: null` (global) vs. `coordinate: 'A1'` (location) only changes: the header text ("Actions" vs. "Location Actions"), the button custom_id suffix (`_global` vs. `_{coordinate}`), and the select placeholder's location+count suffix (omitted for global — there's no "current location" to summarize). `createCustomActionSelectionUI()` (still the exported entry point, now a thin wrapper) additionally appends a `← Menu` back button + separator, but only when `!coordinate` — the coordinate-scoped variant is always reached from within another screen that already has its own navigation.
 
-**Row split (Map Coordinate Screen)**: Discord allows max 5 buttons per ActionRow; the 7 Quick Create actions split 4/3. Row 1 holds the simpler single-modal, mostly-independent creators (Text, Item, ItemText, Currency); Row 2 holds the three with extra moving parts (Crafting — auto-populates conditions; Command — the one non-button trigger type; Enemy — invokes the combat system). This is a placement choice, not an enforced category — reorder freely as new Quick Create actions are added.
+**Custom IDs**: `quick_text_global`, `quick_item_global`, `quick_itemtext_global`, `quick_currency_global`, `quick_crafting_global`, `quick_command_global`, `quick_enemy_global` — all seven now exist globally (Quick ItemText's global variant was the specific gap this refactor closed).
+
+**Row split**: Discord allows max 5 buttons per ActionRow; the 7 Quick Create actions split 4/3. Row 1 holds the simpler single-modal, mostly-independent creators (Text, Item, ItemText, Currency); Row 2 holds the three with extra moving parts (Crafting — auto-populates conditions; Command — the one non-button trigger type; Enemy — invokes the combat system). This is a placement choice, not an enforced category — reorder freely as new Quick Create actions are added (edit `buildActionManagerSection()` once, both screens pick it up).
 
 ---
 
@@ -182,7 +184,7 @@ Quick Crafting compresses the multi-step work of building a recipe Action (condi
 
 ### Global Actions (`coordinate === 'global'`)
 
-Applies to every Quick Create action *except* Quick ItemText, which currently has no button on the Global Actions screen (see [Where They Appear](#where-they-appear)). `handleQuickItemTextSubmit` and `buildQuickItemTextModal` both already handle `coordinate === 'global'` correctly — the mechanics below apply unchanged if/when a `quick_itemtext_global` button is added later.
+Applies to every Quick Create action, including Quick ItemText — all seven have a `_global` variant.
 
 When Quick Actions are triggered from the global Actions screen:
 - `coordinate` is the string `'global'` (from the button custom\_id)

@@ -37,49 +37,26 @@ const OUTCOME_TYPE_OPTIONS = [
  * @returns {Object} Discord Components V2 UI
  */
 export async function createCustomActionSelectionUI({ guildId, coordinate = null, mapId = null }) {
-  const selectRow = await buildActionSelectRow({ guildId, coordinate, mapId });
+  const section = await buildActionManagerSection({ guildId, coordinate, mapId });
+  const containerComponents = [...section];
 
-  // Build Quick Create buttons for global view (coordinate views have them in Location Actions menu)
-  const quickCreateRow = [];
+  // Back to main menu — only the standalone global screen (action_manager)
+  // needs this; coordinate-scoped callers are reached from within another
+  // screen (Location Manager, search results, etc.) that already has its own nav.
   if (!coordinate) {
-    const customTerms = await getCustomTerms(guildId);
-    const currencyLabel = `Quick ${customTerms.currencyName || 'Currency'}`;
-    const currencyEmoji = parseTextEmoji(customTerms.currencyEmoji || '🪙', '🪙').emoji;
-    const craftingLabel = `Quick ${customTerms.craftingName || 'Crafting'}`;
-    const craftingEmoji = resolveEmoji(customTerms.craftingEmoji || '🛠️', '🛠️');
-    quickCreateRow.push({
-      type: 1, // ActionRow
+    containerComponents.push({ type: 14 }); // Separator before navigation
+    containerComponents.push({
+      type: 1, // Action Row
       components: [
-        { type: 2, style: 2, label: 'Quick Text', custom_id: 'quick_text_global', emoji: { name: '📃' } },
-        { type: 2, style: 2, label: currencyLabel, custom_id: 'quick_currency_global', emoji: currencyEmoji },
-        { type: 2, style: 2, label: 'Quick Item', custom_id: 'quick_item_global', emoji: { name: '📦' } },
-        { type: 2, style: 2, label: 'Quick Enemy', custom_id: 'quick_enemy_global', emoji: { name: '🐙' } }
-      ]
-    });
-    quickCreateRow.push({
-      type: 1, // ActionRow
-      components: [
-        { type: 2, style: 2, label: 'Quick Command', custom_id: 'quick_command_global', emoji: { name: '❗' } },
-        { type: 2, style: 2, label: craftingLabel, custom_id: 'quick_crafting_global', emoji: craftingEmoji }
+        { type: 2, style: 2, label: '← Menu', custom_id: 'prod_menu_back' }
       ]
     });
   }
 
-  // Create container like stores handler
   const container = {
     type: 17, // Container
     accent_color: 0x3498db,
-    components: [
-      {
-        type: 10, // Text Display
-        content: coordinate && mapId ?
-          `## ⚡ Actions for ${coordinate}\n\nSelect an action to manage or create a new one.` :
-          `## ⚡ Actions\n\nSelect an action to manage or create a new one.`
-      },
-      ...quickCreateRow,
-      { type: 14 }, // Separator
-      selectRow
-    ]
+    components: containerComponents
   };
 
   // Count components for validation
@@ -87,7 +64,7 @@ export async function createCustomActionSelectionUI({ guildId, coordinate = null
   countComponents([container], {
     enableLogging: true,
     verbosity: "summary",
-    label: "Custom Action Selection UI"
+    label: coordinate ? `Location Actions (${coordinate})` : "Actions"
   });
 
   // Return exactly like stores handler
@@ -95,6 +72,54 @@ export async function createCustomActionSelectionUI({ guildId, coordinate = null
     flags: (1 << 15), // IS_COMPONENTS_V2
     components: [container]
   };
+}
+
+/**
+ * Build the shared "action manager" section: header + select row + Quick Create
+ * rows. Single source of truth for both the standalone global Actions screen
+ * (action_manager, coordinate omitted) and the section embedded inside
+ * the Location Manager screen (map_cell, coordinate set). Previously these
+ * were hand-built separately (customActionUI.js vs entityManagementUI.js) and
+ * had drifted — the global screen was missing Quick ItemText entirely.
+ *
+ * @param {Object} params
+ * @param {string} params.guildId
+ * @param {string} [params.coordinate] - Map coordinate (e.g. "A1"); omit for global
+ * @param {string} [params.mapId] - Required when coordinate is set
+ * @returns {Promise<Array>} [header, selectRow, quickRow1, quickRow2]
+ */
+export async function buildActionManagerSection({ guildId, coordinate = null, mapId = null }) {
+  const headerLabel = coordinate ? 'Location Actions' : 'Actions';
+  const header = { type: 10, content: `### \`\`\`⚡ ${headerLabel}\`\`\`` };
+
+  const selectRow = await buildActionSelectRow({ guildId, coordinate, mapId });
+
+  const coordSuffix = coordinate || 'global';
+  const customTerms = await getCustomTerms(guildId);
+  const currencyLabel = `Quick ${customTerms.currencyName || 'Currency'}`;
+  const currencyEmoji = parseTextEmoji(customTerms.currencyEmoji || '🪙', '🪙').emoji;
+  const craftingLabel = `Quick ${customTerms.craftingName || 'Crafting'}`;
+  const craftingEmoji = resolveEmoji(customTerms.craftingEmoji || '🛠️', '🛠️');
+
+  const quickRow1 = {
+    type: 1, // ActionRow
+    components: [
+      { type: 2, style: 2, label: 'Quick Text', custom_id: `quick_text_${coordSuffix}`, emoji: { name: '📃' } },
+      { type: 2, style: 2, label: 'Quick Item', custom_id: `quick_item_${coordSuffix}`, emoji: { name: '📦' } },
+      { type: 2, style: 2, label: 'Quick ItemText', custom_id: `quick_itemtext_${coordSuffix}`, emoji: { name: '📦' } },
+      { type: 2, style: 2, label: currencyLabel, custom_id: `quick_currency_${coordSuffix}`, emoji: currencyEmoji }
+    ]
+  };
+  const quickRow2 = {
+    type: 1, // ActionRow
+    components: [
+      { type: 2, style: 2, label: craftingLabel, custom_id: `quick_crafting_${coordSuffix}`, emoji: craftingEmoji },
+      { type: 2, style: 2, label: 'Quick Command', custom_id: `quick_command_${coordSuffix}`, emoji: { name: '❗' } },
+      { type: 2, style: 2, label: 'Quick Enemy', custom_id: `quick_enemy_${coordSuffix}`, emoji: { name: '🐙' } }
+    ]
+  };
+
+  return [header, selectRow, quickRow1, quickRow2];
 }
 
 /**

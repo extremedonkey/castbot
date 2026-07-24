@@ -940,7 +940,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     new ButtonBuilder().setCustomId('safari_store_manage_items').setLabel('Stores').setStyle(ButtonStyle.Primary).setEmoji('🏪'),
     new ButtonBuilder().setCustomId('safari_manage_items').setLabel('Items').setStyle(ButtonStyle.Secondary).setEmoji('📦'),
     new ButtonBuilder().setCustomId('safari_manage_currency').setLabel('Currency').setStyle(ButtonStyle.Secondary).setEmoji('💰'),
-    new ButtonBuilder().setCustomId('safari_action_editor').setLabel('Actions').setStyle(ButtonStyle.Secondary).setEmoji('⚡'),
+    new ButtonBuilder().setCustomId('action_manager').setLabel('Actions').setStyle(ButtonStyle.Secondary).setEmoji('⚡'),
     new ButtonBuilder().setCustomId('safari_map_explorer').setLabel('Map').setStyle(ButtonStyle.Secondary).setEmoji('🗺️')
   ];
   const safariFeatureRow = new ActionRowBuilder().addComponents(safariFeatureButtons);
@@ -22539,7 +22539,7 @@ Your server is now ready for Tycoons gameplay!`;
           if (!coordinate || !inSafariChannel) {
             // Orphan action OR not in safari channel - show global action editor
             const reason = !coordinate ? 'orphan action (no coordinates)' : 'not in Safari channel';
-            console.log(`🌍 DEBUG: ${reason} for ${actionId} - showing safari_action_editor`);
+            console.log(`🌍 DEBUG: ${reason} for ${actionId} - showing action_manager`);
 
             const { createCustomActionSelectionUI } = await import('./customActionUI.js');
             const ui = await createCustomActionSelectionUI({
@@ -36102,23 +36102,23 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
       
-    } else if (custom_id === 'safari_action_editor') {
+    } else if (custom_id === 'action_manager') {
       return ButtonHandlerFactory.create({
-        id: 'safari_action_editor',
+        id: 'action_manager',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         ephemeral: true,
         handler: async (context) => {
-          console.log(`🔍 START: safari_action_editor - user ${context.userId}`);
-          
+          console.log(`🔍 START: action_manager - user ${context.userId}`);
+
           const { createCustomActionSelectionUI } = await import('./customActionUI.js');
-          
+
           const ui = await createCustomActionSelectionUI({
             guildId: context.guildId
             // No coordinate or mapId - this will trigger global mode
           });
-          
-          console.log(`✅ SUCCESS: safari_action_editor - opened global action editor`);
+
+          console.log(`✅ SUCCESS: action_manager - opened global action editor`);
           return {
             ...ui,
             ephemeral: true
@@ -50068,7 +50068,7 @@ Your server is now ready for Tycoons gameplay!`;
                     type: 2, // Button
                     style: 2, // Secondary
                     label: '⬅️ Back to Actions',
-                    custom_id: coordinate ? `entity_field_group_map_cell_${coordinate}_interaction` : 'safari_action_editor'
+                    custom_id: coordinate ? `entity_field_group_map_cell_${coordinate}_interaction` : 'action_manager'
                   }
                 ]
               }
