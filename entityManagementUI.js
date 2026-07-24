@@ -182,19 +182,16 @@ export async function createEntityManagementUI(options) {
                 content: `## ${config.displayName}`
             },
 
-            // For map_cell, show field group buttons above the selector, with a
-            // section divider underneath (only when the row itself is shown)
-            ...(selectedEntity && entityType === 'map_cell' ? [
-                ...createFieldGroupButtons('map_cell', selectedId, activeFieldGroup),
-                { type: 10, content: '### ```🗺️Location Info```' }
-            ] : []),
+            // For map_cell, show field group buttons above the selector
+            ...(selectedEntity && entityType === 'map_cell' ? createFieldGroupButtons('map_cell', selectedId, activeFieldGroup) : []),
 
             // Entity selector
             createEntitySelector(filteredEntities, selectedId, entityType, searchTerm),
 
-            // Show entity details if selected
+            // Show entity details if selected, with a Location Info divider (map_cell only)
             ...(selectedEntity ? [
                 { type: 14 }, // Separator
+                ...(entityType === 'map_cell' ? [{ type: 10, content: '### ```🗺️Location Info```' }] : []),
                 createEntityDisplay(selectedEntity, entityType, guildData.safariConfig)
             ] : []),
 
