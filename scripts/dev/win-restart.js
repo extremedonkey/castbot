@@ -114,7 +114,13 @@ if (runTests) {
     .filter(f => f.endsWith('.test.js'))
     .map(f => path.join('tests', f));
 
-  const result = spawnSync(process.execPath, ['--test', ...testFiles], { encoding: 'utf8' });
+  // Force the TAP reporter explicitly — Node's default reporter is TTY-detected
+  // ('spec', printing ℹ-prefixed summary lines) vs non-TTY ('tap', # -prefixed).
+  // spawnSync's pipes read as non-TTY on WSL/Linux but as TTY on this Windows
+  // Node build, so without this flag the regex below silently matched nothing
+  // and always reported "0/0" even when all tests genuinely passed (exit code
+  // gating still worked — only the human-readable summary was wrong).
+  const result = spawnSync(process.execPath, ['--test', '--test-reporter=tap', '--test-reporter-destination=stdout', ...testFiles], { encoding: 'utf8' });
   const testOutput = `${result.stdout || ''}${result.stderr || ''}`;
 
   // Extract counts + duration from the TAP summary footer
