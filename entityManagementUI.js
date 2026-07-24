@@ -191,7 +191,7 @@ export async function createEntityManagementUI(options) {
                 ...(entityType !== 'map_cell' ? [{ type: 14 }] : []), // Separator (map_cell has its own header instead)
                 ...(entityType === 'map_cell' ? [
                     { type: 10, content: '### ```🖼️ Location Info```' },
-                    ...createFieldGroupButtons('map_cell', selectedId, activeFieldGroup)
+                    ...createFieldGroupButtons('map_cell', selectedId, activeFieldGroup, selectedEntity)
                 ] : []),
                 createEntityDisplay(selectedEntity, entityType, guildData.safariConfig),
                 // Area image, if one is set — shown for every render of this screen
@@ -732,22 +732,27 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
 /**
  * Create field group buttons for editing
  */
-function createFieldGroupButtons(entityType, entityId, activeFieldGroup) {
+function createFieldGroupButtons(entityType, entityId, activeFieldGroup, entity = null) {
     const buttons = [];
-    
+
     // Define field groups based on entity type
     const fieldGroups = getFieldGroups(entityType);
-    
+
     Object.entries(fieldGroups).forEach(([groupId, group]) => {
+        let label = group.label;
+        if (entityType === 'map_cell' && groupId === 'stores') {
+            const storeCount = entity?.stores?.length || 0;
+            label = storeCount > 0 ? `Stores (${storeCount})` : 'Stores';
+        }
         buttons.push({
             type: 2, // Button
             style: activeFieldGroup === groupId ? 1 : 2, // Primary if active
-            label: group.label,
+            label,
             custom_id: `entity_field_group_${entityType}_${entityId}_${groupId}`,
             emoji: resolveEmoji(group.emoji, '📋')
         });
     });
-    
+
     return createButtonRows(buttons);
 }
 
@@ -783,7 +788,7 @@ export function getFieldGroups(entityType) {
             };
         case 'map_cell':
             return {
-                info: { label: 'Location Info', emoji: '🖼️', fields: ['title', 'description', 'image', 'emoji'] },
+                info: { label: 'Edit', emoji: '🖼️', fields: ['title', 'description', 'image', 'emoji'] },
                 stores: { label: 'Stores', emoji: '🏪', fields: ['stores'] }
             };
         default:
