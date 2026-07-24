@@ -7,14 +7,17 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 const ITEMS_PER_PAGE = 23;
-const CASTING_GROUP_ORDER = ['cast', 'alternative', 'reject', 'undecided'];
+const CASTING_GROUP_ORDER = ['cast', 'alternative', 'reject', 'undecided', 'withdrawn'];
 
-// Mirrors computeCastingOrder (castRankingManager.js)
-function computeCastingOrder(allApplications, playerData, guildId) {
+// Mirrors computeCastingOrder (castRankingManager.js). `guild` is the fake { channels: { cache: { get } } }
+// built by fixture() below — withdrawal has no data field, it's read off the LIVE channel name's ✖️ prefix.
+function computeCastingOrder(allApplications, playerData, guildId, guild = null) {
   const entries = allApplications.map((app, insertionIndex) => {
     const rec = playerData[guildId]?.applications?.[app.channelId] || {};
     const scores = Object.values(rec.rankings || {}).filter(r => r !== undefined);
     const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+    const liveChannelName = guild?.channels?.cache?.get(app.channelId)?.name || '';
+    const withdrawn = /^✖️/.test(liveChannelName);
     const rawStatus = rec.castingStatus || 'undecided';
     return {
       app,
@@ -23,7 +26,7 @@ function computeCastingOrder(allApplications, playerData, guildId) {
       name: app.displayName || app.username,
       avgScore,
       voteCount: scores.length,
-      castingStatus: CASTING_GROUP_ORDER.includes(rawStatus) ? rawStatus : 'undecided',
+      castingStatus: withdrawn ? 'withdrawn' : (CASTING_GROUP_ORDER.includes(rawStatus) ? rawStatus : 'undecided'),
       placementResponse: rec.placementResponse,
       hasNotes: !!rec.playerNotes
     };
@@ -116,8 +119,9 @@ function parseRankingSelectId(customId) {
 // --- fixtures ---
 const GUILD = 'g1';
 function fixture(apps) {
-  // apps: [{ userId, name, status, scores, notes, channelId? }]
+  // apps: [{ userId, name, status, scores, notes, channelId?, withdrawn? }]
   const playerData = { [GUILD]: { applications: {} } };
+  const channelNames = new Map();
   const allApplications = apps.map((a, i) => {
     const channelId = a.channelId || `ch${i}`;
     const rec = { channelId, userId: a.userId || `u${i}`, displayName: a.name, username: (a.name || '').toLowerCase() };
@@ -126,9 +130,12 @@ function fixture(apps) {
     if (a.notes) rec.playerNotes = a.notes;
     if (a.placementResponse) rec.placementResponse = a.placementResponse;
     playerData[GUILD].applications[channelId] = rec;
+    channelNames.set(channelId, `${a.withdrawn ? '✖️' : ''}${(a.name || '').toLowerCase()}-app`);
     return rec;
   });
-  return { allApplications, playerData };
+  // Fake discord.js guild — just enough of channels.cache.get(id).name for withdrawal detection.
+  const guild = { channels: { cache: { get: (id) => (channelNames.has(id) ? { name: channelNames.get(id) } : undefined) } } };
+  return { allApplications, playerData, guild };
 }
 
 describe('computeCastingOrder — grouping', () => {
@@ -180,6 +187,47 @@ describe('computeCastingOrder — grouping', () => {
     const { ordered, groups } = computeCastingOrder(allApplications, playerData, GUILD);
     assert.equal(ordered.length, 2);
     assert.deepEqual(groups.undecided.map(e => e.name), ['NoStatus', 'Corrupt']);
+  });
+});
+
+describe('computeCastingOrder — withdrawn sinks to the bottom (prod bug: was showing mid-list)', () => {
+  it('a withdrawn applicant sorts LAST regardless of castingStatus, even a high-scored Cast', () => {
+    const { allApplications, playerData, guild } = fixture([
+      { name: 'WithdrawnCast', status: 'cast', scores: [5, 5], withdrawn: true },
+      { name: 'Rej', status: 'reject' },
+      { name: 'Und' }
+    ]);
+    const { ordered } = computeCastingOrder(allApplications, playerData, GUILD, guild);
+    assert.deepEqual(ordered.map(e => e.name), ['Rej', 'Und', 'WithdrawnCast']);
+  });
+
+  it('withdrawal is read from the LIVE channel name, not a stored field — no guild passed → not detected', () => {
+    const { allApplications, playerData } = fixture([
+      { name: 'WithdrawnCast', status: 'cast', scores: [5], withdrawn: true },
+      { name: 'Und' }
+    ]);
+    const { ordered } = computeCastingOrder(allApplications, playerData, GUILD); // no guild
+    assert.deepEqual(ordered.map(e => e.name), ['WithdrawnCast', 'Und']); // still in the cast bucket
+  });
+
+  it('multiple withdrawn applicants are still score-sorted within their own bottom group', () => {
+    const { allApplications, playerData, guild } = fixture([
+      { name: 'WLow', status: 'cast', scores: [1], withdrawn: true },
+      { name: 'WHigh', status: 'undecided', scores: [5], withdrawn: true },
+      { name: 'Active', status: 'cast', scores: [2] }
+    ]);
+    const { ordered, groups } = computeCastingOrder(allApplications, playerData, GUILD, guild);
+    assert.deepEqual(ordered.map(e => e.name), ['Active', 'WHigh', 'WLow']);
+    assert.equal(groups.withdrawn.length, 2);
+  });
+
+  it('a ✖️ appearing mid-name (not as the channel-name prefix) does NOT count as withdrawn', () => {
+    const pd = { [GUILD]: { applications: { ch0: { channelId: 'ch0', userId: 'u0', displayName: 'Normal', username: 'normal' } } } };
+    const app = pd[GUILD].applications.ch0;
+    const guild = { channels: { cache: { get: () => ({ name: 'normal-app-not✖️withdrawn' }) } } };
+    const { groups } = computeCastingOrder([app], pd, GUILD, guild);
+    assert.equal(groups.withdrawn.length, 0);
+    assert.equal(groups.undecided.length, 1);
   });
 });
 
@@ -408,12 +456,15 @@ describe('Marooning parity — helper matches the old inline logic', () => {
     const apps = [...allApplications, ghost];
 
     const oldGroups = oldMarooningGroups(apps, playerData, GUILD);
-    const { groups: newGroups } = computeCastingOrder(apps, playerData, GUILD);
+    const { groups: newGroups } = computeCastingOrder(apps, playerData, GUILD); // no guild — 'withdrawn' N/A here, covered separately above
 
     const project = g => g.map(({ userId, name, avgScore, voteCount, placementResponse }) =>
       ({ userId, name, avgScore, voteCount, placementResponse }));
-    for (const status of CASTING_GROUP_ORDER) {
+    // oldMarooningGroups predates the 'withdrawn' group (RaP: withdrawn ordering fix) — compare only
+    // the four statuses it knows about; withdrawn behaviour has its own describe block above.
+    for (const status of ['cast', 'alternative', 'reject', 'undecided']) {
       assert.deepEqual(project(newGroups[status]), project(oldGroups[status]), `group ${status}`);
     }
+    assert.equal(newGroups.withdrawn.length, 0);
   });
 });

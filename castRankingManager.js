@@ -140,12 +140,16 @@ export function deriveApplicationStatus(app = {}, liveChannelName = '') {
   return { icon: '📝', name: 'Awaiting Votes' };
 }
 
-/** Marooning's status-section order — also the jump-select's display order. (Tentative removed — RaP 0902.) */
-const CASTING_GROUP_ORDER = ['cast', 'alternative', 'reject', 'undecided'];
+/** Marooning's status-section order — also the jump-select's display order. (Tentative removed — RaP 0902.)
+ *  'withdrawn' is always LAST regardless of castingStatus — it's the latest lifecycle action (RaP 0902/
+ *  deriveApplicationStatus precedence) and overrides whatever decision bucket the applicant would otherwise
+ *  land in, so a withdrawn Cast/Reject/etc. applicant sinks below every active applicant instead of hiding
+ *  mid-list among people still being considered (confirmed on prod — was showing at arbitrary positions). */
+const CASTING_GROUP_ORDER = ['cast', 'alternative', 'reject', 'undecided', 'withdrawn'];
 
 /**
  * Single source of truth for "casting order": group applicants by castingStatus
- * (cast → alternative → reject → undecided), then sort each group by
+ * (cast → alternative → reject → undecided → withdrawn), then sort each group by
  * average score descending (stable — ties keep insertion order). Shared by the
  * Marooning tab (buildMarooningView) and the Casting card's jump-select so the two
  * views can never disagree.
@@ -160,13 +164,18 @@ const CASTING_GROUP_ORDER = ['cast', 'alternative', 'reject', 'undecided'];
  * @param {Array} allApplications - insertion-ordered season applications
  * @param {Object} playerData - pre-loaded player data
  * @param {string} guildId - guild ID
+ * @param {import('discord.js').Guild} [guild] - LIVE guild, used to read each applicant's CURRENT channel
+ *   name (the ✖️ withdrawn marker — there is no stored field for it, see playerStatus.js). Omit to skip
+ *   withdrawal detection (degrades to the old cast/alternative/reject/undecided-only behaviour).
  * @returns {{groups: Object<string, Array>, ordered: Array}} groups keyed by status; ordered = groups concatenated in display order. Entry shape: { app, insertionIndex, userId, name, avgScore, voteCount, castingStatus, placementResponse, hasNotes }
  */
-export function computeCastingOrder(allApplications, playerData, guildId) {
+export function computeCastingOrder(allApplications, playerData, guildId, guild = null) {
   const entries = allApplications.map((app, insertionIndex) => {
     const rec = playerData[guildId]?.applications?.[app.channelId] || {};
     const scores = Object.values(rec.rankings || {}).filter(r => r !== undefined);
     const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+    const liveChannelName = guild?.channels?.cache?.get(app.channelId)?.name || '';
+    const withdrawn = /^✖️/.test(liveChannelName);
     const rawStatus = rec.castingStatus || 'undecided';
     return {
       app,
@@ -175,7 +184,7 @@ export function computeCastingOrder(allApplications, playerData, guildId) {
       name: app.displayName || app.username,
       avgScore,
       voteCount: scores.length,
-      castingStatus: CASTING_GROUP_ORDER.includes(rawStatus) ? rawStatus : 'undecided',
+      castingStatus: withdrawn ? 'withdrawn' : (CASTING_GROUP_ORDER.includes(rawStatus) ? rawStatus : 'undecided'),
       placementResponse: rec.placementResponse,
       hasNotes: !!rec.playerNotes
     };
@@ -294,7 +303,7 @@ export async function generateSeasonAppRankingUI({
     // Option VALUES stay insertion-order indices into allApplications — every downstream
     // handler resolves `allApplications[appIndex]`, and stale selects keep pointing at the
     // same person even after scores re-sort the display. Only presentation is sorted.
-    const { ordered } = computeCastingOrder(allApplications, playerData, guildId);
+    const { ordered } = computeCastingOrder(allApplications, playerData, guildId, guild);
     let sortedPos = ordered.findIndex(e => e.insertionIndex === appIndex);
     if (sortedPos === -1) sortedPos = 0; // defensive — callers validated currentApp
 
@@ -608,15 +617,29 @@ export async function handleCastingStatus({ customId, value, channelId, appIndex
 
   const { loadPlayerData, savePlayerData, getApplicationsForSeason } = await import('./storage.js');
   const playerData = await loadPlayerData();
-  if (!playerData[guildId]?.applications?.[channelId]) {
+  const appRecord = playerData[guildId]?.applications?.[channelId];
+  if (!appRecord) {
     return { content: '❌ Application not found.', ephemeral: true };
   }
+  const previousStatus = appRecord.castingStatus || 'undecided';
+  const newStatus = value === 'undecided' ? 'undecided' : value;
   // "undecided" is never stored — clearing castingStatus IS undecided (backwards compatible with
   // existing data, where absence of castingStatus already meant undecided).
   if (value === 'undecided') {
-    delete playerData[guildId].applications[channelId].castingStatus;
+    delete appRecord.castingStatus;
   } else {
-    playerData[guildId].applications[channelId].castingStatus = value;
+    appRecord.castingStatus = value;
+  }
+  // A CHANGED decision invalidates any Stage-2 commitment tied to the OLD decision (a sent offer /
+  // the applicant's response to it) — otherwise a stale 'accepted' keeps outranking the new decision
+  // forever, since deriveApplicationStatus/STATUS_REGISTRY both check placementResponse before
+  // castingStatus. Confirmed on prod: two applicants flipped Cast→Reject still showed 🎉 "Accepted
+  // Placement" weeks later because nothing ever cleared it. Clearing lets a fresh invite re-stamp
+  // offerStatus for the new decision.
+  if (previousStatus !== newStatus) {
+    delete appRecord.placementResponse;
+    delete appRecord.offerStatus;
+    delete appRecord.offerSentAt;
   }
   await savePlayerData(playerData);
 
@@ -817,7 +840,10 @@ export function buildInvitesConfirm({ mode, appIndex, configId, targets }) {
 
 /**
  * Send casting invite messages to the targeted applicants' channels (throttled, V2 cards).
- * Returns { sent, failed, skippedEmpty, perType }.
+ * Returns { sent, failed, skippedEmpty, perType, channels }. `channels` carries the channelId of every
+ * target bucketed by outcome (`{ sent: [], failed: [], skippedEmpty: [] }`) — lets the caller render
+ * `<#channelId>` jump-links next to the counts instead of a bare number (e.g. "1 skipped" with no way
+ * to tell WHICH applicant that was).
  */
 export async function sendCastingInvites({ client, guildId, configId, mode, appIndex, messages }) {
   const { loadPlayerData, savePlayerData, getApplicationsForSeason } = await import('./storage.js');
@@ -831,13 +857,17 @@ export async function sendCastingInvites({ client, guildId, configId, mode, appI
   const nowIso = new Date().toISOString();
   let stampedAny = false;
 
-  const result = { sent: 0, failed: 0, skippedEmpty: 0, perType: { successful: 0, alternative: 0, unsuccessful: 0 } };
+  const result = {
+    sent: 0, failed: 0, skippedEmpty: 0,
+    perType: { successful: 0, alternative: 0, unsuccessful: 0 },
+    channels: { sent: [], failed: [], skippedEmpty: [] }
+  };
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
   for (let i = 0; i < targets.length; i++) {
     const t = targets[i];
     const template = messages[t.messageType];
-    if (!template || !template.trim()) { result.skippedEmpty++; continue; }
+    if (!template || !template.trim()) { result.skippedEmpty++; result.channels.skippedEmpty.push(t.channelId); continue; }
     const content = renderInviteMessage(sanitizeTemplate(template), t.userId);
     // Cast & Alternative offers carry Accept/Decline buttons for the applicant. Unsuccessful does not.
     const cardComponents = [{ type: 10, content }];
@@ -858,6 +888,7 @@ export async function sendCastingInvites({ client, guildId, configId, mode, appI
       });
       result.sent++;
       result.perType[t.messageType]++;
+      result.channels.sent.push(t.channelId);
       // Persist the offer on the application record (chevron Stage 2). Only on a confirmed send.
       const rec = playerData[guildId]?.applications?.[t.channelId];
       const offer = OFFER_FOR_TYPE[t.messageType];
@@ -865,12 +896,39 @@ export async function sendCastingInvites({ client, guildId, configId, mode, appI
     } catch (err) {
       console.log(`⚠️ sendCastingInvites: failed to message channel ${t.channelId}: ${err.message}`);
       result.failed++;
+      result.channels.failed.push(t.channelId);
     }
     if (i < targets.length - 1) await sleep(700); // rate-limit-safe spacing
   }
   if (stampedAny) await savePlayerData(playerData);
   console.log(`📨 sendCastingInvites [${mode}] guild ${guildId}: sent ${result.sent}, failed ${result.failed}, skippedEmpty ${result.skippedEmpty}`);
   return result;
+}
+
+/**
+ * Build the "📨 Invites Sent" confirmation card shown after a send completes (bulk or single).
+ * Jump-links each failed/skipped channel — a bare "1 skipped" count left no way to tell WHICH
+ * applicant that was without hunting through every template. Capped so a large bulk send can't
+ * blow past Discord's text-display length.
+ * @param {Object} r - the sendCastingInvites() result
+ * @returns {Object} { components: [container] } (updateMessage response)
+ */
+export function buildInvitesSentSummary(r) {
+  const linkChannels = (ids, cap = 15) => {
+    const shown = ids.slice(0, cap).map(id => `<#${id}>`).join(', ');
+    return ids.length > cap ? `${shown} +${ids.length - cap} more` : shown;
+  };
+  const parts = [
+    r.perType.successful ? `🎬 Successful → ${r.perType.successful}` : null,
+    r.perType.alternative ? `🔄 Alternative → ${r.perType.alternative}` : null,
+    r.perType.unsuccessful ? `🗑️ Unsuccessful → ${r.perType.unsuccessful}` : null
+  ].filter(Boolean);
+  const extra = [
+    r.failed ? `⚠️ ${r.failed} failed: ${linkChannels(r.channels.failed)}` : null,
+    r.skippedEmpty ? `${r.skippedEmpty} skipped (empty template): ${linkChannels(r.channels.skippedEmpty)}` : null
+  ].filter(Boolean);
+  const summary = `## 📨 Invites Sent\n**${r.sent}** message${r.sent !== 1 ? 's' : ''} delivered.\n${parts.join(' · ') || '-# Nothing to send.'}${extra.length ? `\n-# ${extra.join('\n-# ')}` : ''}`;
+  return { components: [{ type: 17, accent_color: 0x27ae60, components: [{ type: 10, content: summary }] }] };
 }
 
 /**
@@ -1012,13 +1070,14 @@ export async function buildMarooningView({ configId, guildId, playerData, season
 
   // Per-applicant score + casting decision (userId kept for the private draft-tribe grouping below).
   // Grouping + score sort live in computeCastingOrder — shared with the Casting jump-select.
-  const { ordered: applicantData, groups: castGroups } = computeCastingOrder(allApplications, playerData, guildId);
+  const { ordered: applicantData, groups: castGroups } = computeCastingOrder(allApplications, playerData, guildId, guild);
 
   const statusSections = [
     { emoji: '✅', title: 'CAST PLAYERS', group: castGroups.cast },
     { emoji: '🔄', title: 'ALTERNATE', group: castGroups.alternative },
     { emoji: '🙅', title: "DON'T CAST", group: castGroups.reject },
-    { emoji: '⚪', title: 'UNDECIDED', group: castGroups.undecided }
+    { emoji: '⚪', title: 'UNDECIDED', group: castGroups.undecided },
+    { emoji: '✖️', title: 'WITHDRAWN', group: castGroups.withdrawn }
   ];
 
   // ===== 🏕️ Tribes (default/active castlist) — loaded up here because the casting list below groups
@@ -1094,7 +1153,7 @@ export async function buildMarooningView({ configId, guildId, playerData, season
   if (!anyGroup) body += '-# No applicants yet for this season.\n\n';
   body += `### 📊 **SUMMARY**\n`;
   body += `> **Total Applicants:** ${allApplications.length}\n`;
-  body += `> **Cast:** ${castGroups.cast.length} | **Alternate:** ${castGroups.alternative.length} | **Rejected:** ${castGroups.reject.length} | **Undecided:** ${castGroups.undecided.length}\n`;
+  body += `> **Cast:** ${castGroups.cast.length} | **Alternate:** ${castGroups.alternative.length} | **Rejected:** ${castGroups.reject.length} | **Undecided:** ${castGroups.undecided.length} | **Withdrawn:** ${castGroups.withdrawn.length}\n`;
   const totalScored = applicantData.filter(a => a.voteCount > 0).length;
   body += `> **Scored:** ${totalScored}/${allApplications.length} applicants`;
 
@@ -1338,7 +1397,7 @@ export async function handleRankingSelect({
     // Show first applicant of the new SORTED page (display order = Marooning order).
     // Recomputed at click time and clamped — scores/deletions may have shifted boundaries
     // since render. NaN/negative pages fall through to the error path via undefined target.
-    const { ordered } = computeCastingOrder(allApplications, playerData, guildId);
+    const { ordered } = computeCastingOrder(allApplications, playerData, guildId, guild);
     const target = ordered[Math.min(Math.max(newPage, 0) * 23, ordered.length - 1)];
     const newIndex = target?.insertionIndex;
     const currentApp = target ? allApplications[newIndex] : undefined;

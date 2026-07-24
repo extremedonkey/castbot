@@ -30,6 +30,24 @@ function decisionCustomId(char, channelId, appIndex, configId) {
 // app.js handler: the parse regex.
 const RE = /^castdec_([cna])_(\d+)_(\d+)_(.+)$/;
 
+// handleCastingStatus (castRankingManager.js): applying a new decision to an application record.
+// A CHANGED decision clears any Stage-2 commitment (offerStatus/offerSentAt/placementResponse) tied
+// to the OLD decision — otherwise a stale placementResponse='accepted' keeps outranking the new
+// decision forever in deriveApplicationStatus/STATUS_REGISTRY (both check it before castingStatus).
+function applyCastingDecision(appRecord, value) {
+  const rec = { ...appRecord };
+  const previousStatus = rec.castingStatus || 'undecided';
+  const newStatus = value === 'undecided' ? 'undecided' : value;
+  if (value === 'undecided') delete rec.castingStatus;
+  else rec.castingStatus = value;
+  if (previousStatus !== newStatus) {
+    delete rec.placementResponse;
+    delete rec.offerStatus;
+    delete rec.offerSentAt;
+  }
+  return rec;
+}
+
 describe('Casting Decision — char ↔ status map', () => {
   it('maps c/n/a to cast/reject/alternative and nothing else', () => {
     assert.equal(CHAR_TO_STATUS.c, 'cast');
@@ -81,5 +99,50 @@ describe('Casting Decision — custom_id format + parse + length', () => {
   it('worst-case custom_id stays well under Discord\'s 100-char limit', () => {
     const id = decisionCustomId('a', '454453967309504512', '999', 'config_1781015852414_454453967309504512');
     assert.ok(id.length < 100, `len ${id.length}`);
+  });
+});
+
+describe('Casting Decision — a CHANGED decision clears stale Stage-2 fields (prod bug)', () => {
+  it('Cast→Reject after the player already accepted clears placementResponse + offerStatus + offerSentAt', () => {
+    // Reproduces the exact prod record shape found on guild 1512093418602364998: an applicant who
+    // accepted a Cast offer, then was later flipped to Reject — the 🎉 icon kept showing forever
+    // because nothing invalidated the old acceptance.
+    const stale = { castingStatus: 'cast', offerStatus: 'offer', offerSentAt: '2026-07-24T23:20:34.670Z', placementResponse: 'accepted' };
+    const result = applyCastingDecision(stale, 'reject');
+    assert.equal(result.castingStatus, 'reject');
+    assert.equal(result.placementResponse, undefined);
+    assert.equal(result.offerStatus, undefined);
+    assert.equal(result.offerSentAt, undefined);
+  });
+
+  it('toggling the SAME decision off (→ undecided) also clears the stale fields', () => {
+    const stale = { castingStatus: 'cast', offerStatus: 'offer', placementResponse: 'accepted' };
+    const result = applyCastingDecision(stale, 'undecided');
+    assert.equal(result.castingStatus, undefined);
+    assert.equal(result.placementResponse, undefined);
+    assert.equal(result.offerStatus, undefined);
+  });
+
+  it('re-applying the SAME decision (no-op click) leaves Stage-2 fields untouched', () => {
+    const current = { castingStatus: 'cast', offerStatus: 'offer', offerSentAt: 'x', placementResponse: 'accepted' };
+    const result = applyCastingDecision(current, 'cast');
+    assert.equal(result.placementResponse, 'accepted');
+    assert.equal(result.offerStatus, 'offer');
+    assert.equal(result.offerSentAt, 'x');
+  });
+
+  it('first-time decision on a fresh application is a no-op for the (absent) Stage-2 fields', () => {
+    const fresh = {};
+    const result = applyCastingDecision(fresh, 'cast');
+    assert.equal(result.castingStatus, 'cast');
+    assert.equal(result.placementResponse, undefined);
+    assert.equal(result.offerStatus, undefined);
+  });
+
+  it('does not mutate the input record (returns a new object)', () => {
+    const original = { castingStatus: 'cast', placementResponse: 'accepted' };
+    applyCastingDecision(original, 'reject');
+    assert.equal(original.castingStatus, 'cast');
+    assert.equal(original.placementResponse, 'accepted');
   });
 });

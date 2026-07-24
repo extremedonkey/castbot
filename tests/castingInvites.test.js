@@ -152,3 +152,56 @@ describe('Casting Summary — Alternate bucket', () => {
     assert.equal(total, data.length);
   });
 });
+
+// Mirrors buildInvitesSentSummary (castRankingManager.js) — the "📨 Invites Sent" confirmation card.
+function buildInvitesSentSummaryText(r) {
+  const linkChannels = (ids, cap = 15) => {
+    const shown = ids.slice(0, cap).map(id => `<#${id}>`).join(', ');
+    return ids.length > cap ? `${shown} +${ids.length - cap} more` : shown;
+  };
+  const parts = [
+    r.perType.successful ? `🎬 Successful → ${r.perType.successful}` : null,
+    r.perType.alternative ? `🔄 Alternative → ${r.perType.alternative}` : null,
+    r.perType.unsuccessful ? `🗑️ Unsuccessful → ${r.perType.unsuccessful}` : null
+  ].filter(Boolean);
+  const extra = [
+    r.failed ? `⚠️ ${r.failed} failed: ${linkChannels(r.channels.failed)}` : null,
+    r.skippedEmpty ? `${r.skippedEmpty} skipped (empty template): ${linkChannels(r.channels.skippedEmpty)}` : null
+  ].filter(Boolean);
+  return `## 📨 Invites Sent\n**${r.sent}** message${r.sent !== 1 ? 's' : ''} delivered.\n${parts.join(' · ') || '-# Nothing to send.'}${extra.length ? `\n-# ${extra.join('\n-# ')}` : ''}`;
+}
+
+describe('Invites Sent summary — channel jump-links (prod ask: "which channel was that?")', () => {
+  const empty = { sent: 0, failed: 0, skippedEmpty: 0, perType: { successful: 0, alternative: 0, unsuccessful: 0 }, channels: { sent: [], failed: [], skippedEmpty: [] } };
+
+  it('a single skipped send (empty template) links its one channel', () => {
+    const r = { ...empty, skippedEmpty: 1, channels: { ...empty.channels, skippedEmpty: ['chan_mimi'] } };
+    const text = buildInvitesSentSummaryText(r);
+    assert.ok(text.includes('1 skipped (empty template): <#chan_mimi>'), text);
+    assert.ok(text.includes('Nothing to send.'));
+  });
+
+  it('a failed send links its channel alongside a successful count', () => {
+    const r = {
+      sent: 2, failed: 1, skippedEmpty: 0,
+      perType: { successful: 2, alternative: 0, unsuccessful: 0 },
+      channels: { sent: ['c1', 'c2'], failed: ['c3'], skippedEmpty: [] }
+    };
+    const text = buildInvitesSentSummaryText(r);
+    assert.ok(text.includes('🎬 Successful → 2'));
+    assert.ok(text.includes('⚠️ 1 failed: <#c3>'));
+  });
+
+  it('caps a long channel list and shows a "+N more" overflow', () => {
+    const ids = Array.from({ length: 20 }, (_, i) => `c${i}`);
+    const r = { ...empty, skippedEmpty: 20, channels: { ...empty.channels, skippedEmpty: ids } };
+    const text = buildInvitesSentSummaryText(r);
+    assert.ok(text.includes('+5 more'), text);
+    assert.equal((text.match(/<#c\d+>/g) || []).length, 15);
+  });
+
+  it('nothing sent and nothing skipped/failed → just the delivered line, no dangling "-#"', () => {
+    const text = buildInvitesSentSummaryText(empty);
+    assert.equal(text, '## 📨 Invites Sent\n**0** messages delivered.\n-# Nothing to send.');
+  });
+});

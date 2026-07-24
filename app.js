@@ -5564,18 +5564,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const appIndex = parseInt(rest.slice(firstColon + 1, secondColon));
           const configId = rest.slice(secondColon + 1);
 
-          const { sendCastingInvites, getCastingMessages } = await import('./castRankingManager.js');
+          const { sendCastingInvites, getCastingMessages, buildInvitesSentSummary } = await import('./castRankingManager.js');
           const playerData = await loadPlayerData();
           const messages = getCastingMessages(playerData, context.guildId, configId);
           const r = await sendCastingInvites({ client: context.client, guildId: context.guildId, configId, mode, appIndex, messages });
-
-          const parts = [];
-          if (r.perType.successful) parts.push(`🎬 Successful → ${r.perType.successful}`);
-          if (r.perType.alternative) parts.push(`🔄 Alternative → ${r.perType.alternative}`);
-          if (r.perType.unsuccessful) parts.push(`🗑️ Unsuccessful → ${r.perType.unsuccessful}`);
-          const extra = [r.failed ? `⚠️ ${r.failed} failed` : null, r.skippedEmpty ? `${r.skippedEmpty} skipped (empty template)` : null].filter(Boolean);
-          const summary = `## 📨 Invites Sent\n**${r.sent}** message${r.sent !== 1 ? 's' : ''} delivered.\n${parts.join(' · ') || '-# Nothing to send.'}${extra.length ? `\n-# ${extra.join(' · ')}` : ''}`;
-          return { components: [{ type: 17, accent_color: 0x27ae60, components: [{ type: 10, content: summary }] }] };
+          return buildInvitesSentSummary(r);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('placement_accept:') || custom_id.startsWith('placement_decline:')) {
