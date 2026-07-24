@@ -1051,13 +1051,15 @@ export async function buildLocationBlacklistModal(guildId, coord) {
     const safariData = await loadSafariContent();
     const items = safariData[guildId]?.items || {};
     const candidates = getReverseBlacklistCandidates(items, coord);
-    const linkedNames = candidates.filter(c => c.linked).map(c => c.item.name || c.id);
 
     const components = [
         {
             type: 18, // Label
             label: 'Blacklist This Location',
-            description: `Blacklisted locations block player navigation (until unlocked below, or un-blacklisted here). Currently: ${isBlacklisted ? 'Blacklisted' : 'Not Blacklisted'}.`,
+            // Label description is capped at 100 chars by Discord — exceeding it makes
+            // Discord silently reject the whole modal (no server-side error, interaction
+            // just times out client-side). Keep this short; state is on the options below.
+            description: 'Blocks player navigation here — unless unlocked via Reverse Blacklist below.',
             component: {
                 type: 21, // Radio Group — option `default` pre-selects in modals (String Select's doesn't)
                 custom_id: 'blacklist_status',
@@ -1076,7 +1078,9 @@ export async function buildLocationBlacklistModal(guildId, coord) {
         components.push({
             type: 18, // Label
             label: 'Reverse Blacklist',
-            description: `Items selected below unlock ${coord} for a player carrying them, even while blacklisted. ${linkedNames.length > 0 ? `Currently unlocking: ${linkedNames.join(', ')}.` : 'No items currently unlock this location.'} Not listed? Edit it directly via /menu → Items → Movement.`.slice(0, 150),
+            // Same 100-char Label description cap as above — per-item current-status
+            // is on each option's own description instead (see options below).
+            description: 'Selected items unlock this location while blacklisted. Not listed? Edit via /menu > Items.'.slice(0, 100),
             component: {
                 type: 3, // String Select — `default` below is best-effort only (Discord doesn't
                 // honor it in modals), so per-option description states current status instead.
