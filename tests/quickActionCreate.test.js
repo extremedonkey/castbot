@@ -24,8 +24,8 @@ function buildLimitOptions({ currentLimit, periodMs } = {}) {
 const LIMIT_OPTIONS = buildLimitOptions({ currentLimit: 'once_per_player' });
 
 const COLOR_OPTIONS = [
-    { label: 'Blue (Primary)', value: 'Primary', emoji: { name: '🔵' }, default: true },
-    { label: 'Grey (Secondary)', value: 'Secondary', emoji: { name: '⚪' } },
+    { label: 'Grey (Secondary)', value: 'Secondary', emoji: { name: '⚪' }, default: true },
+    { label: 'Blue (Primary)', value: 'Primary', emoji: { name: '🔵' } },
     { label: 'Green (Success)', value: 'Success', emoji: { name: '🟢' } },
     { label: 'Red (Danger)', value: 'Danger', emoji: { name: '🔴' } }
 ];
@@ -406,7 +406,7 @@ function buildItemTextOutcomes(buttonName, displayContent, itemId, limitType) {
     outcomes.push({
         type: 'display_text',
         order: 0,
-        config: { title: buttonName, content: displayContent, image: '', color: '3498db' },
+        config: { title: buttonName, content: displayContent, image: '', color: '95a5a6' }, // Secondary (Grey) accent
         executeOn: 'true'
     });
     outcomes.push({

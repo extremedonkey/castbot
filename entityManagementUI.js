@@ -190,7 +190,7 @@ export async function createEntityManagementUI(options) {
             ...(selectedEntity ? [
                 ...(entityType !== 'map_cell' ? [{ type: 14 }] : []), // Separator (map_cell has its own header instead)
                 ...(entityType === 'map_cell' ? [
-                    { type: 10, content: '### ```🖼️ Location Info```' },
+                    { type: 10, content: '### ```🖼️ Location Information```' },
                     ...createFieldGroupButtons('map_cell', selectedId, activeFieldGroup, selectedEntity)
                 ] : []),
                 createEntityDisplay(selectedEntity, entityType, guildData.safariConfig),
@@ -718,7 +718,7 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
     }
 
     if (entityType === 'map_cell') {
-        components.push({ type: 10, content: '### ```🎮 Player Navigate Options```' });
+        components.push({ type: 10, content: '### ```🗺️ Exploration Options```' });
     }
 
     components.push({

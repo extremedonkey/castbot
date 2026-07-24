@@ -95,7 +95,7 @@ Reached via the `action_manager` button (renamed from `safari_action_editor` —
 
 **Shared constants:**
 - `LIMIT_OPTIONS` — built from `buildLimitOptions()`, pre-selects `once_per_player`
-- `COLOR_OPTIONS` — Blue (Primary), Grey (Secondary), Green (Success), Red (Danger)
+- `COLOR_OPTIONS` — Grey (Secondary) first + default, then Blue (Primary), Green (Success), Red (Danger). Grey-first/default matches the fallback every submit handler uses when the select isn't touched (Discord silently ignores String Select `default` inside modals, so this ordering + the handler fallback are what actually control the effective default, not the `default` flag itself)
 - `STYLE_TO_ACCENT_COLOR` — maps button style to hex accent color for display\_text
 
 **Shared utility:**
@@ -130,7 +130,7 @@ Previously, Quick Item and Quick Crafting each inlined their own sort in `app.js
 
 ### Quick ItemText Special Behavior
 
-**Modal fields (5, in order):** Button Name, Text to display, Item to Give, Button Emoji (Optional), Usage Limit. **No Button Color field** — the button always defaults to `style: 'Primary'` (and its `display_text` outcome uses `STYLE_TO_ACCENT_COLOR['Primary']` accordingly). Kept out to hold the modal at 5 fields (Discord's Label-per-modal cap) once Text-to-display and Item-to-Give are both present.
+**Modal fields (5, in order):** Button Name, Text to display, Item to Give, Button Emoji (Optional), Usage Limit. **No Button Color field** — the button always defaults to `style: 'Secondary'` (Grey) (and its `display_text` outcome uses `STYLE_TO_ACCENT_COLOR['Secondary']` accordingly). Kept out to hold the modal at 5 fields (Discord's Label-per-modal cap) once Text-to-display and Item-to-Give are both present.
 
 **Outcome order is fixed**: `[display_text (order 0), give_item (order 1, qty 1, operation: 'give')]`. `display_text` is always pushed first regardless of field order in the modal, because it renders first once the two outcome responses are bundled into one message — text-then-reward reads better than reward-then-text.
 
@@ -151,7 +151,7 @@ Previously, Quick Item and Quick Crafting each inlined their own sort in `app.js
 - Conditionally shows prefix String Select (only when guild has command prefixes configured)
 - Concatenates prefix + phrase on submit (e.g., "climb" + "tree" → "climb tree"), normalized to lowercase
 - Creates one `display_text` outcome with `executeOn: 'true'` (pass)
-- No button emoji or color (Command actions don't render as buttons on anchor messages)
+- No button emoji or color (Command actions don't render as buttons on anchor messages) — the action shell's internal `style` still defaults to `'Secondary'` (Grey, matching every other no-selector Quick Create default), and its `display_text` outcome uses `STYLE_TO_ACCENT_COLOR['Secondary']` accordingly
 - `metadata.createdVia: 'quick_command'`
 - Component indices shift dynamically based on whether prefix select is present (handled by `hasPrefixes` parameter)
 

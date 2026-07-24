@@ -16,9 +16,13 @@ import { buildLimitOptions } from './utils/periodUtils.js';
 // users pick Custom from the full Outcome Config editor instead.
 const LIMIT_OPTIONS = buildLimitOptions({ currentLimit: 'once_per_player', periodDescription: 'Defaults to 1d in Quick Edit, change in Outcome Config', includeCustom: false });
 
+// Grey (Secondary) first + default: true — matches the fallback style every
+// submit handler below uses when the select isn't touched (Discord silently
+// ignores String Select `default` inside modals, so ordering + the handler
+// fallback are what actually control the "pre-selected" color, not this flag).
 const COLOR_OPTIONS = [
-    { label: 'Blue (Primary)', value: 'Primary', emoji: { name: '🔵' }, default: true },
-    { label: 'Grey (Secondary)', value: 'Secondary', emoji: { name: '⚪' } },
+    { label: 'Grey (Secondary)', value: 'Secondary', emoji: { name: '⚪' }, default: true },
+    { label: 'Blue (Primary)', value: 'Primary', emoji: { name: '🔵' } },
     { label: 'Green (Success)', value: 'Success', emoji: { name: '🟢' } },
     { label: 'Red (Danger)', value: 'Danger', emoji: { name: '🔴' } }
 ];
@@ -242,7 +246,7 @@ export function buildQuickTextModal(coordinate) {
  * Build the Quick ItemText modal — 5 fields
  * Combines Quick Text + Quick Item: a display_text outcome followed by a
  * give_item outcome, in one modal. Button Color is intentionally omitted
- * (button defaults to Primary) to keep the combined modal at 5 fields.
+ * (button defaults to Secondary/Grey) to keep the combined modal at 5 fields.
  * @param {string} coordinate - Map coordinate (e.g. "A2")
  * @param {Array} items - Array of { id, name, emoji, description } for the item select
  * @returns {object} Modal interaction response data
@@ -390,7 +394,7 @@ export async function handleQuickCurrencySubmit(guildId, userId, coordinate, mod
     const amount = getModalValue(modalComponents[1]);
     const emojiInput = getModalValue(modalComponents[2]);
     const limitType = getModalValue(modalComponents[3]) || 'once_per_player';
-    const style = getModalValue(modalComponents[4]) || 'Primary';
+    const style = getModalValue(modalComponents[4]) || 'Secondary';
 
     if (!buttonName) {
         return { error: 'Button name is required.' };
@@ -494,7 +498,7 @@ export async function handleQuickTextSubmit(guildId, userId, coordinate, modalCo
     const displayContent = getModalValue(modalComponents[1]);
     const emojiInput = getModalValue(modalComponents[2]);
     const limitType = getModalValue(modalComponents[3]) || 'once_per_player';
-    const style = getModalValue(modalComponents[4]) || 'Primary';
+    const style = getModalValue(modalComponents[4]) || 'Secondary';
 
     if (!buttonName) return { error: 'Button name is required.' };
     if (!displayContent) return { error: 'Text to display is required.' };
@@ -576,7 +580,7 @@ export async function handleQuickItemSubmit(guildId, userId, coordinate, modalCo
     const itemId = getModalValue(modalComponents[1]);
     const emojiInput = getModalValue(modalComponents[2]);
     const limitType = getModalValue(modalComponents[3]) || 'once_per_player';
-    const style = getModalValue(modalComponents[4]) || 'Primary';
+    const style = getModalValue(modalComponents[4]) || 'Secondary';
 
     if (!buttonName) {
         return { error: 'Button name is required.' };
@@ -675,7 +679,7 @@ export async function handleQuickItemSubmit(guildId, userId, coordinate, modalCo
  * Handle Quick ItemText modal submission — creates action with display_text
  * THEN give_item outcomes (display_text first so it renders first when the
  * two outcome responses are bundled — most visually appealing), returns Action Editor.
- * No Button Color field — button defaults to Primary.
+ * No Button Color field — button defaults to Secondary (Grey).
  */
 export async function handleQuickItemTextSubmit(guildId, userId, coordinate, modalComponents) {
     const { createCustomButton, loadSafariContent, saveSafariContent } = await import('./safariManager.js');
@@ -685,7 +689,7 @@ export async function handleQuickItemTextSubmit(guildId, userId, coordinate, mod
     const itemId = getModalValue(modalComponents[2]);
     const emojiInput = getModalValue(modalComponents[3]);
     const limitType = getModalValue(modalComponents[4]) || 'once_per_player';
-    const style = 'Primary'; // No color field in this modal — fixed default
+    const style = 'Secondary'; // No color field in this modal — fixed default (grey)
 
     if (!buttonName) return { error: 'Button name is required.' };
     if (!displayContent) return { error: 'Text to display is required.' };
@@ -969,9 +973,11 @@ export async function handleQuickCommandSubmit(guildId, userId, coordinate, moda
         ? phraseText.trim().toLowerCase()
         : `${prefixValue} ${phraseText.trim()}`.toLowerCase();
 
+    const style = 'Secondary'; // No color field in this modal (no button either — command trigger) — fixed default (grey)
+
     // Create the action shell
     const actionId = await createCustomButton(guildId, {
-        label: commandName, emoji: null, style: 'Primary', actions: [], tags: []
+        label: commandName, emoji: null, style, actions: [], tags: []
     }, userId);
 
     const safariData = await loadSafariContent();
@@ -994,7 +1000,7 @@ export async function handleQuickCommandSubmit(guildId, userId, coordinate, moda
             title: commandName,
             content: displayContent,
             image: '',
-            color: '3498db'
+            color: STYLE_TO_ACCENT_COLOR[style] || '3498db'
         },
         executeOn: 'true'
     });
@@ -1280,7 +1286,7 @@ export async function handleQuickEnemySubmit(guildId, userId, coordinate, modalC
     const enemyId = getModalValue(modalComponents[1]);
     const emojiInput = getModalValue(modalComponents[2]);
     const limitType = getModalValue(modalComponents[3]) || 'once_per_player';
-    const style = getModalValue(modalComponents[4]) || 'Primary';
+    const style = getModalValue(modalComponents[4]) || 'Secondary';
 
     if (!buttonName) return { error: 'Button name is required.' };
     if (!enemyId) return { error: 'Enemy selection is required.' };
