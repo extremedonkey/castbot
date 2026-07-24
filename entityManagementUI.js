@@ -191,6 +191,7 @@ export async function createEntityManagementUI(options) {
             // Show entity details if selected, with a Location Info divider (map_cell only)
             ...(selectedEntity ? [
                 { type: 14 }, // Separator
+                ...(entityType === 'map_cell' ? [{ type: 10, content: '### ```🖼️ Location Info```' }] : []),
                 createEntityDisplay(selectedEntity, entityType, guildData.safariConfig)
             ] : []),
 
@@ -624,6 +625,7 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
                     coordinate: entityId,
                     mapId: activeMapId
                 });
+                components.push({ type: 10, content: '### ```⚡ Location Actions```' });
                 components.push(actionSelectRow);
             }
 
