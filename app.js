@@ -28665,37 +28665,29 @@ Your server is now ready for Tycoons gameplay!`;
               }
             });
           } else {
-            // Check if this is a map cell selection - if so, go directly to custom actions
+            // Check if this is a map cell selection - if so, reload the full
+            // Location Manager screen for the new coordinate in-place. This must
+            // build the identical screen map_location_actions_{coord} shows —
+            // both go through buildLocationManagerUI().
             if (entityType === 'map_cell') {
-              // For map cells, directly open the custom action UI
-              const { createCustomActionSelectionUI } = await import('./customActionUI.js');
-              const { loadSafariContent } = await import('./safariManager.js');
-              
-              const allSafariData = await loadSafariContent();
-              const guildData = allSafariData[context.guildId] || {};
-              const activeMapId = guildData.maps?.active;
-              
-              if (!activeMapId) {
+              // selectedValue is the coordinate (e.g., "B3")
+              const { buildLocationManagerUI } = await import('./entityManagementUI.js');
+              const ui = await buildLocationManagerUI({ guildId: context.guildId, userId: context.userId, coord: selectedValue });
+
+              if (!ui) {
                 return res.send({
                   type: InteractionResponseType.UPDATE_MESSAGE,
                   data: {
-                    content: '❌ No active map found.',
+                    content: '❌ Location data not found.',
                     flags: InteractionResponseFlags.EPHEMERAL
                   }
                 });
               }
-              
-              // selectedValue is the coordinate (e.g., "B3")
-              const customActionUI = await createCustomActionSelectionUI({
-                guildId: context.guildId,
-                coordinate: selectedValue,
-                mapId: activeMapId
-              });
-              
+
               return res.send({
                 type: InteractionResponseType.UPDATE_MESSAGE,
                 data: {
-                  ...customActionUI,
+                  ...ui,
                   ephemeral: true
                 }
               });
@@ -33131,143 +33123,27 @@ Your server is now ready for Tycoons gameplay!`;
             };
           }
           
-          // Get map data
-          const { loadSafariContent } = await import('./safariManager.js');
-          const safariData = await loadSafariContent();
-          const activeMapId = safariData[context.guildId]?.maps?.active;
-          const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
-          
-          if (!coordData) {
-            console.log(`❌ Location data not found for ${coord}`);
+          // Build the Location Manager UI (shared with entity_select_map_cell —
+          // both must render the identical screen)
+          const { buildLocationManagerUI } = await import('./entityManagementUI.js');
+          const ui = await buildLocationManagerUI({ guildId: context.guildId, userId: context.userId, coord });
+
+          if (!ui) {
             return {
               content: '❌ Location data not found.',
               ephemeral: true
             };
           }
-          
-          // Create entity management UI for this coordinate
-          const { createEntityManagementUI } = await import('./entityManagementUI.js');
-          const ui = await createEntityManagementUI({
-            entityType: 'map_cell',
-            guildId: context.guildId,
-            selectedId: coord,
-            mode: 'edit'
-          });
-          
-          // Add Navigate button to the action row containing Enter Command
-          // Find the action row with Enter Command button and add Navigate to the left
-          console.log(`🔍 DEBUG: UI has ${ui.components?.length || 0} components`);
-          
-          if (ui.components && ui.components.length > 0) {
-            let foundEnterCommand = false;
-            for (let i = 0; i < ui.components.length; i++) {
-              const component = ui.components[i];
-              console.log(`🔍 DEBUG: Component ${i}: type=${component.type}, has ${component.components?.length || 0} sub-components`);
-              
-              // Look for Container (type 17) first
-              if (component.type === 17) { // Container
-                console.log(`🔍 DEBUG: Found Container with ${component.components?.length || 0} sub-components`);
-                
-                // Look through Container's components for Action Rows
-                if (component.components && component.components.length > 0) {
-                  for (let j = 0; j < component.components.length; j++) {
-                    const subComponent = component.components[j];
-                    console.log(`🔍 DEBUG: Container sub-component ${j}: type=${subComponent.type}`);
-                    
-                    if (subComponent.type === 1) { // Action Row inside Container
-                      const hasEnterCommand = subComponent.components?.some(btn => {
-                        console.log(`🔍 DEBUG: Button custom_id: ${btn.custom_id}`);
-                        return btn.custom_id && btn.custom_id.startsWith('player_enter_command_');
-                      });
-                      
-                      console.log(`🔍 DEBUG: Container action row ${j} has Enter Command: ${hasEnterCommand}`);
-                      
-                      if (hasEnterCommand) {
-                        foundEnterCommand = true;
-                        console.log(`🔍 DEBUG: Reordering buttons in container action row ${j} (before: ${subComponent.components.length} buttons)`);
-                        
-                        // Create Navigate button
-                        const navigateButton = {
-                          type: 2, // Button
-                          style: 2, // Secondary (grey)
-                          label: 'Navigate',
-                          custom_id: `safari_navigate_${context.userId}_${coord}`,
-                          emoji: { name: '🗺️' }
-                        };
-                        
-                        // Create Inventory button
-                        const { getCustomTerms } = await import('./safariManager.js');
-                        const customTerms = await getCustomTerms(context.guildId);
-                        const inventoryButton = {
-                          type: 2, // Button
-                          style: 2, // Secondary (grey)
-                          label: 'Inventory',
-                          custom_id: 'safari_player_inventory',
-                          emoji: parseTextEmoji(customTerms.inventoryEmoji || '🧰', '🧰').emoji
-                        };
-                        
-                        // Find existing buttons
-                        const safariButton = subComponent.components.find(btn => btn.custom_id === 'prod_safari_menu');
-                        const enterCommandButton = subComponent.components.find(btn => btn.custom_id && btn.custom_id.startsWith('player_enter_command_'));
-                        const whisperButton = subComponent.components.find(btn => btn.custom_id && btn.custom_id.startsWith('safari_whisper_'));
-                        
-                        // Rebuild components in desired order: Safari, Navigate, Inventory, Enter Command, Whisper
-                        subComponent.components = [];
-                        if (safariButton) subComponent.components.push(safariButton);
-                        subComponent.components.push(navigateButton);
-                        subComponent.components.push(inventoryButton);
-                        if (enterCommandButton) subComponent.components.push(enterCommandButton);
-                        if (whisperButton) subComponent.components.push(whisperButton);
-                        
-                        console.log(`🔍 DEBUG: Reordered buttons (after: ${subComponent.components.length} buttons)`);
-                        break;
-                      }
-                    }
-                  }
-                }
-              } else if (component.type === 1) { // Action Row at top level
-                // Check if this row has Enter Command button
-                const hasEnterCommand = component.components?.some(btn => {
-                  console.log(`🔍 DEBUG: Button custom_id: ${btn.custom_id}`);
-                  return btn.custom_id && btn.custom_id.startsWith('player_enter_command_');
-                });
-                
-                console.log(`🔍 DEBUG: Top-level action row ${i} has Enter Command: ${hasEnterCommand}`);
-                
-                if (hasEnterCommand) {
-                  foundEnterCommand = true;
-                  console.log(`🔍 DEBUG: Adding Navigate button to top-level action row ${i} (before: ${component.components.length} buttons)`);
-                  
-                  // Add Navigate button at the beginning of this action row
-                  const navigateButton = {
-                    type: 2, // Button
-                    style: 2, // Secondary (grey)
-                    label: 'Navigate',
-                    custom_id: `safari_navigate_${context.userId}_${coord}`,
-                    emoji: { name: '🗺️' }
-                  };
-                  
-                  // Insert Navigate button at the beginning
-                  component.components.unshift(navigateButton);
-                  console.log(`🔍 DEBUG: Added Navigate button (after: ${component.components.length} buttons)`);
-                  break;
-                }
-              }
-              
-              if (foundEnterCommand) break;
-            }
-            console.log(`🔍 DEBUG: Found Enter Command row: ${foundEnterCommand}`);
-          }
-          
+
           console.log(`✅ SUCCESS: map_location_actions - showing entity UI with admin buttons and Navigate for ${coord}`);
-          
+
           return {
             ...ui,
             ephemeral: true
           };
         }
       })(req, res, client);
-    
+
     // ─── Quick Create Handlers ───────────────────────────────────────────
     } else if (custom_id.startsWith('quick_text_') && !custom_id.startsWith('quick_text_modal_')) {
       // Quick Text button — show modal

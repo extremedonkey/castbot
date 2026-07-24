@@ -191,7 +191,7 @@ export async function createEntityManagementUI(options) {
             // Show entity details if selected, with a Location Info divider (map_cell only)
             ...(selectedEntity ? [
                 { type: 14 }, // Separator
-                ...(entityType === 'map_cell' ? [{ type: 10, content: '### ```🗺️Location Info```' }] : []),
+                ...(entityType === 'map_cell' ? [{ type: 10, content: '### ```🖼️ Location Info```' }] : []),
                 createEntityDisplay(selectedEntity, entityType, guildData.safariConfig)
             ] : []),
 
@@ -208,6 +208,130 @@ export async function createEntityManagementUI(options) {
         flags: (1 << 15), // IS_COMPONENTS_V2
         components
     };
+}
+
+/**
+ * Build the full admin Location Manager UI for a map coordinate, with the
+ * Navigate/Inventory buttons injected into the Enter Command row.
+ *
+ * Single source of truth for this screen — shared by the
+ * `map_location_actions_{coord}` entry point (anchor message context button,
+ * new ephemeral message) and the `entity_select_map_cell` dropdown (switching
+ * locations in-place via UPDATE_MESSAGE). Both must render the identical
+ * screen; previously entity_select_map_cell rendered a different, much
+ * smaller "Actions for {coord}" list instead of reloading this screen.
+ *
+ * @param {Object} options
+ * @param {string} options.guildId
+ * @param {string} options.userId - for the Navigate button's custom_id
+ * @param {string} options.coord - map coordinate (e.g. "B1")
+ * @returns {Promise<Object|null>} Discord Components V2 response, or null if the coordinate has no data
+ */
+export async function buildLocationManagerUI({ guildId, userId, coord }) {
+    const safariData = await loadSafariContent();
+    const activeMapId = safariData[guildId]?.maps?.active;
+    const coordData = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+
+    if (!coordData) {
+        console.log(`❌ Location data not found for ${coord}`);
+        return null;
+    }
+
+    const ui = await createEntityManagementUI({
+        entityType: 'map_cell',
+        guildId,
+        selectedId: coord,
+        mode: 'edit'
+    });
+
+    // Add Navigate + Inventory buttons to the action row containing Enter Command
+    console.log(`🔍 DEBUG: UI has ${ui.components?.length || 0} components`);
+
+    if (ui.components && ui.components.length > 0) {
+        let foundEnterCommand = false;
+        for (let i = 0; i < ui.components.length; i++) {
+            const component = ui.components[i];
+
+            // Look for Container (type 17) first
+            if (component.type === 17) { // Container
+                if (component.components && component.components.length > 0) {
+                    for (let j = 0; j < component.components.length; j++) {
+                        const subComponent = component.components[j];
+
+                        if (subComponent.type === 1) { // Action Row inside Container
+                            const hasEnterCommand = subComponent.components?.some(btn =>
+                                btn.custom_id && btn.custom_id.startsWith('player_enter_command_')
+                            );
+
+                            if (hasEnterCommand) {
+                                foundEnterCommand = true;
+                                console.log(`🔍 DEBUG: Reordering buttons in container action row ${j} (before: ${subComponent.components.length} buttons)`);
+
+                                const navigateButton = {
+                                    type: 2, // Button
+                                    style: 2, // Secondary (grey)
+                                    label: 'Navigate',
+                                    custom_id: `safari_navigate_${userId}_${coord}`,
+                                    emoji: { name: '🗺️' }
+                                };
+
+                                const customTerms = await getCustomTerms(guildId);
+                                const inventoryButton = {
+                                    type: 2, // Button
+                                    style: 2, // Secondary (grey)
+                                    label: 'Inventory',
+                                    custom_id: 'safari_player_inventory',
+                                    emoji: parseTextEmoji(customTerms.inventoryEmoji || '🧰', '🧰').emoji
+                                };
+
+                                // Find existing buttons
+                                const safariButton = subComponent.components.find(btn => btn.custom_id === 'prod_safari_menu');
+                                const enterCommandButton = subComponent.components.find(btn => btn.custom_id && btn.custom_id.startsWith('player_enter_command_'));
+                                const whisperButton = subComponent.components.find(btn => btn.custom_id && btn.custom_id.startsWith('safari_whisper_'));
+
+                                // Rebuild components in desired order: Safari, Navigate, Inventory, Enter Command, Whisper
+                                subComponent.components = [];
+                                if (safariButton) subComponent.components.push(safariButton);
+                                subComponent.components.push(navigateButton);
+                                subComponent.components.push(inventoryButton);
+                                if (enterCommandButton) subComponent.components.push(enterCommandButton);
+                                if (whisperButton) subComponent.components.push(whisperButton);
+
+                                console.log(`🔍 DEBUG: Reordered buttons (after: ${subComponent.components.length} buttons)`);
+                                break;
+                            }
+                        }
+                    }
+                }
+            } else if (component.type === 1) { // Action Row at top level
+                const hasEnterCommand = component.components?.some(btn =>
+                    btn.custom_id && btn.custom_id.startsWith('player_enter_command_')
+                );
+
+                if (hasEnterCommand) {
+                    foundEnterCommand = true;
+                    console.log(`🔍 DEBUG: Adding Navigate button to top-level action row ${i} (before: ${component.components.length} buttons)`);
+
+                    const navigateButton = {
+                        type: 2, // Button
+                        style: 2, // Secondary (grey)
+                        label: 'Navigate',
+                        custom_id: `safari_navigate_${userId}_${coord}`,
+                        emoji: { name: '🗺️' }
+                    };
+
+                    component.components.unshift(navigateButton);
+                    console.log(`🔍 DEBUG: Added Navigate button (after: ${component.components.length} buttons)`);
+                    break;
+                }
+            }
+
+            if (foundEnterCommand) break;
+        }
+        console.log(`🔍 DEBUG: Found Enter Command row: ${foundEnterCommand}`);
+    }
+
+    return ui;
 }
 
 /**
