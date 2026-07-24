@@ -99,7 +99,7 @@ export async function createCustomActionSelectionUI({ guildId, coordinate = null
 
 /**
  * Build just the ActionRow containing the action StringSelect.
- * Reusable by both the standalone action selection UI and the embedded Map Location Manager.
+ * Reusable by both the standalone action selection UI and the embedded Location Manager.
  * @param {Object} params
  * @param {string} params.guildId
  * @param {string} [params.coordinate]

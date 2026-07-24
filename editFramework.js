@@ -107,7 +107,7 @@ export const EDIT_CONFIGS = {
   },
 
   [EDIT_TYPES.MAP_CELL]: {
-    displayName: '📍 Map Location Manager',
+    displayName: '📍 Location Manager',
     properties: {
       title: { type: 'text', maxLength: 100, required: true, label: 'Location Title' },
       description: { type: 'textarea', maxLength: 1000, required: true, label: 'Location Description' },

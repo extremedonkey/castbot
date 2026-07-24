@@ -1,8 +1,9 @@
 /**
  * quickActionCreate.js — Quick Create shortcuts for map coordinate actions
  *
- * Provides streamlined modals to create Give Currency / Give Item actions
- * in a single modal with 5 fields (using String Selects in Labels).
+ * Provides streamlined single-modal shortcuts (Text, Item, ItemText, Currency,
+ * Enemy, Command, Crafting) that create fully-formed Custom Actions in one
+ * step, composed from a shared field-builder vocabulary below.
  * Creates regular Custom Actions — fully editable in the Action Editor after creation.
  */
 
@@ -30,6 +31,194 @@ const STYLE_TO_ACCENT_COLOR = {
     'Danger': 'e74c3c'
 };
 
+// ─── Shared field builders ──────────────────────────────────────────────
+// Quick Create modals compose from a small, consistent field vocabulary.
+// Extracted here so new combinations (e.g. Quick ItemText) don't re-diverge
+// wording across modals — keep labels/descriptions in sync via these, not
+// copy-paste, when adding future Quick Create variants.
+
+function buildButtonNameField(placeholder) {
+    return {
+        type: 18,
+        label: 'Button Name',
+        description: 'Label on the button the player clicks.',
+        component: {
+            type: 4,
+            custom_id: 'button_name',
+            style: 1,
+            placeholder,
+            required: true,
+            max_length: 80
+        }
+    };
+}
+
+function buildTextToDisplayField() {
+    return {
+        type: 18,
+        label: 'Text to display',
+        description: 'The main text shown when the action triggers. Supports markdown.',
+        component: {
+            type: 4,
+            custom_id: 'display_content',
+            style: 2, // Paragraph
+            placeholder: 'The text to display when the action is triggered...',
+            required: true,
+            max_length: 2000
+        }
+    };
+}
+
+function buildItemToGiveField(itemOptions) {
+    return {
+        type: 18,
+        label: 'Item to Give',
+        description: 'Select which item the player receives.',
+        component: {
+            type: 3,
+            custom_id: 'item_select',
+            placeholder: 'Select item...',
+            min_values: 1,
+            max_values: 1,
+            options: itemOptions
+        }
+    };
+}
+
+function buildButtonEmojiField(placeholder) {
+    return {
+        type: 18,
+        label: 'Button Emoji (Optional)',
+        description: 'Emoji that appears on the button.',
+        component: {
+            type: 4,
+            custom_id: 'button_emoji',
+            style: 1,
+            placeholder,
+            required: false,
+            max_length: 100
+        }
+    };
+}
+
+function buildUsageLimitField(description = 'How many times can this action be used?') {
+    return {
+        type: 18,
+        label: 'Usage Limit',
+        description,
+        component: {
+            type: 3,
+            custom_id: 'usage_limit',
+            placeholder: 'Select usage limit...',
+            min_values: 1,
+            max_values: 1,
+            options: LIMIT_OPTIONS
+        }
+    };
+}
+
+function buildButtonColorField(description = 'Color of the button.') {
+    return {
+        type: 18,
+        label: 'Button Color',
+        description,
+        component: {
+            type: 3,
+            custom_id: 'button_color',
+            placeholder: 'Select button color...',
+            min_values: 1,
+            max_values: 1,
+            options: COLOR_OPTIONS
+        }
+    };
+}
+
+/**
+ * Map raw item records to String Select options (label/value/emoji/description),
+ * newest-metadata-first callers should pre-sort via getSortedQuickCreateItems().
+ * Shared by every Quick Create modal that offers an item picker.
+ */
+function buildItemOptions(items) {
+    return items.slice(0, 25).map(item => {
+        const opt = {
+            label: (item.name || item.id).slice(0, 100),
+            value: item.id
+        };
+        opt.emoji = parseAndValidateEmoji(item.emoji, '📦').emoji;
+        if (item.description) opt.description = item.description.slice(0, 100);
+        return opt;
+    });
+}
+
+/**
+ * Load this guild's Safari items sorted by most-recently-updated first, for
+ * Quick Create item selects. Falls back to creation time for items that have
+ * never been edited since. Replaces the old ID-suffix-parsing sort, which
+ * only compared the last 6 digits of the creation timestamp — those wrap
+ * every ~16.7 minutes, so two items created that far apart could sort in the
+ * wrong order even by "newest first" semantics, let alone "last updated."
+ * @param {string} guildId
+ * @returns {Promise<Array>} up to 25 items: { id, name, emoji, description }
+ */
+export async function getSortedQuickCreateItems(guildId) {
+    const { loadSafariContent } = await import('./safariManager.js');
+    const safariData = await loadSafariContent();
+    const items = safariData[guildId]?.items || {};
+    return Object.entries(items)
+        .map(([id, item]) => ({
+            id,
+            name: item.name,
+            emoji: item.emoji,
+            description: item.description,
+            _sortKey: item.metadata?.lastModified || item.metadata?.createdAt || 0
+        }))
+        .sort((a, b) => b._sortKey - a._sortKey)
+        .slice(0, 25)
+        .map(({ _sortKey, ...rest }) => rest);
+}
+
+// ─── Modal payload helpers ───────────────────────────────────────────────
+// app.js button handlers should be routing, not fetching + validating +
+// building — these do that work so the handler is just "call this, respond
+// with what it returns." Each resolves to { modal } on success or
+// { error } (a plain user-facing message, no emoji/formatting) otherwise.
+
+/**
+ * Resolve the Quick Item modal, or an error if the guild has no items yet.
+ */
+export async function getQuickItemModalPayload(guildId, coordinate) {
+    const sortedItems = await getSortedQuickCreateItems(guildId);
+    if (sortedItems.length === 0) {
+        return { error: 'No items exist yet. Create items first via **Actions** → **Give Item** outcome.' };
+    }
+    return { modal: buildQuickItemModal(coordinate, sortedItems) };
+}
+
+/**
+ * Resolve the Quick ItemText modal, or an error if the guild has no items yet.
+ */
+export async function getQuickItemTextModalPayload(guildId, coordinate) {
+    const sortedItems = await getSortedQuickCreateItems(guildId);
+    if (sortedItems.length === 0) {
+        return { error: 'No items exist yet. Create items first via **Actions** → **Give Item** outcome.' };
+    }
+    return { modal: buildQuickItemTextModal(coordinate, sortedItems) };
+}
+
+/**
+ * Resolve the Quick Crafting modal, or an error if the guild has <2 items.
+ */
+export async function getQuickCraftingModalPayload(guildId, coordinate) {
+    const { getCustomTerms } = await import('./safariManager.js');
+    const sortedItems = await getSortedQuickCreateItems(guildId);
+    if (sortedItems.length < 2) {
+        return { error: 'You need at least 2 items to create a crafting recipe. Add items via **Actions** → **Give Item** outcome first.' };
+    }
+    const customTerms = await getCustomTerms(guildId);
+    const craftingName = customTerms.craftingName || 'Crafting';
+    return { modal: buildQuickCraftingModal(coordinate, sortedItems, craftingName) };
+}
+
 /**
  * Build the Quick Text modal — 5 fields
  * @param {string} coordinate - Map coordinate (e.g. "A2")
@@ -40,71 +229,35 @@ export function buildQuickTextModal(coordinate) {
         custom_id: `quick_text_modal_${coordinate}`,
         title: 'Quick Text Action',
         components: [
-            {
-                type: 18,
-                label: 'Button Name',
-                description: 'Label on the button the player clicks. Also used as the display text title.',
-                component: {
-                    type: 4,
-                    custom_id: 'button_name',
-                    style: 1,
-                    placeholder: 'e.g., "Read the Sign"',
-                    required: true,
-                    max_length: 80
-                }
-            },
-            {
-                type: 18,
-                label: 'Text to display',
-                description: 'The main text shown when the action triggers. Supports markdown.',
-                component: {
-                    type: 4,
-                    custom_id: 'display_content',
-                    style: 2, // Paragraph
-                    placeholder: 'The text to display when the action is triggered...',
-                    required: true,
-                    max_length: 2000
-                }
-            },
-            {
-                type: 18,
-                label: 'Button Emoji (Optional)',
-                description: 'Emoji that appears on the button.',
-                component: {
-                    type: 4,
-                    custom_id: 'button_emoji',
-                    style: 1,
-                    placeholder: 'e.g., 📃',
-                    required: false,
-                    max_length: 100
-                }
-            },
-            {
-                type: 18,
-                label: 'Usage Limit',
-                description: 'How many times can this action be used?',
-                component: {
-                    type: 3,
-                    custom_id: 'usage_limit',
-                    placeholder: 'Select usage limit...',
-                    min_values: 1,
-                    max_values: 1,
-                    options: LIMIT_OPTIONS
-                }
-            },
-            {
-                type: 18,
-                label: 'Button Color',
-                description: 'Color of the button. Also sets the accent color of the text display.',
-                component: {
-                    type: 3,
-                    custom_id: 'button_color',
-                    placeholder: 'Select button color...',
-                    min_values: 1,
-                    max_values: 1,
-                    options: COLOR_OPTIONS
-                }
-            }
+            buildButtonNameField('e.g., "Read the Sign"'),
+            buildTextToDisplayField(),
+            buildButtonEmojiField('e.g., 📃'),
+            buildUsageLimitField(),
+            buildButtonColorField('Color of the button. Also sets the accent color of the text display.')
+        ]
+    };
+}
+
+/**
+ * Build the Quick ItemText modal — 5 fields
+ * Combines Quick Text + Quick Item: a display_text outcome followed by a
+ * give_item outcome, in one modal. Button Color is intentionally omitted
+ * (button defaults to Primary) to keep the combined modal at 5 fields.
+ * @param {string} coordinate - Map coordinate (e.g. "A2")
+ * @param {Array} items - Array of { id, name, emoji, description } for the item select
+ * @returns {object} Modal interaction response data
+ */
+export function buildQuickItemTextModal(coordinate, items) {
+    const itemOptions = buildItemOptions(items);
+    return {
+        custom_id: `quick_itemtext_modal_${coordinate}`,
+        title: 'Quick ItemText Action',
+        components: [
+            buildButtonNameField('e.g., "Open Chest"'),
+            buildTextToDisplayField(),
+            buildItemToGiveField(itemOptions),
+            buildButtonEmojiField('e.g., 📦'),
+            buildUsageLimitField()
         ]
     };
 }
@@ -196,86 +349,17 @@ export function buildQuickCurrencyModal(coordinate, currencyName) {
  * @returns {object} Modal interaction response data
  */
 export function buildQuickItemModal(coordinate, items) {
-    const itemOptions = items.slice(0, 25).map(item => {
-        const opt = {
-            label: (item.name || item.id).slice(0, 100),
-            value: item.id
-        };
-        // Use validated emoji parsing (handles Unicode, custom, deleted emojis)
-        opt.emoji = parseAndValidateEmoji(item.emoji, '📦').emoji;
-        if (item.description) opt.description = item.description.slice(0, 100);
-        return opt;
-    });
+    const itemOptions = buildItemOptions(items);
 
     return {
         custom_id: `quick_item_modal_${coordinate}`,
         title: 'Quick Item Action',
         components: [
-            {
-                type: 18, // Label
-                label: 'Button Name',
-                description: 'Label on the button the player clicks.',
-                component: {
-                    type: 4, // Text Input
-                    custom_id: 'button_name',
-                    style: 1,
-                    placeholder: 'e.g., "Open Chest"',
-                    required: true,
-                    max_length: 80
-                }
-            },
-            {
-                type: 18, // Label
-                label: 'Item to Give',
-                description: 'Select which item the player receives.',
-                component: {
-                    type: 3, // String Select
-                    custom_id: 'item_select',
-                    placeholder: 'Select item...',
-                    min_values: 1,
-                    max_values: 1,
-                    options: itemOptions
-                }
-            },
-            {
-                type: 18, // Label
-                label: 'Button Emoji (Optional)',
-                description: 'Emoji that appears on the button.',
-                component: {
-                    type: 4, // Text Input
-                    custom_id: 'button_emoji',
-                    style: 1,
-                    placeholder: 'e.g., 📦',
-                    required: false,
-                    max_length: 100
-                }
-            },
-            {
-                type: 18, // Label
-                label: 'Usage Limit',
-                description: 'How many times can this action be used?',
-                component: {
-                    type: 3, // String Select
-                    custom_id: 'usage_limit',
-                    placeholder: 'Select usage limit...',
-                    min_values: 1,
-                    max_values: 1,
-                    options: LIMIT_OPTIONS
-                }
-            },
-            {
-                type: 18, // Label
-                label: 'Button Color',
-                description: 'Color of the button.',
-                component: {
-                    type: 3, // String Select
-                    custom_id: 'button_color',
-                    placeholder: 'Select button color...',
-                    min_values: 1,
-                    max_values: 1,
-                    options: COLOR_OPTIONS
-                }
-            }
+            buildButtonNameField('e.g., "Open Chest"'),
+            buildItemToGiveField(itemOptions),
+            buildButtonEmojiField('e.g., 📦'),
+            buildUsageLimitField(),
+            buildButtonColorField()
         ]
     };
 }
@@ -588,6 +672,117 @@ export async function handleQuickItemSubmit(guildId, userId, coordinate, modalCo
 }
 
 /**
+ * Handle Quick ItemText modal submission — creates action with display_text
+ * THEN give_item outcomes (display_text first so it renders first when the
+ * two outcome responses are bundled — most visually appealing), returns Action Editor.
+ * No Button Color field — button defaults to Primary.
+ */
+export async function handleQuickItemTextSubmit(guildId, userId, coordinate, modalComponents) {
+    const { createCustomButton, loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+
+    const buttonName = getModalValue(modalComponents[0]);
+    const displayContent = getModalValue(modalComponents[1]);
+    const itemId = getModalValue(modalComponents[2]);
+    const emojiInput = getModalValue(modalComponents[3]);
+    const limitType = getModalValue(modalComponents[4]) || 'once_per_player';
+    const style = 'Primary'; // No color field in this modal — fixed default
+
+    if (!buttonName) return { error: 'Button name is required.' };
+    if (!displayContent) return { error: 'Text to display is required.' };
+    if (!itemId) return { error: 'Item selection is required.' };
+
+    let buttonEmoji = null;
+    if (emojiInput) {
+        const { createSafeEmoji } = await import('./safariButtonHelper.js');
+        const validated = await createSafeEmoji(emojiInput);
+        if (validated) buttonEmoji = emojiInput;
+    }
+
+    const actionId = await createCustomButton(guildId, {
+        label: buttonName, emoji: buttonEmoji, style, actions: [], tags: []
+    }, userId);
+
+    const safariData = await loadSafariContent();
+    const action = safariData[guildId].buttons[actionId];
+    action.name = buttonName;
+    action.description = '';
+    action.metadata = { ...action.metadata, createdVia: 'quick_itemtext' };
+
+    if (!action.trigger) action.trigger = { type: 'button' };
+    if (!action.trigger.button) action.trigger.button = {};
+    action.trigger.button.style = style;
+    action.style = style;
+
+    const item = safariData[guildId]?.items?.[itemId];
+    const itemName = item?.name || itemId;
+
+    // display_text first — renders first in the bundled response (most visually appealing)
+    action.actions.push({
+        type: 'display_text',
+        order: 0,
+        config: {
+            title: buttonName,
+            content: displayContent,
+            image: '',
+            color: STYLE_TO_ACCENT_COLOR[style] || '3498db'
+        },
+        executeOn: 'true'
+    });
+
+    // Usage limit gates the reward (give_item), matching Quick Item's behavior —
+    // display_text itself isn't claim-gated (it's not a "rewarding" outcome).
+    action.actions.push({
+        type: 'give_item',
+        order: 1,
+        config: {
+            itemId,
+            quantity: 1,
+            operation: 'give',
+            limit: limitType === 'once_per_period'
+                ? { type: 'once_per_period', periodMs: 86400000, claimedBy: {} }
+                : { type: limitType, claimedBy: limitType === 'once_per_player' ? [] : null }
+        },
+        executeOn: 'true'
+    });
+
+    // Assign to coordinate (skip for global actions)
+    if (coordinate && coordinate !== 'global') {
+        const activeMapId = safariData[guildId]?.maps?.active;
+        if (activeMapId) {
+            const coordData = safariData[guildId].maps[activeMapId].coordinates[coordinate];
+            if (coordData) {
+                if (!coordData.buttons) coordData.buttons = [];
+                if (!coordData.buttons.includes(actionId)) {
+                    coordData.buttons.push(actionId);
+                }
+            }
+            if (!action.coordinates) action.coordinates = [];
+            if (!action.coordinates.includes(coordinate)) {
+                action.coordinates.push(coordinate);
+            }
+        }
+    }
+
+    await saveSafariContent(safariData);
+
+    // Queue anchor update only for coordinate-based actions
+    if (coordinate && coordinate !== 'global') {
+        try {
+            const { afterAddCoordinate } = await import('./anchorMessageIntegration.js');
+            await afterAddCoordinate(guildId, actionId, coordinate);
+        } catch (error) {
+            console.error('Error queueing anchor update after quick itemtext:', error);
+        }
+    }
+
+    console.log(`⚡ QUICK ITEMTEXT: Created action ${actionId} at ${coordinate} — Display + Gives 1x ${itemName}`);
+
+    const { createCustomActionEditorUI } = await import('./customActionUI.js');
+    const editorCoordinate = coordinate === 'global' ? null : coordinate;
+    return await createCustomActionEditorUI({ guildId, actionId, coordinate: editorCoordinate });
+}
+
+/**
  * Build the Quick Enemy modal — 5 fields
  * Creates a fight_enemy action at a coordinate in one step.
  */
@@ -853,15 +1048,7 @@ export async function handleQuickCommandSubmit(guildId, userId, coordinate, moda
  * @returns {object} Modal interaction response data
  */
 export function buildQuickCraftingModal(coordinate, items, craftingName = 'Crafting') {
-    const itemOptions = items.slice(0, 25).map(item => {
-        const opt = {
-            label: (item.name || item.id).slice(0, 100),
-            value: item.id
-        };
-        opt.emoji = parseAndValidateEmoji(item.emoji, '📦').emoji;
-        if (item.description) opt.description = item.description.slice(0, 100);
-        return opt;
-    });
+    const itemOptions = buildItemOptions(items);
 
     return {
         custom_id: `quick_crafting_modal_${coordinate}`,

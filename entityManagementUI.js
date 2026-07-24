@@ -12,6 +12,7 @@ import { loadSafariContent, saveSafariContent, getCustomTerms } from './safariMa
 import { EDIT_CONFIGS } from './editFramework.js';
 import { SAFARI_LIMITS } from './config/safariLimits.js';
 import { parseTextEmoji, parseAndValidateEmoji, resolveEmoji } from './utils/emojiUtils.js';
+import { countComponents } from './utils.js';
 
 /**
  * Create item selection UI for map locations
@@ -197,7 +198,11 @@ export async function createEntityManagementUI(options) {
             ...(selectedEntity ? await createModeSpecificUI(mode, entityType, selectedId, selectedEntity, activeFieldGroup, guildId, userId) : [])
         ]
     }];
-    
+
+    if (entityType === 'map_cell') {
+        countComponents(components, { verbosity: 'full', label: 'Location Manager' });
+    }
+
     return {
         flags: (1 << 15), // IS_COMPONENTS_V2
         components
@@ -485,7 +490,7 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
             const customTerms = await getCustomTerms(guildId);
             const currencyLabel = `Quick ${customTerms.currencyName || 'Currency'}`;
 
-            // Embed action string select directly in the Map Location Manager
+            // Embed action string select directly in the Location Manager
             const safariData = await loadSafariContent();
             const activeMapId = safariData[guildId]?.maps?.active;
             if (activeMapId) {
@@ -495,11 +500,12 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
                     coordinate: entityId,
                     mapId: activeMapId
                 });
+                components.push({ type: 10, content: '⚡ Location Actions' });
                 components.push(actionSelectRow);
             }
 
-            // Quick Create row 1: Text / Currency / Item / Enemy
-            // Quick Create row 2: Command / Quick {craftingName}
+            // Quick Create row 1: Text / Item / ItemText / Currency
+            // Quick Create row 2: Crafting / Command / Enemy
             const craftingLabel = `Quick ${customTerms.craftingName || 'Crafting'}`;
             const craftingEmoji = resolveEmoji(customTerms.craftingEmoji || '🛠️', '🛠️');
             components.push({
@@ -515,13 +521,6 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
                     {
                         type: 2, // Button
                         style: 2,
-                        label: currencyLabel,
-                        custom_id: `quick_currency_${entityId}`,
-                        emoji: parseTextEmoji(customTerms.currencyEmoji || '🪙', '🪙').emoji
-                    },
-                    {
-                        type: 2, // Button
-                        style: 2,
                         label: 'Quick Item',
                         custom_id: `quick_item_${entityId}`,
                         emoji: { name: '📦' }
@@ -529,15 +528,29 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
                     {
                         type: 2, // Button
                         style: 2,
-                        label: 'Quick Enemy',
-                        custom_id: `quick_enemy_${entityId}`,
-                        emoji: { name: '🐙' }
+                        label: 'Quick ItemText',
+                        custom_id: `quick_itemtext_${entityId}`,
+                        emoji: { name: '📦' }
+                    },
+                    {
+                        type: 2, // Button
+                        style: 2,
+                        label: currencyLabel,
+                        custom_id: `quick_currency_${entityId}`,
+                        emoji: parseTextEmoji(customTerms.currencyEmoji || '🪙', '🪙').emoji
                     }
                 ]
             });
             components.push({
                 type: 1, // ActionRow
                 components: [
+                    {
+                        type: 2, // Button
+                        style: 2,
+                        label: craftingLabel,
+                        custom_id: `quick_crafting_${entityId}`,
+                        emoji: craftingEmoji
+                    },
                     {
                         type: 2, // Button
                         style: 2,
@@ -548,9 +561,9 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
                     {
                         type: 2, // Button
                         style: 2,
-                        label: craftingLabel,
-                        custom_id: `quick_crafting_${entityId}`,
-                        emoji: craftingEmoji
+                        label: 'Quick Enemy',
+                        custom_id: `quick_enemy_${entityId}`,
+                        emoji: { name: '🐙' }
                     }
                 ]
             });
@@ -640,12 +653,16 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
             emoji: { name: '🗑️' }
         });
     }
-    
+
+    if (entityType === 'map_cell') {
+        components.push({ type: 10, content: '🎮 Player Navigate Options' });
+    }
+
     components.push({
         type: 1, // ActionRow
         components: actionRowComponents
     });
-    
+
     return components;
 }
 

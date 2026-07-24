@@ -7,10 +7,24 @@
 > | Concept | Preferred Term | Legacy Names (still in code/data) | Data Path |
 > |---------|---------------|-----------------------------------|-----------|
 > | The top-level entity (e.g., `harvest_and_attack_test_1772798001927`) | **Action** | Custom Action, Safari Button, button, interactive action | `safariData[guildId].buttons[actionId]` |
-> | How an Action is invoked | **Trigger** | Button Click, Text Command, Modal, Player Command | `action.trigger.type` (`'button'`, `'modal'`, `'select'`, `'schedule'`) |
+> | How an Action is invoked | **Trigger** | Button Click, Text Command, Modal, Player Command | `action.trigger.type` — see [Trigger Types](#trigger-types) below |
 > | An individual step an Action executes | **Outcome** | Action Type, sub-action, action component | `action.actions[]` — each has `.type` and `.config` |
 >
 > **Why "buttons" in the data path?** The storage key `guildData.buttons` is a legacy artifact from when Actions could only be triggered by button clicks. Renaming it would require a data migration, so it stays — but conceptually it holds **Actions**, not buttons.
+
+## Trigger Types
+
+The trigger type selector (`customActionUI.js` → `createTriggerConfigUI()`) offers exactly five values. **There is no `'select'` trigger type** — no code path creates, checks, or renders one; treat any doc or memory claiming otherwise as stale.
+
+| UI Label | `trigger.type` value | Behavior |
+|---|---|---|
+| Button Click | `button` | Player or host clicks a button. |
+| Command | `modal` | Player types a phrase via the 🕹️ Enter Command button (map location or player menu). Matched against `trigger.phrases[]`. Despite the value name, this is the **text command** trigger, not a modal popup. |
+| Button + Secret Code | `button_modal` | Player clicks a button; a modal pops up asking for a phrase. Correct phrase (`trigger.phrases[]`) → pass outcomes run; wrong → fail outcomes run. |
+| Button + User Input | `button_input` | Player clicks a button; a modal captures free text, exposed to outcomes as `{triggerInput}`. |
+| Scheduled Action | `schedule` | Fires automatically at a set time. Arming vs. firing is two-phase: invoking a `schedule`-trigger action arms a timer (`armScheduledAction()` in `scheduledActionManager.js`) instead of running outcomes immediately; the scheduler calls back into `executeButtonActions()` with `{ scheduledExecution: true }` at fire time to actually run them. |
+
+All five can be attached to the same deployment surfaces (map coordinates, global actions, Post to Channel, Crafting menu); `modal`-type (Command) actions are the exception — they never render as a clickable button, so they're invoked only via the Enter Command flow.
 
 ## Overview
 
@@ -187,6 +201,8 @@ Conditions determine whether actions execute. Multiple conditions can be combine
 | **Attribute** | 📊 | Check single attribute value | Mana ≥ 20, HP < 50% |
 | **Compare Attributes** | ⚔️ | Compare two attributes | Strength > Dexterity |
 | **Multi-Attribute** | 📈 | Check multiple attributes | All stats ≥ 10 |
+| **Random Probability** | 🎲 | Randomized dice-style pass/fail check | 75% chance of pass |
+| **D20 Roll** | 🐉 | D&D-style d20 roll vs. a DC, with modifiers/crits/fumbles | Roll + modifier ≥ DC 12 |
 
 ### Attribute Conditions
 
@@ -221,6 +237,15 @@ Check multiple attributes with aggregation modes:
 Shortcuts: `all_stats`, `all_resources`, `all`
 
 See [Attribute Conditions](./AttributeConditions.md) for full documentation.
+
+### Random Probability (🎲) and D20 Roll (🐉)
+
+Chance-based conditions — evaluate alongside other conditions using the same AND/OR logic (e.g., "has Sword" AND "75% chance" = must have the sword, then roll).
+
+- **Random Probability** (`type: 'random_probability'`): a configurable percentage chance of passing. Display modes: text-only result card, compact probability %, or silent (logged only).
+- **D20 Roll** (`type: 'd20_roll'`): rolls 1d20 + modifier against a target DC, with crit/fumble flavor text. Display modes: full D&D-style narration, roll + result card, compact one-liner, or silent.
+
+Both are implemented in `evaluateSingleCondition()` in `safariManager.js`, configured via the condition editor in `customActionUI.js`, and rendered via `buildProbabilityResultDisplay()` / `buildD20ResultDisplay()` in `diceRoll.js`. `fight_enemy` outcomes use the same underlying roll mechanics for combat resolution. Full design rationale: [RaP 0942 — Random Probability](../01-RaP/0942_20260316_RandomProbability_Analysis.md) (note: despite that doc's stale "ready to build" status header, this feature is shipped and live in the condition type selector).
 
 ---
 
@@ -442,6 +467,7 @@ To convert map-based drops to Custom Actions:
 ## Related Documentation
 
 - [Safari.md](./Safari.md) - Main Safari system overview
+- [QuickCreateActions.md](./QuickCreateActions.md) - One-modal shortcuts (Quick Text, Item, ItemText, Currency, Enemy, Command, Crafting) that create Actions in a single step
 - [SafariMapExplorer.md](./SafariMapExplorer.md) - Map and location management
 - [EntityEditFramework.md](../architecture/EntityEditFramework.md) - UI framework details
 - [ButtonHandlerFactory.md](../architecture/ButtonHandlerFactory.md) - Button implementation patterns

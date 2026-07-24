@@ -20,13 +20,16 @@ Quick Create Actions are one-modal shortcuts that create fully-formed Actions in
 | Type | Button Label | Modal Title | Trigger Type | Outcome(s) Created |
 |------|-------------|-------------|--------------|-----------------|
 | **Quick Text** | 📃 Quick Text | Quick Text Action | Button Click | `display_text` |
-| **Quick Currency** | 🪙 Quick {CurrencyName} | Quick {CurrencyName} Action | Button Click | `give_currency` |
 | **Quick Item** | 📦 Quick Item | Quick Item Action | Button Click | `give_item` (qty 1) |
-| **Quick Enemy** | 🐙 Quick Enemy | Quick Enemy Action | Button Click | `fight_enemy` |
-| **Quick Command** | ❗ Quick Command | ❗ Quick Command | Command (modal) | `display_text` |
+| **Quick ItemText** | 📦 Quick ItemText | Quick ItemText Action | Button Click | `display_text` + `give_item` (qty 1), display_text always first |
+| **Quick Currency** | 🪙 Quick {CurrencyName} | Quick {CurrencyName} Action | Button Click | `give_currency` |
 | **Quick Crafting** | 🛠️ Quick {CraftingName} | Quick {CraftingName} Action | Button Click | 2× `give_item` (remove) + 1× `give_item` (give) |
+| **Quick Command** | ❗ Quick Command | ❗ Quick Command | Command (modal) | `display_text` |
+| **Quick Enemy** | 🐙 Quick Enemy | Quick Enemy Action | Button Click | `fight_enemy` |
 
-Quick Text/Currency/Item/Enemy create **button-triggered** actions (5 fields: name, content/amount/item/enemy, emoji, limit, color).
+Quick Text/Item/ItemText/Currency/Enemy create **button-triggered** actions (5 fields: name, content/item/amount/enemy, emoji, limit, color — ItemText omits color, see below).
+
+Quick ItemText is a **composition of Quick Text + Quick Item** in one modal — it combines their two outcome types into a single Action rather than introducing a new outcome type. It exists because "show some flavor text, then hand over an item" is common enough at map locations to not need two separate quick-created actions bundled together by hand afterwards.
 
 Quick Command creates a **Command-triggered** action (3-5 fields depending on prefix config: name, prefix select (if prefixes exist), command phrase, display text, usage limit). No button color/emoji since Command actions don't render as buttons on anchor messages.
 
@@ -39,11 +42,13 @@ Quick Crafting creates a **button-triggered recipe Action** (5 fields: name, Cra
 ### Map Coordinate Screen (Location Actions) — 2 rows
 
 ```
-Row 1:  [📃 Quick Text] [🪙 Quick Currency] [📦 Quick Item] [🐙 Quick Enemy]
-Row 2:  [❗ Quick Command] [🛠️ Quick {CraftingName}]
+Row 1:  [📃 Quick Text] [📦 Quick Item] [📦 Quick ItemText] [🪙 Quick Currency]
+Row 2:  [🛠️ Quick {CraftingName}] [❗ Quick Command] [🐙 Quick Enemy]
 ```
 
-Buttons in `entityManagementUI.js` ActionRow, inside `if (entityType === 'map_cell')`. Actions created here are automatically assigned to the coordinate (and the anchor message is updated via `afterAddCoordinate`).
+Buttons in `entityManagementUI.js` `createEditModeUI()`, inside `if (entityType === 'map_cell')`. Actions created here are automatically assigned to the coordinate (and the anchor message is updated via `afterAddCoordinate`).
+
+**Quick ItemText is currently map-coordinate-only** — it does not appear on the Global Actions screen (below). This was a deliberate initial scope decision, not a technical limitation; the modal/handler (`buildQuickItemTextModal`/`handleQuickItemTextSubmit`) already accepts `coordinate === 'global'` like every other Quick Create action, so adding a `quick_itemtext_global` button to the global screen later is a small, low-risk follow-up (mirror the existing `quick_item_global` wiring) rather than new engineering.
 
 ### Global Actions Screen — 2 rows
 
@@ -54,11 +59,11 @@ Row 2:  [❗ Quick Command] [🛠️ Quick {CraftingName}]
 [Select an action to manage...                                    ▼]
 ```
 
-Buttons in `customActionUI.js` → `createCustomActionSelectionUI()`, shown only when `coordinate === null` (global view). Actions created here have no coordinates — they're global (usable from Player Menu, Crafting menu, commands, item links, etc.).
+Buttons in `customActionUI.js` → `createCustomActionSelectionUI()`, shown only when `coordinate === null` (global view). Actions created here have no coordinates — they're global (usable from Player Menu, Crafting menu, commands, item links, etc.). **Note this row keeps its original order and set** (no Quick ItemText) — the two screens are not currently kept in sync by shared code, so a future reorder of one does not automatically apply to the other.
 
-**Custom IDs**: `quick_text_global`, `quick_currency_global`, `quick_item_global`, `quick_enemy_global`, `quick_command_global`, `quick_crafting_global`
+**Custom IDs**: `quick_text_global`, `quick_currency_global`, `quick_item_global`, `quick_enemy_global`, `quick_command_global`, `quick_crafting_global` (no `quick_itemtext_global` yet — see above)
 
-**Row split rationale**: Discord allows max 5 buttons per ActionRow. Adding Quick Crafting pushed the Quick Create set to 6 entries, so the row was split by "trigger type": button-style creators (Text/Currency/Item/Enemy) on Row 1, higher-level creators (Command, Crafting) on Row 2.
+**Row split (Map Coordinate Screen)**: Discord allows max 5 buttons per ActionRow; the 7 Quick Create actions split 4/3. Row 1 holds the simpler single-modal, mostly-independent creators (Text, Item, ItemText, Currency); Row 2 holds the three with extra moving parts (Crafting — auto-populates conditions; Command — the one non-button trigger type; Enemy — invokes the combat system). This is a placement choice, not an enforced category — reorder freely as new Quick Create actions are added.
 
 ---
 
@@ -68,18 +73,23 @@ Buttons in `customActionUI.js` → `createCustomActionSelectionUI()`, shown only
 
 **Exports:**
 - `buildQuickTextModal(coordinate)` — builds 5-field modal
+- `buildQuickItemModal(coordinate, items)` — builds 5-field modal with item StringSelect (max 25, most-recently-updated first)
+- `buildQuickItemTextModal(coordinate, items)` — builds **5-field** modal (name, text, item, emoji, limit — no color) combining Quick Text + Quick Item's outcomes
 - `buildQuickCurrencyModal(coordinate, currencyName)` — builds 5-field modal with dynamic currency name
-- `buildQuickItemModal(coordinate, items)` — builds 5-field modal with item StringSelect (max 25, newest first)
 - `buildQuickEnemyModal(coordinate, enemies)` — builds 5-field modal with enemy StringSelect (max 25, alphabetical)
 - `buildQuickCommandModal(coordinate, prefixes)` — builds 3–5 field modal; prefix select only shown when guild has prefixes
-- `buildQuickCraftingModal(coordinate, items, craftingName)` — builds 5-field modal with 3 item StringSelects (max 25, newest first)
+- `buildQuickCraftingModal(coordinate, items, craftingName)` — builds 5-field modal with 3 item StringSelects (max 25, most-recently-updated first)
 - `handleQuickTextSubmit(guildId, userId, coordinate, components)` — creates action + display\_text outcome
-- `handleQuickCurrencySubmit(guildId, userId, coordinate, components)` — creates action + give\_currency outcome
 - `handleQuickItemSubmit(guildId, userId, coordinate, components)` — creates action + give\_item outcome
+- `handleQuickItemTextSubmit(guildId, userId, coordinate, components)` — creates action + `[display_text (order 0), give_item (order 1)]`; only the give\_item outcome carries the usage limit
+- `handleQuickCurrencySubmit(guildId, userId, coordinate, components)` — creates action + give\_currency outcome
 - `handleQuickEnemySubmit(guildId, userId, coordinate, components)` — creates action + fight\_enemy outcome
 - `handleQuickCommandSubmit(guildId, userId, coordinate, components, hasPrefixes)` — creates Command-trigger action + display\_text outcome
 - `handleQuickCraftingSubmit(guildId, userId, coordinate, components)` — creates action with 2 item conditions + 3 give\_item outcomes (remove×2, give×1), Grey, menuVisibility=`crafting_menu`
 - `buildCraftingLogic(item1Id, item2Id, itemToGiveId)` — **pure function** returning `{ conditions, outcomes }`; collapses duplicate inputs into a single qty:2 condition + qty:2 remove outcome. Exported for test coverage.
+- `getSortedQuickCreateItems(guildId)` — loads guild items sorted **most-recently-updated first** (see [Item Sort](#item-sort-most-recently-updated-not-creation-id-suffix) below), capped at 25. Single source of truth for every item-picker modal — call this instead of loading/sorting items inline.
+
+**Shared field builders** (internal, not exported — module-private): `buildButtonNameField()`, `buildTextToDisplayField()`, `buildItemToGiveField()`, `buildButtonEmojiField()`, `buildUsageLimitField()`, `buildButtonColorField()`, `buildItemOptions()`. Every modal builder composes from these rather than inlining Label/component objects, so wording (labels, descriptions, placeholders) stays consistent by construction as new Quick Create combinations are added — edit the builder once, every modal using that field picks it up. `buildQuickTextModal`, `buildQuickItemModal`, and `buildQuickItemTextModal` are fully composed this way; `buildQuickCurrencyModal`/`buildQuickEnemyModal`/`buildQuickCommandModal`/`buildQuickCraftingModal` still inline their own fields (left untouched when ItemText was added — same words in most cases, but not yet migrated to the shared builders).
 
 **Shared constants:**
 - `LIMIT_OPTIONS` — built from `buildLimitOptions()`, pre-selects `once_per_player`
@@ -88,6 +98,12 @@ Buttons in `customActionUI.js` → `createCustomActionSelectionUI()`, shown only
 
 **Shared utility:**
 - `getModalValue(comp)` — extracts value from Label (type 18) component, handles both TextInput (`.value`) and StringSelect (`.values[0]`)
+
+### Item Sort: most-recently-updated, not creation-ID suffix
+
+Every item-picker modal (Quick Item, Quick ItemText, Quick Crafting ×3 selects) now sources its options from `getSortedQuickCreateItems(guildId)`, which sorts by `item.metadata.lastModified` (falling back to `item.metadata.createdAt` for items never edited since creation) — genuinely "last updated first."
+
+Previously, Quick Item and Quick Crafting each inlined their own sort in `app.js`, parsing a numeric suffix out of the item's ID string (`item.id.match(/_(\d+)$/)`) and comparing those numbers descending. That suffix comes from `generateButtonId()` in `safariManager.js`, which keeps only `Date.now().toString().slice(-6)` — the **last 6 digits** of the creation timestamp, which wrap every 1,000,000ms (~16.7 minutes). Two items created further apart than that could sort in the wrong order even under "newest first" semantics, and the sort never reflected edits at all. `getSortedQuickCreateItems()` fixes both problems at once and is now the only item-fetch path Quick Create uses — any new item-picker modal should call it rather than re-deriving a sort.
 
 ### Handler Flow
 
@@ -109,6 +125,18 @@ Buttons in `customActionUI.js` → `createCustomActionSelectionUI()`, shown only
 - `title` is set to the Button Name (so display\_text shows a heading)
 - `color` is mapped from Button Color via `STYLE_TO_ACCENT_COLOR` (Primary→blue, Success→green, etc.)
 - `executeOn: 'true'`
+
+### Quick ItemText Special Behavior
+
+**Modal fields (5, in order):** Button Name, Text to display, Item to Give, Button Emoji (Optional), Usage Limit. **No Button Color field** — the button always defaults to `style: 'Primary'` (and its `display_text` outcome uses `STYLE_TO_ACCENT_COLOR['Primary']` accordingly). Kept out to hold the modal at 5 fields (Discord's Label-per-modal cap) once Text-to-display and Item-to-Give are both present.
+
+**Outcome order is fixed**: `[display_text (order 0), give_item (order 1, qty 1, operation: 'give')]`. `display_text` is always pushed first regardless of field order in the modal, because it renders first once the two outcome responses are bundled into one message — text-then-reward reads better than reward-then-text.
+
+**Usage limit applies only to the `give_item` outcome** — `display_text` is never claim-gated (same precedent as Quick Item; Quick Text's own Usage Limit field is likewise not applied to its `display_text` outcome, since display-only outcomes aren't "rewarding" in the claim-tracking sense — see [SafariUsageLimits.md](SafariUsageLimits.md)).
+
+- `metadata.createdVia: 'quick_itemtext'`
+- Button click handler uses `ButtonHandlerFactory` (CIF) with `requiresModal: true` — unlike Quick Text/Currency/Item's legacy inline handlers, this one follows current CLAUDE.md guidance for new buttons from the start
+- Item select sourced via `getSortedQuickCreateItems()` (see above)
 
 ### Quick Enemy Special Behavior
 
@@ -154,6 +182,8 @@ Quick Crafting compresses the multi-step work of building a recipe Action (condi
 
 ### Global Actions (`coordinate === 'global'`)
 
+Applies to every Quick Create action *except* Quick ItemText, which currently has no button on the Global Actions screen (see [Where They Appear](#where-they-appear)). `handleQuickItemTextSubmit` and `buildQuickItemTextModal` both already handle `coordinate === 'global'` correctly — the mechanics below apply unchanged if/when a `quick_itemtext_global` button is added later.
+
 When Quick Actions are triggered from the global Actions screen:
 - `coordinate` is the string `'global'` (from the button custom\_id)
 - Coordinate assignment is skipped (`if (coordinate && coordinate !== 'global')`)
@@ -165,8 +195,9 @@ When Quick Actions are triggered from the global Actions screen:
 
 All Quick-created actions have `metadata.createdVia`:
 - `'quick_text'`
-- `'quick_currency'`
 - `'quick_item'`
+- `'quick_itemtext'`
+- `'quick_currency'`
 - `'quick_enemy'`
 - `'quick_command'`
 - `'quick_crafting'`
@@ -177,9 +208,10 @@ All Quick-created actions have `metadata.createdVia`:
 
 ```
 'quick_text_*'     → category: safari_quick_create, requiresModal: true
+'quick_item_*'     → category: safari_quick_create, requiresModal: true
+'quick_itemtext_*' → category: safari_quick_create, requiresModal: true
 'quick_command_*'  → category: safari_quick_create, requiresModal: true
 'quick_currency_*' → category: safari_quick_create, requiresModal: true
-'quick_item_*'     → category: safari_quick_create, requiresModal: true
 'quick_enemy_*'    → category: safari_quick_create, requiresModal: true
 'quick_crafting_*' → category: safari_quick_create, requiresModal: true
 ```
@@ -189,11 +221,11 @@ All Quick-created actions have `metadata.createdVia`:
 | Handler | Pattern | CIF? |
 |---------|---------|------|
 | Button clicks (show modal) | `quick_text_*`, `quick_currency_*`, `quick_item_*` | Legacy (inline `res.send()`) |
-| Button click (enemy) | `quick_enemy_*` | Yes — `ButtonHandlerFactory` with `requiresModal: true` |
-| Modal submits | `quick_text_modal_*`, `quick_currency_modal_*`, `quick_item_modal_*`, `quick_enemy_modal_*` | Legacy (MODAL\_SUBMIT section — correct) |
+| Button click (enemy/command/crafting/itemtext) | `quick_enemy_*`, `quick_command_*`, `quick_crafting_*`, `quick_itemtext_*` | Yes — `ButtonHandlerFactory` with `requiresModal: true` |
+| Modal submits | `quick_text_modal_*`, `quick_currency_modal_*`, `quick_item_modal_*`, `quick_itemtext_modal_*`, `quick_enemy_modal_*`, `quick_command_modal_*`, `quick_crafting_modal_*` | Legacy (MODAL\_SUBMIT section — correct, per CLAUDE.md modal-submit exception) |
 
 ---
 
 ## Test Coverage
 
-`tests/quickActionCreate.test.js` — 19+ test cases covering modal structure, field types, validation, emoji fallbacks, item limiting.
+`tests/quickActionCreate.test.js` — 30+ test cases covering modal structure, field types, validation, emoji fallbacks, item limiting, item sort-order (last-updated vs. the old truncated-ID-suffix bug), and Quick ItemText's fixed display_text-first outcome ordering.

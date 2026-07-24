@@ -1,7 +1,7 @@
 # Random Probability Condition — Dice Rolls for Actions
 
 > **RaP #0942** | 2026-03-16
-> **Status**: Specification — ready to build
+> **Status**: ✅ Shipped — live in production as the 🎲 Random Probability and 🐉 D20 Roll condition types. Reference: [SafariCustomActions.md](../03-features/SafariCustomActions.md#random-probability--and-d20-roll-). This doc is kept for design rationale only; the spec below may not reflect the final shipped UI in every detail.
 > **Related**: [Challenge Actions RaP](0943_20260316_ChallengeActions_Analysis.md), [Action Terminology RaP](0956_20260308_ActionTerminology_Analysis.md), [SafariCustomActions](../03-features/SafariCustomActions.md)
 > **Depends on**: Opening Outcomes (built), Condition system (built)
 

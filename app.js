@@ -22556,7 +22556,7 @@ Your server is now ready for Tycoons gameplay!`;
 
           console.log(`✅ SUCCESS: safari_finish_button_${actionId} - navigating back to location ${coordinate}`);
 
-          // Show the Map Location Manager for this coordinate
+          // Show the Location Manager for this coordinate
           const { createEntityManagementUI } = await import('./entityManagementUI.js');
           const ui = await createEntityManagementUI({
             entityType: 'map_cell',
@@ -29595,7 +29595,7 @@ Your server is now ready for Tycoons gameplay!`;
           
           if (selectedValue === 'back_to_all') {
             if (coordinate && mapId) {
-              // Return to Map Location Manager (action select is embedded there)
+              // Return to Location Manager (action select is embedded there)
               const { createEntityManagementUI } = await import('./entityManagementUI.js');
               const ui = await createEntityManagementUI({
                 entityType: 'map_cell',
@@ -33306,34 +33306,32 @@ Your server is now ready for Tycoons gameplay!`;
       const coord = custom_id.replace('quick_item_', '');
       try {
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
-        const guildId = req.body.guild_id;
-        const { loadSafariContent } = await import('./safariManager.js');
-        const safariData = await loadSafariContent();
-        const items = safariData[guildId]?.items || {};
-        const itemList = Object.entries(items).map(([id, item]) => ({
-          id, name: item.name, emoji: item.emoji, description: item.description
-        }));
-        if (itemList.length === 0) {
-          return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ No items exist yet. Create items first via **Actions** → **Give Item** outcome.', flags: InteractionResponseFlags.EPHEMERAL } });
+        const { getQuickItemModalPayload } = await import('./quickActionCreate.js');
+        const { modal, error: payloadError } = await getQuickItemModalPayload(req.body.guild_id, coord);
+        if (payloadError) {
+          return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ ${payloadError}`, flags: InteractionResponseFlags.EPHEMERAL } });
         }
-        // Sort by most recently created (newest first), limit to 25
-        const sortedItems = itemList.sort((a, b) => {
-          // Items with numeric suffixes in IDs are newer (higher = newer)
-          const aNum = parseInt(a.id.match(/_(\d+)$/)?.[1] || '0');
-          const bNum = parseInt(b.id.match(/_(\d+)$/)?.[1] || '0');
-          return bNum - aNum;
-        }).slice(0, 25);
-        const { buildQuickItemModal } = await import('./quickActionCreate.js');
-        const modalData = buildQuickItemModal(coord, sortedItems);
-        console.log(`⚡ QUICK ITEM: Modal payload:`, JSON.stringify(modalData, null, 2).slice(0, 2000));
-        return res.send({
-          type: InteractionResponseType.MODAL,
-          data: modalData
-        });
+        return res.send({ type: InteractionResponseType.MODAL, data: modal });
       } catch (error) {
         console.error('Error showing quick item modal:', error);
         return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Error opening Quick Item modal.', flags: InteractionResponseFlags.EPHEMERAL } });
       }
+
+    } else if (custom_id.startsWith('quick_itemtext_') && !custom_id.startsWith('quick_itemtext_modal_')) {
+      // Quick ItemText button — show modal with item list (Quick Text + Quick Item combined)
+      return ButtonHandlerFactory.create({
+        id: 'quick_itemtext',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        requiresModal: true,
+        handler: async (context) => {
+          const coord = context.customId.replace('quick_itemtext_', '');
+          const { getQuickItemTextModalPayload } = await import('./quickActionCreate.js');
+          const { modal, error } = await getQuickItemTextModalPayload(context.guildId, coord);
+          if (error) return { content: `❌ ${error}`, ephemeral: true };
+          return { type: InteractionResponseType.MODAL, data: modal };
+        }
+      })(req, res, client);
 
     } else if (custom_id.startsWith('quick_enemy_') && !custom_id.startsWith('quick_enemy_modal_')) {
       // Quick Enemy button — show modal with enemy list
@@ -33388,29 +33386,10 @@ Your server is now ready for Tycoons gameplay!`;
         requiresModal: true,
         handler: async (context) => {
           const coord = context.customId.replace('quick_crafting_', '');
-          console.log(`🛠️ START: quick_crafting - user ${context.userId}, coord ${coord}`);
-          const { loadSafariContent, getCustomTerms } = await import('./safariManager.js');
-          const safariData = await loadSafariContent();
-          const items = safariData[context.guildId]?.items || {};
-          const itemList = Object.entries(items).map(([id, item]) => ({
-            id, name: item.name, emoji: item.emoji, description: item.description
-          }));
-          if (itemList.length < 2) {
-            return {
-              content: '❌ You need at least 2 items to create a crafting recipe. Add items via **Actions** → **Give Item** outcome first.',
-              ephemeral: true
-            };
-          }
-          const sortedItems = itemList.sort((a, b) => {
-            const aNum = parseInt(a.id.match(/_(\d+)$/)?.[1] || '0');
-            const bNum = parseInt(b.id.match(/_(\d+)$/)?.[1] || '0');
-            return bNum - aNum;
-          }).slice(0, 25);
-          const customTerms = await getCustomTerms(context.guildId);
-          const craftingName = customTerms.craftingName || 'Crafting';
-          const { buildQuickCraftingModal } = await import('./quickActionCreate.js');
-          const modalData = buildQuickCraftingModal(coord, sortedItems, craftingName);
-          return { type: InteractionResponseType.MODAL, data: modalData };
+          const { getQuickCraftingModalPayload } = await import('./quickActionCreate.js');
+          const { modal, error } = await getQuickCraftingModalPayload(context.guildId, coord);
+          if (error) return { content: `❌ ${error}`, ephemeral: true };
+          return { type: InteractionResponseType.MODAL, data: modal };
         }
       })(req, res, client);
 
@@ -47544,6 +47523,24 @@ Your server is now ready for Tycoons gameplay!`;
         return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: { ...result, flags: (1 << 15) } });
       } catch (error) {
         console.error('Error handling quick item modal:', error);
+        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ Error: ${error.message}`, flags: InteractionResponseFlags.EPHEMERAL } });
+      }
+
+    } else if (custom_id.startsWith('quick_itemtext_modal_')) {
+      try {
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
+        const coordinate = custom_id.replace('quick_itemtext_modal_', '');
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+
+        const { handleQuickItemTextSubmit } = await import('./quickActionCreate.js');
+        const result = await handleQuickItemTextSubmit(guildId, userId, coordinate, components);
+        if (result.error) {
+          return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ ${result.error}`, flags: InteractionResponseFlags.EPHEMERAL } });
+        }
+        return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: { ...result, flags: (1 << 15) } });
+      } catch (error) {
+        console.error('Error handling quick itemtext modal:', error);
         return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ Error: ${error.message}`, flags: InteractionResponseFlags.EPHEMERAL } });
       }
 

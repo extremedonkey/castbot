@@ -283,3 +283,159 @@ describe('buildCraftingLogic — same input item twice', () => {
         assert.equal(outcomes[1].config.quantity, 1);
     });
 });
+
+// Replicate buildItemOptions (same as quickActionCreate.js)
+function buildItemOptions(items) {
+    return items.slice(0, 25).map(item => {
+        const opt = { label: (item.name || item.id).slice(0, 100), value: item.id };
+        opt.emoji = item.emoji ? { name: item.emoji } : { name: '📦' };
+        if (item.description) opt.description = item.description.slice(0, 100);
+        return opt;
+    });
+}
+
+// Replicate buildQuickItemTextModal (same as quickActionCreate.js)
+function buildQuickItemTextModal(coordinate, items) {
+    const itemOptions = buildItemOptions(items);
+    return {
+        custom_id: `quick_itemtext_modal_${coordinate}`,
+        title: 'Quick ItemText Action',
+        components: [
+            { type: 18, label: 'Button Name', description: 'Label on the button the player clicks.', component: { type: 4, custom_id: 'button_name', style: 1, placeholder: 'e.g., "Open Chest"', required: true, max_length: 80 } },
+            { type: 18, label: 'Text to display', description: 'The main text shown when the action triggers. Supports markdown.', component: { type: 4, custom_id: 'display_content', style: 2, placeholder: 'The text to display when the action is triggered...', required: true, max_length: 2000 } },
+            { type: 18, label: 'Item to Give', description: 'Select which item the player receives.', component: { type: 3, custom_id: 'item_select', placeholder: 'Select item...', min_values: 1, max_values: 1, options: itemOptions } },
+            { type: 18, label: 'Button Emoji (Optional)', description: 'Emoji that appears on the button.', component: { type: 4, custom_id: 'button_emoji', style: 1, placeholder: 'e.g., 📦', required: false, max_length: 100 } },
+            { type: 18, label: 'Usage Limit', description: 'How many times can this action be used?', component: { type: 3, custom_id: 'usage_limit', placeholder: 'Select usage limit...', min_values: 1, max_values: 1, options: LIMIT_OPTIONS } }
+        ]
+    };
+}
+
+describe('buildQuickItemTextModal', () => {
+    const testItems = [
+        { id: 'sword_1', name: 'Sword', emoji: '⚔️', description: 'A sharp blade' }
+    ];
+
+    it('generates correct custom_id', () => {
+        const modal = buildQuickItemTextModal('D4', testItems);
+        assert.equal(modal.custom_id, 'quick_itemtext_modal_D4');
+    });
+
+    it('has exactly 5 fields: name, text, item, emoji, limit — no color field', () => {
+        const modal = buildQuickItemTextModal('A1', testItems);
+        assert.equal(modal.components.length, 5);
+        assert.equal(modal.components[0].label, 'Button Name');
+        assert.equal(modal.components[1].label, 'Text to display');
+        assert.equal(modal.components[2].label, 'Item to Give');
+        assert.equal(modal.components[3].label, 'Button Emoji (Optional)');
+        assert.equal(modal.components[4].label, 'Usage Limit');
+        assert.ok(!modal.components.some(c => c.label === 'Button Color'));
+    });
+
+    it('text field is a required Paragraph text input', () => {
+        const modal = buildQuickItemTextModal('A1', testItems);
+        const textField = modal.components[1].component;
+        assert.equal(textField.custom_id, 'display_content');
+        assert.equal(textField.style, 2); // Paragraph
+        assert.equal(textField.required, true);
+    });
+
+    it('item field uses String Select with item options', () => {
+        const modal = buildQuickItemTextModal('A1', testItems);
+        const itemSelect = modal.components[2].component;
+        assert.equal(itemSelect.type, 3);
+        assert.equal(itemSelect.options[0].value, 'sword_1');
+    });
+
+    it('all components are Label wrappers (type 18)', () => {
+        const modal = buildQuickItemTextModal('A1', testItems);
+        for (const comp of modal.components) {
+            assert.equal(comp.type, 18);
+        }
+    });
+});
+
+// Replicate the sort behavior of getSortedQuickCreateItems (same as quickActionCreate.js)
+function sortItemsByRecency(itemEntries) {
+    return itemEntries
+        .map(([id, item]) => ({
+            id, name: item.name,
+            _sortKey: item.metadata?.lastModified || item.metadata?.createdAt || 0
+        }))
+        .sort((a, b) => b._sortKey - a._sortKey)
+        .map(({ _sortKey, ...rest }) => rest);
+}
+
+describe('getSortedQuickCreateItems sort behavior — last-updated, not ID-suffix', () => {
+    it('orders by lastModified descending when present', () => {
+        const entries = [
+            ['old_edit', { name: 'Edited Long Ago', metadata: { createdAt: 1000, lastModified: 2000 } }],
+            ['new_edit', { name: 'Edited Recently', metadata: { createdAt: 500, lastModified: 9000 } }]
+        ];
+        const sorted = sortItemsByRecency(entries);
+        assert.equal(sorted[0].id, 'new_edit');
+        assert.equal(sorted[1].id, 'old_edit');
+    });
+
+    it('falls back to createdAt when an item has never been edited', () => {
+        const entries = [
+            ['never_edited', { name: 'Fresh', metadata: { createdAt: 5000 } }],
+            ['edited_but_older_create', { name: 'Edited', metadata: { createdAt: 100, lastModified: 4000 } }]
+        ];
+        const sorted = sortItemsByRecency(entries);
+        // 5000 (never_edited's createdAt) > 4000 (edited's lastModified)
+        assert.equal(sorted[0].id, 'never_edited');
+    });
+
+    it('is immune to the old bug: full-precision timestamps compare correctly regardless of gap size', () => {
+        // Old buggy sort parsed only the last 6 digits of the ID's Date.now()-based suffix
+        // (generateButtonId keeps `Date.now().toString().slice(-6)`), which wraps every
+        // 1,000,000ms (~16.7min) — two items created further apart than that could sort
+        // backwards. Sorting on the full metadata timestamp instead has no such ceiling.
+        const entries = [
+            ['created_first', { name: 'First', metadata: { createdAt: 1_700_000_000_000 } }],
+            ['created_much_later', { name: 'Much Later', metadata: { createdAt: 1_700_001_000_000 } }] // ~16.7min later — old suffix-parse would wrap to a *smaller* number
+        ];
+        const sorted = sortItemsByRecency(entries);
+        assert.equal(sorted[0].id, 'created_much_later');
+    });
+});
+
+// Replicate the outcome-ordering logic of handleQuickItemTextSubmit (same as quickActionCreate.js)
+function buildItemTextOutcomes(buttonName, displayContent, itemId, limitType) {
+    const outcomes = [];
+    outcomes.push({
+        type: 'display_text',
+        order: 0,
+        config: { title: buttonName, content: displayContent, image: '', color: '3498db' },
+        executeOn: 'true'
+    });
+    outcomes.push({
+        type: 'give_item',
+        order: 1,
+        config: {
+            itemId, quantity: 1, operation: 'give',
+            limit: { type: limitType, claimedBy: limitType === 'once_per_player' ? [] : null }
+        },
+        executeOn: 'true'
+    });
+    return outcomes;
+}
+
+describe('handleQuickItemTextSubmit outcome ordering', () => {
+    const outcomes = buildItemTextOutcomes('Open Chest', 'You find a chest.', 'gold_1', 'once_per_player');
+
+    it('display_text is always first (order 0) for visual bundling', () => {
+        assert.equal(outcomes[0].type, 'display_text');
+        assert.equal(outcomes[0].order, 0);
+    });
+
+    it('give_item is always second (order 1)', () => {
+        assert.equal(outcomes[1].type, 'give_item');
+        assert.equal(outcomes[1].order, 1);
+    });
+
+    it('only give_item carries the usage limit — display_text is not claim-gated', () => {
+        assert.equal(outcomes[0].config.limit, undefined);
+        assert.deepEqual(outcomes[1].config.limit, { type: 'once_per_player', claimedBy: [] });
+    });
+});

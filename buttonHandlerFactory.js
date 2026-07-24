@@ -2046,6 +2046,14 @@ export const BUTTON_REGISTRY = {
     category: 'safari_quick_create',
     requiresModal: true
   },
+  'quick_itemtext_*': {
+    label: 'Quick ItemText',
+    description: 'Quick-create a combined display text + give item action at a location',
+    emoji: '📦',
+    style: 'Secondary',
+    category: 'safari_quick_create',
+    requiresModal: true
+  },
   'safari_location_editor': {
     label: 'Location Editor',
     description: 'Open map location editor interface',
