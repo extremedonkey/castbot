@@ -500,7 +500,7 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
                     coordinate: entityId,
                     mapId: activeMapId
                 });
-                components.push({ type: 10, content: '⚡ Location Actions' });
+                components.push({ type: 10, content: '### ```⚡ Location Actions```' });
                 components.push(actionSelectRow);
             }
 
@@ -655,7 +655,7 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
     }
 
     if (entityType === 'map_cell') {
-        components.push({ type: 10, content: '🎮 Player Navigate Options' });
+        components.push({ type: 10, content: '### ```🎮 Player Navigate Options```' });
     }
 
     components.push({
