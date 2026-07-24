@@ -181,7 +181,10 @@ export async function createEntityManagementUI(options) {
                 type: 10, // Text Display
                 content: `## ${config.displayName}`
             },
-            
+
+            // Location Manager section divider (map_cell only)
+            ...(entityType === 'map_cell' ? [{ type: 10, content: '### ```🗺️Location Info```' }] : []),
+
             // For map_cell, show field group buttons above the selector
             ...(selectedEntity && entityType === 'map_cell' ? createFieldGroupButtons('map_cell', selectedId, activeFieldGroup) : []),
 
