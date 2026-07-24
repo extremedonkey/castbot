@@ -948,6 +948,213 @@ export async function handleMapAdminBlacklistModal(context, req) {
   return result;
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Per-location Blacklist + Reverse Blacklist modal
+//
+// New, separate from the guild-wide Blacklist button above (map_admin_blacklist /
+// handleMapAdminBlacklist) — this is a per-coordinate convenience opened from the
+// Location Manager (map_location_actions_{coord} → 🚫 Blacklist button, next to
+// Stores). Deliberately reuses the EXISTING data model and the existing
+// getBlacklistedCoordinates/updateBlacklistedCoordinates functions rather than
+// introducing a parallel one — see docs/03-features/SafariReverseBlacklist.md
+// and mapExplorer.js for the underlying feature this is a thin UI on top of.
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * Pick which items to present in the Reverse Blacklist select for a coordinate,
+ * respecting Discord's 25-option cap. Pure — no I/O — so it's independently
+ * testable and reused by both the modal builder and the submit handler (the
+ * submit handler must recompute the identical "presented" set to know which
+ * items it's allowed to toggle — the modal submission only reports what's
+ * currently *selected*, not what was originally *shown*).
+ *
+ * Order: every item already unlocking this coordinate (reverseBlacklist
+ * includes coord), most-recently-updated first — so an admin can always see
+ * and revoke existing links even if the guild has hundreds of items — then
+ * fill remaining slots (25 - linked count) with the most-recently-updated
+ * OTHER items, so newly-added items are reachable without leaving this modal.
+ *
+ * @param {Object} items - safariData[guildId].items (id -> item)
+ * @param {string} coord - coordinate being edited, e.g. "B1"
+ * @returns {Array<{id: string, item: Object, linked: boolean}>} up to 25 entries, linked-first
+ */
+export function getReverseBlacklistCandidates(items, coord) {
+    const sortKey = (item) => item.metadata?.lastModified || item.metadata?.createdAt || 0;
+    const entries = Object.entries(items).map(([id, item]) => ({ id, item }));
+
+    const linked = entries
+        .filter(({ item }) => Array.isArray(item.reverseBlacklist) && item.reverseBlacklist.includes(coord))
+        .sort((a, b) => sortKey(b.item) - sortKey(a.item));
+
+    const linkedIds = new Set(linked.map(e => e.id));
+    const remainingSlots = Math.max(0, 25 - linked.length);
+    const filler = entries
+        .filter(({ id }) => !linkedIds.has(id))
+        .sort((a, b) => sortKey(b.item) - sortKey(a.item))
+        .slice(0, remainingSlots);
+
+    return [...linked, ...filler]
+        .slice(0, 25)
+        .map(({ id, item }) => ({ id, item, linked: linkedIds.has(id) }));
+}
+
+/**
+ * Apply a Reverse Blacklist select submission to a specific, presented set of
+ * items — mutates each item's `reverseBlacklist` array in place. Only items
+ * in `presentedItemIds` are ever touched (never a global wipe), matching the
+ * "selection defines final state for what was shown" convention used
+ * elsewhere for modal multi-selects (see src/analytics/logsConfigUI.js —
+ * Discord doesn't reliably pre-check multi-select options inside modals, so
+ * the modal's Label description states current state in text instead, and
+ * submission is scoped to exactly what was offered).
+ *
+ * @param {Object} items - safariData[guildId].items (id -> item), mutated in place
+ * @param {string} coord - coordinate being toggled
+ * @param {string[]} presentedItemIds - item IDs that were shown as options (from getReverseBlacklistCandidates)
+ * @param {string[]} selectedItemIds - item IDs the admin left selected on submit
+ * @returns {string[]} item IDs whose reverseBlacklist actually changed
+ */
+export function applyReverseBlacklistSelection(items, coord, presentedItemIds, selectedItemIds) {
+    const selected = new Set(selectedItemIds);
+    const changed = [];
+
+    for (const itemId of presentedItemIds) {
+        const item = items[itemId];
+        if (!item) continue;
+
+        const current = Array.isArray(item.reverseBlacklist) ? item.reverseBlacklist : [];
+        const has = current.includes(coord);
+        const shouldHave = selected.has(itemId);
+
+        if (shouldHave && !has) {
+            item.reverseBlacklist = [...current, coord];
+            changed.push(itemId);
+        } else if (!shouldHave && has) {
+            item.reverseBlacklist = current.filter(c => c !== coord);
+            changed.push(itemId);
+        }
+    }
+
+    return changed;
+}
+
+/**
+ * Build the per-location Blacklist modal for a map coordinate.
+ * @param {string} guildId
+ * @param {string} coord - map coordinate, e.g. "B1"
+ * @returns {Promise<Object>} modal response ({ type: MODAL, data: {...} })
+ */
+export async function buildLocationBlacklistModal(guildId, coord) {
+    const { isCoordinateBlacklisted } = await import('./mapExplorer.js');
+    const isBlacklisted = await isCoordinateBlacklisted(guildId, coord);
+
+    const safariData = await loadSafariContent();
+    const items = safariData[guildId]?.items || {};
+    const candidates = getReverseBlacklistCandidates(items, coord);
+    const linkedNames = candidates.filter(c => c.linked).map(c => c.item.name || c.id);
+
+    const components = [
+        {
+            type: 18, // Label
+            label: 'Blacklist This Location',
+            description: `Blacklisted locations block player navigation (until unlocked below, or un-blacklisted here). Currently: ${isBlacklisted ? 'Blacklisted' : 'Not Blacklisted'}.`,
+            component: {
+                type: 21, // Radio Group — option `default` pre-selects in modals (String Select's doesn't)
+                custom_id: 'blacklist_status',
+                required: true,
+                // Exactly ONE option may carry `default` — an explicit default:false on the
+                // sibling suppresses pre-selection for the whole group.
+                options: [
+                    { label: 'Not Blacklisted', value: 'no', description: 'Players can navigate here normally (default)', ...(!isBlacklisted ? { default: true } : {}) },
+                    { label: 'Blacklisted', value: 'yes', description: 'Players cannot navigate here', ...(isBlacklisted ? { default: true } : {}) }
+                ]
+            }
+        }
+    ];
+
+    if (candidates.length > 0) {
+        components.push({
+            type: 18, // Label
+            label: 'Reverse Blacklist',
+            description: `Items selected below unlock ${coord} for a player carrying them, even while blacklisted. ${linkedNames.length > 0 ? `Currently unlocking: ${linkedNames.join(', ')}.` : 'No items currently unlock this location.'} Not listed? Edit it directly via /menu → Items → Movement.`.slice(0, 150),
+            component: {
+                type: 3, // String Select — `default` below is best-effort only (Discord doesn't
+                // honor it in modals), so per-option description states current status instead.
+                custom_id: 'reverse_blacklist_items',
+                placeholder: 'Select items that unlock this location...',
+                required: false,
+                min_values: 0,
+                max_values: candidates.length,
+                options: candidates.map(({ id, item, linked }) => ({
+                    label: `${item.emoji || '📦'} ${(item.name || id)}`.slice(0, 100),
+                    value: id,
+                    description: linked ? '✅ Currently unlocks this location' : 'Not currently linked',
+                    ...(linked ? { default: true } : {})
+                }))
+            }
+        });
+    }
+
+    return {
+        type: InteractionResponseType.MODAL,
+        data: {
+            custom_id: `map_cell_blacklist_modal_${coord}`,
+            title: `Blacklist — ${coord}`.slice(0, 45),
+            components
+        }
+    };
+}
+
+/**
+ * Handle the per-location Blacklist modal submission — updates the guild-wide
+ * blacklistedCoordinates list (via the existing updateBlacklistedCoordinates,
+ * so navigation.blocked flags stay in sync exactly as the guild-wide Blacklist
+ * button already maintains them) and toggles reverseBlacklist membership on
+ * whichever items were presented in the Reverse Blacklist select.
+ *
+ * @param {string} guildId
+ * @param {string} coord
+ * @param {Array} submittedComponents - req.body.data.components from the modal submit
+ * @returns {Promise<{ blacklisted: boolean, reverseBlacklistChanged: string[] }>}
+ */
+export async function handleLocationBlacklistModalSubmit(guildId, coord, submittedComponents) {
+    console.log(`🚫 START: map_cell_blacklist_modal - guild ${guildId}, coord ${coord}`);
+
+    const blacklistComp = submittedComponents.find(c => c.component?.custom_id === 'blacklist_status');
+    const shouldBlacklist = (blacklistComp?.component?.value || 'no') === 'yes';
+
+    const { getBlacklistedCoordinates, updateBlacklistedCoordinates } = await import('./mapExplorer.js');
+    const currentBlacklist = await getBlacklistedCoordinates(guildId);
+    const alreadyBlacklisted = currentBlacklist.includes(coord);
+
+    if (shouldBlacklist !== alreadyBlacklisted) {
+        const nextBlacklist = shouldBlacklist
+            ? [...currentBlacklist, coord]
+            : currentBlacklist.filter(c => c !== coord);
+        await updateBlacklistedCoordinates(guildId, nextBlacklist);
+    }
+
+    // Reverse Blacklist select is only present in the modal when the guild had
+    // >=1 item at build time — absent here means nothing to toggle.
+    const reverseComp = submittedComponents.find(c => c.component?.custom_id === 'reverse_blacklist_items');
+    let reverseBlacklistChanged = [];
+    if (reverseComp) {
+        const safariData = await loadSafariContent();
+        const items = safariData[guildId]?.items || {};
+        const presentedItemIds = getReverseBlacklistCandidates(items, coord).map(c => c.id);
+        const selectedItemIds = reverseComp.component?.values || [];
+
+        reverseBlacklistChanged = applyReverseBlacklistSelection(items, coord, presentedItemIds, selectedItemIds);
+        if (reverseBlacklistChanged.length > 0) {
+            await saveSafariContent(safariData);
+        }
+    }
+
+    console.log(`✅ SUCCESS: map_cell_blacklist_modal - ${coord} blacklisted=${shouldBlacklist}, reverseBlacklist changed on ${reverseBlacklistChanged.length} item(s)`);
+
+    return { blacklisted: shouldBlacklist, reverseBlacklistChanged };
+}
+
 /**
  * Handle refresh anchors management button
  * @param {Object} context - Interaction context

@@ -29015,9 +29015,14 @@ Your server is now ready for Tycoons gameplay!`;
                 flags: (1 << 15), // IS_COMPONENTS_V2
                 ephemeral: true
               };
+            } else if (fieldGroup === 'blacklist') {
+              // Bespoke modal (Blacklist toggle + Reverse Blacklist item select) —
+              // not a generic entity field group, doesn't go through createFieldGroupModal.
+              const { buildLocationBlacklistModal } = await import('./safariMapAdmin.js');
+              return await buildLocationBlacklistModal(context.guildId, entityId);
             }
           }
-          
+
           // For consumable property, show select menu instead of modal
           if (fieldGroup === 'properties' && entityType === 'item') {
             const { loadEntity } = await import('./entityManager.js');
@@ -50381,7 +50386,40 @@ Your server is now ready for Tycoons gameplay!`;
           return await buildMapExplorerResponse(context.guildId, context.userId, context.client);
         }
       })(req, res, client);
-      
+
+    } else if (custom_id.startsWith('map_cell_blacklist_modal_')) {
+      // Per-location Blacklist + Reverse Blacklist modal submission (opened from
+      // the Location Manager's 🚫 Blacklist button, next to Stores)
+      return ButtonHandlerFactory.create({
+        id: 'map_cell_blacklist_modal',
+        updateMessage: true,
+        deferred: true,
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const coord = context.customId.replace('map_cell_blacklist_modal_', '');
+          const { handleLocationBlacklistModalSubmit } = await import('./safariMapAdmin.js');
+          await handleLocationBlacklistModalSubmit(context.guildId, coord, req.body.data.components);
+
+          // No anchor refresh here — mirrors the guild-wide Blacklist button
+          // (handleMapAdminBlacklistModal), which also doesn't refresh anchors;
+          // blacklist status affects NEIGHBORING coordinates' navigation buttons,
+          // not this coordinate's own anchor, same as today.
+          const { buildLocationManagerUI } = await import('./entityManagementUI.js');
+          const ui = await buildLocationManagerUI({ guildId: context.guildId, userId: context.userId, coord, member: context.member });
+          if (!ui) {
+            return {
+              flags: (1 << 15), // IS_COMPONENTS_V2
+              components: [{
+                type: 17, // Container
+                components: [{ type: 10, content: '❌ Location data not found.' }]
+              }]
+            };
+          }
+          return ui;
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'map_admin_refresh_anchors_modal') {
       // Handle refresh anchors modal submission
       try {

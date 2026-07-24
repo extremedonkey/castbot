@@ -2297,7 +2297,7 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
       .setCustomId('map_admin_blacklist')
       .setLabel('Blacklist')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('📍')
+      .setEmoji('🚫')
       .setDisabled(!hasActiveMap);
     const mapMgmtRow = new ActionRowBuilder().addComponents([createUpdateButton, deleteButton, blacklistButton]);
     containerComponents.push(mapMgmtRow.toJSON());

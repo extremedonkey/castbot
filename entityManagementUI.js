@@ -809,7 +809,12 @@ export function getFieldGroups(entityType) {
         case 'map_cell':
             return {
                 info: { label: 'Edit', emoji: '🖼️', fields: ['title', 'description', 'image', 'emoji'] },
-                stores: { label: 'Stores', emoji: '🏪', fields: ['stores'] }
+                stores: { label: 'Stores', emoji: '🏪', fields: ['stores'] },
+                // No `fields` — this opens a bespoke modal (safariMapAdmin.js
+                // buildLocationBlacklistModal), not the generic field-group editor.
+                // app.js's entity_field_group_* handler intercepts fieldGroup ===
+                // 'blacklist' for map_cell before it ever reaches createFieldGroupModal.
+                blacklist: { label: 'Blacklist', emoji: '🚫' }
             };
         default:
             return {};
