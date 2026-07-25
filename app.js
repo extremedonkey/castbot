@@ -101,6 +101,13 @@ import {
   handlePlayerModalSubmit
 } from './playerManagement.js';
 import {
+  parseCastDockAction,
+  initCastDockCache,
+  applyCastDockToggle,
+  handleCastDockMessageCreate,
+  handleCastDockChannelDelete
+} from './castDock.js';
+import {
   executeSetup,
   runFullSetup,
   hasCompletedSetup,
@@ -1577,6 +1584,13 @@ client.once('ready', async () => {
   }
 
   console.log(`📥 Total reaction mappings loaded: ${totalMappingsLoaded}`);
+
+  // Initialize CastDock sticky-menu cache from persistent storage
+  try {
+    await initCastDockCache(client);
+  } catch (error) {
+    console.error('❌ Error initializing CastDock cache:', error);
+  }
 
   // Initialize and restore persistent scheduler
   scheduler.init(client);
@@ -9834,6 +9848,25 @@ To fix this:
         const who = isAdminMode ? `<@${targetUserId}>` : 'You';
         const verb = isAdminMode ? 'has' : 'have';
         return { content: `${emoji} ${who} ${verb} **${balance}** ${name}.`, ephemeral: true };
+      }})(req, res, client);
+
+    } else if (custom_id === 'player_menu_sel_castdock') {
+      // PLAYER mode — self-service: a player toggling CastDock for their OWN menu/channel.
+      return ButtonHandlerFactory.create({ id: 'player_menu_sel_castdock', security: 'public', updateMessage: true, handler: async (context) => {
+        await applyCastDockToggle(client, context.guildId, context.channelId, context.userId, parseCastDockAction(req.body.data.values), context.userId);
+        const guild = await context.client.guilds.fetch(context.guildId);
+        const member = await guild.members.fetch(context.userId);
+        const playerData = await loadPlayerData();
+        return await createPlayerManagementUI({ mode: PlayerManagementMode.PLAYER, targetMember: member, playerData, guildId: context.guildId, userId: context.userId, activeButton: 'castdock', client: context.client, channelId: context.channelId });
+      }})(req, res, client);
+
+    } else if (custom_id.startsWith('player_menu_sel_castdock_')) {
+      // ADMIN mode — toggling CastDock on behalf of another player; requires elevated permission.
+      return ButtonHandlerFactory.create({ id: 'player_menu_sel_castdock_admin', requiresPermission: PermissionFlagsBits.ManageRoles, permissionName: 'Manage Roles', updateMessage: true, handler: async (context) => {
+        const targetUserId = custom_id.replace('player_menu_sel_castdock_', '');
+        await applyCastDockToggle(client, context.guildId, context.channelId, targetUserId, parseCastDockAction(req.body.data.values), context.userId);
+        const { buildAdminPlayerMenu } = await import('./playerManagement.js');
+        return await buildAdminPlayerMenu(context.client, context.guildId, targetUserId, context.userId, 'castdock');
       }})(req, res, client);
 
     } else if (custom_id === 'player_menu_sel_inventory' || custom_id.startsWith('player_menu_sel_inventory_')) {
@@ -26187,7 +26220,7 @@ Your server is now ready for Tycoons gameplay!`;
           };
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('admin_set_pronouns_') || custom_id.startsWith('admin_set_timezone_') || custom_id.startsWith('admin_set_age_') || custom_id.startsWith('admin_manage_vanity_') || custom_id.startsWith('admin_set_attributes_') || custom_id.startsWith('admin_set_castlists_') || custom_id.startsWith('admin_set_challenges_') || custom_id.startsWith('admin_set_crafting_') || custom_id.startsWith('admin_set_actions_') || custom_id.startsWith('admin_set_stores_') || custom_id.startsWith('admin_set_currency_') || custom_id.startsWith('admin_set_inventory_') || custom_id.startsWith('admin_set_map_') || custom_id.startsWith('admin_set_stamina_')) {
+    } else if (custom_id.startsWith('admin_set_pronouns_') || custom_id.startsWith('admin_set_timezone_') || custom_id.startsWith('admin_set_age_') || custom_id.startsWith('admin_manage_vanity_') || custom_id.startsWith('admin_set_attributes_') || custom_id.startsWith('admin_set_castlists_') || custom_id.startsWith('admin_set_challenges_') || custom_id.startsWith('admin_set_crafting_') || custom_id.startsWith('admin_set_actions_') || custom_id.startsWith('admin_set_stores_') || custom_id.startsWith('admin_set_currency_') || custom_id.startsWith('admin_set_inventory_') || custom_id.startsWith('admin_set_map_') || custom_id.startsWith('admin_set_castdock_') || custom_id.startsWith('admin_set_stamina_')) {
       // 🔘 Convert to ButtonHandlerFactory
       return ButtonHandlerFactory.create({
         id: custom_id,
@@ -26197,8 +26230,6 @@ Your server is now ready for Tycoons gameplay!`;
           return await handlePlayerButtonClick(req, res, custom_id, playerData, context.client);
         }
       })(req, res, client);
-    // Removed disabled legacy vanity handler
-    // Removed disabled legacy timezone handler
     } else if ((custom_id.startsWith('admin_integrated_age') || custom_id.startsWith('player_integrated_age')) &&
                req.body.data.values?.[0] === 'age_custom') {
       // 🔘 Handle age_custom modal separately (modals cannot be deferred)
@@ -26650,158 +26681,7 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
-    // Removed disabled legacy age handler
-    } else if (false) { // DISABLED
-      // Admin age management
-      try {
-        const guildId = req.body.guild_id;
-        const adminUserId = req.body.member.user.id;
-        const targetPlayerId = custom_id.split('_')[3]; // Extract player ID from admin_set_age_${playerId}
-        
-        const guild = await client.guilds.fetch(guildId);
-        
-        // Check admin permissions
-        const adminMember = await guild.members.fetch(adminUserId);
-        if (!adminMember.permissions.has(PermissionFlagsBits.ManageRoles) && 
-            !adminMember.permissions.has(PermissionFlagsBits.ManageChannels) && 
-            !adminMember.permissions.has(PermissionFlagsBits.ManageGuild)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles, Manage Channels, or Manage Server permissions to use this feature.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-
-        // Get target player
-        let targetMember;
-        try {
-          targetMember = await guild.members.fetch(targetPlayerId);
-        } catch (error) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Unable to find the target player in this server.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-
-        // Get current age if exists
-        const currentAge = getPlayer(guildId, targetPlayerId)?.age || '';
-
-        // Create age input modal
-        const ageModal = new ModalBuilder()
-          .setCustomId(`admin_age_modal_${targetPlayerId}`)
-          .setTitle(`Set Age for ${targetMember.displayName}`);
-
-        const ageInput = new TextInputBuilder()
-          .setCustomId('age_input')
-          .setLabel('Age')
-          .setStyle(TextInputStyle.Short)
-          .setPlaceholder('Enter age (numbers only)')
-          .setRequired(false)
-          .setMaxLength(3);
-
-        if (currentAge) {
-          ageInput.setValue(currentAge);
-        }
-
-        const ageRow = new ActionRowBuilder().addComponents(ageInput);
-        ageModal.addComponents(ageRow);
-
-        return res.send({
-          type: InteractionResponseType.MODAL,
-          data: ageModal
-        });
-
-      } catch (error) {
-        console.error('Error handling admin_set_age button:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Error creating age input',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
-    // Removed disabled legacy vanity handler  
-    } else if (false) { // DISABLED
-      // Admin vanity roles management
-      try {
-        const guildId = req.body.guild_id;
-        const adminUserId = req.body.member.user.id;
-        const targetPlayerId = custom_id.split('_')[3]; // Extract player ID from admin_manage_vanity_${playerId}
-        
-        const guild = await client.guilds.fetch(guildId);
-        
-        // Check admin permissions
-        const adminMember = await guild.members.fetch(adminUserId);
-        if (!adminMember.permissions.has(PermissionFlagsBits.ManageRoles) && 
-            !adminMember.permissions.has(PermissionFlagsBits.ManageChannels) && 
-            !adminMember.permissions.has(PermissionFlagsBits.ManageGuild)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles, Manage Channels, or Manage Server permissions to use this feature.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-
-        // Get target player
-        let targetMember;
-        try {
-          targetMember = await guild.members.fetch(targetPlayerId);
-        } catch (error) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Unable to find the target player in this server.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-
-        // Get current vanity roles
-        const playerData = await loadPlayerData();
-        const currentVanityRoles = playerData[guildId]?.players?.[targetPlayerId]?.vanityRoles || [];
-
-        // Create role select menu
-        const roleSelect = new RoleSelectMenuBuilder()
-          .setCustomId(`admin_select_vanity_${targetPlayerId}`)
-          .setPlaceholder('Special roles to appear under the player in the castlist')
-          .setMinValues(0)
-          .setMaxValues(25);
-
-        if (currentVanityRoles.length > 0) {
-          const limitedRoles = currentVanityRoles.slice(0, 25);
-          roleSelect.setDefaultRoles(limitedRoles);
-        }
-
-        const selectRow = new ActionRowBuilder().addComponents(roleSelect);
-
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: `Select vanity roles for **${targetMember.displayName}**:\n*These roles will appear under their name in the castlist.*`,
-            components: [selectRow],
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-
-      } catch (error) {
-        console.error('Error handling admin_manage_vanity button:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Error creating vanity role selection',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
-    } else if (custom_id === 'player_set_pronouns' || custom_id === 'player_set_timezone' || custom_id === 'player_set_age' || custom_id === 'player_set_attributes' || custom_id === 'player_set_castlists' || custom_id === 'player_set_challenges' || custom_id === 'player_set_crafting' || custom_id === 'player_set_actions' || custom_id === 'player_set_stores' || custom_id === 'player_set_currency' || custom_id === 'player_set_inventory' || custom_id === 'player_set_map') {
+    } else if (custom_id === 'player_set_pronouns' || custom_id === 'player_set_timezone' || custom_id === 'player_set_age' || custom_id === 'player_set_attributes' || custom_id === 'player_set_castlists' || custom_id === 'player_set_challenges' || custom_id === 'player_set_crafting' || custom_id === 'player_set_actions' || custom_id === 'player_set_stores' || custom_id === 'player_set_currency' || custom_id === 'player_set_inventory' || custom_id === 'player_set_map' || custom_id === 'player_set_castdock') {
       // Player management buttons — use modular handler
       const playerData = await loadPlayerData();
       return await handlePlayerButtonClick(req, res, custom_id, playerData, client);
@@ -51523,6 +51403,11 @@ client.on('messageDelete', async (message) => {
     console.error('Error cleaning up reaction mapping on message delete:', error);
   }
 });
+
+// CastDock: repost the pinned player menu as the newest message when enabled for a channel
+client.on('messageCreate', (message) => handleCastDockMessageCreate(client, message));
+// CastDock: clean up config when a channel with sticky mode enabled is deleted
+client.on('channelDelete', (channel) => handleCastDockChannelDelete(client, channel));
 
 // Add near other helper functions
 // checkRoleHierarchyPermission function moved to utils/roleUtils.js (Phase 1A refactoring)

@@ -20,6 +20,8 @@ import { parseAndValidateEmoji, parseTextEmoji, resolveEmoji } from './utils/emo
 import { createBackButtonV2 } from './src/ui/backButtonFactory.js';
 import { getTimeUntilRegeneration } from './pointsManager.js';
 import { getChallengeActions, normalizeLinks, extractActionIds } from './challengeActionCreate.js';
+import { formatBotEmoji } from './botEmojis.js';
+import { getCastDockConfig, buildCastDockSelectRow } from './castDock.js';
 
 /**
  * Player management modes
@@ -591,6 +593,7 @@ async function calculateVisibility(guildId, targetUserId, playerData, safariData
   // === Row 3: Advanced ===
   vis.attributes = { show: isAdmin ? hasAttributesConfigured : hasAttributesConfigured, disabled: isAdmin && !hasTarget, label: 'Stats', emoji: '📊' };
   vis.commands = { show: enableGlobalCommands, disabled: isAdmin && !hasTarget, label: 'Commands', emoji: '🕹️', immediate: true };
+  vis.castdock = { show: true, disabled: isAdmin && !hasTarget, label: 'CastDock', emoji: formatBotEmoji('castbot_logo') };
   vis.vanity = { show: isAdmin, disabled: isAdmin && !hasTarget, label: 'Vanity Roles', emoji: '🎭' };
   vis.navigate = { show: hasTarget && isInitialized && hasMapLocation, disabled: false, label: 'Navigate', emoji: '🗺️', immediate: true, coordinate: currentCoordinate };
 
@@ -675,7 +678,7 @@ function buildSectionRow(buttonIds, targetUserId, activeCategory, visibility, mo
  * @param {string} userId - The interacting user's ID
  * @returns {Object} ActionRow component (always returns something - disabled placeholder if no category)
  */
-async function buildSuperSelect(activeCategory, targetMember, playerData, safariData, guildId, mode, client, guild, userId) {
+async function buildSuperSelect(activeCategory, targetMember, playerData, safariData, guildId, mode, client, guild, userId, channelId) {
   const prefix = mode === PlayerManagementMode.ADMIN ? 'admin' : 'player';
   const userIdPart = mode === PlayerManagementMode.ADMIN && targetMember ? `_${targetMember.id}` : '';
 
@@ -1450,6 +1453,16 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
       };
     }
 
+    // ─── CastDock — pin this menu publicly in the current channel ───────
+    case 'castdock': {
+      const isAdminMode = mode === PlayerManagementMode.ADMIN;
+      const config = await getCastDockConfig(guildId, channelId, playerData);
+      const selectCustomId = isAdminMode && targetMember
+        ? `player_menu_sel_castdock_${targetMember.id}`
+        : 'player_menu_sel_castdock';
+      return buildCastDockSelectRow(selectCustomId, config);
+    }
+
     default:
       return null;
   }
@@ -1578,7 +1591,7 @@ export async function createPlayerManagementUI(options) {
     // Row 3: Advanced (conditional — hide if no buttons visible)
     // 'navigate' removed — superseded by the Map category's "Show Navigate Pane" option.
     // 'vanity' moved to row 1 (Castlists & Profile) as the 5th button.
-    const row3Ids = ['attributes', 'commands'];
+    const row3Ids = ['attributes', 'commands', 'castdock'];
     const row3 = buildSectionRow(row3Ids, targetUserId, activeCategory, visibility, mode);
     if (row3.length) {
       container.components.push({
@@ -1603,7 +1616,7 @@ export async function createPlayerManagementUI(options) {
 
   const selectMenu = await buildSuperSelect(
     activeCategory, targetMember, playerData, safariData,
-    guildId, mode, client, guild, userId
+    guildId, mode, client, guild, userId, channelId
   );
   if (selectMenu) {
     container.components.push(selectMenu);

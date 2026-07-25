@@ -1283,6 +1283,14 @@ export const BUTTON_REGISTRY = {
     category: 'attributes',
     parent: 'prod_player_admin'
   },
+  'admin_set_castdock_*': {
+    label: 'CastDock (Admin)',
+    description: 'Opens CastDock enable/disable for a player, in Player Admin',
+    emoji: '📌',
+    style: 'Secondary',
+    category: 'player_management',
+    parent: 'prod_player_admin'
+  },
   'admin_integrated_attributes_*': {
     label: 'Attribute Select',
     description: 'Select which attribute to modify for a player',
@@ -1363,6 +1371,7 @@ export const BUTTON_REGISTRY = {
   'player_set_crafting': { label: 'Crafting', description: 'Show crafting recipes', emoji: '����️', style: 'Secondary', category: 'player_management' },
   'player_set_actions': { label: 'Actions', description: 'Show player actions', emoji: '⚡', style: 'Secondary', category: 'player_management' },
   'player_set_stores': { label: 'Stores', description: 'Show global stores', emoji: '🏪', style: 'Secondary', category: 'player_management' },
+  'player_set_castdock': { label: 'CastDock', description: 'Toggle CastDock sticky menu for this channel', emoji: '📌', style: 'Secondary', category: 'player_management' },
 
   // === CHALLENGE ACTION CATEGORIES ===
   'challenge_action_cat_select_*': {
