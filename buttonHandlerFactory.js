@@ -3396,6 +3396,22 @@ export const BUTTON_REGISTRY = {
     category: 'application_management',
     requiresModal: true
   },
+  'marooning_show_rejects_*': {
+    label: 'Show Rejects',
+    description: 'Reveal the Don\'t Cast/Withdrawn roster on Marooning (hidden by default)',
+    emoji: '🗑️',
+    style: 'Secondary',
+    parent: 'season_marooning',
+    category: 'application_management'
+  },
+  'marooning_hide_rejects_*': {
+    label: 'Hide Rejects',
+    description: 'Collapse the Don\'t Cast/Withdrawn roster on Marooning',
+    emoji: '🗑️',
+    style: 'Secondary',
+    parent: 'season_marooning',
+    category: 'application_management'
+  },
   // ── 🔐 Channel Administration (hidden tab — CHANNEL_ADMIN_USER_IDS only) ──
   // Gating is an inline user-ID check in each handler; `restrictedUser` here enforces NOTHING
   // (RaP 0900) and is recorded for documentation only.

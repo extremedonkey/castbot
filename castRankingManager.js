@@ -1128,14 +1128,17 @@ export async function generateDncOverviewUI({ guildId, configId, guild }) {
 /**
  * 🚣 Marooning tab — the season-wide casting-decision summary (formerly the "Casting Summary" button).
  * Now a first-class Season Manager tab: shared seasonManagerHeader('marooning') + buildSeasonNavRow(…,
- * 'marooning') + the casting-status breakdown + the shared [← Seasons][Edit] bottom row. LEAN chrome,
- * consistent with the Apps/Planner/Casting tabs. Reached via season_marooning_{configId} (and the legacy
- * ranking_view_all_scores_* which now delegates here). Pure render — caller supplies playerData + seasonName.
- * @param {Object} p - { configId, guildId, playerData, seasonName, guild, userId }
+ * 'marooning') + the casting-status breakdown + the shared [← Seasons][Edit][🗑️ Show/Hide Rejects] bottom
+ * row. LEAN chrome, consistent with the Apps/Planner/Casting tabs. Reached via season_marooning_{configId}
+ * (and the legacy ranking_view_all_scores_* which now delegates here). Pure render — caller supplies
+ * playerData + seasonName.
+ * @param {Object} p - { configId, guildId, playerData, seasonName, guild, userId, showRejects }
  * @param {string} [p.userId] - viewer; gates the hidden Channels tab in the nav row
+ * @param {boolean} [p.showRejects] - reveal the Don't Cast/Withdrawn roster (hidden by default; toggled
+ *   via marooning_show_rejects_{configId} / marooning_hide_rejects_{configId})
  * @returns {Object} { components: [container] } (updateMessage pattern; caller adds ephemeral flags if needed)
  */
-export async function buildMarooningView({ configId, guildId, playerData, seasonName, guild, userId = null }) {
+export async function buildMarooningView({ configId, guildId, playerData, seasonName, guild, userId = null, showRejects = false }) {
   const { getApplicationsForSeason, getAllApplicationsFromData } = await import('./storage.js');
   const { buildSeasonNavRow, seasonManagerHeader, buildSeasonBottomRow } = await import('./seasonSelector.js');
 
@@ -1267,7 +1270,6 @@ export async function buildMarooningView({ configId, guildId, playerData, season
   };
 
   let body = '### ```🎬 Casting Decisions```\n';
-  let anyGroup = false;
 
   // Cast, Alternate, and Undecided share ONE continuous counter: a host tracking toward a target cast
   // size wants a single running count across everyone still "in consideration". Don't Cast and Withdrawn
@@ -1283,9 +1285,9 @@ export async function buildMarooningView({ configId, guildId, playerData, season
     { emoji: '🔄', title: 'Alternate', group: castGroups.alternative, breakdown: true },
     { emoji: '⚪', title: 'Undecided', group: castGroups.undecided, breakdown: false }
   ];
+  const hasCandidates = CANDIDATE_SECTIONS.some(s => s.group.length > 0);
   for (const section of CANDIDATE_SECTIONS) {
     if (section.group.length === 0) continue;
-    anyGroup = true;
     body += `### \`\`\`${section.emoji} ${section.title} (${section.group.length}${section.countSuffix || ''})\`\`\`\n`;
     if (section.breakdown) {
       const { accepted, offerSent, draft } = splitByOfferStage(section.group);
@@ -1297,19 +1299,28 @@ export async function buildMarooningView({ configId, guildId, playerData, season
     }
   }
 
-  // Not candidates — Don't Cast and Withdrawn each restart their OWN numbering at 1.
+  // Not candidates — Don't Cast and Withdrawn each restart their OWN numbering at 1. HIDDEN by default
+  // (🗑️ Show/Hide Rejects toggle in the bottom row, marooning_{show|hide}_rejects_{configId}) — Marooning
+  // is primarily a "who's still in the running" view, so rejected/withdrawn applicants are noise most of
+  // the time. The Summary counts below always include them regardless of the toggle — only the detailed
+  // roster is collapsed.
   const NON_CANDIDATE_SECTIONS = [
     { emoji: '🙅', title: "Don't Cast", group: castGroups.reject },
     { emoji: '✖️', title: 'Withdrawn', group: castGroups.withdrawn }
   ];
-  for (const section of NON_CANDIDATE_SECTIONS) {
-    if (section.group.length === 0) continue;
-    anyGroup = true;
-    body += `### \`\`\`${section.emoji} ${section.title} (${section.group.length})\`\`\`\n`;
-    body += renderPlayerList(section.group, { n: 0 });
+  const hasRejects = castGroups.reject.length > 0 || castGroups.withdrawn.length > 0;
+  if (showRejects) {
+    for (const section of NON_CANDIDATE_SECTIONS) {
+      if (section.group.length === 0) continue;
+      body += `### \`\`\`${section.emoji} ${section.title} (${section.group.length})\`\`\`\n`;
+      body += renderPlayerList(section.group, { n: 0 });
+    }
+  } else if (hasRejects) {
+    const hiddenCount = castGroups.reject.length + castGroups.withdrawn.length;
+    body += `-# 🗑️ ${hiddenCount} Don't Cast/Withdrawn applicant${hiddenCount !== 1 ? 's' : ''} hidden — click Show Rejects below.\n\n`;
   }
 
-  if (!anyGroup) body += '-# No applicants yet for this season.\n\n';
+  if (!hasCandidates && !hasRejects) body += '-# No applicants yet for this season.\n\n';
   body += `### 📊 **SUMMARY**\n`;
   body += `> **Total Applicants:** ${allApplications.length}\n`;
   body += `> **Cast:** ${castGroups.cast.length} | **Alternate:** ${castGroups.alternative.length} | **Undecided:** ${castGroups.undecided.length} | **Rejected:** ${castGroups.reject.length} | **Withdrawn:** ${castGroups.withdrawn.length}\n`;
@@ -1320,6 +1331,12 @@ export async function buildMarooningView({ configId, guildId, playerData, season
   // it's identical in look/feel/function: opens the Add New Tribe modal → creates the role → adds it to the
   // DEFAULT castlist. 💭 Draft Tribes opens the private draft modal (needs ≥2 tribes, else disabled).
   const canDraft = tribeRoleIds.length >= 2;
+
+  // 🗑️ Show/Hide Rejects — toggles the Don't Cast/Withdrawn roster. Disabled when there's nothing to
+  // reveal (both groups empty) rather than offering a dead-end click.
+  const rejectsToggleButton = showRejects
+    ? { type: 2, custom_id: `marooning_hide_rejects_${configId}`, label: 'Hide Rejects', style: 2, emoji: { name: '🗑️' }, disabled: !hasRejects }
+    : { type: 2, custom_id: `marooning_show_rejects_${configId}`, label: 'Show Rejects', style: 2, emoji: { name: '🗑️' }, disabled: !hasRejects };
 
   const container = {
     type: 17,
@@ -1343,7 +1360,7 @@ export async function buildMarooningView({ configId, guildId, playerData, season
       { type: 14 },
       { type: 10, content: body },
       { type: 14 },
-      buildSeasonBottomRow(configId, 'marooning')
+      buildSeasonBottomRow(configId, 'marooning', [rejectsToggleButton])
     ]
   };
 
@@ -1351,6 +1368,20 @@ export async function buildMarooningView({ configId, guildId, playerData, season
   countComponents([container], { verbosity: 'summary', label: `Marooning - ${seasonName}` });
 
   return { components: [container] };
+}
+
+/**
+ * Parses the 🗑️ Show/Hide Rejects toggle's custom_id and re-renders Marooning with the flag flipped.
+ * Caller (app.js) owns the permission gate + playerData load; this is just the configId/seasonName/
+ * render plumbing, kept out of app.js per the router-not-processor rule.
+ * @param {string} customId - marooning_show_rejects_{configId} or marooning_hide_rejects_{configId}
+ * @returns {Promise<Object>} a buildMarooningView response
+ */
+export async function renderMarooningRejectsToggle(customId, guildId, userId, guild, playerData) {
+  const showRejects = customId.startsWith('marooning_show_rejects_');
+  const configId = customId.replace(showRejects ? 'marooning_show_rejects_' : 'marooning_hide_rejects_', '');
+  const seasonName = playerData[guildId]?.applicationConfigs?.[configId]?.seasonName || `Season ${configId}`;
+  return buildMarooningView({ configId, guildId, playerData, seasonName, guild, userId, showRejects });
 }
 
 /**

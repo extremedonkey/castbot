@@ -81,6 +81,29 @@ function shouldBulkFetchMembers(cacheSize, memberCount) {
   return cacheSize < memberCount * 0.8;
 }
 
+// Mirrors renderMarooningRejectsToggle's custom_id parsing (castRankingManager.js).
+function parseRejectsToggleCustomId(customId) {
+  const showRejects = customId.startsWith('marooning_show_rejects_');
+  const configId = customId.replace(showRejects ? 'marooning_show_rejects_' : 'marooning_hide_rejects_', '');
+  return { showRejects, configId };
+}
+
+// Mirrors buildMarooningView's 🗑️ toggle button — label/custom_id flip on current state; disabled
+// when there's nothing to reveal (no dead-end click).
+function rejectsToggleButton(showRejects, hasRejects, configId) {
+  return showRejects
+    ? { custom_id: `marooning_hide_rejects_${configId}`, label: 'Hide Rejects', disabled: !hasRejects }
+    : { custom_id: `marooning_show_rejects_${configId}`, label: 'Show Rejects', disabled: !hasRejects };
+}
+
+// Mirrors buildMarooningView's collapsed-state hint line.
+function hiddenRejectsHint(showRejects, rejectCount, withdrawnCount) {
+  if (showRejects) return null;
+  const hiddenCount = rejectCount + withdrawnCount;
+  if (hiddenCount === 0) return null;
+  return `-# 🗑️ ${hiddenCount} Don't Cast/Withdrawn applicant${hiddenCount !== 1 ? 's' : ''} hidden — click Show Rejects below.`;
+}
+
 // Mirrors buildMarooningView's Cast Players header — "(N/Est)" once the Season Planner's Estimated
 // Number of Players is set, else plain "(N)". Deliberately uncapped: exceeding the estimate is valid.
 function castPlayersHeader(count, estimatedTotalPlayers) {
@@ -422,5 +445,58 @@ describe('Marooning — deleted Discord roles are gracefully ignored', () => {
   it('Draft Tribes gate: 2 tribes with 1 deleted → below the 2-tribe minimum (button disabled / modal null)', () => {
     const live = filterDeletedRoles(['roleA', 'roleDead'], mockGuild(['roleA']));
     assert.ok(live.length < 2);
+  });
+});
+
+describe('Marooning — 🗑️ Show/Hide Rejects toggle', () => {
+  it('parses show_rejects and hide_rejects custom_ids, incl. underscore-laden configId', () => {
+    assert.deepEqual(
+      parseRejectsToggleCustomId('marooning_show_rejects_config_1781015852414_454453967309504512'),
+      { showRejects: true, configId: 'config_1781015852414_454453967309504512' }
+    );
+    assert.deepEqual(
+      parseRejectsToggleCustomId('marooning_hide_rejects_config_1781015852414_454453967309504512'),
+      { showRejects: false, configId: 'config_1781015852414_454453967309504512' }
+    );
+  });
+
+  it('default (collapsed) state shows "Show Rejects", pointing at the show_rejects custom_id', () => {
+    const btn = rejectsToggleButton(false, true, 'cfg1');
+    assert.equal(btn.label, 'Show Rejects');
+    assert.equal(btn.custom_id, 'marooning_show_rejects_cfg1');
+    assert.equal(btn.disabled, false);
+  });
+
+  it('expanded state shows "Hide Rejects", pointing at the hide_rejects custom_id', () => {
+    const btn = rejectsToggleButton(true, true, 'cfg1');
+    assert.equal(btn.label, 'Hide Rejects');
+    assert.equal(btn.custom_id, 'marooning_hide_rejects_cfg1');
+  });
+
+  it('disabled (no dead-end click) when there is nothing to reveal', () => {
+    assert.equal(rejectsToggleButton(false, false, 'cfg1').disabled, true);
+    assert.equal(rejectsToggleButton(true, false, 'cfg1').disabled, true);
+  });
+
+  it('collapsed + hidden applicants present → hint line with the combined count', () => {
+    assert.equal(
+      hiddenRejectsHint(false, 3, 2),
+      '-# 🗑️ 5 Don\'t Cast/Withdrawn applicants hidden — click Show Rejects below.'
+    );
+  });
+
+  it('singular applicant → "applicant" not "applicants"', () => {
+    assert.equal(
+      hiddenRejectsHint(false, 1, 0),
+      '-# 🗑️ 1 Don\'t Cast/Withdrawn applicant hidden — click Show Rejects below.'
+    );
+  });
+
+  it('expanded → no hint line regardless of counts', () => {
+    assert.equal(hiddenRejectsHint(true, 3, 2), null);
+  });
+
+  it('collapsed but nothing hidden → no hint line (avoids a pointless "0 hidden" message)', () => {
+    assert.equal(hiddenRejectsHint(false, 0, 0), null);
   });
 });

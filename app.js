@@ -13636,6 +13636,22 @@ To fix this:
           return uiResponse;
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('marooning_show_rejects_') || custom_id.startsWith('marooning_hide_rejects_')) {
+      // 🗑️ Show/Hide Rejects toggle — re-renders Marooning with the Don't Cast/Withdrawn roster revealed/collapsed.
+      return ButtonHandlerFactory.create({
+        id: 'marooning_toggle_rejects',
+        deferred: true,
+        updateMessage: true,
+        handler: async (context) => {
+          const { guildId, userId, client } = context;
+          const guild = await client.guilds.fetch(guildId);
+          const member = await guild.members.fetch(userId);
+          if (!hasCastRankingPermissions(member, guildId)) return { flags: (1 << 15), components: [{ type: 17, components: [{ type: 10, content: '❌ You need Manage Roles or Manage Channels permissions to access Marooning.' }] }] };
+          const playerData = await loadPlayerData();
+          const { renderMarooningRejectsToggle } = await import('./castRankingManager.js');
+          return renderMarooningRejectsToggle(context.customId, guildId, userId, guild, playerData);
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('season_channels_') || custom_id.startsWith('channels_')) {
       // 🔐 Channel Administration — hidden Channels tab. Bodies live in src/channels/channelsRouter.js.
       return ButtonHandlerFactory.create({
