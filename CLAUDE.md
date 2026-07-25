@@ -505,6 +505,7 @@ When a feature is **deployed to production and working**, move/rename its doc in
 - **🚷 DNC OVERVIEW** → [docs/03-features/DNCOverview.md](docs/03-features/DNCOverview.md) - Global DNC conflict detection, mutual/one-way classification, season-wide view
 - **🐙 ENEMIES** → [docs/03-features/EnemySystem.md](docs/03-features/EnemySystem.md) - Enemy entities, fight_enemy outcome, combat resolution
 - **🧑‍🤝‍🧑 PLAYER MANAGEMENT** → [playerManagement.js](playerManagement.js) - Pronouns, timezones, age, vanity roles, attributes display
+- **📌 CASTDOCK** → [docs/03-features/CastDock.md](docs/03-features/CastDock.md) - Sticky public /menu pinned to a channel (subs/submission use case), compact + full render modes, event-driven repost on messageCreate (no polling). Core: [castDock.js](castDock.js)
 - **🥇 CASTLIST V3** → [docs/03-features/CastlistV3.md](docs/03-features/CastlistV3.md) - Castlist system overhaul
 - **🏷️ VANITY ROLE SORT/DISPLAY** → [docs/03-features/VanityRoleSortDisplay.md](docs/03-features/VanityRoleSortDisplay.md) - Vanity role tier sorting (Season→Alpha→Numeric→Emoji→Other) for member ordering + in-card display
 - **📅 SEASONS** → [docs/concepts/SurvivorContext.md](docs/concepts/SurvivorContext.md) - Season lifecycle and integration
