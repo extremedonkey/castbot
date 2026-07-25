@@ -41,6 +41,64 @@ const REMOTE_PATH = IS_TEST
 const SSH_KEY_PATH = path.join(os.homedir(), '.ssh', IS_TEST ? 'castbot-blue-key.pem' : 'castbot-key.pem');
 const SSH_TARGET = `${REMOTE_USER}@${REMOTE_HOST}`;
 
+// Always-on TEST box (castbot-blue) — used to SEND prod deploy notifications (see
+// sendDeployNotification below), independent of which target this run is deploying TO.
+// Its own .env holds the CastBot Test bot token, so notifications posted from there show
+// up as "CastBot Test" instead of whichever bot's token happens to be in the LOCAL .env
+// on the machine running this deploy (usually the dev laptop's CastBot-Dev token).
+const NOTIFY_HOST = process.env.TEST_LIGHTSAIL_HOST || '13.210.218.153';
+const NOTIFY_USER = process.env.TEST_LIGHTSAIL_USER || 'ubuntu';
+const NOTIFY_PATH = process.env.TEST_LIGHTSAIL_PATH || '/home/ubuntu/castbot';
+const NOTIFY_SSH_KEY = path.join(os.homedir(), '.ssh', 'castbot-blue-key.pem');
+
+// POSIX single-quote escaping for values dropped into a remote shell command string
+// (git commit messages, file lists) — mirrors the escaping used by app.js's TEST
+// self-announce (`replace(/'/g, "'\\''")`).
+function shQuote(value) {
+    return `'${String(value ?? '').replace(/'/g, `'\\''`)}'`;
+}
+
+function spawnLocalNotify({ customMessage, commitMessage, filesChanged, gitStats }) {
+    const notifyProcess = spawn('node', [
+        'scripts/notify-restart.js',
+        customMessage,
+        commitMessage,
+        filesChanged,
+        gitStats
+    ], {
+        env: { ...process.env, PRODUCTION: 'TRUE', INSTANCE_ROLE: '' },
+        detached: true,
+        stdio: 'ignore'
+    });
+    notifyProcess.unref();
+}
+
+// Send the PRODUCTION deploy notification FROM the always-on TEST box instead of
+// locally, so it posts as CastBot Test (always up) rather than CastBot-Dev (only up
+// when the laptop is). Falls back to the local send (original behavior, posts as
+// CastBot-Dev) if the box is unreachable, so a notification still goes out either way.
+async function sendDeployNotification({ customMessage, commitMessage, filesChanged, gitStats }) {
+    const remoteArgs = [customMessage, commitMessage, filesChanged, gitStats].map(shQuote).join(' ');
+    const remoteCommand = `cd ${NOTIFY_PATH} && PRODUCTION=TRUE INSTANCE_ROLE= node scripts/notify-restart.js ${remoteArgs}`;
+
+    const exitCode = await new Promise((resolve) => {
+        const ssh = spawn('ssh', [
+            '-i', NOTIFY_SSH_KEY,
+            '-o', 'ConnectTimeout=10',
+            `${NOTIFY_USER}@${NOTIFY_HOST}`,
+            remoteCommand
+        ], { stdio: 'ignore' });
+        ssh.on('close', (code) => resolve(code));
+        ssh.on('error', () => resolve(1));
+    });
+
+    if (exitCode === 0) {
+        return 'test-box';
+    }
+    spawnLocalNotify({ customMessage, commitMessage, filesChanged, gitStats });
+    return 'local-fallback';
+}
+
 function log(message, level = 'info') {
     const prefix = {
         'info': '  ',
@@ -387,28 +445,23 @@ async function deployToProduction() {
                 let customMessage = COMMANDS_ONLY
                     ? `${envWord} commands updated - changes will propagate within 1 hour!`
                     : `${envWord} deployment successful - bot is now live with latest changes!`;
+                const commitMessage = gitCommitMessage || `${envWord} deployment`;
 
-                // notify-restart picks its label from INSTANCE_ROLE/PRODUCTION; pass the right pair.
-                const notifyEnv = IS_TEST
-                    ? { ...process.env, PRODUCTION: 'FALSE', INSTANCE_ROLE: 'test' }
-                    : { ...process.env, PRODUCTION: 'TRUE', INSTANCE_ROLE: '' };
-
-                const { spawn } = await import('child_process');
-                const notifyProcess = spawn('node', [
-                    'scripts/notify-restart.js',
-                    customMessage,
-                    gitCommitMessage || `${envWord} deployment`,
-                    gitFilesChanged,
-                    gitStats
-                ], {
-                    env: notifyEnv,
-                    detached: true,
-                    stdio: 'ignore'
-                });
-
-                notifyProcess.unref();
-
-                log('✅ Discord notification sent', 'success');
+                if (IS_TEST) {
+                    // Deploying TO the test box itself — unchanged local send.
+                    const notifyProcess = spawn('node', [
+                        'scripts/notify-restart.js', customMessage, commitMessage, gitFilesChanged, gitStats
+                    ], {
+                        env: { ...process.env, PRODUCTION: 'FALSE', INSTANCE_ROLE: 'test' },
+                        detached: true,
+                        stdio: 'ignore'
+                    });
+                    notifyProcess.unref();
+                    log('✅ Discord notification sent', 'success');
+                } else {
+                    const via = await sendDeployNotification({ customMessage, commitMessage, filesChanged: gitFilesChanged, gitStats });
+                    log(`✅ Discord notification sent (via ${via === 'test-box' ? 'TEST box' : 'local fallback'})`, 'success');
+                }
             } catch (notifyError) {
                 log('⚠️  Could not send Discord notification (non-critical)', 'warning');
                 if (VERBOSE) {
@@ -430,19 +483,20 @@ async function deployToProduction() {
         // Send Discord notification for failed deployment
         if (!DRY_RUN) {
             try {
-                const { spawn } = await import('child_process');
-                const notifyProcess = spawn('node', [
-                    'scripts/notify-restart.js',
-                    `❌ Production deployment FAILED: ${error.message}`,
-                    gitCommitMessage || 'Production deployment attempted',
-                    gitFilesChanged,
-                    gitStats
-                ], {
-                    env: { ...process.env, PRODUCTION: 'TRUE' },
-                    detached: true,
-                    stdio: 'ignore'
-                });
-                notifyProcess.unref();
+                const customMessage = `❌ Production deployment FAILED: ${error.message}`;
+                const commitMessage = gitCommitMessage || 'Production deployment attempted';
+                if (IS_TEST) {
+                    const notifyProcess = spawn('node', [
+                        'scripts/notify-restart.js', customMessage, commitMessage, gitFilesChanged, gitStats
+                    ], {
+                        env: { ...process.env, PRODUCTION: 'TRUE' },
+                        detached: true,
+                        stdio: 'ignore'
+                    });
+                    notifyProcess.unref();
+                } else {
+                    await sendDeployNotification({ customMessage, commitMessage, filesChanged: gitFilesChanged, gitStats });
+                }
             } catch (notifyError) {
                 // Silent fail - error notification is not critical
             }
