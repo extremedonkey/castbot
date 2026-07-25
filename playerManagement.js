@@ -1522,6 +1522,17 @@ export async function createPlayerManagementUI(options) {
     content: `## ${title}`
   });
 
+  // ── CastDock: collapse toggle (only in a channel where the sticky menu is active) ──
+  // Channel-scoped, not mode-scoped — anyone rendering a menu in a CastDock-enabled
+  // channel sees this, regardless of how they reached the full view.
+  if (client?.castDockChannels?.has(channelId)) {
+    container.components.push({
+      type: 9, // Section
+      components: [{ type: 10, content: '-# 📌 CastDock is pinned in this channel' }],
+      accessory: { type: 2, custom_id: 'castdock_collapse', label: '⌄', style: 2 }
+    });
+  }
+
   // ── Admin: User Select ──
   if (showUserSelect) {
     container.components.push({ type: 14 }); // Separator
@@ -1983,5 +1994,7 @@ async function createHotSwappableSelect(activeButton, targetMember, playerData, 
 }
 
 export {
-  createHotSwappableSelect
+  createHotSwappableSelect,
+  calculateVisibility,
+  buildSectionRow
 };

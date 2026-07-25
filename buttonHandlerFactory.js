@@ -1372,6 +1372,8 @@ export const BUTTON_REGISTRY = {
   'player_set_actions': { label: 'Actions', description: 'Show player actions', emoji: '⚡', style: 'Secondary', category: 'player_management' },
   'player_set_stores': { label: 'Stores', description: 'Show global stores', emoji: '🏪', style: 'Secondary', category: 'player_management' },
   'player_set_castdock': { label: 'CastDock', description: 'Toggle CastDock sticky menu for this channel', emoji: '📌', style: 'Secondary', category: 'player_management' },
+  'castdock_expand': { label: 'Expand', description: 'Show the full player menu from CastDock\'s compact view', emoji: '⬆️', style: 'Secondary', category: 'player_management' },
+  'castdock_collapse': { label: 'Collapse', description: 'Return CastDock to its compact view', emoji: '⬇️', style: 'Secondary', category: 'player_management' },
 
   // === CHALLENGE ACTION CATEGORIES ===
   'challenge_action_cat_select_*': {

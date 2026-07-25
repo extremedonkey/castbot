@@ -11,7 +11,10 @@ import {
     normalizeCastDockConfig,
     buildCastDockSelectRow,
     parseCastDockAction,
-    evaluateCastDockTrigger
+    evaluateCastDockTrigger,
+    COMPACT_ROW2_IDS,
+    COMPACT_ROW3_IDS,
+    stripButtonLabels
 } from '../castDock.js';
 
 describe('CastDock — normalizeCastDockConfig', () => {
@@ -112,5 +115,61 @@ describe('CastDock — evaluateCastDockTrigger (anti-loop / cooldown truth table
     it('reposts on the first-ever trigger (lastRepostAt 0/undefined) when enabled and human', () => {
         assert.equal(evaluateCastDockTrigger({ entry: { enabled: true, lastRepostAt: 0 }, authorIsBot: false }).action, 'repost');
         assert.equal(evaluateCastDockTrigger({ entry: { enabled: true }, authorIsBot: false }).action, 'repost');
+    });
+});
+
+describe('CastDock — compact view row composition', () => {
+    it('puts commands first, guaranteeing it chunks into the same ActionRow as currency (buildSectionRow groups in array order, 5 per row)', () => {
+        assert.equal(COMPACT_ROW2_IDS[0], 'commands');
+        assert.ok(COMPACT_ROW2_IDS.indexOf('commands') < 5, 'commands must land in the first 5-item chunk alongside currency');
+        assert.ok(COMPACT_ROW2_IDS.indexOf('currency') < 5, 'currency must also be in the first chunk for the two to ever share a row');
+    });
+
+    it('row 2 never includes attributes/castdock (those stay in row 3)', () => {
+        assert.ok(!COMPACT_ROW2_IDS.includes('attributes'));
+        assert.ok(!COMPACT_ROW2_IDS.includes('castdock'));
+    });
+
+    it('row 3 no longer includes commands (relocated to row 2) but keeps attributes and castdock', () => {
+        assert.deepEqual(COMPACT_ROW3_IDS, ['attributes', 'castdock']);
+    });
+
+    it('row 1 (Castlists & Profile) ids are entirely absent from both compact rows', () => {
+        const row1Ids = ['castlists', 'pronouns', 'timezone', 'age', 'vanity'];
+        for (const id of row1Ids) {
+            assert.ok(!COMPACT_ROW2_IDS.includes(id), `${id} must not appear in compact row 2`);
+            assert.ok(!COMPACT_ROW3_IDS.includes(id), `${id} must not appear in compact row 3`);
+        }
+    });
+});
+
+describe('CastDock — stripButtonLabels', () => {
+    it('deletes label but keeps emoji/custom_id/style on every button in a row', () => {
+        const row = { type: 1, components: [
+            { type: 2, style: 2, label: 'Currency', custom_id: 'player_set_currency', emoji: { name: '🪙' } },
+            { type: 2, style: 2, label: 'Inventory', custom_id: 'player_set_inventory', emoji: { name: '🧰' } }
+        ] };
+        stripButtonLabels(row);
+        for (const btn of row.components) {
+            assert.ok(!('label' in btn), 'label must be fully removed, not just emptied');
+            assert.ok(btn.emoji, 'emoji must survive untouched');
+            assert.ok(btn.custom_id, 'custom_id must survive untouched');
+        }
+    });
+
+    it('accepts an array of rows (as buildSectionRow returns when chunked across multiple ActionRows)', () => {
+        const rows = [
+            { type: 1, components: [{ type: 2, label: 'A', custom_id: 'a', emoji: { name: '🅰️' } }] },
+            { type: 1, components: [{ type: 2, label: 'B', custom_id: 'b', emoji: { name: '🅱️' } }] }
+        ];
+        stripButtonLabels(rows);
+        assert.ok(!('label' in rows[0].components[0]));
+        assert.ok(!('label' in rows[1].components[0]));
+    });
+
+    it('is a no-op on a row with no components (safe on empty/malformed input)', () => {
+        assert.deepEqual(stripButtonLabels({ type: 1, components: [] }), { type: 1, components: [] });
+        assert.doesNotThrow(() => stripButtonLabels(null));
+        assert.doesNotThrow(() => stripButtonLabels(undefined));
     });
 });

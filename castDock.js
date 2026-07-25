@@ -141,6 +141,77 @@ export async function initCastDockCache(client) {
   console.log(`📥 CastDock: ${client.castDockChannels.size} channel(s) enabled across all guilds`);
 }
 
+// ── Compact view (the CastDock steady-state UI) ─────────────────────────────
+
+// 'commands' listed first so it always lands in the same ActionRow as currency/inventory —
+// buildSectionRow chunks visible buttons into rows of 5 in array order, so whatever's
+// first is guaranteed to share row 1 with the row's other early entries.
+export const COMPACT_ROW2_IDS = ['commands', 'currency', 'inventory', 'map', 'stamina', 'challenges', 'crafting', 'actions', 'stores'];
+export const COMPACT_ROW3_IDS = ['attributes', 'castdock']; // 'commands' removed — relocated to row 2 above
+
+/** Pure — drops the label from every button in a row (or array of rows), keeping only its emoji. */
+export function stripButtonLabels(rows) {
+  for (const row of [].concat(rows)) {
+    for (const component of row?.components || []) {
+      delete component.label;
+    }
+  }
+  return rows;
+}
+
+/**
+ * Builds the compact CastDock view: header (+ '^' expand toggle), player info, and the
+ * Safari + Advanced button rows with 'commands' merged into Safari — all emoji-only.
+ * No Row 1 (Castlists & Profile) and no hot-swap select; this is a minimal "home" view,
+ * not a full menu replacement — clicking any button still routes through the exact same
+ * handlers the full menu uses, which is what surfaces the full menu (with its own
+ * CastDock collapse toggle, added by createPlayerManagementUI for any CastDock channel).
+ */
+export async function buildCompactCastDockMenu(client, guildId, targetMember, playerData, channelId) {
+  const { calculateVisibility, buildSectionRow, createPlayerDisplaySection, PlayerManagementMode } = await import('./playerManagement.js');
+  const { loadSafariContent } = await import('./safariManager.js');
+  const { countComponents } = await import('./utils.js');
+
+  const targetUserId = targetMember.id;
+  const safariData = await loadSafariContent();
+  const visibility = await calculateVisibility(guildId, targetUserId, playerData, safariData, PlayerManagementMode.PLAYER, client, channelId);
+
+  const container = {
+    type: 17, // Container
+    accent_color: 0x3498DB,
+    components: [{
+      type: 9, // Section — header with the expand toggle as its accessory
+      components: [{ type: 10, content: '## CastBot | Player Menu' }],
+      accessory: { type: 2, custom_id: 'castdock_expand', label: '^', style: 2 }
+    }]
+  };
+
+  container.components.push({ type: 14 }); // Separator
+
+  const playerSection = await createPlayerDisplaySection(targetMember, playerData, guildId);
+  if (playerSection) container.components.push(playerSection);
+
+  container.components.push({ type: 14 }); // Separator
+
+  const row2 = buildSectionRow(COMPACT_ROW2_IDS, targetUserId, null, visibility, PlayerManagementMode.PLAYER);
+  if (row2.length) {
+    stripButtonLabels(row2);
+    container.components.push({ type: 10, content: '### ```🦁 Idol Hunts, Challenges and Safari```' });
+    row2.forEach(r => container.components.push(r));
+  }
+
+  const row3 = buildSectionRow(COMPACT_ROW3_IDS, targetUserId, null, visibility, PlayerManagementMode.PLAYER);
+  if (row3.length) {
+    stripButtonLabels(row3);
+    container.components.push({ type: 10, content: '### ```💎 Advanced```' });
+    row3.forEach(r => container.components.push(r));
+  }
+
+  countComponents([container], { enableLogging: true, verbosity: 'summary', label: 'CastDock Compact Menu' });
+
+  return { flags: (1 << 15), components: [container] };
+}
+
 // ── Repost (impure — single code path for both the Enable action and the hot path) ──
 
 /**
@@ -149,7 +220,6 @@ export async function initCastDockCache(client) {
  * stray duplicate rather than a channel with no sticky at all).
  */
 export async function repostCastDockMenu(client, guildId, channelId, entry) {
-  const { createPlayerManagementUI, PlayerManagementMode } = await import('./playerManagement.js');
   const { loadPlayerData } = await import('./storage.js');
   const { sanitizeComponentEmojis } = await import('./utils/emojiUtils.js');
 
@@ -163,18 +233,9 @@ export async function repostCastDockMenu(client, guildId, channelId, entry) {
   }
 
   const playerData = await loadPlayerData();
-  const menuUI = await createPlayerManagementUI({
-    mode: PlayerManagementMode.PLAYER,
-    targetMember,
-    playerData,
-    guildId,
-    userId: entry.targetUserId,
-    channelId,
-    showUserSelect: false,
-    showVanityRoles: false,
-    title: 'CastBot | Player Menu',
-    client
-  });
+  // Reposts always render compact (the steady-state view) — a viewer who expanded it
+  // via the '^' button gets reset to compact on the next repost, same as any other state.
+  const menuUI = await buildCompactCastDockMenu(client, guildId, targetMember, playerData, channelId);
   // Bypassing the interaction-response path (raw fetch below), so sanitize explicitly —
   // an invalid/deleted custom emoji in the menu would otherwise fail the whole POST unattended.
   sanitizeComponentEmojis(menuUI.components);

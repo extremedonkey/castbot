@@ -9869,6 +9869,27 @@ To fix this:
         return await buildAdminPlayerMenu(context.client, context.guildId, targetUserId, context.userId, 'castdock');
       }})(req, res, client);
 
+    } else if (custom_id === 'castdock_expand' || custom_id === 'castdock_collapse') {
+      // Toggle between CastDock's compact view and the full player menu — anyone in the
+      // channel may toggle it (view-only, no state mutation), so this is deliberately public.
+      return ButtonHandlerFactory.create({ id: custom_id, security: 'public', updateMessage: true, handler: async (context) => {
+        const entry = client.castDockChannels?.get(context.channelId);
+        if (!entry) {
+          return {
+            flags: (1 << 15),
+            components: [{ type: 17, components: [{ type: 10, content: '📌 CastDock is no longer enabled in this channel.' }] }]
+          };
+        }
+        const guild = await context.client.guilds.fetch(context.guildId);
+        const member = await guild.members.fetch(entry.targetUserId);
+        const playerData = await loadPlayerData();
+        if (custom_id === 'castdock_collapse') {
+          const { buildCompactCastDockMenu } = await import('./castDock.js');
+          return await buildCompactCastDockMenu(context.client, context.guildId, member, playerData, context.channelId);
+        }
+        return await createPlayerManagementUI({ mode: PlayerManagementMode.PLAYER, targetMember: member, playerData, guildId: context.guildId, userId: entry.targetUserId, channelId: context.channelId, client: context.client, title: 'CastBot | Player Menu' });
+      }})(req, res, client);
+
     } else if (custom_id === 'player_menu_sel_inventory' || custom_id.startsWith('player_menu_sel_inventory_')) {
       const selectedValue = req.body.data.values?.[0];
       if (custom_id.startsWith('player_menu_sel_inventory_') && selectedValue === 'edit_items') {
