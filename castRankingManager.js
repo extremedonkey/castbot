@@ -1197,15 +1197,16 @@ export async function buildMarooningView({ configId, guildId, playerData, season
     }
   }
 
-  // "{age} | @{pronoun} | @{timezone}" — same order/style as the Casting card's 👤 Overview line,
-  // wrapped in backticks. Rendered on its OWN line (not appended inline) — Discord's mobile client
-  // wraps a long inline code span into several disconnected-looking pill boxes; a full-width line
-  // wraps far more cleanly. No leading space (it's a line, not a suffix).
+  // "{age}yo | @{pronoun} | @{timezone}" as a `-#` subtext line (not a backtick code span — a long
+  // inline code span wraps into several disconnected-looking pill boxes on Discord mobile; `-#` wraps
+  // as plain small text instead). Same age/pronoun/timezone order as the Casting card's 👤 Overview
+  // line, but "yo"-suffixed and subtext-styled — Marooning's rows are denser, so this reads as a
+  // de-emphasized detail line rather than a highlighted code block.
   const demographicsSuffix = (playerUserId) => {
     const member = guild?.members?.cache?.get(playerUserId);
     const { age, pronounName, timezoneName } = resolvePlayerDemographics(playerData, guildId, playerUserId, member, guild);
-    const bits = [age ? `${age}` : null, pronounName ? `@${pronounName}` : null, timezoneName ? `@${timezoneName}` : null].filter(Boolean);
-    return bits.length ? `\`${bits.join(' | ')}\`` : '';
+    const bits = [age ? `${age}yo` : null, pronounName ? `@${pronounName}` : null, timezoneName ? `@${timezoneName}` : null].filter(Boolean);
+    return bits.length ? `-# ${bits.join(' | ')}` : '';
   };
 
   // `counter` is a mutable { n } threaded through a render pass so numbering can run continuously

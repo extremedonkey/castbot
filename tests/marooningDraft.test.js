@@ -47,14 +47,14 @@ function renderRow(p, counter, opts = {}) {
   return demo ? `${line1}\n${demo}` : line1;
 }
 
-// Mirrors buildMarooningView's demographicsSuffix — "{age} | @{pronoun} | @{timezone}" in backticks,
-// same order/style as the Casting card's 👤 Overview line. Bare (no leading space) — it's its own line
-// now, not an inline suffix. Test fixtures pass the already-resolved strings directly on `p`
-// (pronoun/age/timezone) rather than replicating the guild-role-cache lookup, which is Discord-object-
-// shaped and not pure logic (covered separately by resolvePlayerDemographics below).
+// Mirrors buildMarooningView's demographicsSuffix — "{age}yo | @{pronoun} | @{timezone}" as a `-#`
+// subtext line (not a backtick code span — wraps into disconnected pill boxes on Discord mobile).
+// Test fixtures pass the already-resolved strings directly on `p` (pronoun/age/timezone) rather than
+// replicating the guild-role-cache lookup, which is Discord-object-shaped and not pure logic (covered
+// separately by resolvePlayerDemographics below).
 function demographicsSuffix(p) {
-  const bits = [p.age ? `${p.age}` : null, p.pronoun ? `@${p.pronoun}` : null, p.timezone ? `@${p.timezone}` : null].filter(Boolean);
-  return bits.length ? `\`${bits.join(' | ')}\`` : '';
+  const bits = [p.age ? `${p.age}yo` : null, p.pronoun ? `@${p.pronoun}` : null, p.timezone ? `@${p.timezone}` : null].filter(Boolean);
+  return bits.length ? `-# ${bits.join(' | ')}` : '';
 }
 
 // Mirrors resolvePlayerDemographics (castRankingManager.js) — the shared age/pronoun/timezone resolver
@@ -205,17 +205,17 @@ describe('Marooning Draft — score row format (no medals, numbered)', () => {
   });
 });
 
-describe('Marooning Draft — demographics suffix (age | @pronoun | @timezone, matches Casting card Overview)', () => {
-  it('all three present → on their OWN line, pipe-joined, backtick-wrapped, Age/Pronoun/Timezone order, @-prefixed', () => {
+describe('Marooning Draft — demographics suffix ("Nyo | @pronoun | @timezone" as a -# subtext line)', () => {
+  it('all three present → on their OWN -# subtext line, pipe-joined, Age(yo)/Pronoun/Timezone order, @-prefixed', () => {
     assert.equal(
       renderRow({ name: 'Reece', avgScore: 5, voteCount: 1, pronoun: 'He/Him', age: 33, timezone: 'GMT+8' }, { n: 0 }),
-      '1. Reece - 5.0/5.0 (1 vote)\n`33 | @He/Him | @GMT+8`'
+      '1. Reece - 5.0/5.0 (1 vote)\n-# 33yo | @He/Him | @GMT+8'
     );
   });
   it('partial demographics — only the known bits appear, no dangling pipes', () => {
     assert.equal(
       renderRow({ name: 'X', avgScore: 0, voteCount: 0, age: 21 }, { n: 0 }),
-      '1. X - Unrated/5.0 (0 votes)\n`21`'
+      '1. X - Unrated/5.0 (0 votes)\n-# 21yo'
     );
   });
   it('no demographics known → single-line row, no second line at all', () => {
@@ -236,7 +236,7 @@ describe('Marooning Draft — rows within a group butt directly together (no bla
     const joined = rows.join('\n');
     assert.equal(
       joined,
-      '1. Q - 5.0/5.0 (2 votes)\n`21 | @He/Him | @EST`\n2. Andrew - 5.0/5.0 (1 vote)\n`27 | @He/Him | @CST`'
+      '1. Q - 5.0/5.0 (2 votes)\n-# 21yo | @He/Him | @EST\n2. Andrew - 5.0/5.0 (1 vote)\n-# 27yo | @He/Him | @CST'
     );
     assert.ok(!joined.includes('\n\n'), 'no blank line snuck in between entries');
   });
