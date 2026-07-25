@@ -40,12 +40,37 @@ function renderRow(p, counter) {
   return `${counter.n}. ${p.name} - ${scoreDisplay}/5.0 (${p.voteCount} vote${p.voteCount !== 1 ? 's' : ''})${resp}${demographicsSuffix(p)}`;
 }
 
-// Mirrors buildMarooningView's demographicsSuffix — {Pronoun, Age yo, Timezone} in backticks.
-// Test fixtures pass the already-resolved strings directly on `p` (pronoun/age/timezone) rather than
-// replicating the guild-role-cache lookup, which is Discord-object-shaped and not pure logic.
+// Mirrors buildMarooningView's demographicsSuffix — "{age} | @{pronoun} | @{timezone}" in backticks,
+// same order/style as the Casting card's 👤 Overview line. Test fixtures pass the already-resolved
+// strings directly on `p` (pronoun/age/timezone) rather than replicating the guild-role-cache lookup,
+// which is Discord-object-shaped and not pure logic (covered separately by resolvePlayerDemographics below).
 function demographicsSuffix(p) {
-  const bits = [p.pronoun || null, p.age ? `${p.age} yo` : null, p.timezone || null].filter(Boolean);
-  return bits.length ? ` \`${bits.join(', ')}\`` : '';
+  const bits = [p.age ? `${p.age}` : null, p.pronoun ? `@${p.pronoun}` : null, p.timezone ? `@${p.timezone}` : null].filter(Boolean);
+  return bits.length ? ` \`${bits.join(' | ')}\`` : '';
+}
+
+// Mirrors resolvePlayerDemographics (castRankingManager.js) — the shared age/pronoun/timezone resolver
+// used by BOTH the Casting card and Marooning. Role-name lookup tries guild.roles.cache first, falling
+// back to member.roles.cache (a GuildMember's roles.cache holds full Role objects, not just IDs).
+// THIS is the fix for the prod bug: Marooning previously skipped the member-cache fallback entirely.
+function resolvePlayerDemographics(playerData, guildId, userId, member, guild) {
+  const age = playerData[guildId]?.players?.[userId]?.age;
+  let pronounRoleId = null, timezoneRoleId = null;
+  if (member?.roles) {
+    const guildPronouns = playerData[guildId]?.pronounRoleIDs || [];
+    const guildTimezones = Object.keys(playerData[guildId]?.timezones || {});
+    const memberRoles = member.roles.cache ? Array.from(member.roles.cache.keys()) : member.roles;
+    for (const roleId of memberRoles) { if (guildPronouns.includes(roleId)) { pronounRoleId = roleId; break; } }
+    for (const roleId of memberRoles) { if (guildTimezones.includes(roleId)) { timezoneRoleId = roleId; break; } }
+  }
+  const roleNameOf = (id) => id ? (guild?.roles?.cache?.get(id)?.name || member?.roles?.cache?.get(id)?.name || null) : null;
+  return { age, pronounName: roleNameOf(pronounRoleId), timezoneName: roleNameOf(timezoneRoleId) };
+}
+
+// Mirrors buildMarooningView's bulk member-fetch gate — only worth a gateway round-trip when the
+// cache is meaningfully incomplete (matches castlistDataAccess.js's tribe-rendering precedent).
+function shouldBulkFetchMembers(cacheSize, memberCount) {
+  return cacheSize < memberCount * 0.8;
 }
 
 // Mirrors buildMarooningView's splitByOfferStage — Cast/Alternate broken into Accepted / Offer Sent /
@@ -142,21 +167,60 @@ describe('Marooning Draft — score row format (no medals, numbered)', () => {
   });
 });
 
-describe('Marooning Draft — demographics suffix (pronoun/age/timezone)', () => {
-  it('all three present → comma-joined, backtick-wrapped, in Pronoun/Age/Timezone order', () => {
+describe('Marooning Draft — demographics suffix (age | @pronoun | @timezone, matches Casting card Overview)', () => {
+  it('all three present → pipe-joined, backtick-wrapped, Age/Pronoun/Timezone order, @-prefixed roles', () => {
     assert.equal(
       renderRow({ name: 'Reece', avgScore: 5, voteCount: 1, pronoun: 'He/Him', age: 33, timezone: 'GMT+8' }, { n: 0 }),
-      '1. Reece - 5.0/5.0 (1 vote) `He/Him, 33 yo, GMT+8`'
+      '1. Reece - 5.0/5.0 (1 vote) `33 | @He/Him | @GMT+8`'
     );
   });
-  it('partial demographics — only the known bits appear, no empty commas', () => {
+  it('partial demographics — only the known bits appear, no dangling pipes', () => {
     assert.equal(
       renderRow({ name: 'X', avgScore: 0, voteCount: 0, age: 21 }, { n: 0 }),
-      '1. X - Unrated/5.0 (0 votes) `21 yo`'
+      '1. X - Unrated/5.0 (0 votes) `21`'
     );
   });
   it('no demographics known → no trailing backtick block at all', () => {
     assert.equal(renderRow({ name: 'X', avgScore: 0, voteCount: 0 }, { n: 0 }), '1. X - Unrated/5.0 (0 votes)');
+  });
+});
+
+describe('resolvePlayerDemographics — role-name resolution (the actual prod bug)', () => {
+  const fakeRole = name => ({ name });
+  const playerData = { g1: { players: { u1: { age: 33 } }, pronounRoleIDs: ['pron1'], timezones: { tz1: { offset: 8 } } } };
+
+  it('resolves via the GUILD role cache when present', () => {
+    const member = { roles: { cache: new Map([['pron1', fakeRole('He/Him')], ['tz1', fakeRole('GMT+8')]]) } };
+    const guild = { roles: { cache: new Map([['pron1', fakeRole('He/Him')], ['tz1', fakeRole('GMT+8')]]) } };
+    const r = resolvePlayerDemographics(playerData, 'g1', 'u1', member, guild);
+    assert.deepEqual(r, { age: 33, pronounName: 'He/Him', timezoneName: 'GMT+8' });
+  });
+
+  it('FALLS BACK to the MEMBER role cache when the guild role cache misses (prod bug repro)', () => {
+    // guild.roles.cache is missing the timezone role entirely — member.roles.cache still has the full
+    // Role object though (this is exactly what generateSeasonAppRankingUI's fetched applicantMember has).
+    const member = { roles: { cache: new Map([['pron1', fakeRole('He/Him')], ['tz1', fakeRole('GMT+8')]]) } };
+    const guild = { roles: { cache: new Map([['pron1', fakeRole('He/Him')]]) } }; // tz1 NOT cached at guild level
+    const r = resolvePlayerDemographics(playerData, 'g1', 'u1', member, guild);
+    assert.equal(r.timezoneName, 'GMT+8'); // recovered via the member fallback, not lost
+  });
+
+  it('no member object at all (uncached, not fetched) → pronoun/timezone both null, age still resolves', () => {
+    // This was the ACTUAL prod bug: Marooning did guild.members.cache.get() (no fetch), and for a large
+    // roster most members simply aren't in cache — so pronoun/timezone silently came back empty while
+    // age (which needs no Discord object at all) kept working, making it look like a partial/random gap.
+    const r = resolvePlayerDemographics(playerData, 'g1', 'u1', undefined, { roles: { cache: new Map() } });
+    assert.deepEqual(r, { age: 33, pronounName: null, timezoneName: null });
+  });
+});
+
+describe('Marooning — bulk member-fetch gate (warms the cache before resolving demographics)', () => {
+  it('fetches when the cache is meaningfully incomplete (<80%)', () => {
+    assert.equal(shouldBulkFetchMembers(10, 50), true); // 20% cached
+  });
+  it('skips the fetch when the cache is already warm (≥80%)', () => {
+    assert.equal(shouldBulkFetchMembers(45, 50), false); // 90% cached
+    assert.equal(shouldBulkFetchMembers(50, 50), false); // 100% cached
   });
 });
 

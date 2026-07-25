@@ -140,6 +140,38 @@ export function deriveApplicationStatus(app = {}, liveChannelName = '') {
   return { icon: '📝', name: 'Awaiting Votes' };
 }
 
+/**
+ * Resolve a player's age + pronoun/timezone role NAMES (as plain text — a code-block/text-display can't
+ * render `<@&role>` pills). Shared by the Casting card's 👤 Overview block and the Marooning roster rows
+ * so they can't drift apart.
+ *
+ * Role-name lookup checks the GUILD's role cache first, falling back to the MEMBER's own role cache —
+ * a GuildMember's `roles.cache` holds full Role objects (not just IDs), so it still resolves a name even
+ * on the rare guild-role-cache miss. Skipping this fallback was the original Marooning bug: timezone
+ * roles came up blank while pronoun roles (usually touched elsewhere, keeping the guild cache warm)
+ * happened to resolve fine.
+ *
+ * @param {Object} playerData
+ * @param {string} guildId
+ * @param {string} userId
+ * @param {import('discord.js').GuildMember} [member] - the player's LIVE guild member (cache or fetched)
+ * @param {import('discord.js').Guild} [guild]
+ * @returns {{age: (number|undefined), pronounName: (string|null), timezoneName: (string|null)}}
+ */
+function resolvePlayerDemographics(playerData, guildId, userId, member, guild) {
+  const age = playerData[guildId]?.players?.[userId]?.age;
+  let pronounRoleId = null, timezoneRoleId = null;
+  if (member?.roles) {
+    const guildPronouns = playerData[guildId]?.pronounRoleIDs || [];
+    const guildTimezones = Object.keys(playerData[guildId]?.timezones || {});
+    const memberRoles = member.roles.cache ? Array.from(member.roles.cache.keys()) : member.roles;
+    for (const roleId of memberRoles) { if (guildPronouns.includes(roleId)) { pronounRoleId = roleId; break; } }
+    for (const roleId of memberRoles) { if (guildTimezones.includes(roleId)) { timezoneRoleId = roleId; break; } }
+  }
+  const roleNameOf = (id) => id ? (guild?.roles?.cache?.get(id)?.name || member?.roles?.cache?.get(id)?.name || null) : null;
+  return { age, pronounName: roleNameOf(pronounRoleId), timezoneName: roleNameOf(timezoneRoleId) };
+}
+
 /** Marooning's status-section order — also the jump-select's display order. (Tentative removed — RaP 0902.)
  *  'undecided' sits BEFORE 'reject' (Reece's call): Cast/Alternate/Undecided are all still "in
  *  consideration" for a host working toward a target cast size, while Reject/Withdrawn are not — see
@@ -398,16 +430,9 @@ export async function generateSeasonAppRankingUI({
   const appRecord = playerData[guildId]?.applications?.[currentApp.channelId] || {};
   const liveChannelName = guild?.channels?.cache?.get(currentApp.channelId)?.name || '';
 
-  // ---- Applicant demographics — age + pronoun/timezone role IDs feed the 📃 header below. ----
-  const applicantAge = playerData[guildId]?.players?.[currentApp.userId]?.age;
-  let pronounRoleId = null, timezoneRoleId = null;
-  if (applicantMember?.roles) {
-    const guildPronouns = playerData[guildId]?.pronounRoleIDs || [];
-    const guildTimezones = Object.keys(playerData[guildId]?.timezones || {});
-    const memberRoles = applicantMember.roles.cache ? Array.from(applicantMember.roles.cache.keys()) : applicantMember.roles;
-    for (const roleId of memberRoles) { if (guildPronouns.includes(roleId)) { pronounRoleId = roleId; break; } }
-    for (const roleId of memberRoles) { if (guildTimezones.includes(roleId)) { timezoneRoleId = roleId; break; } }
-  }
+  // ---- Applicant demographics (age + pronoun/timezone role NAMES) — shared with Marooning's rows. ----
+  const { age: applicantAge, pronounName: _pronounName, timezoneName: _timezoneName } =
+    resolvePlayerDemographics(playerData, guildId, currentApp.userId, applicantMember, guild);
 
   // ▶ Casting Status block — the Casting Lifecycle Chevron (RaP 0902) under a Rate-styled "Casting Status"
   // header. The old info block (Name / Average Score / App) was DELETED as redundant: Name/age/pronoun/tz now
@@ -422,10 +447,7 @@ export async function generateSeasonAppRankingUI({
   // action row) as bullets: "{age} | @{pronoun} | @{timezone}" + the DNC summary (only if they have any).
   // Role NAMES are injected as plain text (a code-block header can't render <@&role> pills).
   const headerName = applicantMember?.displayName || currentApp.displayName || currentApp.username || 'Applicant';
-  const roleNameOf = (id) => id ? (guild?.roles?.cache?.get(id)?.name || applicantMember?.roles?.cache?.get(id)?.name || null) : null;
   const appHeaderContent = `# \`\`\`📃 ${headerName}'s App\`\`\``;
-  const _pronounName = roleNameOf(pronounRoleId);
-  const _timezoneName = roleNameOf(timezoneRoleId);
   const overviewBits = [];
   if (applicantAge) overviewBits.push(`${applicantAge}`);
   if (_pronounName) overviewBits.push(`@${_pronounName}`);
@@ -1110,22 +1132,26 @@ export async function buildMarooningView({ configId, guildId, playerData, season
     for (const uid of (ids || [])) { if (!userDraftTribe[uid]) userDraftTribe[uid] = rid; }
   }
 
-  // {Pronoun, Age yo, Timezone} appended to every row — cache-only lookups (no fetch) so a long roster
-  // never triggers a fetch storm; a player just absent from cache silently renders without the suffix.
-  const demographicsSuffix = (playerUserId) => {
-    const age = playerData[guildId]?.players?.[playerUserId]?.age;
-    const member = guild?.members?.cache?.get(playerUserId);
-    let pronounName = null, timezoneName = null;
-    if (member?.roles?.cache) {
-      const guildPronouns = playerData[guildId]?.pronounRoleIDs || [];
-      const guildTimezones = Object.keys(playerData[guildId]?.timezones || {});
-      for (const roleId of member.roles.cache.keys()) {
-        if (!pronounName && guildPronouns.includes(roleId)) pronounName = guild.roles.cache.get(roleId)?.name || null;
-        if (!timezoneName && guildTimezones.includes(roleId)) timezoneName = guild.roles.cache.get(roleId)?.name || null;
-      }
+  // Warm the member cache before resolving demographics — pronoun/timezone are read off
+  // member.roles.cache, which Discord.js only populates for members it has actually seen/fetched
+  // (same gotcha castlistDataAccess.js hit for tribe rendering: "role.members is a FILTERED VIEW of
+  // the member cache"). A per-row fetch would risk a fetch storm on a large roster, so bulk-fetch once
+  // via the gateway, guarded by a timeout so one slow guild can't hang the whole view.
+  if (guild && guild.members.cache.size < guild.memberCount * 0.8) {
+    try {
+      await guild.members.fetch({ timeout: 10000 });
+    } catch (e) {
+      console.warn(`⚠️ Marooning: bulk member fetch failed/timed out, continuing with partial cache: ${e.message}`);
     }
-    const bits = [pronounName, age ? `${age} yo` : null, timezoneName].filter(Boolean);
-    return bits.length ? ` \`${bits.join(', ')}\`` : '';
+  }
+
+  // "{age} | @{pronoun} | @{timezone}" — same order/style as the Casting card's 👤 Overview line,
+  // wrapped in backticks so it stays visually distinct in Marooning's denser numbered rows.
+  const demographicsSuffix = (playerUserId) => {
+    const member = guild?.members?.cache?.get(playerUserId);
+    const { age, pronounName, timezoneName } = resolvePlayerDemographics(playerData, guildId, playerUserId, member, guild);
+    const bits = [age ? `${age}` : null, pronounName ? `@${pronounName}` : null, timezoneName ? `@${timezoneName}` : null].filter(Boolean);
+    return bits.length ? ` \`${bits.join(' | ')}\`` : '';
   };
 
   // `counter` is a mutable { n } threaded through a render pass so numbering can run continuously
