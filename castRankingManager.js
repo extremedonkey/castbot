@@ -1223,8 +1223,9 @@ export async function buildMarooningView({ configId, guildId, playerData, season
   };
 
   // Renders a (already score-sorted) player list, sub-grouped by private draft tribe same as before,
-  // numbering via the shared `counter`. A blank line between entries (not just a newline) keeps each
-  // person's now-2-line block visually separated. Returns '' for an empty list (caller skips the header).
+  // numbering via the shared `counter`. Rows within a group butt directly against each other (no blank
+  // line between entries — keeps a long roster scannable on mobile); the trailing \n\n only separates
+  // this whole group from whatever comes next. Returns '' for an empty list (caller skips the header).
   const renderPlayerList = (players, counter, opts = {}) => {
     if (players.length === 0) return '';
     const perTribe = new Map();
@@ -1242,11 +1243,11 @@ export async function buildMarooningView({ configId, guildId, playerData, season
     for (const rid of tribeRoleIds) {
       const tribePlayers = perTribe.get(rid);
       if (!tribePlayers?.length) continue;
-      out += `<@&${rid}> (tentative)\n${tribePlayers.map(p => renderRow(p, counter, opts)).join('\n\n')}\n\n`;
+      out += `<@&${rid}> (tentative)\n${tribePlayers.map(p => renderRow(p, counter, opts)).join('\n')}\n\n`;
     }
     if (undrafted.length) {
       if (perTribe.size > 0) out += `-# Not yet drafted to a tribe\n`;
-      out += `${undrafted.map(p => renderRow(p, counter, opts)).join('\n\n')}\n\n`;
+      out += `${undrafted.map(p => renderRow(p, counter, opts)).join('\n')}\n\n`;
     }
     return out;
   };

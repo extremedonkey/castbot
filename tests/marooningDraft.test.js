@@ -195,6 +195,23 @@ describe('Marooning Draft — demographics suffix (age | @pronoun | @timezone, m
   });
 });
 
+describe('Marooning Draft — rows within a group butt directly together (no blank line — long-roster scroll length)', () => {
+  it('consecutive 2-line rows join with a single newline, never a blank line', () => {
+    const counter = { n: 0 };
+    const rows = [
+      { name: 'Q', avgScore: 5, voteCount: 2, age: 21, pronoun: 'He/Him', timezone: 'EST' },
+      { name: 'Andrew', avgScore: 5, voteCount: 1, age: 27, pronoun: 'He/Him', timezone: 'CST' }
+    ].map(p => renderRow(p, counter));
+    // Mirrors renderPlayerList's row-join separator: '\n', not '\n\n'.
+    const joined = rows.join('\n');
+    assert.equal(
+      joined,
+      '1. Q - 5.0/5.0 (2 votes)\n`21 | @He/Him | @EST`\n2. Andrew - 5.0/5.0 (1 vote)\n`27 | @He/Him | @CST`'
+    );
+    assert.ok(!joined.includes('\n\n'), 'no blank line snuck in between entries');
+  });
+});
+
 describe('resolvePlayerDemographics — role-name resolution (the actual prod bug)', () => {
   const fakeRole = name => ({ name });
   const playerData = { g1: { players: { u1: { age: 33 } }, pronounRoleIDs: ['pron1'], timezones: { tz1: { offset: 8 } } } };
