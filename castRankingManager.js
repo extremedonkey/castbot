@@ -1195,29 +1195,37 @@ export async function buildMarooningView({ configId, guildId, playerData, season
   }
 
   // "{age} | @{pronoun} | @{timezone}" — same order/style as the Casting card's 👤 Overview line,
-  // wrapped in backticks so it stays visually distinct in Marooning's denser numbered rows.
+  // wrapped in backticks. Rendered on its OWN line (not appended inline) — Discord's mobile client
+  // wraps a long inline code span into several disconnected-looking pill boxes; a full-width line
+  // wraps far more cleanly. No leading space (it's a line, not a suffix).
   const demographicsSuffix = (playerUserId) => {
     const member = guild?.members?.cache?.get(playerUserId);
     const { age, pronounName, timezoneName } = resolvePlayerDemographics(playerData, guildId, playerUserId, member, guild);
     const bits = [age ? `${age}` : null, pronounName ? `@${pronounName}` : null, timezoneName ? `@${timezoneName}` : null].filter(Boolean);
-    return bits.length ? ` \`${bits.join(' | ')}\`` : '';
+    return bits.length ? `\`${bits.join(' | ')}\`` : '';
   };
 
   // `counter` is a mutable { n } threaded through a render pass so numbering can run continuously
   // ACROSS multiple calls (Cast → Alternate → Undecided share one; see below) instead of restarting
-  // per group/sub-group/tribe-bucket.
-  const renderRow = (p, counter) => {
+  // per group/sub-group/tribe-bucket. `opts.suppressAcceptedTag` drops the inline "· 🎉 Accepted" /
+  // "· ✅ Accepted (Alt)" markers — redundant once the row already sits under an "- Accepted"
+  // sub-heading. "· 🚫 Declined" is NEVER suppressed: Declined stays folded into "Offer Sent" (an
+  // offer WAS sent), so it's the only signal distinguishing it from a still-awaiting-response row there.
+  const renderRow = (p, counter, opts = {}) => {
     const scoreDisplay = p.avgScore > 0 ? p.avgScore.toFixed(1) : 'Unrated';
-    const resp = p.placementResponse === 'accepted' ? ' · 🎉 Accepted'
-      : p.placementResponse === 'accepted_alternative' ? ' · ✅ Accepted (Alt)'
+    const resp = (!opts.suppressAcceptedTag && p.placementResponse === 'accepted') ? ' · 🎉 Accepted'
+      : (!opts.suppressAcceptedTag && p.placementResponse === 'accepted_alternative') ? ' · ✅ Accepted (Alt)'
       : p.placementResponse === 'declined' ? ' · 🚫 Declined' : '';
     counter.n += 1;
-    return `${counter.n}. ${p.name} - ${scoreDisplay}/5.0 (${p.voteCount} vote${p.voteCount !== 1 ? 's' : ''})${resp}${demographicsSuffix(p.userId)}`;
+    const line1 = `${counter.n}. ${p.name} - ${scoreDisplay}/5.0 (${p.voteCount} vote${p.voteCount !== 1 ? 's' : ''})${resp}`;
+    const demo = demographicsSuffix(p.userId);
+    return demo ? `${line1}\n${demo}` : line1;
   };
 
   // Renders a (already score-sorted) player list, sub-grouped by private draft tribe same as before,
-  // numbering via the shared `counter`. Returns '' for an empty list (caller skips the surrounding header).
-  const renderPlayerList = (players, counter) => {
+  // numbering via the shared `counter`. A blank line between entries (not just a newline) keeps each
+  // person's now-2-line block visually separated. Returns '' for an empty list (caller skips the header).
+  const renderPlayerList = (players, counter, opts = {}) => {
     if (players.length === 0) return '';
     const perTribe = new Map();
     const undrafted = [];
@@ -1234,11 +1242,11 @@ export async function buildMarooningView({ configId, guildId, playerData, season
     for (const rid of tribeRoleIds) {
       const tribePlayers = perTribe.get(rid);
       if (!tribePlayers?.length) continue;
-      out += `<@&${rid}> (tentative)\n${tribePlayers.map(p => renderRow(p, counter)).join('\n')}\n\n`;
+      out += `<@&${rid}> (tentative)\n${tribePlayers.map(p => renderRow(p, counter, opts)).join('\n\n')}\n\n`;
     }
     if (undrafted.length) {
       if (perTribe.size > 0) out += `-# Not yet drafted to a tribe\n`;
-      out += `${undrafted.map(p => renderRow(p, counter)).join('\n')}\n\n`;
+      out += `${undrafted.map(p => renderRow(p, counter, opts)).join('\n\n')}\n\n`;
     }
     return out;
   };
@@ -1275,7 +1283,7 @@ export async function buildMarooningView({ configId, guildId, playerData, season
     body += `### \`\`\`${section.emoji} ${section.title} (${section.group.length})\`\`\`\n`;
     if (section.breakdown) {
       const { accepted, offerSent, draft } = splitByOfferStage(section.group);
-      if (accepted.length) body += `> ${section.emoji}✅ **${section.title} - Accepted**\n${renderPlayerList(accepted, candidateCounter)}`;
+      if (accepted.length) body += `> ${section.emoji}✅ **${section.title} - Accepted**\n${renderPlayerList(accepted, candidateCounter, { suppressAcceptedTag: true })}`;
       if (offerSent.length) body += `> ${section.emoji}📨 **${section.title} - Offer Sent**\n${renderPlayerList(offerSent, candidateCounter)}`;
       if (draft.length) body += `> ${section.emoji} **${section.title} - Draft**\n${renderPlayerList(draft, candidateCounter)}`;
     } else {

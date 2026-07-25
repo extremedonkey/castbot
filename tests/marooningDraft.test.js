@@ -31,22 +31,30 @@ function groupByTribe(players, userDraftTribe, tribeRoleIds) {
 
 // `counter` is a mutable { n } threaded through a render pass so numbering can run continuously
 // across multiple calls (Cast → Alternate → Undecided share one) instead of resetting per group.
-function renderRow(p, counter) {
+// `opts.suppressAcceptedTag` drops the inline "· 🎉 Accepted"/"· ✅ Accepted (Alt)" markers — redundant
+// once the row already sits under an "- Accepted" sub-heading. "· 🚫 Declined" is NEVER suppressed:
+// Declined stays folded into "Offer Sent", so it's the only signal marking it there.
+// Demographics now render on their OWN line (not appended inline) — long inline code spans wrap into
+// several disconnected-looking boxes on Discord mobile; a full-width line wraps far more cleanly.
+function renderRow(p, counter, opts = {}) {
   const scoreDisplay = p.avgScore > 0 ? p.avgScore.toFixed(1) : 'Unrated';
-  const resp = p.placementResponse === 'accepted' ? ' · 🎉 Accepted'
-    : p.placementResponse === 'accepted_alternative' ? ' · ✅ Accepted (Alt)'
+  const resp = (!opts.suppressAcceptedTag && p.placementResponse === 'accepted') ? ' · 🎉 Accepted'
+    : (!opts.suppressAcceptedTag && p.placementResponse === 'accepted_alternative') ? ' · ✅ Accepted (Alt)'
     : p.placementResponse === 'declined' ? ' · 🚫 Declined' : '';
   counter.n += 1;
-  return `${counter.n}. ${p.name} - ${scoreDisplay}/5.0 (${p.voteCount} vote${p.voteCount !== 1 ? 's' : ''})${resp}${demographicsSuffix(p)}`;
+  const line1 = `${counter.n}. ${p.name} - ${scoreDisplay}/5.0 (${p.voteCount} vote${p.voteCount !== 1 ? 's' : ''})${resp}`;
+  const demo = demographicsSuffix(p);
+  return demo ? `${line1}\n${demo}` : line1;
 }
 
 // Mirrors buildMarooningView's demographicsSuffix — "{age} | @{pronoun} | @{timezone}" in backticks,
-// same order/style as the Casting card's 👤 Overview line. Test fixtures pass the already-resolved
-// strings directly on `p` (pronoun/age/timezone) rather than replicating the guild-role-cache lookup,
-// which is Discord-object-shaped and not pure logic (covered separately by resolvePlayerDemographics below).
+// same order/style as the Casting card's 👤 Overview line. Bare (no leading space) — it's its own line
+// now, not an inline suffix. Test fixtures pass the already-resolved strings directly on `p`
+// (pronoun/age/timezone) rather than replicating the guild-role-cache lookup, which is Discord-object-
+// shaped and not pure logic (covered separately by resolvePlayerDemographics below).
 function demographicsSuffix(p) {
   const bits = [p.age ? `${p.age}` : null, p.pronoun ? `@${p.pronoun}` : null, p.timezone ? `@${p.timezone}` : null].filter(Boolean);
-  return bits.length ? ` \`${bits.join(' | ')}\`` : '';
+  return bits.length ? `\`${bits.join(' | ')}\`` : '';
 }
 
 // Mirrors resolvePlayerDemographics (castRankingManager.js) — the shared age/pronoun/timezone resolver
@@ -168,20 +176,22 @@ describe('Marooning Draft — score row format (no medals, numbered)', () => {
 });
 
 describe('Marooning Draft — demographics suffix (age | @pronoun | @timezone, matches Casting card Overview)', () => {
-  it('all three present → pipe-joined, backtick-wrapped, Age/Pronoun/Timezone order, @-prefixed roles', () => {
+  it('all three present → on their OWN line, pipe-joined, backtick-wrapped, Age/Pronoun/Timezone order, @-prefixed', () => {
     assert.equal(
       renderRow({ name: 'Reece', avgScore: 5, voteCount: 1, pronoun: 'He/Him', age: 33, timezone: 'GMT+8' }, { n: 0 }),
-      '1. Reece - 5.0/5.0 (1 vote) `33 | @He/Him | @GMT+8`'
+      '1. Reece - 5.0/5.0 (1 vote)\n`33 | @He/Him | @GMT+8`'
     );
   });
   it('partial demographics — only the known bits appear, no dangling pipes', () => {
     assert.equal(
       renderRow({ name: 'X', avgScore: 0, voteCount: 0, age: 21 }, { n: 0 }),
-      '1. X - Unrated/5.0 (0 votes) `21`'
+      '1. X - Unrated/5.0 (0 votes)\n`21`'
     );
   });
-  it('no demographics known → no trailing backtick block at all', () => {
-    assert.equal(renderRow({ name: 'X', avgScore: 0, voteCount: 0 }, { n: 0 }), '1. X - Unrated/5.0 (0 votes)');
+  it('no demographics known → single-line row, no second line at all', () => {
+    const row = renderRow({ name: 'X', avgScore: 0, voteCount: 0 }, { n: 0 });
+    assert.equal(row, '1. X - Unrated/5.0 (0 votes)');
+    assert.ok(!row.includes('\n'));
   });
 });
 
@@ -270,6 +280,25 @@ describe('Marooning Draft — offer-stage breakdown (Cast/Alternate: Accepted / 
     }));
     const { accepted, offerSent, draft } = splitByOfferStage(players);
     assert.equal(accepted.length + offerSent.length + draft.length, players.length);
+  });
+});
+
+describe('Marooning Draft — suppressAcceptedTag (redundant once under an "- Accepted" sub-heading)', () => {
+  it('accepted → no inline tag when suppressed (the "- Accepted" sub-section)', () => {
+    const row = renderRow({ name: 'Mimi', avgScore: 5, voteCount: 2, placementResponse: 'accepted' }, { n: 0 }, { suppressAcceptedTag: true });
+    assert.equal(row, '1. Mimi - 5.0/5.0 (2 votes)');
+  });
+  it('accepted_alternative → also suppressed', () => {
+    const row = renderRow({ name: 'Mimi', avgScore: 5, voteCount: 2, placementResponse: 'accepted_alternative' }, { n: 0 }, { suppressAcceptedTag: true });
+    assert.ok(!row.includes('Accepted'));
+  });
+  it('unsuppressed (default) still shows the accepted tag — e.g. a stale record sitting outside its expected bucket', () => {
+    const row = renderRow({ name: 'Mimi', avgScore: 5, voteCount: 2, placementResponse: 'accepted' }, { n: 0 });
+    assert.ok(row.includes('· 🎉 Accepted'));
+  });
+  it('Declined is NEVER suppressed, even with suppressAcceptedTag set — it\'s the only marker inside Offer Sent', () => {
+    const row = renderRow({ name: 'D', avgScore: 4, voteCount: 1, placementResponse: 'declined' }, { n: 0 }, { suppressAcceptedTag: true });
+    assert.ok(row.includes('· 🚫 Declined'));
   });
 });
 
