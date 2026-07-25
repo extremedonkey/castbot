@@ -29,11 +29,36 @@ function groupByTribe(players, userDraftTribe, tribeRoleIds) {
   return { perTribe, undrafted };
 }
 
-function renderRow(p, i) {
+// `counter` is a mutable { n } threaded through a render pass so numbering can run continuously
+// across multiple calls (Cast → Alternate → Undecided share one) instead of resetting per group.
+function renderRow(p, counter) {
   const scoreDisplay = p.avgScore > 0 ? p.avgScore.toFixed(1) : 'Unrated';
   const resp = p.placementResponse === 'accepted' ? ' · 🎉 Accepted'
+    : p.placementResponse === 'accepted_alternative' ? ' · ✅ Accepted (Alt)'
     : p.placementResponse === 'declined' ? ' · 🚫 Declined' : '';
-  return `${i + 1}. ${p.name} - ${scoreDisplay}/5.0 (${p.voteCount} vote${p.voteCount !== 1 ? 's' : ''})${resp}`;
+  counter.n += 1;
+  return `${counter.n}. ${p.name} - ${scoreDisplay}/5.0 (${p.voteCount} vote${p.voteCount !== 1 ? 's' : ''})${resp}${demographicsSuffix(p)}`;
+}
+
+// Mirrors buildMarooningView's demographicsSuffix — {Pronoun, Age yo, Timezone} in backticks.
+// Test fixtures pass the already-resolved strings directly on `p` (pronoun/age/timezone) rather than
+// replicating the guild-role-cache lookup, which is Discord-object-shaped and not pure logic.
+function demographicsSuffix(p) {
+  const bits = [p.pronoun || null, p.age ? `${p.age} yo` : null, p.timezone || null].filter(Boolean);
+  return bits.length ? ` \`${bits.join(', ')}\`` : '';
+}
+
+// Mirrors buildMarooningView's splitByOfferStage — Cast/Alternate broken into Accepted / Offer Sent /
+// Draft. Declined stays folded into Offer Sent (an offer WAS sent; the inline "· 🚫 Declined" marks it).
+const OFFER_STAGE_ACCEPTED = new Set(['accepted', 'accepted_alternative']);
+function splitByOfferStage(players) {
+  const accepted = [], offerSent = [], draft = [];
+  for (const p of players) {
+    if (OFFER_STAGE_ACCEPTED.has(p.placementResponse)) accepted.push(p);
+    else if (p.offerStatus) offerSent.push(p);
+    else draft.push(p);
+  }
+  return { accepted, offerSent, draft };
 }
 
 function tribesLine(tribeRoleIds, tribes) {
@@ -95,18 +120,92 @@ describe('Marooning Draft — grouping the casting list by draft tribe', () => {
 
 describe('Marooning Draft — score row format (no medals, numbered)', () => {
   it('numbers sequentially, no 🥇🥈🥉', () => {
+    const counter = { n: 0 };
     const rows = [
       { name: 'Internet Crybaby', avgScore: 4.0, voteCount: 1 },
       { name: 'Benja Man', avgScore: 2.0, voteCount: 1 }
-    ].map(renderRow);
+    ].map(p => renderRow(p, counter));
     assert.equal(rows[0], '1. Internet Crybaby - 4.0/5.0 (1 vote)');
     assert.equal(rows[1], '2. Benja Man - 2.0/5.0 (1 vote)');
     assert.ok(!rows.join('').match(/🥇|🥈|🥉/), 'no medal emojis');
   });
   it('unrated + plural votes + placement annotation', () => {
-    assert.equal(renderRow({ name: 'X', avgScore: 0, voteCount: 0 }, 0), '1. X - Unrated/5.0 (0 votes)');
-    assert.equal(renderRow({ name: 'Y', avgScore: 3, voteCount: 2, placementResponse: 'accepted' }, 2),
+    assert.equal(renderRow({ name: 'X', avgScore: 0, voteCount: 0 }, { n: 0 }), '1. X - Unrated/5.0 (0 votes)');
+    assert.equal(renderRow({ name: 'Y', avgScore: 3, voteCount: 2, placementResponse: 'accepted' }, { n: 2 }),
       '3. Y - 3.0/5.0 (2 votes) · 🎉 Accepted');
+  });
+  it('accepted_alternative renders "Accepted (Alt)" (distinct from a main-cast accept)', () => {
+    assert.equal(
+      renderRow({ name: 'Z', avgScore: 4, voteCount: 1, placementResponse: 'accepted_alternative' }, { n: 0 }),
+      '1. Z - 4.0/5.0 (1 vote) · ✅ Accepted (Alt)'
+    );
+  });
+});
+
+describe('Marooning Draft — demographics suffix (pronoun/age/timezone)', () => {
+  it('all three present → comma-joined, backtick-wrapped, in Pronoun/Age/Timezone order', () => {
+    assert.equal(
+      renderRow({ name: 'Reece', avgScore: 5, voteCount: 1, pronoun: 'He/Him', age: 33, timezone: 'GMT+8' }, { n: 0 }),
+      '1. Reece - 5.0/5.0 (1 vote) `He/Him, 33 yo, GMT+8`'
+    );
+  });
+  it('partial demographics — only the known bits appear, no empty commas', () => {
+    assert.equal(
+      renderRow({ name: 'X', avgScore: 0, voteCount: 0, age: 21 }, { n: 0 }),
+      '1. X - Unrated/5.0 (0 votes) `21 yo`'
+    );
+  });
+  it('no demographics known → no trailing backtick block at all', () => {
+    assert.equal(renderRow({ name: 'X', avgScore: 0, voteCount: 0 }, { n: 0 }), '1. X - Unrated/5.0 (0 votes)');
+  });
+});
+
+describe('Marooning Draft — continuous vs. restarting numbering (host counts toward a cast target)', () => {
+  it('one counter threaded across Cast → Alternate → Undecided numbers them 1..N continuously', () => {
+    const counter = { n: 0 };
+    const cast = [{ name: 'C1', avgScore: 5, voteCount: 1 }, { name: 'C2', avgScore: 4, voteCount: 1 }];
+    const alt = [{ name: 'A1', avgScore: 3, voteCount: 1 }];
+    const und = [{ name: 'U1', avgScore: 0, voteCount: 0 }];
+    const rows = [...cast, ...alt, ...und].map(p => renderRow(p, counter));
+    assert.deepEqual(rows.map(r => r.split('.')[0]), ['1', '2', '3', '4']);
+  });
+  it('Don\'t Cast and Withdrawn each get their OWN fresh counter — not continuing from the candidate count', () => {
+    const candidateCounter = { n: 0 };
+    [{ name: 'C1', avgScore: 5, voteCount: 1 }, { name: 'C2', avgScore: 4, voteCount: 1 }]
+      .forEach(p => renderRow(p, candidateCounter)); // pretend 2 candidates already rendered
+    const dontCastRow = renderRow({ name: 'R1', avgScore: 1, voteCount: 1 }, { n: 0 });
+    const withdrawnRow = renderRow({ name: 'W1', avgScore: 2, voteCount: 1 }, { n: 0 });
+    assert.equal(dontCastRow.split('.')[0], '1'); // NOT '3'
+    assert.equal(withdrawnRow.split('.')[0], '1'); // independent of Don't Cast's counter too
+  });
+});
+
+describe('Marooning Draft — offer-stage breakdown (Cast/Alternate: Accepted / Offer Sent / Draft)', () => {
+  it('splits by placementResponse (accepted) → offerStatus (sent, no response) → neither (draft)', () => {
+    const players = [
+      { name: 'Accepted1', placementResponse: 'accepted' },
+      { name: 'AcceptedAlt', placementResponse: 'accepted_alternative' },
+      { name: 'Sent1', offerStatus: 'offer' },
+      { name: 'Declined1', offerStatus: 'offer', placementResponse: 'declined' }, // stays in Offer Sent, not its own bucket
+      { name: 'Draft1' }
+    ];
+    const { accepted, offerSent, draft } = splitByOfferStage(players);
+    assert.deepEqual(accepted.map(p => p.name), ['Accepted1', 'AcceptedAlt']);
+    assert.deepEqual(offerSent.map(p => p.name), ['Sent1', 'Declined1']);
+    assert.deepEqual(draft.map(p => p.name), ['Draft1']);
+  });
+  it('a Declined player still shows the inline suffix even though bucketed under Offer Sent', () => {
+    const row = renderRow({ name: 'D', avgScore: 4, voteCount: 1, offerStatus: 'offer', placementResponse: 'declined' }, { n: 0 });
+    assert.ok(row.includes('· 🚫 Declined'));
+  });
+  it('every player lands in exactly one bucket (no drops, no duplicates)', () => {
+    const players = Array.from({ length: 12 }, (_, i) => ({
+      name: `P${i}`,
+      placementResponse: i % 4 === 0 ? 'accepted' : undefined,
+      offerStatus: i % 3 === 0 ? 'offer' : undefined
+    }));
+    const { accepted, offerSent, draft } = splitByOfferStage(players);
+    assert.equal(accepted.length + offerSent.length + draft.length, players.length);
   });
 });
 

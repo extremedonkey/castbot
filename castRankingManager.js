@@ -141,15 +141,18 @@ export function deriveApplicationStatus(app = {}, liveChannelName = '') {
 }
 
 /** Marooning's status-section order — also the jump-select's display order. (Tentative removed — RaP 0902.)
+ *  'undecided' sits BEFORE 'reject' (Reece's call): Cast/Alternate/Undecided are all still "in
+ *  consideration" for a host working toward a target cast size, while Reject/Withdrawn are not — see
+ *  the continuous-vs-restarting numbering split in buildMarooningView, which relies on this exact split.
  *  'withdrawn' is always LAST regardless of castingStatus — it's the latest lifecycle action (RaP 0902/
  *  deriveApplicationStatus precedence) and overrides whatever decision bucket the applicant would otherwise
  *  land in, so a withdrawn Cast/Reject/etc. applicant sinks below every active applicant instead of hiding
  *  mid-list among people still being considered (confirmed on prod — was showing at arbitrary positions). */
-const CASTING_GROUP_ORDER = ['cast', 'alternative', 'reject', 'undecided', 'withdrawn'];
+const CASTING_GROUP_ORDER = ['cast', 'alternative', 'undecided', 'reject', 'withdrawn'];
 
 /**
  * Single source of truth for "casting order": group applicants by castingStatus
- * (cast → alternative → reject → undecided → withdrawn), then sort each group by
+ * (cast → alternative → undecided → reject → withdrawn), then sort each group by
  * average score descending (stable — ties keep insertion order). Shared by the
  * Marooning tab (buildMarooningView) and the Casting card's jump-select so the two
  * views can never disagree.
@@ -167,7 +170,7 @@ const CASTING_GROUP_ORDER = ['cast', 'alternative', 'reject', 'undecided', 'with
  * @param {import('discord.js').Guild} [guild] - LIVE guild, used to read each applicant's CURRENT channel
  *   name (the ✖️ withdrawn marker — there is no stored field for it, see playerStatus.js). Omit to skip
  *   withdrawal detection (degrades to the old cast/alternative/reject/undecided-only behaviour).
- * @returns {{groups: Object<string, Array>, ordered: Array}} groups keyed by status; ordered = groups concatenated in display order. Entry shape: { app, insertionIndex, userId, name, avgScore, voteCount, castingStatus, placementResponse, hasNotes }
+ * @returns {{groups: Object<string, Array>, ordered: Array}} groups keyed by status; ordered = groups concatenated in display order. Entry shape: { app, insertionIndex, userId, name, avgScore, voteCount, castingStatus, offerStatus, placementResponse, hasNotes }
  */
 export function computeCastingOrder(allApplications, playerData, guildId, guild = null) {
   const entries = allApplications.map((app, insertionIndex) => {
@@ -185,6 +188,7 @@ export function computeCastingOrder(allApplications, playerData, guildId, guild 
       avgScore,
       voteCount: scores.length,
       castingStatus: withdrawn ? 'withdrawn' : (CASTING_GROUP_ORDER.includes(rawStatus) ? rawStatus : 'undecided'),
+      offerStatus: rec.offerStatus,
       placementResponse: rec.placementResponse,
       hasNotes: !!rec.playerNotes
     };
@@ -1072,14 +1076,6 @@ export async function buildMarooningView({ configId, guildId, playerData, season
   // Grouping + score sort live in computeCastingOrder — shared with the Casting jump-select.
   const { ordered: applicantData, groups: castGroups } = computeCastingOrder(allApplications, playerData, guildId, guild);
 
-  const statusSections = [
-    { emoji: '✅', title: 'CAST PLAYERS', group: castGroups.cast },
-    { emoji: '🔄', title: 'ALTERNATE', group: castGroups.alternative },
-    { emoji: '🙅', title: "DON'T CAST", group: castGroups.reject },
-    { emoji: '⚪', title: 'UNDECIDED', group: castGroups.undecided },
-    { emoji: '✖️', title: 'WITHDRAWN', group: castGroups.withdrawn }
-  ];
-
   // ===== 🏕️ Tribes (default/active castlist) — loaded up here because the casting list below groups
   // players by their PRIVATE draft-tribe assignment, and the Draft Tribes button needs the tribe count. =====
   const { castlistManager } = await import('./castlistManager.js');
@@ -1114,24 +1110,43 @@ export async function buildMarooningView({ configId, guildId, playerData, season
     for (const uid of (ids || [])) { if (!userDraftTribe[uid]) userDraftTribe[uid] = rid; }
   }
 
-  const renderRow = (p, i) => {
+  // {Pronoun, Age yo, Timezone} appended to every row — cache-only lookups (no fetch) so a long roster
+  // never triggers a fetch storm; a player just absent from cache silently renders without the suffix.
+  const demographicsSuffix = (playerUserId) => {
+    const age = playerData[guildId]?.players?.[playerUserId]?.age;
+    const member = guild?.members?.cache?.get(playerUserId);
+    let pronounName = null, timezoneName = null;
+    if (member?.roles?.cache) {
+      const guildPronouns = playerData[guildId]?.pronounRoleIDs || [];
+      const guildTimezones = Object.keys(playerData[guildId]?.timezones || {});
+      for (const roleId of member.roles.cache.keys()) {
+        if (!pronounName && guildPronouns.includes(roleId)) pronounName = guild.roles.cache.get(roleId)?.name || null;
+        if (!timezoneName && guildTimezones.includes(roleId)) timezoneName = guild.roles.cache.get(roleId)?.name || null;
+      }
+    }
+    const bits = [pronounName, age ? `${age} yo` : null, timezoneName].filter(Boolean);
+    return bits.length ? ` \`${bits.join(', ')}\`` : '';
+  };
+
+  // `counter` is a mutable { n } threaded through a render pass so numbering can run continuously
+  // ACROSS multiple calls (Cast → Alternate → Undecided share one; see below) instead of restarting
+  // per group/sub-group/tribe-bucket.
+  const renderRow = (p, counter) => {
     const scoreDisplay = p.avgScore > 0 ? p.avgScore.toFixed(1) : 'Unrated';
     const resp = p.placementResponse === 'accepted' ? ' · 🎉 Accepted'
       : p.placementResponse === 'accepted_alternative' ? ' · ✅ Accepted (Alt)'
       : p.placementResponse === 'declined' ? ' · 🚫 Declined' : '';
-    return `${i + 1}. ${p.name} - ${scoreDisplay}/5.0 (${p.voteCount} vote${p.voteCount !== 1 ? 's' : ''})${resp}`;
+    counter.n += 1;
+    return `${counter.n}. ${p.name} - ${scoreDisplay}/5.0 (${p.voteCount} vote${p.voteCount !== 1 ? 's' : ''})${resp}${demographicsSuffix(p.userId)}`;
   };
 
-  let body = '### ```🎬 Casting Decisions```\n';
-  let anyGroup = false;
-  statusSections.forEach(section => {
-    if (section.group.length === 0) return;
-    anyGroup = true;
-    body += `## ${section.emoji} ${section.title} (${section.group.length})\n`;
-    // Sub-group this status' players by their private draft tribe (castlist order preserved), undrafted last.
+  // Renders a (already score-sorted) player list, sub-grouped by private draft tribe same as before,
+  // numbering via the shared `counter`. Returns '' for an empty list (caller skips the surrounding header).
+  const renderPlayerList = (players, counter) => {
+    if (players.length === 0) return '';
     const perTribe = new Map();
     const undrafted = [];
-    for (const p of section.group) { // already score-sorted
+    for (const p of players) {
       const rid = userDraftTribe[p.userId];
       if (rid && tribeRoleIds.includes(rid)) {
         if (!perTribe.has(rid)) perTribe.set(rid, []);
@@ -1140,20 +1155,75 @@ export async function buildMarooningView({ configId, guildId, playerData, season
         undrafted.push(p);
       }
     }
+    let out = '';
     for (const rid of tribeRoleIds) {
-      const players = perTribe.get(rid);
-      if (!players?.length) continue;
-      body += `<@&${rid}> (tentative)\n${players.map(renderRow).join('\n')}\n\n`;
+      const tribePlayers = perTribe.get(rid);
+      if (!tribePlayers?.length) continue;
+      out += `<@&${rid}> (tentative)\n${tribePlayers.map(p => renderRow(p, counter)).join('\n')}\n\n`;
     }
     if (undrafted.length) {
-      if (perTribe.size > 0) body += `-# Not yet drafted to a tribe\n`;
-      body += `${undrafted.map(renderRow).join('\n')}\n\n`;
+      if (perTribe.size > 0) out += `-# Not yet drafted to a tribe\n`;
+      out += `${undrafted.map(p => renderRow(p, counter)).join('\n')}\n\n`;
     }
-  });
+    return out;
+  };
+
+  // Accepted values that count as "responded — yes" for Cast/Alternate's offer-stage breakdown.
+  // Declined stays folded into "Offer Sent" (an offer WAS sent) — the inline "· 🚫 Declined" suffix
+  // above still marks it, so it isn't lost, just not pulled into its own top-level bucket.
+  const OFFER_STAGE_ACCEPTED = new Set(['accepted', 'accepted_alternative']);
+  const splitByOfferStage = (players) => {
+    const accepted = [], offerSent = [], draft = [];
+    for (const p of players) {
+      if (OFFER_STAGE_ACCEPTED.has(p.placementResponse)) accepted.push(p);
+      else if (p.offerStatus) offerSent.push(p);
+      else draft.push(p);
+    }
+    return { accepted, offerSent, draft };
+  };
+
+  let body = '### ```🎬 Casting Decisions```\n';
+  let anyGroup = false;
+
+  // Cast, Alternate, and Undecided share ONE continuous counter: a host tracking toward a target cast
+  // size wants a single running count across everyone still "in consideration". Don't Cast and Withdrawn
+  // are NOT candidates, so each gets its own counter that restarts at 1 (see the loop below).
+  const candidateCounter = { n: 0 };
+  const CANDIDATE_SECTIONS = [
+    { emoji: '✅', title: 'Cast Players', group: castGroups.cast, breakdown: true },
+    { emoji: '🔄', title: 'Alternate', group: castGroups.alternative, breakdown: true },
+    { emoji: '⚪', title: 'Undecided', group: castGroups.undecided, breakdown: false }
+  ];
+  for (const section of CANDIDATE_SECTIONS) {
+    if (section.group.length === 0) continue;
+    anyGroup = true;
+    body += `### \`\`\`${section.emoji} ${section.title} (${section.group.length})\`\`\`\n`;
+    if (section.breakdown) {
+      const { accepted, offerSent, draft } = splitByOfferStage(section.group);
+      if (accepted.length) body += `> ${section.emoji}✅ **${section.title} - Accepted**\n${renderPlayerList(accepted, candidateCounter)}`;
+      if (offerSent.length) body += `> ${section.emoji}📨 **${section.title} - Offer Sent**\n${renderPlayerList(offerSent, candidateCounter)}`;
+      if (draft.length) body += `> ${section.emoji} **${section.title} - Draft**\n${renderPlayerList(draft, candidateCounter)}`;
+    } else {
+      body += renderPlayerList(section.group, candidateCounter);
+    }
+  }
+
+  // Not candidates — Don't Cast and Withdrawn each restart their OWN numbering at 1.
+  const NON_CANDIDATE_SECTIONS = [
+    { emoji: '🙅', title: "Don't Cast", group: castGroups.reject },
+    { emoji: '✖️', title: 'Withdrawn', group: castGroups.withdrawn }
+  ];
+  for (const section of NON_CANDIDATE_SECTIONS) {
+    if (section.group.length === 0) continue;
+    anyGroup = true;
+    body += `### \`\`\`${section.emoji} ${section.title} (${section.group.length})\`\`\`\n`;
+    body += renderPlayerList(section.group, { n: 0 });
+  }
+
   if (!anyGroup) body += '-# No applicants yet for this season.\n\n';
   body += `### 📊 **SUMMARY**\n`;
   body += `> **Total Applicants:** ${allApplications.length}\n`;
-  body += `> **Cast:** ${castGroups.cast.length} | **Alternate:** ${castGroups.alternative.length} | **Rejected:** ${castGroups.reject.length} | **Undecided:** ${castGroups.undecided.length} | **Withdrawn:** ${castGroups.withdrawn.length}\n`;
+  body += `> **Cast:** ${castGroups.cast.length} | **Alternate:** ${castGroups.alternative.length} | **Undecided:** ${castGroups.undecided.length} | **Rejected:** ${castGroups.reject.length} | **Withdrawn:** ${castGroups.withdrawn.length}\n`;
   const totalScored = applicantData.filter(a => a.voteCount > 0).length;
   body += `> **Scored:** ${totalScored}/${allApplications.length} applicants`;
 

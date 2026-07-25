@@ -1,13 +1,15 @@
 // Tests for computeCastingOrder + the Casting jump-select's sorted display
-// (castRankingManager.js): Marooning-order grouping (cast → alternative → reject →
-// undecided), score-desc stable sort, sorted-page slicing/sentinels, page_N
-// resolution, Status-engine icons, and label truncation. (Tentative removed — RaP 0902.)
+// (castRankingManager.js): Marooning-order grouping (cast → alternative → undecided →
+// reject → withdrawn), score-desc stable sort, sorted-page slicing/sentinels, page_N
+// resolution, Status-engine icons, and label truncation. (Tentative removed — RaP 0902.
+// Undecided moved above reject/withdrawn so it groups with the "still in consideration"
+// candidates — see buildMarooningView's continuous-vs-restarting numbering split.)
 // Pure logic replicated inline to avoid importing the Discord/file-I/O-heavy module.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 const ITEMS_PER_PAGE = 23;
-const CASTING_GROUP_ORDER = ['cast', 'alternative', 'reject', 'undecided', 'withdrawn'];
+const CASTING_GROUP_ORDER = ['cast', 'alternative', 'undecided', 'reject', 'withdrawn'];
 
 // Mirrors computeCastingOrder (castRankingManager.js). `guild` is the fake { channels: { cache: { get } } }
 // built by fixture() below — withdrawal has no data field, it's read off the LIVE channel name's ✖️ prefix.
@@ -27,6 +29,7 @@ function computeCastingOrder(allApplications, playerData, guildId, guild = null)
       avgScore,
       voteCount: scores.length,
       castingStatus: withdrawn ? 'withdrawn' : (CASTING_GROUP_ORDER.includes(rawStatus) ? rawStatus : 'undecided'),
+      offerStatus: rec.offerStatus,
       placementResponse: rec.placementResponse,
       hasNotes: !!rec.playerNotes
     };
@@ -119,7 +122,7 @@ function parseRankingSelectId(customId) {
 // --- fixtures ---
 const GUILD = 'g1';
 function fixture(apps) {
-  // apps: [{ userId, name, status, scores, notes, channelId?, withdrawn? }]
+  // apps: [{ userId, name, status, scores, notes, channelId?, withdrawn?, offerStatus? }]
   const playerData = { [GUILD]: { applications: {} } };
   const channelNames = new Map();
   const allApplications = apps.map((a, i) => {
@@ -129,6 +132,7 @@ function fixture(apps) {
     if (a.scores) rec.rankings = Object.fromEntries(a.scores.map((s, j) => [`admin${j}`, s]));
     if (a.notes) rec.playerNotes = a.notes;
     if (a.placementResponse) rec.placementResponse = a.placementResponse;
+    if (a.offerStatus) rec.offerStatus = a.offerStatus;
     playerData[GUILD].applications[channelId] = rec;
     channelNames.set(channelId, `${a.withdrawn ? '✖️' : ''}${(a.name || '').toLowerCase()}-app`);
     return rec;
@@ -139,15 +143,15 @@ function fixture(apps) {
 }
 
 describe('computeCastingOrder — grouping', () => {
-  it('orders groups cast → alternative → reject → undecided', () => {
+  it('orders groups cast → alternative → undecided → reject (undecided is a "still in consideration" candidate)', () => {
     const { allApplications, playerData } = fixture([
-      { name: 'Und' },
       { name: 'Rej', status: 'reject' },
+      { name: 'Und' },
       { name: 'Alt', status: 'alternative' },
       { name: 'Cast', status: 'cast' }
     ]);
     const { ordered } = computeCastingOrder(allApplications, playerData, GUILD);
-    assert.deepEqual(ordered.map(e => e.name), ['Cast', 'Alt', 'Rej', 'Und']);
+    assert.deepEqual(ordered.map(e => e.name), ['Cast', 'Alt', 'Und', 'Rej']);
   });
 
   it('legacy tentative data normalizes into the Undecided group (RaP 0902)', () => {
@@ -188,6 +192,16 @@ describe('computeCastingOrder — grouping', () => {
     assert.equal(ordered.length, 2);
     assert.deepEqual(groups.undecided.map(e => e.name), ['NoStatus', 'Corrupt']);
   });
+
+  it('entries carry offerStatus (feeds Marooning\'s Accepted/Offer Sent/Draft breakdown)', () => {
+    const { allApplications, playerData } = fixture([
+      { name: 'Sent', status: 'cast', offerStatus: 'offer' },
+      { name: 'Draft', status: 'cast' }
+    ]);
+    const { groups } = computeCastingOrder(allApplications, playerData, GUILD);
+    assert.equal(groups.cast.find(e => e.name === 'Sent').offerStatus, 'offer');
+    assert.equal(groups.cast.find(e => e.name === 'Draft').offerStatus, undefined);
+  });
 });
 
 describe('computeCastingOrder — withdrawn sinks to the bottom (prod bug: was showing mid-list)', () => {
@@ -198,7 +212,7 @@ describe('computeCastingOrder — withdrawn sinks to the bottom (prod bug: was s
       { name: 'Und' }
     ]);
     const { ordered } = computeCastingOrder(allApplications, playerData, GUILD, guild);
-    assert.deepEqual(ordered.map(e => e.name), ['Rej', 'Und', 'WithdrawnCast']);
+    assert.deepEqual(ordered.map(e => e.name), ['Und', 'Rej', 'WithdrawnCast']);
   });
 
   it('withdrawal is read from the LIVE channel name, not a stored field — no guild passed → not detected', () => {
@@ -291,7 +305,7 @@ describe('Jump-select — sorted page derivation & slicing', () => {
   const { ordered } = computeCastingOrder(allApplications, playerData, GUILD);
 
   it('currentPage comes from sorted position, not insertion index', () => {
-    // insertionIndex 15 is a reject → sorts after all 10 casts, somewhere in 10..19
+    // insertionIndex 15 is a reject → now sorts AFTER cast + undecided (positions 40..49)
     const { sortedPos, currentPage } = derivePage(ordered, 15);
     assert.equal(ordered[sortedPos].insertionIndex, 15);
     assert.equal(currentPage, Math.floor(sortedPos / ITEMS_PER_PAGE));
