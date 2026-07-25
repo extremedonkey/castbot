@@ -14,7 +14,7 @@ import {
     evaluateCastDockTrigger,
     COMPACT_ROW2_IDS,
     stripButtonLabels,
-    appendToggleToLastRow
+    stripNameAndLocalTimeLines
 } from '../castDock.js';
 
 describe('CastDock — normalizeCastDockConfig', () => {
@@ -142,35 +142,30 @@ describe('CastDock — compact view row composition', () => {
     });
 });
 
-describe('CastDock — appendToggleToLastRow', () => {
-    const toggle = { type: 2, style: 2, custom_id: 'castdock_expand', label: '^' };
-
-    it('appends the toggle to the last row when there is room (<5 buttons)', () => {
-        const rows = [{ type: 1, components: [{ type: 2, custom_id: 'a' }, { type: 2, custom_id: 'b' }] }];
-        const result = appendToggleToLastRow(rows, toggle);
-        assert.equal(result.length, 1, 'no new row needed');
-        assert.equal(result[0].components.length, 3);
-        assert.equal(result[0].components.at(-1), toggle, 'toggle must be the last (rightmost) button');
+describe('CastDock — stripNameAndLocalTimeLines', () => {
+    it('drops the name/mention line (always line 0) and any Local time line, keeping the rest', () => {
+        const content = '**<@123456789012345678>**\nAsk • 27 • CST / CDT\n`🕛 Local time 🕛` 11:52 PM\n💰300 · 🧰1 · 📍A1 · ⚡11/11 (♻️ MAX)';
+        const result = stripNameAndLocalTimeLines(content);
+        assert.ok(!result.includes('<@123456789012345678>'), 'name/mention line must be gone');
+        assert.ok(!result.includes('Local time'), 'Local time line must be gone');
+        assert.ok(result.includes('Ask • 27 • CST / CDT'), 'pronouns/age/timezone line must survive');
+        assert.ok(result.includes('💰300'), 'stats line must survive');
     });
 
-    it('starts a new row when the last row is already full (5 buttons)', () => {
-        const fullRow = { type: 1, components: [1, 2, 3, 4, 5].map(n => ({ type: 2, custom_id: `b${n}` })) };
-        const result = appendToggleToLastRow([fullRow], toggle);
-        assert.equal(result.length, 2, 'a new row must be added');
-        assert.deepEqual(result[1], { type: 1, components: [toggle] });
+    it('is a no-op-safe pass-through for missing/empty content', () => {
+        assert.equal(stripNameAndLocalTimeLines(null), null);
+        assert.equal(stripNameAndLocalTimeLines(undefined), undefined);
+        assert.equal(stripNameAndLocalTimeLines(''), '');
     });
 
-    it('starts a new row when there are no rows at all (nothing visible in that section)', () => {
-        const result = appendToggleToLastRow([], toggle);
-        assert.equal(result.length, 1);
-        assert.deepEqual(result[0], { type: 1, components: [toggle] });
+    it('handles content with no Local time line (timezone not configured) — only the name line drops', () => {
+        const content = '**<@123>**\nAsk • 27\n💰300 · 🧰1';
+        const result = stripNameAndLocalTimeLines(content);
+        assert.equal(result, 'Ask • 27\n💰300 · 🧰1');
     });
 
-    it('accepts a single row object (not wrapped in an array) the same way', () => {
-        const singleRow = { type: 1, components: [{ type: 2, custom_id: 'a' }] };
-        const result = appendToggleToLastRow(singleRow, toggle);
-        assert.equal(result.length, 1);
-        assert.equal(result[0].components.length, 2);
+    it('handles content that is JUST the name line (nothing else configured) — result is empty', () => {
+        assert.equal(stripNameAndLocalTimeLines('**<@123>**'), '');
     });
 });
 

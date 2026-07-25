@@ -161,30 +161,25 @@ export function stripButtonLabels(rows) {
 }
 
 /**
- * Pure — appends toggleButton to the last row's components if there's room (<5, Discord's
- * per-ActionRow cap), else starts a brand new row for it. Used to keep the expand/collapse
- * toggle at the bottom-right regardless of how many buttons happen to be visible.
+ * Pure — drops the name/mention line (always line 0, per createPlayerDisplaySection's
+ * override) and any "Local time" line from a player-info content string, keeping
+ * pronouns•age•timezone, vanity roles, and the stats line untouched.
  */
-export function appendToggleToLastRow(rows, toggleButton) {
-  const list = [].concat(rows).filter(Boolean);
-  const last = list[list.length - 1];
-  if (last && last.components.length < 5) {
-    last.components.push(toggleButton);
-  } else {
-    list.push({ type: 1, components: [toggleButton] });
-  }
-  return list;
+export function stripNameAndLocalTimeLines(content) {
+  if (!content) return content;
+  const lines = content.split('\n');
+  return lines.slice(1).filter(line => !line.includes('Local time')).join('\n');
 }
 
 /**
- * Builds the compact CastDock view: a plain "CastDock" header, the player's existing
- * icon/stats line (no thumbnail), and the Safari row (with Commands merged in, Currency
- * removed) — all emoji-only, with the '^' expand toggle as the last button in the bottom
- * row. No Row 1 (Castlists & Profile), no Advanced section, no hot-swap select — a minimal
- * "home" view, not a full menu replacement. Clicking any button still routes through the
- * exact same handlers the full menu uses, which is what surfaces the full menu (with its
- * own bottom-right CastDock collapse toggle, added by createPlayerManagementUI for any
- * CastDock channel).
+ * Builds the compact CastDock view: a "CastDock" header Section with the '^' expand
+ * toggle as its accessory, the player's existing icon/stats line (no thumbnail), and the
+ * bare Safari button row (with Commands merged in, Currency removed, no section heading
+ * text above it) — all emoji-only. No Row 1 (Castlists & Profile), no Advanced section,
+ * no hot-swap select — a minimal "home" view, not a full menu replacement. Clicking any
+ * button still routes through the exact same handlers the full menu uses, which is what
+ * surfaces the full menu (with its own bottom-right CastDock collapse toggle, added by
+ * createPlayerManagementUI for any CastDock channel).
  */
 export async function buildCompactCastDockMenu(client, guildId, targetMember, playerData, channelId) {
   const { calculateVisibility, buildSectionRow, createPlayerDisplaySection, PlayerManagementMode } = await import('./playerManagement.js');
@@ -198,24 +193,24 @@ export async function buildCompactCastDockMenu(client, guildId, targetMember, pl
   const container = {
     type: 17, // Container
     accent_color: 0x3498DB,
-    components: [{ type: 10, content: '## CastDock' }]
+    components: [{
+      type: 9, // Section — header with the expand toggle as its accessory
+      components: [{ type: 10, content: '## CastDock' }],
+      accessory: { type: 2, custom_id: 'castdock_expand', label: '^', style: 2 }
+    }]
   };
 
-  container.components.push({ type: 14 }); // Separator
-
-  // Same icon/stats text the full menu shows — just the TextDisplay, no Section/thumbnail.
+  // Same icon/stats text the full menu shows, minus the name and Local time lines —
+  // just the TextDisplay, no Section/thumbnail.
   const playerSection = await createPlayerDisplaySection(targetMember, playerData, guildId);
-  if (playerSection?.components?.[0]) container.components.push(playerSection.components[0]);
+  const infoContent = stripNameAndLocalTimeLines(playerSection?.components?.[0]?.content);
+  if (infoContent) container.components.push({ type: 10, content: infoContent });
 
   container.components.push({ type: 14 }); // Separator
 
   const row2 = buildSectionRow(COMPACT_ROW2_IDS, targetUserId, null, visibility, PlayerManagementMode.PLAYER);
   stripButtonLabels(row2);
-  if (row2.length) {
-    container.components.push({ type: 10, content: '### ```🦁 Idol Hunts, Challenges and Safari```' });
-  }
-  const expandToggle = { type: 2, style: 2, custom_id: 'castdock_expand', label: '^' };
-  appendToggleToLastRow(row2, expandToggle).forEach(r => container.components.push(r));
+  row2.forEach(r => container.components.push(r));
 
   countComponents([container], { enableLogging: true, verbosity: 'summary', label: 'CastDock Compact Menu' });
 
