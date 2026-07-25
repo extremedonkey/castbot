@@ -641,33 +641,41 @@ export async function handleCastingStatus({ customId, value, channelId, appIndex
     return { content: '❌ Invalid casting status request.', ephemeral: true };
   }
 
-  const { loadPlayerData, savePlayerData, getApplicationsForSeason } = await import('./storage.js');
-  const playerData = await loadPlayerData();
-  const appRecord = playerData[guildId]?.applications?.[channelId];
-  if (!appRecord) {
+  const { loadPlayerData, savePlayerData, getApplicationsForSeason, withStorageLock } = await import('./storage.js');
+  // Locked load→mutate→save (incident-05 protection) — a concurrent playerData cycle during this
+  // write would otherwise be silently erased (last save wins). Discord fetch + re-render stay OUTSIDE
+  // the lock; the mutated playerData reference is carried out for rendering.
+  let playerData, found = false;
+  await withStorageLock(async () => {
+    playerData = await loadPlayerData();
+    const appRecord = playerData[guildId]?.applications?.[channelId];
+    if (!appRecord) return;
+    found = true;
+    const previousStatus = appRecord.castingStatus || 'undecided';
+    const newStatus = value === 'undecided' ? 'undecided' : value;
+    // "undecided" is never stored — clearing castingStatus IS undecided (backwards compatible with
+    // existing data, where absence of castingStatus already meant undecided).
+    if (value === 'undecided') {
+      delete appRecord.castingStatus;
+    } else {
+      appRecord.castingStatus = value;
+    }
+    // A CHANGED decision invalidates any Stage-2 commitment tied to the OLD decision (a sent offer /
+    // the applicant's response to it) — otherwise a stale 'accepted' keeps outranking the new decision
+    // forever, since deriveApplicationStatus/STATUS_REGISTRY both check placementResponse before
+    // castingStatus. Confirmed on prod: two applicants flipped Cast→Reject still showed 🎉 "Accepted
+    // Placement" weeks later because nothing ever cleared it. Clearing lets a fresh invite re-stamp
+    // offerStatus for the new decision.
+    if (previousStatus !== newStatus) {
+      delete appRecord.placementResponse;
+      delete appRecord.offerStatus;
+      delete appRecord.offerSentAt;
+    }
+    await savePlayerData(playerData);
+  });
+  if (!found) {
     return { content: '❌ Application not found.', ephemeral: true };
   }
-  const previousStatus = appRecord.castingStatus || 'undecided';
-  const newStatus = value === 'undecided' ? 'undecided' : value;
-  // "undecided" is never stored — clearing castingStatus IS undecided (backwards compatible with
-  // existing data, where absence of castingStatus already meant undecided).
-  if (value === 'undecided') {
-    delete appRecord.castingStatus;
-  } else {
-    appRecord.castingStatus = value;
-  }
-  // A CHANGED decision invalidates any Stage-2 commitment tied to the OLD decision (a sent offer /
-  // the applicant's response to it) — otherwise a stale 'accepted' keeps outranking the new decision
-  // forever, since deriveApplicationStatus/STATUS_REGISTRY both check placementResponse before
-  // castingStatus. Confirmed on prod: two applicants flipped Cast→Reject still showed 🎉 "Accepted
-  // Placement" weeks later because nothing ever cleared it. Clearing lets a fresh invite re-stamp
-  // offerStatus for the new decision.
-  if (previousStatus !== newStatus) {
-    delete appRecord.placementResponse;
-    delete appRecord.offerStatus;
-    delete appRecord.offerSentAt;
-  }
-  await savePlayerData(playerData);
 
   const allApplications = await getApplicationsForSeason(guildId, configId);
   const currentApp = allApplications[appIndex];
@@ -737,6 +745,51 @@ export function applyStatusOnlyUpdate(playerData, guildId, app, recordAccepted) 
   return { ok: true, name: app.displayName || app.username || 'Applicant' };
 }
 
+/**
+ * Locked variant of applyStatusOnlyUpdate — owns the whole load→mutate→save cycle under
+ * withStorageLock (incident-05 protection). This is what the casting_messages_save handler calls;
+ * the pure function above stays exported for tests and callers that already own a cycle.
+ * @returns {Promise<{ok: true, name: string} | {ok: false, error: string}>}
+ */
+export async function applyStatusOnlyUpdateLocked(guildId, app, recordAccepted) {
+  const { loadPlayerData, savePlayerData, withStorageLock } = await import('./storage.js');
+  let result;
+  await withStorageLock(async () => {
+    const playerData = await loadPlayerData();
+    result = applyStatusOnlyUpdate(playerData, guildId, app, recordAccepted);
+    if (result.ok) await savePlayerData(playerData);
+  });
+  return result;
+}
+
+/**
+ * Record an applicant's Accept/Decline click on a placement invite card — locked load→mutate→save.
+ * Validates the record exists and the clicker IS the applicant inside the lock, then writes
+ * placementResponse ('accepted' / 'accepted_alternative' for an alternate offer / 'declined').
+ * The caller (placement_accept/decline handler, app.js) handles all the Discord side effects
+ * (public message, channel emoji, card edit) AFTER this returns — nothing slow runs inside the lock.
+ * @param {Object} p - { guildId, channelId, clickerUserId, offerType ('successful'|'alternative'), accepted }
+ * @returns {Promise<{ok: true, applicantUserId: string, configId: (string|undefined)} | {ok: false, error: string}>}
+ */
+export async function recordPlacementResponse({ guildId, channelId, clickerUserId, offerType, accepted }) {
+  const { loadPlayerData, savePlayerData, withStorageLock } = await import('./storage.js');
+  let outcome;
+  await withStorageLock(async () => {
+    const playerData = await loadPlayerData();
+    const appRec = playerData[guildId]?.applications?.[channelId];
+    if (!appRec) { outcome = { ok: false, error: '❌ Application not found for this channel.' }; return; }
+    if (clickerUserId !== appRec.userId) {
+      outcome = { ok: false, error: `❌ Only <@${appRec.userId}> can respond to this placement.` };
+      return;
+    }
+    // accepted_alternative (RaP 0902): accepting an ALTERNATE offer is distinct from a main-cast accept.
+    appRec.placementResponse = accepted ? (offerType === 'alternative' ? 'accepted_alternative' : 'accepted') : 'declined';
+    await savePlayerData(playerData);
+    outcome = { ok: true, applicantUserId: appRec.userId, configId: appRec.configId };
+  });
+  return outcome;
+}
+
 /** Accent colours per message type for the V2 invite card. */
 const INVITE_ACCENT = { successful: 0x27ae60, alternative: 0xf1c40f, unsuccessful: 0xe74c3c };
 
@@ -767,18 +820,22 @@ function sanitizeTemplate(text) {
 
 /** Persist the three templates to the guild node (future: per-season under applicationConfigs[configId]). */
 export async function saveCastingMessages(guildId, configId, messages, userId, tsMs) {
-  const { loadPlayerData, savePlayerData } = await import('./storage.js');
-  const playerData = await loadPlayerData();
-  if (!playerData[guildId]) playerData[guildId] = {};
-  playerData[guildId].castingMessages = {
-    successful: sanitizeTemplate(messages.successful),
-    alternative: sanitizeTemplate(messages.alternative),
-    unsuccessful: sanitizeTemplate(messages.unsuccessful),
-    updatedAt: tsMs || 0,
-    updatedBy: userId
-  };
-  await savePlayerData(playerData);
-  return playerData[guildId].castingMessages;
+  const { loadPlayerData, savePlayerData, withStorageLock } = await import('./storage.js');
+  let saved;
+  await withStorageLock(async () => {
+    const playerData = await loadPlayerData();
+    if (!playerData[guildId]) playerData[guildId] = {};
+    playerData[guildId].castingMessages = {
+      successful: sanitizeTemplate(messages.successful),
+      alternative: sanitizeTemplate(messages.alternative),
+      unsuccessful: sanitizeTemplate(messages.unsuccessful),
+      updatedAt: tsMs || 0,
+      updatedBy: userId
+    };
+    await savePlayerData(playerData);
+    saved = playerData[guildId].castingMessages;
+  });
+  return saved;
 }
 
 /** Substitute the @Player token with the applicant's mention. */
@@ -921,16 +978,19 @@ export function buildInvitesConfirm({ mode, appIndex, configId, targets }) {
  * to tell WHICH applicant that was).
  */
 export async function sendCastingInvites({ client, guildId, configId, mode, appIndex, messages }) {
-  const { loadPlayerData, savePlayerData, getApplicationsForSeason } = await import('./storage.js');
+  const { loadPlayerData, savePlayerData, getApplicationsForSeason, withStorageLock } = await import('./storage.js');
   const { DiscordRequest } = await import('./utils.js');
+  // Pure read for target selection — the write happens in a SHORT locked cycle after the send loop.
+  // The old shape (mutate this copy during the loop, save at the end) held a stale playerData snapshot
+  // across the whole throttled send (~700ms × N targets) and its final save silently erased any
+  // concurrent write landing in that window — the exact incident-05 lost-write shape.
   const playerData = await loadPlayerData();
   const allApplications = await getApplicationsForSeason(guildId, configId);
   const targets = selectInviteTargets(allApplications, playerData, guildId, mode, appIndex);
 
   // Stage 2 (RaP 0902): a SENT invite stamps offerStatus on the application (drives the Casting chevron).
   const OFFER_FOR_TYPE = { successful: 'offer', alternative: 'offer_alternative', unsuccessful: 'offer_rejected' };
-  const nowIso = new Date().toISOString();
-  let stampedAny = false;
+  const stamped = []; // { channelId, offer } per successful send — applied under the lock below
 
   const result = {
     sent: 0, failed: 0, skippedEmpty: 0,
@@ -964,10 +1024,9 @@ export async function sendCastingInvites({ client, guildId, configId, mode, appI
       result.sent++;
       result.perType[t.messageType]++;
       result.channels.sent.push(t.channelId);
-      // Persist the offer on the application record (chevron Stage 2). Only on a confirmed send.
-      const rec = playerData[guildId]?.applications?.[t.channelId];
+      // Queue the offer stamp (chevron Stage 2). Only on a confirmed send; written under the lock below.
       const offer = OFFER_FOR_TYPE[t.messageType];
-      if (rec && offer) { rec.offerStatus = offer; rec.offerSentAt = nowIso; stampedAny = true; }
+      if (offer) stamped.push({ channelId: t.channelId, offer });
     } catch (err) {
       console.log(`⚠️ sendCastingInvites: failed to message channel ${t.channelId}: ${err.message}`);
       result.failed++;
@@ -975,7 +1034,17 @@ export async function sendCastingInvites({ client, guildId, configId, mode, appI
     }
     if (i < targets.length - 1) await sleep(700); // rate-limit-safe spacing
   }
-  if (stampedAny) await savePlayerData(playerData);
+  if (stamped.length > 0) {
+    await withStorageLock(async () => {
+      const fresh = await loadPlayerData();
+      const nowIso = new Date().toISOString();
+      for (const { channelId, offer } of stamped) {
+        const rec = fresh[guildId]?.applications?.[channelId];
+        if (rec) { rec.offerStatus = offer; rec.offerSentAt = nowIso; }
+      }
+      await savePlayerData(fresh);
+    });
+  }
   console.log(`📨 sendCastingInvites [${mode}] guild ${guildId}: sent ${result.sent}, failed ${result.failed}, skippedEmpty ${result.skippedEmpty}`);
   return result;
 }
@@ -1138,7 +1207,12 @@ export async function generateDncOverviewUI({ guildId, configId, guild }) {
  * @returns {string[]} tribe role IDs
  */
 function getMarooningTribeRoleIds(playerData, guildId, guild) {
-  const allTribeIds = Object.keys(playerData[guildId]?.tribes || {});
+  // Skip null/undefined tribe entries — prod data really contains them, which is why the virtual
+  // adapter guards `if (!tribe) continue` in three places. Without this, a nulled-out tribe whose
+  // Discord role still exists would resurrect here (count toward canDraft, render in the Tribes line).
+  const allTribeIds = Object.entries(playerData[guildId]?.tribes || {})
+    .filter(([, tribe]) => tribe)
+    .map(([roleId]) => roleId);
   return guild ? allTribeIds.filter(rid => guild.roles.cache.has(rid)) : allTribeIds;
 }
 
@@ -1191,10 +1265,12 @@ export async function buildMarooningView({ configId, guildId, playerData, season
   // member.roles.cache, which Discord.js only populates for members it has actually seen/fetched
   // (same gotcha castlistDataAccess.js hit for tribe rendering: "role.members is a FILTERED VIEW of
   // the member cache"). A per-row fetch would risk a fetch storm on a large roster, so bulk-fetch once
-  // via the gateway, guarded by a timeout so one slow guild can't hang the whole view.
+  // via the gateway, capped at 10s so one slow guild can't hang the whole view. NOTE: discord.js's
+  // fetch-all timeout option is `time`, NOT `timeout` — an unknown key is silently ignored and the
+  // default 120s applies (this exact bug shipped here first, copied from castlistDataAccess.js).
   if (guild && guild.members.cache.size < guild.memberCount * 0.8) {
     try {
-      await guild.members.fetch({ timeout: 10000 });
+      await guild.members.fetch({ time: 10000 });
     } catch (e) {
       console.warn(`⚠️ Marooning: bulk member fetch failed/timed out, continuing with partial cache: ${e.message}`);
     }
@@ -1321,7 +1397,7 @@ export async function buildMarooningView({ configId, guildId, playerData, season
     }
   } else if (hasRejects) {
     const hiddenCount = castGroups.reject.length + castGroups.withdrawn.length;
-    body += `-# 🗑️ ${hiddenCount} Don't Cast/Withdrawn applicant${hiddenCount !== 1 ? 's' : ''} hidden — click Show Rejects below.\n\n`;
+    body += `-# 🗑️ ${hiddenCount} Don't Cast/Withdrawn applicant${hiddenCount !== 1 ? 's' : ''} hidden — click Rejects below to view.\n\n`;
   }
 
   if (!hasCandidates && !hasRejects) body += '-# No applicants yet for this season.\n\n';

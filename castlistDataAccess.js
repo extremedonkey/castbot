@@ -90,7 +90,7 @@ export async function getTribesForCastlist(guildId, castlistIdentifier, client) 
     }
     try {
       const fetchStart = Date.now();
-      await guild.members.fetch({ timeout: 10000 }); // 10 second timeout
+      await guild.members.fetch({ time: 10000 }); // 10s cap — discord.js option is `time`, not `timeout` (unknown keys silently ignored → default 120s)
       const fetchTime = Date.now() - fetchStart;
       if (isVerbose) {
         console.log(`[TRIBES] ✅ Fetched ${guild.members.cache.size} members in ${fetchTime}ms`);

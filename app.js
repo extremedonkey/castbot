@@ -5596,28 +5596,21 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const guildId = context.guildId;
           const channelId = req.body.channel_id;
 
-          const playerData = await loadPlayerData();
-          const appRec = playerData[guildId]?.applications?.[channelId];
-          if (!appRec) return { content: '❌ Application not found for this channel.', ephemeral: true };
-          // Only the applicant may respond.
-          if (context.userId !== appRec.userId) {
-            return { content: `❌ Only <@${appRec.userId}> can respond to this placement.`, ephemeral: true };
-          }
-
-          // accepted_alternative (RaP 0902): accepting an ALTERNATE offer is distinct from a main-cast accept.
-          appRec.placementResponse = accepted ? (offerType === 'alternative' ? 'accepted_alternative' : 'accepted') : 'declined';
-          await savePlayerData(playerData);
+          // Locked load→validate→mutate→save lives in castRankingManager; Discord side effects stay out here.
+          const { recordPlacementResponse } = await import('./castRankingManager.js');
+          const rp = await recordPlacementResponse({ guildId, channelId, clickerUserId: context.userId, offerType, accepted });
+          if (!rp.ok) return { content: rp.error, ephemeral: true };
 
           const { DiscordRequest } = await import('./utils.js');
           const offerLabel = offerType === 'alternative' ? 'the alternate spot' : 'their cast placement';
           let prodPing = '';
           try {
-            const cfg = appRec.configId ? await getApplicationConfig(guildId, appRec.configId) : null;
+            const cfg = rp.configId ? await getApplicationConfig(guildId, rp.configId) : null;
             if (cfg?.productionRole) prodPing = ` <@&${cfg.productionRole}>`;
           } catch {}
           const publicText = accepted
-            ? `## ✅ Placement Accepted\n<@${appRec.userId}> has **accepted** ${offerLabel}!${prodPing}`
-            : `## ❌ Placement Declined\n<@${appRec.userId}> has **declined** ${offerLabel}.${prodPing}`;
+            ? `## ✅ Placement Accepted\n<@${rp.applicantUserId}> has **accepted** ${offerLabel}!${prodPing}`
+            : `## ❌ Placement Declined\n<@${rp.applicantUserId}> has **declined** ${offerLabel}.${prodPing}`;
 
           // Post a new PUBLIC message for production to read.
           try {
@@ -39371,29 +39364,28 @@ Your server is now ready for Tycoons gameplay!`;
           const messages = { successful: fields.msg_successful || '', alternative: fields.msg_alternative || '', unsuccessful: fields.msg_unsuccessful || '' };
           const mode = fields.invite_mode || 'draft';
 
-          const { saveCastingMessages, selectInviteTargets, buildInvitesConfirm, applyStatusOnlyUpdate } = await import('./castRankingManager.js');
+          const { saveCastingMessages, selectInviteTargets, buildInvitesConfirm, applyStatusOnlyUpdateLocked } = await import('./castRankingManager.js');
           await saveCastingMessages(context.guildId, configId, messages, context.userId, Date.now());
 
           if (mode === 'draft') {
             return { flags: (1 << 15), components: [{ type: 17, accent_color: 0x27ae60, components: [{ type: 10, content: '💾 **Templates saved.** No messages were sent.' }] }] };
           }
 
-          const playerData = await loadPlayerData();
           const { getApplicationsForSeason } = await import('./storage.js');
           const allApplications = await getApplicationsForSeason(context.guildId, configId);
 
           if (mode === 'status_only' || mode === 'status_only_accepted') {
-            const result = applyStatusOnlyUpdate(playerData, context.guildId, allApplications[appIndex], mode === 'status_only_accepted');
+            const result = await applyStatusOnlyUpdateLocked(context.guildId, allApplications[appIndex], mode === 'status_only_accepted');
             if (!result.ok) {
               return { flags: (1 << 15), components: [{ type: 17, accent_color: 0xe74c3c, components: [{ type: 10, content: result.error }] }] };
             }
-            await savePlayerData(playerData);
             const emoji = mode === 'status_only_accepted' ? '🎉' : '🕵️';
             const verb = mode === 'status_only_accepted' ? 'recorded as accepted' : 'recorded the offer as sent';
             return { flags: (1 << 15), components: [{ type: 17, accent_color: 0x27ae60, components: [{ type: 10, content: `${emoji} **Status updated for ${result.name}** — ${verb} (no message was sent).` }] }] };
           }
 
-          // Compute targets and show the confirmation before sending.
+          // Compute targets (pure read) and show the confirmation before sending.
+          const playerData = await loadPlayerData();
           const targets = selectInviteTargets(allApplications, playerData, context.guildId, mode, appIndex);
           return buildInvitesConfirm({ mode, appIndex, configId, targets });
         }

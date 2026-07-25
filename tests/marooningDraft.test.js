@@ -99,12 +99,12 @@ function rejectsToggleButton(showRejects, hasRejects, configId) {
   };
 }
 
-// Mirrors buildMarooningView's collapsed-state hint line.
+// Mirrors buildMarooningView's collapsed-state hint line ("Rejects" — the button's actual label).
 function hiddenRejectsHint(showRejects, rejectCount, withdrawnCount) {
   if (showRejects) return null;
   const hiddenCount = rejectCount + withdrawnCount;
   if (hiddenCount === 0) return null;
-  return `-# 🗑️ ${hiddenCount} Don't Cast/Withdrawn applicant${hiddenCount !== 1 ? 's' : ''} hidden — click Show Rejects below.`;
+  return `-# 🗑️ ${hiddenCount} Don't Cast/Withdrawn applicant${hiddenCount !== 1 ? 's' : ''} hidden — click Rejects below to view.`;
 }
 
 // Mirrors buildMarooningView's Cast Players header — "(N/Est)" once the Season Planner's Estimated
@@ -150,8 +150,12 @@ function filterDeletedRoles(tribeRoleIds, guild) {
 // castlist-membership check (castlistIds[]/castlistId/legacy castlist string vs 'default') to a direct
 // existence check: every tribe CastBot knows about, whose Discord role still exists. Fixes a real gap —
 // a tribe created via the "Tribes (Legacy)" debug flow has no castlistIds and could fail every format check.
+// Null/undefined tribe entries are skipped — prod data contains them (the virtual adapter guards
+// `if (!tribe) continue` in three places for the same reason).
 function getMarooningTribeRoleIds(playerData, guildId, guild) {
-  const allTribeIds = Object.keys(playerData[guildId]?.tribes || {});
+  const allTribeIds = Object.entries(playerData[guildId]?.tribes || {})
+    .filter(([, tribe]) => tribe)
+    .map(([roleId]) => roleId);
   return guild ? allTribeIds.filter(rid => guild.roles.cache.has(rid)) : allTribeIds;
 }
 
@@ -477,6 +481,17 @@ describe('getMarooningTribeRoleIds — simplified from castlist-membership to di
     assert.deepEqual(getMarooningTribeRoleIds(playerData, 'g1', guild), ['roleA']);
   });
 
+  it('null/undefined tribe entries are skipped even when the Discord role still exists (adapter parity)', () => {
+    // Prod data really contains tribes[roleId] = null — the virtual adapter guards `if (!tribe) continue`
+    // in three places. A nulled-out tribe must not resurrect as a ghost (canDraft, Tribes line, modal).
+    const playerData = { g1: { tribes: { roleNulled: null, roleLive: { emoji: '🔥' } } } };
+    const guild = mockGuild(['roleNulled', 'roleLive']);
+    assert.deepEqual(getMarooningTribeRoleIds(playerData, 'g1', guild), ['roleLive']);
+    // ...and a guild that ONLY has nulled tribes reads as zero → Draft Tribes disabled.
+    const onlyNulls = { g1: { tribes: { roleNulled: null } } };
+    assert.deepEqual(getMarooningTribeRoleIds(onlyNulls, 'g1', mockGuild(['roleNulled'])), []);
+  });
+
   it('filters out deleted-role tribes, same as before', () => {
     const playerData = { g1: { tribes: { roleA: {}, roleDead: {} } } };
     const guild = mockGuild(['roleA']);
@@ -531,17 +546,17 @@ describe('Marooning — 🗑️ Show/Hide Rejects toggle', () => {
     assert.equal(rejectsToggleButton(true, false, 'cfg1').disabled, true);
   });
 
-  it('collapsed + hidden applicants present → hint line with the combined count', () => {
+  it('collapsed + hidden applicants present → hint line with the combined count, naming the actual button label', () => {
     assert.equal(
       hiddenRejectsHint(false, 3, 2),
-      '-# 🗑️ 5 Don\'t Cast/Withdrawn applicants hidden — click Show Rejects below.'
+      '-# 🗑️ 5 Don\'t Cast/Withdrawn applicants hidden — click Rejects below to view.'
     );
   });
 
   it('singular applicant → "applicant" not "applicants"', () => {
     assert.equal(
       hiddenRejectsHint(false, 1, 0),
-      '-# 🗑️ 1 Don\'t Cast/Withdrawn applicant hidden — click Show Rejects below.'
+      '-# 🗑️ 1 Don\'t Cast/Withdrawn applicant hidden — click Rejects below to view.'
     );
   });
 
