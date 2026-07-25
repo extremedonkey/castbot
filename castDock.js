@@ -83,6 +83,11 @@ export async function setCastDockButtonSelection(guildId, channelId, targetUserI
     if (!playerData[guildId]) playerData[guildId] = {};
     const channels = (playerData[guildId].castDock ||= {}).channels ||= {};
     const existing = channels[channelId] || {};
+    // A pre-activation selection write must never retarget or mutate a dock that is LIVE
+    // for a different player (deferred-activation contract) — reject untouched.
+    if (existing.enabled === true && existing.targetUserId && existing.targetUserId !== targetUserId) {
+      return { ...existing, rejected: true };
+    }
     channels[channelId] = { ...existing, targetUserId, selectedButtons, enabled: existing.enabled === true };
     await savePlayerData(playerData);
     return channels[channelId];
@@ -449,7 +454,10 @@ export async function applyCastDockToggle(client, guildId, channelId, targetUser
   if (!client.castDockChannels) client.castDockChannels = new Map();
   if (action === 'enable') {
     await setCastDockConfig(guildId, channelId, { enabled: true, targetUserId, enabledBy: actorUserId });
-    const entry = { enabled: true, targetUserId, guildId, lastMessageId: null, lastRepostAt: Date.now() };
+    // Carry over the previous sticky's id — re-activating an already-active dock (the
+    // reconfigure flow) must delete the old message on first post, not orphan it forever.
+    const prevMessageId = client.castDockChannels.get(channelId)?.lastMessageId ?? null;
+    const entry = { enabled: true, targetUserId, guildId, lastMessageId: prevMessageId, lastRepostAt: Date.now() };
     client.castDockChannels.set(channelId, entry);
     await repostCastDockMenu(client, guildId, channelId, entry); // immediate first post
   } else {
