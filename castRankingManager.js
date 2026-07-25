@@ -1273,15 +1273,20 @@ export async function buildMarooningView({ configId, guildId, playerData, season
   // size wants a single running count across everyone still "in consideration". Don't Cast and Withdrawn
   // are NOT candidates, so each gets its own counter that restarts at 1 (see the loop below).
   const candidateCounter = { n: 0 };
+  // Cast Players' header becomes "(N/Est)" when the Season Planner's "Estimated Number of Players"
+  // (season_edit_info → estimatedTotalPlayers) is set — lets a host see progress toward their target
+  // cast size at a glance. Deliberately NOT capped: exceeding the estimate (e.g. 22/18) is valid and
+  // should show as-is, not clamp or warn.
+  const estimatedTotalPlayers = playerData[guildId]?.applicationConfigs?.[configId]?.estimatedTotalPlayers;
   const CANDIDATE_SECTIONS = [
-    { emoji: '✅', title: 'Cast Players', group: castGroups.cast, breakdown: true },
+    { emoji: '✅', title: 'Cast Players', group: castGroups.cast, breakdown: true, countSuffix: estimatedTotalPlayers != null ? `/${estimatedTotalPlayers}` : '' },
     { emoji: '🔄', title: 'Alternate', group: castGroups.alternative, breakdown: true },
     { emoji: '⚪', title: 'Undecided', group: castGroups.undecided, breakdown: false }
   ];
   for (const section of CANDIDATE_SECTIONS) {
     if (section.group.length === 0) continue;
     anyGroup = true;
-    body += `### \`\`\`${section.emoji} ${section.title} (${section.group.length})\`\`\`\n`;
+    body += `### \`\`\`${section.emoji} ${section.title} (${section.group.length}${section.countSuffix || ''})\`\`\`\n`;
     if (section.breakdown) {
       const { accepted, offerSent, draft } = splitByOfferStage(section.group);
       if (accepted.length) body += `> ${section.emoji}✅ **${section.title} - Accepted**\n${renderPlayerList(accepted, candidateCounter, { suppressAcceptedTag: true })}`;

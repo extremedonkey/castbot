@@ -81,6 +81,13 @@ function shouldBulkFetchMembers(cacheSize, memberCount) {
   return cacheSize < memberCount * 0.8;
 }
 
+// Mirrors buildMarooningView's Cast Players header — "(N/Est)" once the Season Planner's Estimated
+// Number of Players is set, else plain "(N)". Deliberately uncapped: exceeding the estimate is valid.
+function castPlayersHeader(count, estimatedTotalPlayers) {
+  const countSuffix = estimatedTotalPlayers != null ? `/${estimatedTotalPlayers}` : '';
+  return `Cast Players (${count}${countSuffix})`;
+}
+
 // Mirrors buildMarooningView's splitByOfferStage — Cast/Alternate broken into Accepted / Offer Sent /
 // Draft. Declined stays folded into Offer Sent (an offer WAS sent; the inline "· 🚫 Declined" marks it).
 const OFFER_STAGE_ACCEPTED = new Set(['accepted', 'accepted_alternative']);
@@ -248,6 +255,22 @@ describe('Marooning — bulk member-fetch gate (warms the cache before resolving
   it('skips the fetch when the cache is already warm (≥80%)', () => {
     assert.equal(shouldBulkFetchMembers(45, 50), false); // 90% cached
     assert.equal(shouldBulkFetchMembers(50, 50), false); // 100% cached
+  });
+});
+
+describe('Marooning — Cast Players header shows "(N/Est)" once a Season Planner estimate is set', () => {
+  it('no estimate set → plain "(N)", unchanged from before', () => {
+    assert.equal(castPlayersHeader(17, undefined), 'Cast Players (17)');
+    assert.equal(castPlayersHeader(17, null), 'Cast Players (17)');
+  });
+  it('estimate set → "(N/Est)"', () => {
+    assert.equal(castPlayersHeader(17, 18), 'Cast Players (17/18)');
+  });
+  it('exceeding the estimate is a VALID figure — no capping, no clamping', () => {
+    assert.equal(castPlayersHeader(22, 18), 'Cast Players (22/18)');
+  });
+  it('an estimate of 0 still renders (falsy but not null/undefined — != null is the right guard)', () => {
+    assert.equal(castPlayersHeader(0, 0), 'Cast Players (0/0)');
   });
 });
 
