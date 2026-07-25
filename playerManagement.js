@@ -1863,9 +1863,12 @@ export async function handlePlayerButtonClick(req, res, customId, playerData, cl
   const guild = await client.guilds.fetch(guildId);
   const targetMember = await guild.members.fetch(targetUserId);
 
-  // Check if this is an application channel context (same logic as player_menu handler)
+  // Check if this is an application channel context — PLAYER mode only (matches the
+  // mode === 'player' gate used everywhere else this check appears in app.js). An admin
+  // managing a target's profile from inside that player's own app channel must still get
+  // the full menu, not the applicant's restricted age/pronoun/timezone-only view.
   const channelId = req.body.channel_id;
-  const isApplicationChannel = playerData[guildId]?.applications && 
+  const isApplicationChannel = mode === PlayerManagementMode.PLAYER && playerData[guildId]?.applications &&
     Object.values(playerData[guildId].applications).some(app => app.channelId === channelId);
   
   // Use custom title and hide bottom buttons if in application context

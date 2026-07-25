@@ -72,3 +72,30 @@ describe('handlePlayerButtonClick — channelId threading (regression: CastDock 
     assert.ok(/\bchannelId\b/.test(callBlock), 'createPlayerManagementUI call must pass channelId');
   });
 });
+
+describe('handlePlayerButtonClick — isApplicationChannel gated to PLAYER mode (regression: admin CastDock redirected to app UI)', () => {
+  // Bug caught live on TEST 2026-07-25: clicking an admin_set_castdock_* (or any other
+  // admin_set_*) button from within a channel that happens to be registered as a season
+  // application channel forced the restricted "Set your age, pronouns and timezone."
+  // view and hid Row 2/3 entirely — even though the ADMIN was managing a target player's
+  // profile, not filling in their own application. Every other occurrence of this same
+  // "is this an application channel" check in app.js explicitly gates it with
+  // `mode === 'player' ? isApplicationChannel : false`; handlePlayerButtonClick was the
+  // one place that applied it unconditionally to both PLAYER and ADMIN mode. Static check:
+  // catches the gate vanishing again without mocking the whole Discord-client call chain.
+  it('computes isApplicationChannel only when mode is PLAYER, not unconditionally', () => {
+    const src = readFileSync(path.join(__dirname, '..', 'playerManagement.js'), 'utf8');
+    const fnStart = src.indexOf('export async function handlePlayerButtonClick');
+    assert.ok(fnStart !== -1, 'handlePlayerButtonClick must exist in playerManagement.js');
+
+    const declIdx = src.indexOf('const isApplicationChannel', fnStart);
+    assert.ok(declIdx !== -1, 'handlePlayerButtonClick must declare isApplicationChannel');
+
+    const declEnd = src.indexOf(';', src.indexOf(';', declIdx) + 1);
+    const declaration = src.slice(declIdx, declEnd);
+    assert.ok(
+      /mode\s*===\s*PlayerManagementMode\.PLAYER/.test(declaration),
+      'isApplicationChannel must be gated by mode === PlayerManagementMode.PLAYER, or admin buttons get collapsed into the applicant-only view'
+    );
+  });
+});
