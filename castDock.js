@@ -185,7 +185,7 @@ export async function buildCompactCastDockMenu(client, guildId, targetMember, pl
     accent_color: 0x3498DB,
     components: [{
       type: 9, // Section — header with the expand toggle as its accessory
-      components: [{ type: 10, content: '## CastDock' }],
+      components: [{ type: 10, content: '.' }], // TEMP visual test: does the ^ accessory fit inline with less header text?
       accessory: { type: 2, custom_id: 'castdock_expand', label: '^', style: 2 }
     }]
   };
