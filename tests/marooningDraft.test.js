@@ -88,12 +88,15 @@ function parseRejectsToggleCustomId(customId) {
   return { showRejects, configId };
 }
 
-// Mirrors buildMarooningView's 🗑️ toggle button — label/custom_id flip on current state; disabled
-// when there's nothing to reveal (no dead-end click).
+// Mirrors buildMarooningView's 🗑️ toggle button — label stays a STATIC "Rejects" regardless of state
+// (the body text already makes current state obvious); only custom_id flips. Disabled when there's
+// nothing to reveal (no dead-end click).
 function rejectsToggleButton(showRejects, hasRejects, configId) {
-  return showRejects
-    ? { custom_id: `marooning_hide_rejects_${configId}`, label: 'Hide Rejects', disabled: !hasRejects }
-    : { custom_id: `marooning_show_rejects_${configId}`, label: 'Show Rejects', disabled: !hasRejects };
+  return {
+    custom_id: showRejects ? `marooning_hide_rejects_${configId}` : `marooning_show_rejects_${configId}`,
+    label: 'Rejects',
+    disabled: !hasRejects
+  };
 }
 
 // Mirrors buildMarooningView's collapsed-state hint line.
@@ -141,6 +144,15 @@ function overflowWarningIndex(tribeRoleIds) {
 function filterDeletedRoles(tribeRoleIds, guild) {
   if (!guild) return tribeRoleIds;
   return tribeRoleIds.filter(rid => guild.roles.cache.has(rid));
+}
+
+// Mirrors getMarooningTribeRoleIds (castRankingManager.js) — simplified from the old 3-format
+// castlist-membership check (castlistIds[]/castlistId/legacy castlist string vs 'default') to a direct
+// existence check: every tribe CastBot knows about, whose Discord role still exists. Fixes a real gap —
+// a tribe created via the "Tribes (Legacy)" debug flow has no castlistIds and could fail every format check.
+function getMarooningTribeRoleIds(playerData, guildId, guild) {
+  const allTribeIds = Object.keys(playerData[guildId]?.tribes || {});
+  return guild ? allTribeIds.filter(rid => guild.roles.cache.has(rid)) : allTribeIds;
 }
 
 describe('Marooning Draft — userDraftTribe map (first tribe wins)', () => {
@@ -442,9 +454,50 @@ describe('Marooning — deleted Discord roles are gracefully ignored', () => {
     assert.deepEqual([...perTribe.keys()], ['roleLive']);
     assert.deepEqual(undrafted.map(p => p.name), ['A']);
   });
-  it('Draft Tribes gate: 2 tribes with 1 deleted → below the 2-tribe minimum (button disabled / modal null)', () => {
+  it('Draft Tribes gate: 1 live tribe now MEETS the ≥1 minimum (was ≥2 — button enabled, not disabled)', () => {
     const live = filterDeletedRoles(['roleA', 'roleDead'], mockGuild(['roleA']));
-    assert.ok(live.length < 2);
+    assert.equal(live.length, 1);
+    assert.ok(live.length >= 1); // canDraft = true
+  });
+});
+
+describe('getMarooningTribeRoleIds — simplified from castlist-membership to direct existence check', () => {
+  const mockGuild = roleIds => ({ roles: { cache: new Map(roleIds.map(id => [id, {}])) } });
+
+  it('returns every tribe key CastBot knows about — no castlist-membership check at all', () => {
+    const playerData = { g1: { tribes: { roleA: { castlist: 'default' }, roleB: { castlistIds: ['other_castlist'] } } } };
+    // roleB is on a DIFFERENT castlist entirely, yet still counts — this is the whole point of the change.
+    const guild = mockGuild(['roleA', 'roleB']);
+    assert.deepEqual(getMarooningTribeRoleIds(playerData, 'g1', guild).sort(), ['roleA', 'roleB']);
+  });
+
+  it('a tribe with NO castlistIds/castlistId/castlist field at all still counts (the legacy-debug-flow gap)', () => {
+    const playerData = { g1: { tribes: { roleA: { emoji: '🔥', analyticsName: 'Legacy Tribe' } } } };
+    const guild = mockGuild(['roleA']);
+    assert.deepEqual(getMarooningTribeRoleIds(playerData, 'g1', guild), ['roleA']);
+  });
+
+  it('filters out deleted-role tribes, same as before', () => {
+    const playerData = { g1: { tribes: { roleA: {}, roleDead: {} } } };
+    const guild = mockGuild(['roleA']);
+    assert.deepEqual(getMarooningTribeRoleIds(playerData, 'g1', guild), ['roleA']);
+  });
+
+  it('no guild → no deleted-role filtering (fail open, same convention as filterDeletedRoles)', () => {
+    const playerData = { g1: { tribes: { roleA: {}, roleB: {} } } };
+    assert.deepEqual(getMarooningTribeRoleIds(playerData, 'g1', null).sort(), ['roleA', 'roleB']);
+  });
+
+  it('no tribes configured at all → empty array, not a throw', () => {
+    assert.deepEqual(getMarooningTribeRoleIds({ g1: {} }, 'g1', mockGuild([])), []);
+    assert.deepEqual(getMarooningTribeRoleIds({}, 'g1', mockGuild([])), []);
+  });
+
+  it('canDraft threshold: 0 tribes → disabled, 1 tribe → enabled (was ≥2)', () => {
+    const zero = getMarooningTribeRoleIds({ g1: { tribes: {} } }, 'g1', mockGuild([]));
+    const one = getMarooningTribeRoleIds({ g1: { tribes: { roleA: {} } } }, 'g1', mockGuild(['roleA']));
+    assert.equal(zero.length >= 1, false);
+    assert.equal(one.length >= 1, true);
   });
 });
 
@@ -460,16 +513,16 @@ describe('Marooning — 🗑️ Show/Hide Rejects toggle', () => {
     );
   });
 
-  it('default (collapsed) state shows "Show Rejects", pointing at the show_rejects custom_id', () => {
+  it('default (collapsed) state → static "Rejects" label, pointing at the show_rejects custom_id', () => {
     const btn = rejectsToggleButton(false, true, 'cfg1');
-    assert.equal(btn.label, 'Show Rejects');
+    assert.equal(btn.label, 'Rejects');
     assert.equal(btn.custom_id, 'marooning_show_rejects_cfg1');
     assert.equal(btn.disabled, false);
   });
 
-  it('expanded state shows "Hide Rejects", pointing at the hide_rejects custom_id', () => {
+  it('expanded state → SAME "Rejects" label (not "Hide Rejects"), pointing at the hide_rejects custom_id', () => {
     const btn = rejectsToggleButton(true, true, 'cfg1');
-    assert.equal(btn.label, 'Hide Rejects');
+    assert.equal(btn.label, 'Rejects');
     assert.equal(btn.custom_id, 'marooning_hide_rejects_cfg1');
   });
 

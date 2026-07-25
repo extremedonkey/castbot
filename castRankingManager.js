@@ -1126,6 +1126,23 @@ export async function generateDncOverviewUI({ guildId, configId, guild }) {
  * @returns {Object} Complete UI response object for navigation
  */
 /**
+ * Which tribe role IDs Marooning (Tribes line, Draft Tribes, roster grouping) treats as "this guild's
+ * tribes". Simplified from the old 3-format castlist-membership check (castlistIds[]/castlistId/legacy
+ * castlist string, matched against the 'default' castlist) to a direct existence check: every tribe
+ * CastBot knows about, whose Discord role still exists. Robustness win — the legacy format-matching had
+ * real gaps (e.g. a tribe created via the "Tribes (Legacy)" debug flow has NO castlistIds at all and
+ * could silently fail every one of the three format checks).
+ * @param {Object} playerData
+ * @param {string} guildId
+ * @param {import('discord.js').Guild} [guild] - when omitted, deleted-role filtering is skipped
+ * @returns {string[]} tribe role IDs
+ */
+function getMarooningTribeRoleIds(playerData, guildId, guild) {
+  const allTribeIds = Object.keys(playerData[guildId]?.tribes || {});
+  return guild ? allTribeIds.filter(rid => guild.roles.cache.has(rid)) : allTribeIds;
+}
+
+/**
  * 🚣 Marooning tab — the season-wide casting-decision summary (formerly the "Casting Summary" button).
  * Now a first-class Season Manager tab: shared seasonManagerHeader('marooning') + buildSeasonNavRow(…,
  * 'marooning') + the casting-status breakdown + the shared [← Seasons][Edit][🗑️ Show/Hide Rejects] bottom
@@ -1150,26 +1167,12 @@ export async function buildMarooningView({ configId, guildId, playerData, season
   // Grouping + score sort live in computeCastingOrder — shared with the Casting jump-select.
   const { ordered: applicantData, groups: castGroups } = computeCastingOrder(allApplications, playerData, guildId, guild);
 
-  // ===== 🏕️ Tribes (default/active castlist) — loaded up here because the casting list below groups
-  // players by their PRIVATE draft-tribe assignment, and the Draft Tribes button needs the tribe count. =====
-  const { castlistManager } = await import('./castlistManager.js');
-  let tribeRoleIds = [];
-  try {
-    tribeRoleIds = await castlistManager.getTribesUsingCastlist(guildId, 'default');
-  } catch (e) {
-    console.warn(`⚠️ Marooning: could not load default-castlist tribes: ${e.message}`);
-  }
-  // Gracefully ignore tribes whose Discord role was deleted (would render as @unknown-role).
-  // Display-only filter — the Castlist Hub is the place that detects orphans and CLEANS the data.
-  // With none left this renders exactly like no tribes configured (Tribes: None, Draft disabled,
-  // draftees of the dead tribe fall back to the undrafted list below).
-  if (guild) {
-    const orphaned = tribeRoleIds.filter(rid => !guild.roles.cache.has(rid));
-    if (orphaned.length > 0) {
-      console.log(`⚠️ Marooning: ignoring ${orphaned.length} tribe(s) with deleted Discord role(s): ${orphaned.join(', ')}`);
-      tribeRoleIds = tribeRoleIds.filter(rid => guild.roles.cache.has(rid));
-    }
-  }
+  // ===== 🏕️ Tribes — loaded up here because the casting list below groups players by their PRIVATE
+  // draft-tribe assignment, and the Draft Tribes button needs the tribe count. Deleted-role tribes are
+  // silently excluded (display-only filter — the Castlist Hub is the place that detects orphans and
+  // CLEANS the data); with none left this renders exactly like no tribes configured (Tribes: None,
+  // Draft disabled, draftees of the dead tribe fall back to the undrafted list below). =====
+  const tribeRoleIds = getMarooningTribeRoleIds(playerData, guildId, guild);
   const tribes = playerData[guildId]?.tribes || {};
   const tribesLine = tribeRoleIds.length > 0
     ? `**Tribes:** ${tribeRoleIds.map(id => `${tribes[id]?.emoji || '🏕️'} <@&${id}>`).join(', ')}`
@@ -1330,14 +1333,23 @@ export async function buildMarooningView({ configId, guildId, playerData, season
 
   // 🏕️ Tribes section — the New Tribe button REUSES the Castlist Hub's button (tribe_add_button|default) so
   // it's identical in look/feel/function: opens the Add New Tribe modal → creates the role → adds it to the
-  // DEFAULT castlist. 💭 Draft Tribes opens the private draft modal (needs ≥2 tribes, else disabled).
-  const canDraft = tribeRoleIds.length >= 2;
+  // DEFAULT castlist. 💭 Draft Tribes opens the private draft modal (needs ≥1 tribe, else disabled).
+  const canDraft = tribeRoleIds.length >= 1;
 
-  // 🗑️ Show/Hide Rejects — toggles the Don't Cast/Withdrawn roster. Disabled when there's nothing to
-  // reveal (both groups empty) rather than offering a dead-end click.
-  const rejectsToggleButton = showRejects
-    ? { type: 2, custom_id: `marooning_hide_rejects_${configId}`, label: 'Hide Rejects', style: 2, emoji: { name: '🗑️' }, disabled: !hasRejects }
-    : { type: 2, custom_id: `marooning_show_rejects_${configId}`, label: 'Show Rejects', style: 2, emoji: { name: '🗑️' }, disabled: !hasRejects };
+  // ✒️ Bulk Invites — season-level bulk sends (Cast/Alternate/Reject templates → applicant channels).
+  // appIndex is baked as 0: it's only read by the modal's "selected applicant" mode, which is N/A from
+  // this season-level view (guarded by a name-showing confirm card). Lives in the bottom row, next to
+  // the 🗑️ Rejects toggle it's most often used together with (send outcome messages, then check who's left).
+  const bulkInvitesButton = { type: 2, custom_id: `casting_messages_0_${configId}`, label: 'Bulk Invites', style: 2, emoji: { name: '✒️' } };
+
+  // 🗑️ Rejects — toggles the Don't Cast/Withdrawn roster. Label stays static ("Rejects", not
+  // "Show/Hide Rejects") — the body text already makes the current state obvious. Disabled when
+  // there's nothing to reveal (both groups empty) rather than offering a dead-end click.
+  const rejectsToggleButton = {
+    type: 2,
+    custom_id: showRejects ? `marooning_hide_rejects_${configId}` : `marooning_show_rejects_${configId}`,
+    label: 'Rejects', style: 2, emoji: { name: '🗑️' }, disabled: !hasRejects
+  };
 
   const container = {
     type: 17,
@@ -1351,17 +1363,13 @@ export async function buildMarooningView({ configId, guildId, playerData, season
         // New Tribe reuses the Castlist Hub button, but carries a 'marooning_{configId}' origin so the modal
         // SUBMIT refreshes THIS Marooning message (not the Castlist Hub). Still adds to the default castlist.
         { type: 2, custom_id: `tribe_add_button|default|marooning_${configId}`, label: 'New Tribe', style: 2, emoji: { name: '🏕️' } },
-        { type: 2, custom_id: `marooning_draft_tribes_${configId}`, label: 'Draft Tribes', style: 2, emoji: { name: '💭' }, disabled: !canDraft },
-        // ✒️ Invites — moved here from the Casting card. Season-level bulk sends (Cast/Alternate/Reject
-        // templates → applicant channels). appIndex is baked as 0: it's only read by the modal's "selected
-        // applicant" mode, which is N/A from this season-level view (guarded by a name-showing confirm card).
-        { type: 2, custom_id: `casting_messages_0_${configId}`, label: 'Bulk Invites', style: 2, emoji: { name: '✒️' } }
+        { type: 2, custom_id: `marooning_draft_tribes_${configId}`, label: 'Draft Tribes', style: 2, emoji: { name: '💭' }, disabled: !canDraft }
       ]},
       { type: 10, content: tribesLine },
       { type: 14 },
       { type: 10, content: body },
       { type: 14 },
-      buildSeasonBottomRow(configId, 'marooning', [rejectsToggleButton])
+      buildSeasonBottomRow(configId, 'marooning', [bulkInvitesButton, rejectsToggleButton])
     ]
   };
 
@@ -1386,25 +1394,17 @@ export async function renderMarooningRejectsToggle(customId, guildId, userId, gu
 }
 
 /**
- * 💭 Draft Tribes modal — up to 5 PRIVATE User Selects, one per tribe on the default castlist. Provisional,
- * host-only assignments: submitting does NOT assign Discord roles and does NOT notify anyone (see the
+ * 💭 Draft Tribes modal — up to 5 PRIVATE User Selects, one per known tribe. Provisional, host-only
+ * assignments: submitting does NOT assign Discord roles and does NOT notify anyone (see the
  * marooning_draft_tribes_modal submit handler in app.js). Reassuring copy (ComponentsV2) on every label.
- * Pre-fills each select with the current draft (default_values). Returns null when <2 tribes exist (nothing
- * meaningful to draft). If >5 tribes, only the first 5 are shown and the LAST label warns to trim the castlist.
+ * Pre-fills each select with the current draft (default_values). Returns null when 0 tribes exist (nothing
+ * to draft into). If >5 tribes, only the first 5 are shown and the LAST label warns to trim the castlist.
  * @param {Object} p - { configId, guildId, playerData, guild }
  * @returns {Object|null} a MODAL response ({ type: 9, data }) or null
  */
 export async function buildDraftTribesModal({ configId, guildId, playerData, guild }) {
-  const { castlistManager } = await import('./castlistManager.js');
-  let tribeRoleIds = [];
-  try {
-    tribeRoleIds = await castlistManager.getTribesUsingCastlist(guildId, 'default');
-  } catch (e) {
-    console.warn(`⚠️ Draft Tribes: could not load default-castlist tribes: ${e.message}`);
-  }
-  // Same deleted-role filter as buildMarooningView — a dead tribe would render as "🏕️ Tribe".
-  if (guild) tribeRoleIds = tribeRoleIds.filter(rid => guild.roles.cache.has(rid));
-  if (tribeRoleIds.length < 2) return null; // need ≥2 tribes to draft between
+  const tribeRoleIds = getMarooningTribeRoleIds(playerData, guildId, guild);
+  if (tribeRoleIds.length === 0) return null; // need ≥1 tribe to draft into
 
   const tribes = playerData[guildId]?.tribes || {};
   const draft = playerData[guildId]?.applicationConfigs?.[configId]?.draftTribes || {};

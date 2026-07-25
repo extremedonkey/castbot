@@ -3408,7 +3408,7 @@ export const BUTTON_REGISTRY = {
   },
   'marooning_draft_tribes_*': {
     label: 'Draft Tribes',
-    description: 'Privately draft-assign players to the default castlist\'s tribes (host-only, no roles assigned, hidden until marooning)',
+    description: 'Privately draft-assign players to any of the guild\'s known tribes (host-only, no roles assigned, hidden until marooning)',
     emoji: '💭',
     style: 'Secondary',
     parent: 'season_marooning',
@@ -3416,16 +3416,16 @@ export const BUTTON_REGISTRY = {
     requiresModal: true
   },
   'marooning_show_rejects_*': {
-    label: 'Show Rejects',
-    description: 'Reveal the Don\'t Cast/Withdrawn roster on Marooning (hidden by default)',
+    label: 'Rejects',
+    description: 'Toggle button — currently collapsed: reveal the Don\'t Cast/Withdrawn roster on Marooning (hidden by default)',
     emoji: '🗑️',
     style: 'Secondary',
     parent: 'season_marooning',
     category: 'application_management'
   },
   'marooning_hide_rejects_*': {
-    label: 'Hide Rejects',
-    description: 'Collapse the Don\'t Cast/Withdrawn roster on Marooning',
+    label: 'Rejects',
+    description: 'Toggle button — currently expanded: collapse the Don\'t Cast/Withdrawn roster on Marooning',
     emoji: '🗑️',
     style: 'Secondary',
     parent: 'season_marooning',
