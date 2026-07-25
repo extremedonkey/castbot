@@ -1614,8 +1614,17 @@ export async function createPlayerManagementUI(options) {
   // ════════════════════════════════════════════════════════════════════════
   container.components.push({ type: 14 }); // Separator
 
+  // hideBottomButtons mode only ever shows Row 1 essentials (see the branch above) — an
+  // activeCategory left over from a Row 2/3 button (e.g. a stale 'castdock'/'currency' from
+  // a prior render where that button WAS visible) must not leak its select through here once
+  // the button itself is hidden, or the screen shows a select with no button that opens it.
+  const applicationAllowedCategories = ['pronouns', 'timezone', 'age'];
+  const effectiveActiveCategory = (hideBottomButtons && !applicationAllowedCategories.includes(activeCategory))
+    ? null
+    : activeCategory;
+
   const selectMenu = await buildSuperSelect(
-    activeCategory, targetMember, playerData, safariData,
+    effectiveActiveCategory, targetMember, playerData, safariData,
     guildId, mode, client, guild, userId, channelId
   );
   if (selectMenu) {
@@ -1625,7 +1634,7 @@ export async function createPlayerManagementUI(options) {
   // ════════════════════════════════════════════════════════════════════════
   // STATS DISPLAY (below select when Stats button active)
   // ════════════════════════════════════════════════════════════════════════
-  if (activeCategory === 'attributes' && targetMember) {
+  if (effectiveActiveCategory === 'attributes' && targetMember) {
     const displayName = targetMember.displayName || targetMember.user?.username || 'Player';
     const statsLabel = isAdmin ? `${displayName}'s Stats` : 'Your Stats';
     const attributeSection = await createAttributeDisplaySection(guildId, targetMember.id, statsLabel);
