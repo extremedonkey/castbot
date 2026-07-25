@@ -9890,6 +9890,50 @@ To fix this:
         return await createPlayerManagementUI({ mode: PlayerManagementMode.PLAYER, targetMember: member, playerData, guildId: context.guildId, userId: entry.targetUserId, channelId: context.channelId, client: context.client, title: 'CastBot | Player Menu' });
       }})(req, res, client);
 
+    } else if (custom_id === 'castdock_view_inventory') {
+      // Compact-mode Inventory button — skips the hot-swap select, straight to the view.
+      // Always the CastDock's fixed target player, not whoever clicked.
+      return ButtonHandlerFactory.create({ id: 'castdock_view_inventory', security: 'public', handler: async (context) => {
+        const entry = client.castDockChannels?.get(context.channelId);
+        if (!entry) return { content: '📌 CastDock is no longer enabled in this channel.', ephemeral: true };
+        const { createPlayerInventoryDisplay } = await import('./safariManager.js');
+        let targetMember = null;
+        try { targetMember = await context.guild.members.fetch(entry.targetUserId); } catch { /* fallback to id-only display */ }
+        return await createPlayerInventoryDisplay(context.guildId, entry.targetUserId, targetMember, 0);
+      }})(req, res, client);
+
+    } else if (custom_id === 'castdock_view_navigate') {
+      // Compact-mode Map button — skips the hot-swap select, straight to the navigate pane.
+      return ButtonHandlerFactory.create({ id: 'castdock_view_navigate', security: 'public', deferred: true, handler: async (context) => {
+        const entry = client.castDockChannels?.get(context.channelId);
+        if (!entry) return { content: '📌 CastDock is no longer enabled in this channel.', ephemeral: true };
+        const { getPlayerLocation, getMovementDisplay } = await import('./mapMovement.js');
+        const loc = await getPlayerLocation(context.guildId, entry.targetUserId);
+        const coordinate = loc?.currentCoordinate;
+        if (!coordinate) return { content: '🗺️ This player hasn\'t started exploring the map yet.', ephemeral: true };
+        const pane = await getMovementDisplay(context.guildId, entry.targetUserId, coordinate, true);
+        return { ...pane, ephemeral: true };
+      }})(req, res, client);
+
+    } else if (custom_id === 'castdock_open_crafting' || custom_id === 'castdock_open_challenges') {
+      // Compact-mode Crafting/Challenges — appends the existing select inline (same custom_id
+      // the full menu uses, e.g. player_menu_sel_crafting) instead of switching to the full menu.
+      return ButtonHandlerFactory.create({ id: custom_id, security: 'public', deferred: true, updateMessage: true, handler: async (context) => {
+        const category = custom_id === 'castdock_open_crafting' ? 'crafting' : 'challenges';
+        const entry = client.castDockChannels?.get(context.channelId);
+        if (!entry) {
+          return {
+            flags: (1 << 15),
+            components: [{ type: 17, components: [{ type: 10, content: '📌 CastDock is no longer enabled in this channel.' }] }]
+          };
+        }
+        const guild = await context.client.guilds.fetch(context.guildId);
+        const targetMember = await guild.members.fetch(entry.targetUserId);
+        const playerData = await loadPlayerData();
+        const { buildCompactCastDockMenu } = await import('./castDock.js');
+        return await buildCompactCastDockMenu(context.client, context.guildId, targetMember, playerData, context.channelId, category);
+      }})(req, res, client);
+
     } else if (custom_id === 'player_menu_sel_inventory' || custom_id.startsWith('player_menu_sel_inventory_')) {
       const selectedValue = req.body.data.values?.[0];
       if (custom_id.startsWith('player_menu_sel_inventory_') && selectedValue === 'edit_items') {

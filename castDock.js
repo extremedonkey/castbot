@@ -160,19 +160,47 @@ export function stripButtonLabels(rows) {
   return rows;
 }
 
+// Compact-mode-only custom_ids for buttons that skip the hot-swap select and either act
+// directly (inventory/map) or open a select scoped to CastDock's own safe fallback
+// (crafting/challenges — see buildCompactCastDockMenu's activeSelectCategory param).
+// Every other row2 button (commands, stamina, actions, stores) is untouched, still routing
+// through the same custom_ids the full menu uses.
+export const COMPACT_DIRECT_ACTION_REMAP = {
+  player_set_inventory: 'castdock_view_inventory',
+  player_set_map: 'castdock_view_navigate',
+  player_set_crafting: 'castdock_open_crafting',
+  player_set_challenges: 'castdock_open_challenges',
+};
+
+/** Pure — rewrites specific button custom_ids per COMPACT_DIRECT_ACTION_REMAP, leaving the rest untouched. */
+export function remapCompactButtonIds(rows) {
+  for (const row of [].concat(rows)) {
+    for (const component of row?.components || []) {
+      const replacement = COMPACT_DIRECT_ACTION_REMAP[component.custom_id];
+      if (replacement) component.custom_id = replacement;
+    }
+  }
+  return rows;
+}
+
 /**
  * Builds the compact CastDock view: a "CastDock" header Section with the '^' expand
  * toggle as its accessory, JUST the player's stats line (no name, no pronouns/age/timezone,
  * no Local time, no thumbnail — built directly via buildPlayerStatsLine rather than through
  * createPlayerDisplaySection's combined card), and the bare Safari button row (with Commands
  * merged in, Currency removed, no section heading text above it) — all emoji-only. No Row 1
- * (Castlists & Profile), no Advanced section, no hot-swap select — a minimal "home" view, not
- * a full menu replacement. Clicking any button still routes through the exact same handlers
- * the full menu uses, which is what surfaces the full menu (with its own bottom-right
- * CastDock collapse toggle, added by createPlayerManagementUI for any CastDock channel).
+ * (Castlists & Profile), no Advanced section, no hot-swap select by default — a minimal
+ * "home" view, not a full menu replacement.
+ *
+ * Inventory and Map skip the hot-swap select entirely (their custom_ids are remapped to
+ * dedicated handlers that jump straight to the view-inventory / navigate-pane action).
+ * Crafting and Challenges instead open their existing hot-swap select, rendered inline below
+ * this same compact row via activeSelectCategory — pass 'crafting' or 'challenges' to append
+ * it (used by the castdock_open_crafting/castdock_open_challenges handlers in app.js).
+ * @param {string|null} [activeSelectCategory] - 'crafting' | 'challenges' | null
  */
-export async function buildCompactCastDockMenu(client, guildId, targetMember, playerData, channelId) {
-  const { calculateVisibility, buildSectionRow, buildPlayerStatsLine, PlayerManagementMode } = await import('./playerManagement.js');
+export async function buildCompactCastDockMenu(client, guildId, targetMember, playerData, channelId, activeSelectCategory = null) {
+  const { calculateVisibility, buildSectionRow, buildSuperSelect, buildPlayerStatsLine, PlayerManagementMode } = await import('./playerManagement.js');
   const { loadSafariContent } = await import('./safariManager.js');
   const { countComponents } = await import('./utils.js');
 
@@ -197,7 +225,13 @@ export async function buildCompactCastDockMenu(client, guildId, targetMember, pl
 
   const row2 = buildSectionRow(COMPACT_ROW2_IDS, targetUserId, null, visibility, PlayerManagementMode.PLAYER);
   stripButtonLabels(row2);
+  remapCompactButtonIds(row2);
   row2.forEach(r => container.components.push(r));
+
+  if (activeSelectCategory) {
+    const selectRow = await buildSuperSelect(activeSelectCategory, targetMember, playerData, safariData, guildId, PlayerManagementMode.PLAYER, client, null, targetUserId, channelId);
+    if (selectRow) container.components.push(selectRow);
+  }
 
   countComponents([container], { enableLogging: true, verbosity: 'summary', label: 'CastDock Compact Menu' });
 

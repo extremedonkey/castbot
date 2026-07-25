@@ -1374,6 +1374,10 @@ export const BUTTON_REGISTRY = {
   'player_set_castdock': { label: 'CastDock', description: 'Toggle CastDock sticky menu for this channel', emoji: '📌', style: 'Secondary', category: 'player_management' },
   'castdock_expand': { label: 'Expand', description: 'Show the full player menu from CastDock\'s compact view', emoji: '⬆️', style: 'Secondary', category: 'player_management' },
   'castdock_collapse': { label: 'Collapse', description: 'Return CastDock to its compact view', emoji: '⬇️', style: 'Secondary', category: 'player_management' },
+  'castdock_view_inventory': { label: 'View Inventory', description: 'CastDock compact: jump straight to the inventory view', emoji: '🧰', style: 'Secondary', category: 'player_management' },
+  'castdock_view_navigate': { label: 'View Navigate Pane', description: 'CastDock compact: jump straight to the map navigate pane', emoji: '🗺️', style: 'Secondary', category: 'player_management' },
+  'castdock_open_crafting': { label: 'Open Crafting Select', description: 'CastDock compact: show the crafting select inline', emoji: '🛠️', style: 'Secondary', category: 'player_management' },
+  'castdock_open_challenges': { label: 'Open Challenges Select', description: 'CastDock compact: show the challenges select inline', emoji: '🏃', style: 'Secondary', category: 'player_management' },
 
   // === CHALLENGE ACTION CATEGORIES ===
   'challenge_action_cat_select_*': {

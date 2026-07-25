@@ -13,7 +13,9 @@ import {
     parseCastDockAction,
     evaluateCastDockTrigger,
     COMPACT_ROW2_IDS,
-    stripButtonLabels
+    stripButtonLabels,
+    COMPACT_DIRECT_ACTION_REMAP,
+    remapCompactButtonIds
 } from '../castDock.js';
 
 describe('CastDock — normalizeCastDockConfig', () => {
@@ -138,6 +140,48 @@ describe('CastDock — compact view row composition', () => {
         for (const id of row1Ids) {
             assert.ok(!COMPACT_ROW2_IDS.includes(id), `${id} must not appear in the compact row`);
         }
+    });
+});
+
+describe('CastDock — remapCompactButtonIds', () => {
+    it('remaps inventory/map/crafting/challenges to their CastDock-specific custom_ids', () => {
+        const row = { type: 1, components: [
+            { type: 2, custom_id: 'player_set_inventory' },
+            { type: 2, custom_id: 'player_set_map' },
+            { type: 2, custom_id: 'player_set_crafting' },
+            { type: 2, custom_id: 'player_set_challenges' }
+        ] };
+        remapCompactButtonIds(row);
+        assert.equal(row.components[0].custom_id, 'castdock_view_inventory');
+        assert.equal(row.components[1].custom_id, 'castdock_view_navigate');
+        assert.equal(row.components[2].custom_id, 'castdock_open_crafting');
+        assert.equal(row.components[3].custom_id, 'castdock_open_challenges');
+    });
+
+    it('leaves every other button untouched (commands, stamina, actions, stores, castdock, etc.)', () => {
+        const untouched = ['player_enter_command_global', 'player_set_stamina', 'player_set_actions', 'player_set_stores', 'player_set_castdock', 'player_set_attributes'];
+        const row = { type: 1, components: untouched.map(custom_id => ({ type: 2, custom_id })) };
+        remapCompactButtonIds(row);
+        assert.deepEqual(row.components.map(c => c.custom_id), untouched);
+    });
+
+    it('accepts an array of rows, same as stripButtonLabels', () => {
+        const rows = [
+            { type: 1, components: [{ type: 2, custom_id: 'player_set_inventory' }] },
+            { type: 1, components: [{ type: 2, custom_id: 'player_set_map' }] }
+        ];
+        remapCompactButtonIds(rows);
+        assert.equal(rows[0].components[0].custom_id, 'castdock_view_inventory');
+        assert.equal(rows[1].components[0].custom_id, 'castdock_view_navigate');
+    });
+
+    it('the remap table itself has exactly the 4 expected entries', () => {
+        assert.deepEqual(COMPACT_DIRECT_ACTION_REMAP, {
+            player_set_inventory: 'castdock_view_inventory',
+            player_set_map: 'castdock_view_navigate',
+            player_set_crafting: 'castdock_open_crafting',
+            player_set_challenges: 'castdock_open_challenges',
+        });
     });
 });
 

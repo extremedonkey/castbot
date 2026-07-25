@@ -2004,5 +2004,6 @@ async function createHotSwappableSelect(activeButton, targetMember, playerData, 
 export {
   createHotSwappableSelect,
   calculateVisibility,
-  buildSectionRow
+  buildSectionRow,
+  buildSuperSelect
 };
