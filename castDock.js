@@ -56,7 +56,10 @@ export async function setCastDockConfig(guildId, channelId, { enabled, targetUse
     if (!playerData[guildId]) playerData[guildId] = {};
     const channels = (playerData[guildId].castDock ||= {}).channels ||= {};
     if (enabled) {
-      channels[channelId] = { enabled: true, targetUserId, enabledBy, enabledAt: Date.now(), disabledAt: null };
+      // Spread the existing entry — a selectedButtons choice saved on the setup screen
+      // (setCastDockButtonSelection) must survive activation. Live bug 2026-07-25: a fresh
+      // object literal here wiped the just-picked selection and the dock rendered defaults.
+      channels[channelId] = { ...channels[channelId], enabled: true, targetUserId, enabledBy, enabledAt: Date.now(), disabledAt: null };
     } else if (channels[channelId]) {
       channels[channelId] = { ...channels[channelId], enabled: false, disabledAt: Date.now() };
     }
@@ -119,32 +122,40 @@ export function parseCastDockAction(values) {
 // Order here IS the render order — buttons always render in this order regardless of the
 // order they were picked in the multi-select. 'stamina'/'stores' are deliberately absent —
 // dropped from compact mode entirely (the full menu is unaffected).
+// defaultOn:false = excluded from the default selection (only matters while selectedButtons
+// is null — an explicit selection always wins). Map is off by default so the five default
+// buttons fit on a single ActionRow (Discord's 5-button row limit); a sixth wraps to row 2.
 export const CASTDOCK_SELECTABLE_BUTTONS = [
   { id: 'commands', label: 'Commands', emoji: '🕹️', description: 'Lets player type in commands in actions' },
   { id: 'inventory', label: 'Inventory', emoji: '🧰', description: "Shows the players' inventory" },
   { id: 'actions', label: 'Actions', emoji: '⚡', description: 'Shows any actions configured to player menu' },
   { id: 'challenges', label: 'Challenges', emoji: '🏃', description: 'Shows any active challenge actions' },
   { id: 'crafting', label: 'Crafting', emoji: '🛠️', description: 'Shows crafting options' },
-  { id: 'map', label: 'Map', emoji: '🗺️', description: 'Shows the navigate pane if the player is in Safari' },
+  { id: 'map', label: 'Map', emoji: '🗺️', description: 'Shows the navigate pane if the player is in Safari', defaultOn: false },
 ];
+
+/** Pure — the ids selected by default (when selectedButtons is null/undefined): every entry not marked defaultOn:false. */
+export function defaultCastDockButtonIds() {
+  return CASTDOCK_SELECTABLE_BUTTONS.filter(b => b.defaultOn !== false).map(b => b.id);
+}
 
 /**
  * Pure — resolves which compact-row ids to render, in CASTDOCK_SELECTABLE_BUTTONS order.
- * null/undefined (never configured) → all 6, in order. An explicit array — including [] —
- * is a real, respected choice, not defaulted. Unknown/garbage ids are silently dropped.
+ * null/undefined (never configured) → the default five (Map is off by default). An explicit
+ * array — including [] — is a real, respected choice, not defaulted. Unknown ids are dropped.
  */
 export function resolveCompactRowIds(selectedButtons) {
-  const chosen = Array.isArray(selectedButtons) ? new Set(selectedButtons) : new Set(CASTDOCK_SELECTABLE_BUTTONS.map(b => b.id));
+  const chosen = Array.isArray(selectedButtons) ? new Set(selectedButtons) : new Set(defaultCastDockButtonIds());
   return CASTDOCK_SELECTABLE_BUTTONS.filter(b => chosen.has(b.id)).map(b => b.id);
 }
 
 /**
  * Pure — the "Select CastDock buttons" multi-select shown on the setup screen. Options are
  * always in CASTDOCK_SELECTABLE_BUTTONS order; `default:` reflects the current selection
- * (or all 6 if selectedButtons is null/undefined — never configured yet).
+ * (or the default five — Map off — if selectedButtons is null/undefined, never configured).
  */
 export function buildCastDockButtonSelectRow(customId, selectedButtons) {
-  const chosen = Array.isArray(selectedButtons) ? new Set(selectedButtons) : new Set(CASTDOCK_SELECTABLE_BUTTONS.map(b => b.id));
+  const chosen = Array.isArray(selectedButtons) ? new Set(selectedButtons) : new Set(defaultCastDockButtonIds());
   return {
     type: 1, // ActionRow
     components: [{
@@ -198,7 +209,7 @@ export async function buildCastDockSetupScreen(guildId, channelId, isAdminMode, 
       { type: 10, content: '-# Since it\'s public now, whatever shows on it — currency, item counts, safari stats — is visible to everyone in this channel. Best kept to a private submission/subs channel, not anywhere spectators or other players can see it.' },
       { type: 14 },
       { type: 10, content: '### ```🔘 Select CastDock buttons```' },
-      { type: 10, content: '-# Choose which buttons appear on CastDock (shown in this order: Commands, Inventory, Actions, Challenges, Crafting, Map). A selected button still only shows if its own requirements are met — e.g. Inventory stays hidden for a player carrying nothing.' },
+      { type: 10, content: '-# Choose which buttons appear on CastDock (shown in this order: Commands, Inventory, Actions, Challenges, Crafting, Map). The default five fit neatly on one row — Map is off by default, as a sixth button wraps onto a second row. A selected button still only shows if its own requirements are met — e.g. Inventory stays hidden for a player carrying nothing.' },
       buildCastDockButtonSelectRow(selectButtonsId, config.selectedButtons),
       { type: 14 },
       { type: 1, components: [

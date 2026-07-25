@@ -5,6 +5,9 @@
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
 import {
     CASTDOCK_COOLDOWN_MS,
@@ -13,12 +16,15 @@ import {
     parseCastDockAction,
     evaluateCastDockTrigger,
     CASTDOCK_SELECTABLE_BUTTONS,
+    defaultCastDockButtonIds,
     resolveCompactRowIds,
     buildCastDockButtonSelectRow,
     stripButtonLabels,
     COMPACT_DIRECT_ACTION_REMAP,
     remapCompactButtonIds
 } from '../castDock.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 describe('CastDock — normalizeCastDockConfig', () => {
     it('defaults missing/malformed data to disabled with no button selection', () => {
@@ -100,12 +106,21 @@ describe('CastDock — CASTDOCK_SELECTABLE_BUTTONS (the fixed selectable + rende
             assert.ok(b.description, `${b.id} needs a description`);
         }
     });
+
+    it('only Map is off by default — the default five fit a single 5-button ActionRow', () => {
+        assert.deepEqual(defaultCastDockButtonIds(), ['commands', 'inventory', 'actions', 'challenges', 'crafting']);
+        assert.ok(defaultCastDockButtonIds().length <= 5, 'defaults must fit one ActionRow');
+    });
 });
 
 describe('CastDock — resolveCompactRowIds', () => {
-    it('defaults to all 6, in reference order, when selectedButtons is null/undefined (never configured)', () => {
-        assert.deepEqual(resolveCompactRowIds(null), ['commands', 'inventory', 'actions', 'challenges', 'crafting', 'map']);
-        assert.deepEqual(resolveCompactRowIds(undefined), ['commands', 'inventory', 'actions', 'challenges', 'crafting', 'map']);
+    it('defaults to the five default buttons (no Map), in reference order, when selectedButtons is null/undefined', () => {
+        assert.deepEqual(resolveCompactRowIds(null), ['commands', 'inventory', 'actions', 'challenges', 'crafting']);
+        assert.deepEqual(resolveCompactRowIds(undefined), ['commands', 'inventory', 'actions', 'challenges', 'crafting']);
+    });
+
+    it('Map still renders when explicitly selected', () => {
+        assert.deepEqual(resolveCompactRowIds(['map']), ['map']);
     });
 
     it('reorders an explicit subset to the fixed reference order, regardless of input order', () => {
@@ -132,9 +147,12 @@ describe('CastDock — buildCastDockButtonSelectRow', () => {
         assert.deepEqual(options(row).map(o => o.value), ['commands', 'inventory', 'actions', 'challenges', 'crafting', 'map']);
     });
 
-    it('defaults every option to selected when selectedButtons is null (never configured)', () => {
+    it('defaults the five default buttons on and Map off when selectedButtons is null (never configured)', () => {
         const opts = options(buildCastDockButtonSelectRow('x', null));
-        assert.ok(opts.every(o => o.default === true));
+        assert.equal(opts.find(o => o.value === 'map').default, false, 'Map must be off by default');
+        for (const id of ['commands', 'inventory', 'actions', 'challenges', 'crafting']) {
+            assert.equal(opts.find(o => o.value === id).default, true, `${id} must be on by default`);
+        }
     });
 
     it('marks only the stored subset as default when selectedButtons is an explicit array', () => {
@@ -159,6 +177,23 @@ describe('CastDock — buildCastDockButtonSelectRow', () => {
         const select = buildCastDockButtonSelectRow('x', null).components[0];
         assert.ok(select.max_values <= select.options.length,
             `max_values (${select.max_values}) must be <= options.length (${select.options.length})`);
+    });
+});
+
+describe('CastDock — setCastDockConfig preserves selectedButtons across activation (static guard)', () => {
+    // Live bug 2026-07-25: the enabled:true branch assigned a fresh object literal, wiping the
+    // selectedButtons saved moments earlier by setCastDockButtonSelection — Activate rendered
+    // the dock with defaults regardless of the owner's picks. The fix spreads the existing
+    // entry. Static check, same convention as playerManagementApplicationContext.test.js.
+    it('the enabled:true branch spreads the existing channel entry', () => {
+        const src = readFileSync(path.join(__dirname, '..', 'castDock.js'), 'utf8');
+        const fnStart = src.indexOf('export async function setCastDockConfig');
+        assert.ok(fnStart !== -1, 'setCastDockConfig must exist in castDock.js');
+        const ifIdx = src.indexOf('if (enabled)', fnStart);
+        assert.ok(ifIdx !== -1, 'setCastDockConfig must branch on enabled');
+        const branch = src.slice(ifIdx, src.indexOf('} else', ifIdx));
+        assert.ok(branch.includes('...channels[channelId]'),
+            'enable branch must spread the existing entry, or selectedButtons is wiped on Activate');
     });
 });
 
