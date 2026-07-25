@@ -703,6 +703,40 @@ export const CASTING_STATUS_TO_MESSAGE = { cast: 'successful', alternative: 'alt
  *  mirrors the messageType→offerStatus chain used on send (cast→offer, alternative→offer_alternative, reject→offer_rejected). */
 export const OFFER_FOR_STATUS = { cast: 'offer', alternative: 'offer_alternative', reject: 'offer_rejected' };
 
+/** castingStatus → the placementResponse value meaning "the applicant accepted" (Stage 2b). NO entry for
+ *  'reject' — there is no "accepted a rejection" state. Powers the single-invite modal's "Update Status
+ *  Only - Accepted" option: manually records an accept the host confirmed OUTSIDE CastBot (e.g. over DM),
+ *  writing the exact same field a real Accept-button click would (placement_accept handler, app.js) — so
+ *  the two paths are indistinguishable everywhere downstream (icons, chevron, channelRoster's accepted-cast
+ *  roster). Deliberately does NOT rename the channel or post the public accept message like the real button
+ *  does — "Update Status Only" is the quiet/private bookkeeping path by design. */
+export const ACCEPTED_RESPONSE_FOR_STATUS = { cast: 'accepted', alternative: 'accepted_alternative' };
+
+/**
+ * Apply an "Update Status Only" write (single-invite modal) — stamps offerStatus, and for the
+ * "- Accepted" variant ALSO placementResponse, WITHOUT sending a message. Mutates `playerData` in
+ * place (caller saves); does not itself touch the channel name or post anything, unlike a real
+ * Accept/Decline click — this is the quiet bookkeeping path by design.
+ * @param {Object} playerData
+ * @param {string} guildId
+ * @param {Object} app - allApplications[appIndex] (or undefined if out of range)
+ * @param {boolean} recordAccepted - true for "- Accepted"; false for "- Offered"/"- Notified"
+ * @returns {{ok: true, name: string} | {ok: false, error: string}}
+ */
+export function applyStatusOnlyUpdate(playerData, guildId, app, recordAccepted) {
+  const rec = app ? playerData[guildId]?.applications?.[app.channelId] : null;
+  const offer = rec ? OFFER_FOR_STATUS[rec.castingStatus] : null;
+  if (!rec || !offer) return { ok: false, error: '⚠️ No casting decision set for this applicant — nothing to update.' };
+  const acceptedValue = recordAccepted ? ACCEPTED_RESPONSE_FOR_STATUS[rec.castingStatus] : null;
+  if (recordAccepted && !acceptedValue) {
+    return { ok: false, error: '⚠️ This decision has no "accepted" state (e.g. Don\'t Cast) — nothing to update.' };
+  }
+  rec.offerStatus = offer;
+  rec.offerSentAt = new Date().toISOString();
+  if (acceptedValue) rec.placementResponse = acceptedValue;
+  return { ok: true, name: app.displayName || app.username || 'Applicant' };
+}
+
 /** Accent colours per message type for the V2 invite card. */
 const INVITE_ACCENT = { successful: 0x27ae60, alternative: 0xf1c40f, unsuccessful: 0xe74c3c };
 
@@ -784,8 +818,11 @@ const SINGLE_SEND_WORD = { successful: 'Casting Offer', alternative: 'Alternate 
  * Pre-fills templates from saved guild messages (or defaults). The template fields are identical for both
  * variants; only the final select differs:
  *  - BULK (default): 6 options (draft / all / successful / unsuccessful / alternative / selected).
- *  - SINGLE (opts.single, from the per-applicant ✒️ Send button): 3 options — Save as draft, "Send {name} {msg}"
- *    (value 'selected', envelope), and "Update Status Only" (value 'status_only', 🕵️ — stamp offerStatus, no send).
+ *  - SINGLE (opts.single, from the per-applicant ✒️ Send button): Save as draft, "Send {name} {msg}"
+ *    (value 'selected', envelope), "Update Status Only - Offered"/"- Notified" (value 'status_only', 🕵️ —
+ *    stamp offerStatus, no send) + — for Cast/Alternate only, no accepted state exists for Don't Cast —
+ *    "Update Status Only - Accepted" (value 'status_only_accepted', 🎉 — ALSO stamps placementResponse,
+ *    for recording an accept the host confirmed outside CastBot, e.g. over DM).
  * @param {Object} [opts] - { single, applicantName, castingStatus } for the single-applicant variant.
  */
 export function buildCastingInvitesModal(playerData, guildId, appIndex, configId, opts = {}) {
@@ -797,14 +834,26 @@ export function buildCastingInvitesModal(playerData, guildId, appIndex, configId
 
   let modeOptions;
   if (opts.single) {
-    const word = SINGLE_SEND_WORD[CASTING_STATUS_TO_MESSAGE[opts.castingStatus]] || 'Message';
+    const messageType = CASTING_STATUS_TO_MESSAGE[opts.castingStatus]; // 'successful' | 'alternative' | 'unsuccessful' | undefined
+    const word = SINGLE_SEND_WORD[messageType] || 'Message';
     const name = opts.applicantName || 'this applicant';
     const sendLabel = `Send ${name} ${word}`.slice(0, 100); // select option label cap
+    // Don't Cast has no "accepted" concept (unsuccessful cards ship with no Accept/Decline buttons) —
+    // "Notified" reads correctly there, where "Offered" implies a spot that doesn't exist.
+    const offeredLabel = messageType === 'unsuccessful' ? 'Update Status Only - Notified' : 'Update Status Only - Offered';
     modeOptions = [
       { label: 'Save as draft only', value: 'draft', emoji: { name: '💾' }, description: 'Save the templates, send nothing', default: true },
       { label: sendLabel, value: 'selected', emoji: { name: '📨' }, description: 'Sends the relevant msg above to their app channel (with a Check-In button if Cast/Alternate)'.slice(0, 100) },
-      { label: 'Update Status Only', value: 'status_only', emoji: { name: '🕵️' }, description: "Use to tell CastBot when you've manually messaged an applicant".slice(0, 100) }
+      { label: offeredLabel, value: 'status_only', emoji: { name: '🕵️' }, description: "Use to tell CastBot when you've manually messaged an applicant".slice(0, 100) }
     ];
+    if (ACCEPTED_RESPONSE_FOR_STATUS[opts.castingStatus]) {
+      modeOptions.push({
+        label: 'Update Status Only - Accepted',
+        value: 'status_only_accepted',
+        emoji: { name: '🎉' },
+        description: 'Records an accept confirmed outside CastBot (e.g. DM) — same as them clicking Accept'.slice(0, 100)
+      });
+    }
   } else {
     modeOptions = [
       { label: 'Save as draft only', value: 'draft', emoji: { name: '💾' }, description: 'Save the templates, send nothing', default: true },

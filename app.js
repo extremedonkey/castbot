@@ -39366,7 +39366,7 @@ Your server is now ready for Tycoons gameplay!`;
           const messages = { successful: fields.msg_successful || '', alternative: fields.msg_alternative || '', unsuccessful: fields.msg_unsuccessful || '' };
           const mode = fields.invite_mode || 'draft';
 
-          const { saveCastingMessages, selectInviteTargets, buildInvitesConfirm, OFFER_FOR_STATUS } = await import('./castRankingManager.js');
+          const { saveCastingMessages, selectInviteTargets, buildInvitesConfirm, applyStatusOnlyUpdate } = await import('./castRankingManager.js');
           await saveCastingMessages(context.guildId, configId, messages, context.userId, Date.now());
 
           if (mode === 'draft') {
@@ -39377,20 +39377,15 @@ Your server is now ready for Tycoons gameplay!`;
           const { getApplicationsForSeason } = await import('./storage.js');
           const allApplications = await getApplicationsForSeason(context.guildId, configId);
 
-          if (mode === 'status_only') {
-            // "Update Status Only" (single-invite modal) — stamp offerStatus from the applicant's casting decision
-            // WITHOUT sending a message (host messaged them manually). Mirrors the send path's offerStatus stamp.
-            const app = allApplications[appIndex];
-            const rec = app ? playerData[context.guildId]?.applications?.[app.channelId] : null;
-            const offer = rec ? OFFER_FOR_STATUS[rec.castingStatus] : null;
-            if (!rec || !offer) {
-              return { flags: (1 << 15), components: [{ type: 17, accent_color: 0xe74c3c, components: [{ type: 10, content: '⚠️ No casting decision set for this applicant — nothing to update.' }] }] };
+          if (mode === 'status_only' || mode === 'status_only_accepted') {
+            const result = applyStatusOnlyUpdate(playerData, context.guildId, allApplications[appIndex], mode === 'status_only_accepted');
+            if (!result.ok) {
+              return { flags: (1 << 15), components: [{ type: 17, accent_color: 0xe74c3c, components: [{ type: 10, content: result.error }] }] };
             }
-            rec.offerStatus = offer;
-            rec.offerSentAt = new Date().toISOString();
             await savePlayerData(playerData);
-            const name = app.displayName || app.username || 'Applicant';
-            return { flags: (1 << 15), components: [{ type: 17, accent_color: 0x27ae60, components: [{ type: 10, content: `🕵️ **Status updated for ${name}** — recorded the offer as sent (no message was sent).` }] }] };
+            const emoji = mode === 'status_only_accepted' ? '🎉' : '🕵️';
+            const verb = mode === 'status_only_accepted' ? 'recorded as accepted' : 'recorded the offer as sent';
+            return { flags: (1 << 15), components: [{ type: 17, accent_color: 0x27ae60, components: [{ type: 10, content: `${emoji} **Status updated for ${result.name}** — ${verb} (no message was sent).` }] }] };
           }
 
           // Compute targets and show the confirmation before sending.
