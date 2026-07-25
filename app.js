@@ -4699,12 +4699,27 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       })(req, res, client);
     }
     
+    // === ADMIN: DELETE STALE NAVIGATION PANEL (offered via safari_navigate_ admin branch) ===
+    if (custom_id.startsWith('safari_nav_delete_panel_')) {
+      const panelMessageId = custom_id.replace('safari_nav_delete_panel_', '');
+      return ButtonHandlerFactory.create({
+        id: 'safari_nav_delete_panel',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const { deleteNavigationPanel } = await import('./mapMovement.js');
+          return deleteNavigationPanel(context.channelId, panelMessageId, context.userId);
+        }
+      })(req, res, client);
+    }
+
     // === NAVIGATE HANDLER (shows movement and deletes arrival message) ===
     if (custom_id.startsWith('safari_navigate_')) {
       const parts = custom_id.split('_');
       const targetUserId = parts[2];
       const coordinate = parts[3];
-      
+
       return ButtonHandlerFactory.create({
         id: custom_id,
         ephemeral: true,
@@ -4712,12 +4727,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         handler: async (context) => {
           console.log(`🗺️ START: safari_navigate - user ${context.userId}, coordinate ${coordinate}`);
 
-          // Verify this button is for the correct user
+          // Verify this button is for the correct user (admins get a stale-panel cleanup offer)
           if (context.userId !== targetUserId) {
-            return {
-              content: '❌ This navigation panel is for another player.',
-              ephemeral: true
-            };
+            const { resolveForeignNavigateClick } = await import('./mapMovement.js');
+            return resolveForeignNavigateClick(context, targetUserId);
           }
 
           // Check if coordinate is 'none' (player not initialized)
@@ -4740,15 +4753,15 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             };
           }
 
-          // Delete the arrival message
-          try {
-            await DiscordRequest(`channels/${context.channelId}/messages/${context.messageId}`, {
-              method: 'DELETE'
-            });
-            console.log(`🗑️ Deleted arrival message ${context.messageId}`);
-          } catch (error) {
-            console.error('Error deleting arrival message:', error);
-          }
+          // Delete the arrival card — best-effort; DELETE returns { success } and never throws.
+          // success=false means the click came from an ephemeral Explore panel (that message
+          // can't be deleted via the channel endpoint), leaving any public card for admin cleanup.
+          const deleteResult = await DiscordRequest(`channels/${context.channelId}/messages/${context.messageId}`, {
+            method: 'DELETE'
+          });
+          console.log(deleteResult?.success
+            ? `🗑️ Deleted arrival message ${context.messageId}`
+            : `⚠️ Arrival message ${context.messageId} not deleted (ephemeral Explore panel click)`);
 
           // Get movement display with expensive inventory checks
           const movementDisplay = await getMovementDisplay(context.guildId, context.userId, coordinate, true);

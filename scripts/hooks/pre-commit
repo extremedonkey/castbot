@@ -7,7 +7,7 @@
 # See: CLAUDE.md "Button Handler Factory" section
 
 BASELINE=100  # Legacy handler count as of 2026-07-21 (map_grid_edit retirement). Includes completion_edit modal exception. Only goes DOWN.
-APP_JS_LINES_MAX=52249  # app.js line-count ratchet as of 2026-07-25 (actual: 52249, Location Manager button-injection logic + Quick Create modal payload builders extracted into entityManagementUI.js/quickActionCreate.js). Only goes DOWN. Extract more than you add.
+APP_JS_LINES_MAX=52247  # app.js line-count ratchet as of 2026-07-25 (actual: 52247, safari_navigate foreign-click resolution + nav panel deletion extracted into mapMovement.js/mapNavigationUI.js). Only goes DOWN. Extract more than you add.
 
 # ── Auto-sync: keep installed hook in sync with source ──
 SOURCE_HOOK="scripts/hooks/pre-commit"

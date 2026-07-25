@@ -2564,6 +2564,16 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari_movement'
   },
+
+  // Admin: delete a stale arrival/navigation panel (offered when Production clicks another player's Navigate)
+  'safari_nav_delete_panel_*': {
+    label: 'Delete Panel',
+    description: 'Delete a stale arrival/navigation panel (Production only)',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'safari_movement',
+    parent: 'safari_navigate_*'
+  },
   
   // Map Location Actions
   'map_location_actions_*': {

@@ -311,6 +311,31 @@ export async function movePlayer(guildId, userId, newCoordinate, client, options
     };
 }
 
+// Resolve a Navigate click by someone other than the panel's owner:
+// Production (ManageRoles) gets a stale-panel cleanup offer (panels are undeletable by players
+// once the owner leaves the cell — the owner loses channel visibility); everyone else gets
+// redirected to the anchor message's Explore button.
+export async function resolveForeignNavigateClick(context, targetUserId) {
+    const { buildNavigateDenialUI, buildAdminNavPanelWarningUI } = await import('./mapNavigationUI.js');
+    const isAdmin = context.member?.permissions &&
+        (BigInt(context.member.permissions) & PermissionFlagsBits.ManageRoles) !== 0n;
+    if (!isAdmin) return buildNavigateDenialUI();
+    const ownerState = await getPlayerLocation(context.guildId, targetUserId);
+    return buildAdminNavPanelWarningUI(targetUserId, context.messageId, ownerState?.currentCoordinate || null);
+}
+
+// Admin cleanup: delete a stale arrival/navigation panel and report the outcome (UPDATE_MESSAGE shape)
+export async function deleteNavigationPanel(channelId, panelMessageId, adminUserId) {
+    const { buildNavPanelDeleteResultUI } = await import('./mapNavigationUI.js');
+    const { DiscordRequest } = await import('./utils.js');
+    const result = await DiscordRequest(`channels/${channelId}/messages/${panelMessageId}`, { method: 'DELETE' });
+    const deleted = !!result?.success;
+    console.log(deleted
+        ? `🗑️ Admin ${adminUserId} deleted navigation panel ${panelMessageId}`
+        : `⚠️ Admin ${adminUserId} tried to delete navigation panel ${panelMessageId} but it was already gone`);
+    return buildNavPanelDeleteResultUI(deleted);
+}
+
 // Create movement notification for ephemeral response (Components V2 format)
 export function createMovementNotification(guildId, userId, oldCoordinate, newCoordinate, newChannelId) {
     return {
