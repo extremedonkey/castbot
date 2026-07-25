@@ -1886,6 +1886,7 @@ export async function handlePlayerButtonClick(req, res, customId, playerData, cl
     playerData,
     guildId,
     userId: mode === PlayerManagementMode.PLAYER ? userId : req.body.member.user.id,
+    channelId,
     showUserSelect: mode === PlayerManagementMode.ADMIN,
     showVanityRoles: mode === PlayerManagementMode.ADMIN,
     title: title,
