@@ -154,6 +154,12 @@ describe('CastDock — buildCastDockButtonSelectRow', () => {
     it('min_values is 0 (allowing a deliberate zero-button selection)', () => {
         assert.equal(buildCastDockButtonSelectRow('x', null).components[0].min_values, 0);
     });
+
+    it('max_values never exceeds the option count — Discord rejects the whole message otherwise (live TEST failure 2026-07-25)', () => {
+        const select = buildCastDockButtonSelectRow('x', null).components[0];
+        assert.ok(select.max_values <= select.options.length,
+            `max_values (${select.max_values}) must be <= options.length (${select.options.length})`);
+    });
 });
 
 describe('CastDock — parseCastDockAction', () => {

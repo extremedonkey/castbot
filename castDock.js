@@ -152,7 +152,9 @@ export function buildCastDockButtonSelectRow(customId, selectedButtons) {
       custom_id: customId,
       placeholder: 'Default buttons selected',
       min_values: 0,
-      max_values: 10,
+      // Discord rejects the whole message ("interaction failed") if max_values exceeds
+      // the option count — cap at however many selectable buttons exist.
+      max_values: Math.min(10, CASTDOCK_SELECTABLE_BUTTONS.length),
       options: CASTDOCK_SELECTABLE_BUTTONS.map(b => ({
         label: b.label,
         value: b.id,
