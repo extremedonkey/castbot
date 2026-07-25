@@ -161,28 +161,18 @@ export function stripButtonLabels(rows) {
 }
 
 /**
- * Pure — drops the name/mention line (always line 0, per createPlayerDisplaySection's
- * override) and any "Local time" line from a player-info content string, keeping
- * pronouns•age•timezone, vanity roles, and the stats line untouched.
- */
-export function stripNameAndLocalTimeLines(content) {
-  if (!content) return content;
-  const lines = content.split('\n');
-  return lines.slice(1).filter(line => !line.includes('Local time')).join('\n');
-}
-
-/**
  * Builds the compact CastDock view: a "CastDock" header Section with the '^' expand
- * toggle as its accessory, the player's existing icon/stats line (no thumbnail), and the
- * bare Safari button row (with Commands merged in, Currency removed, no section heading
- * text above it) — all emoji-only. No Row 1 (Castlists & Profile), no Advanced section,
- * no hot-swap select — a minimal "home" view, not a full menu replacement. Clicking any
- * button still routes through the exact same handlers the full menu uses, which is what
- * surfaces the full menu (with its own bottom-right CastDock collapse toggle, added by
- * createPlayerManagementUI for any CastDock channel).
+ * toggle as its accessory, JUST the player's stats line (no name, no pronouns/age/timezone,
+ * no Local time, no thumbnail — built directly via buildPlayerStatsLine rather than through
+ * createPlayerDisplaySection's combined card), and the bare Safari button row (with Commands
+ * merged in, Currency removed, no section heading text above it) — all emoji-only. No Row 1
+ * (Castlists & Profile), no Advanced section, no hot-swap select — a minimal "home" view, not
+ * a full menu replacement. Clicking any button still routes through the exact same handlers
+ * the full menu uses, which is what surfaces the full menu (with its own bottom-right
+ * CastDock collapse toggle, added by createPlayerManagementUI for any CastDock channel).
  */
 export async function buildCompactCastDockMenu(client, guildId, targetMember, playerData, channelId) {
-  const { calculateVisibility, buildSectionRow, createPlayerDisplaySection, PlayerManagementMode } = await import('./playerManagement.js');
+  const { calculateVisibility, buildSectionRow, buildPlayerStatsLine, PlayerManagementMode } = await import('./playerManagement.js');
   const { loadSafariContent } = await import('./safariManager.js');
   const { countComponents } = await import('./utils.js');
 
@@ -200,11 +190,8 @@ export async function buildCompactCastDockMenu(client, guildId, targetMember, pl
     }]
   };
 
-  // Same icon/stats text the full menu shows, minus the name and Local time lines —
-  // just the TextDisplay, no Section/thumbnail.
-  const playerSection = await createPlayerDisplaySection(targetMember, playerData, guildId);
-  const infoContent = stripNameAndLocalTimeLines(playerSection?.components?.[0]?.content);
-  if (infoContent) container.components.push({ type: 10, content: infoContent });
+  const statsLine = await buildPlayerStatsLine(guildId, targetMember, playerData);
+  if (statsLine) container.components.push({ type: 10, content: statsLine });
 
   container.components.push({ type: 14 }); // Separator
 

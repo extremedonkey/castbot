@@ -42,6 +42,76 @@ export const PlayerButtonType = {
 };
 
 /**
+ * Builds the safari stats line: currencyEmoji XX • inventoryEmoji X • 📍 location • ⚡ stamina
+ * Currency + items are shown ONLY once the player has some money or at least one item —
+ * so profiles stay clean in servers where Safari hasn't started (no pointless "🪙 0 • 🧰 0").
+ * The pair shows/hides together (money OR items). Location shows only when on the active map
+ * (paused → ⏸️ suffix). Stamina is decoupled: shown whenever a value is recorded for the player.
+ * Extracted from createPlayerDisplaySection so CastDock's compact view can show just this
+ * line without the name/pronouns/timezone/vanity-role lines that function also builds.
+ * @param {string} guildId
+ * @param {Object} player - Discord member object
+ * @param {Object} playerData - Guild player data
+ * @returns {Promise<string>} the stats line (empty string if nothing to show)
+ */
+export async function buildPlayerStatsLine(guildId, player, playerData) {
+  let statsLine = '';
+  try {
+    const ct = await getCustomTerms(guildId);
+    const sp = playerData[guildId]?.players?.[player.id]?.safari || {};
+    const currency = sp.currency ?? 0;
+    const inv = sp.inventory || {};
+    const itemTotal = Object.values(inv).reduce((sum, v) => sum + (typeof v === 'object' ? (v?.quantity || 0) : (v || 0)), 0);
+    // Gate the currency/inventory pair on actual economy activity (Jason feedback 2026-06-18).
+    const showEconomy = currency > 0 || itemTotal > 0;
+    const parts = showEconomy
+      ? [`${ct.currencyEmoji || '🪙'} ${currency}`, `${ct.inventoryEmoji || '🧰'} ${itemTotal}`]
+      : [];
+
+    const { loadSafariContent } = await import('./safariManager.js');
+    const safariData = await loadSafariContent();
+    const activeMapId = safariData[guildId]?.maps?.active;
+
+    // 📍 Location — only when actually on the active map (initialized/paused). Pause → ⏸️ suffix.
+    const { getPlayerSafariState, PLAYER_SAFARI_STATE } = await import('./safariPlayerUtils.js');
+    const state = getPlayerSafariState(playerData[guildId]?.players?.[player.id], activeMapId);
+    const currentLocation = activeMapId ? sp.mapProgress?.[activeMapId]?.currentLocation : null;
+    if (currentLocation && state !== PLAYER_SAFARI_STATE.UNINITIALIZED) {
+      parts.push(`📍 ${currentLocation}${state === PLAYER_SAFARI_STATE.PAUSED ? ' (⏸️)' : ''}`);
+    } else if (state === PLAYER_SAFARI_STATE.UNINITIALIZED) {
+      // 🚩 Where they'll spawn — uninitialized players with a custom starting location only.
+      const startingLocation = activeMapId ? sp.mapProgress?.[activeMapId]?.startingLocation : null;
+      if (startingLocation) parts.push(`🚩 ${startingLocation}`);
+    }
+
+    // ⚡ Stamina — decoupled: show whatever value is recorded for the player, irrespective of state.
+    if (sp.points?.stamina !== undefined) {
+      try {
+        const { getEntityPoints, getStaminaRegenSummary } = await import('./pointsManager.js');
+        const entityStamina = await getEntityPoints(guildId, `player_${player.id}`, 'stamina');
+        const stamina = entityStamina
+          ? { current: entityStamina.current, maximum: entityStamina.max }
+          : sp.points.stamina;
+        // Same summary the navigate pane uses. Compact: drip shows the amount ("+1 in 1m"),
+        // full refill just the countdown ("1m"), at/over max shows MAX.
+        const regen = await getStaminaRegenSummary(guildId, `player_${player.id}`);
+        const regenDisplay = !regen ? 'MAX'
+          : regen.amountLabel === 'to full' ? regen.timeText
+          : `${regen.amountLabel} in ${regen.timeText}`;
+        parts.push(`⚡ ${stamina.current}/${stamina.maximum} (♻️ ${regenDisplay})`);
+      } catch (e) {
+        console.warn(`⚠️ buildPlayerStatsLine: stamina lookup failed for ${player.id}: ${e.message}`);
+      }
+    }
+
+    statsLine = parts.join(' • ');
+  } catch (e) {
+    console.warn(`⚠️ buildPlayerStatsLine: could not build stats line for ${player.id}: ${e.message}`);
+  }
+  return statsLine;
+}
+
+/**
  * Creates a player display section using castlistV2 components
  * @param {Object} player - Discord member object
  * @param {Object} playerData - Guild player data
@@ -163,64 +233,7 @@ export async function createPlayerDisplaySection(player, playerData, guildId) {
     }
   };
 
-  // Build the safari stats line: currencyEmoji XX • inventoryEmoji X • 📍 location • ⚡ stamina
-  // Currency + items are shown ONLY once the player has some money or at least one item —
-  // so profiles stay clean in servers where Safari hasn't started (no pointless "🪙 0 • 🧰 0").
-  // The pair shows/hides together (money OR items). Location shows only when on the active map
-  // (paused → ⏸️ suffix). Stamina is decoupled: shown whenever a value is recorded for the player.
-  let statsLine = '';
-  try {
-    const ct = await getCustomTerms(guildId);
-    const sp = playerData[guildId]?.players?.[player.id]?.safari || {};
-    const currency = sp.currency ?? 0;
-    const inv = sp.inventory || {};
-    const itemTotal = Object.values(inv).reduce((sum, v) => sum + (typeof v === 'object' ? (v?.quantity || 0) : (v || 0)), 0);
-    // Gate the currency/inventory pair on actual economy activity (Jason feedback 2026-06-18).
-    const showEconomy = currency > 0 || itemTotal > 0;
-    const parts = showEconomy
-      ? [`${ct.currencyEmoji || '🪙'} ${currency}`, `${ct.inventoryEmoji || '🧰'} ${itemTotal}`]
-      : [];
-
-    const { loadSafariContent } = await import('./safariManager.js');
-    const safariData = await loadSafariContent();
-    const activeMapId = safariData[guildId]?.maps?.active;
-
-    // 📍 Location — only when actually on the active map (initialized/paused). Pause → ⏸️ suffix.
-    const { getPlayerSafariState, PLAYER_SAFARI_STATE } = await import('./safariPlayerUtils.js');
-    const state = getPlayerSafariState(playerData[guildId]?.players?.[player.id], activeMapId);
-    const currentLocation = activeMapId ? sp.mapProgress?.[activeMapId]?.currentLocation : null;
-    if (currentLocation && state !== PLAYER_SAFARI_STATE.UNINITIALIZED) {
-      parts.push(`📍 ${currentLocation}${state === PLAYER_SAFARI_STATE.PAUSED ? ' (⏸️)' : ''}`);
-    } else if (state === PLAYER_SAFARI_STATE.UNINITIALIZED) {
-      // 🚩 Where they'll spawn — uninitialized players with a custom starting location only.
-      const startingLocation = activeMapId ? sp.mapProgress?.[activeMapId]?.startingLocation : null;
-      if (startingLocation) parts.push(`🚩 ${startingLocation}`);
-    }
-
-    // ⚡ Stamina — decoupled: show whatever value is recorded for the player, irrespective of state.
-    if (sp.points?.stamina !== undefined) {
-      try {
-        const { getEntityPoints, getStaminaRegenSummary } = await import('./pointsManager.js');
-        const entityStamina = await getEntityPoints(guildId, `player_${player.id}`, 'stamina');
-        const stamina = entityStamina
-          ? { current: entityStamina.current, maximum: entityStamina.max }
-          : sp.points.stamina;
-        // Same summary the navigate pane uses. Compact: drip shows the amount ("+1 in 1m"),
-        // full refill just the countdown ("1m"), at/over max shows MAX.
-        const regen = await getStaminaRegenSummary(guildId, `player_${player.id}`);
-        const regenDisplay = !regen ? 'MAX'
-          : regen.amountLabel === 'to full' ? regen.timeText
-          : `${regen.amountLabel} in ${regen.timeText}`;
-        parts.push(`⚡ ${stamina.current}/${stamina.maximum} (♻️ ${regenDisplay})`);
-      } catch (e) {
-        console.warn(`⚠️ createPlayerDisplaySection: stamina lookup failed for ${player.id}: ${e.message}`);
-      }
-    }
-
-    statsLine = parts.join(' • ');
-  } catch (e) {
-    console.warn(`⚠️ createPlayerDisplaySection: could not build stats line for ${player.id}: ${e.message}`);
-  }
+  const statsLine = await buildPlayerStatsLine(guildId, player, playerData);
 
   // Override the card's name line (line 1) with a clickable user mention + tribe role tag(s),
   // and append the safari stats line below the vanity roles. Player-menu only — castlist cards unaffected.

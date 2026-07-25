@@ -13,8 +13,7 @@ import {
     parseCastDockAction,
     evaluateCastDockTrigger,
     COMPACT_ROW2_IDS,
-    stripButtonLabels,
-    stripNameAndLocalTimeLines
+    stripButtonLabels
 } from '../castDock.js';
 
 describe('CastDock — normalizeCastDockConfig', () => {
@@ -139,33 +138,6 @@ describe('CastDock — compact view row composition', () => {
         for (const id of row1Ids) {
             assert.ok(!COMPACT_ROW2_IDS.includes(id), `${id} must not appear in the compact row`);
         }
-    });
-});
-
-describe('CastDock — stripNameAndLocalTimeLines', () => {
-    it('drops the name/mention line (always line 0) and any Local time line, keeping the rest', () => {
-        const content = '**<@123456789012345678>**\nAsk • 27 • CST / CDT\n`🕛 Local time 🕛` 11:52 PM\n💰300 · 🧰1 · 📍A1 · ⚡11/11 (♻️ MAX)';
-        const result = stripNameAndLocalTimeLines(content);
-        assert.ok(!result.includes('<@123456789012345678>'), 'name/mention line must be gone');
-        assert.ok(!result.includes('Local time'), 'Local time line must be gone');
-        assert.ok(result.includes('Ask • 27 • CST / CDT'), 'pronouns/age/timezone line must survive');
-        assert.ok(result.includes('💰300'), 'stats line must survive');
-    });
-
-    it('is a no-op-safe pass-through for missing/empty content', () => {
-        assert.equal(stripNameAndLocalTimeLines(null), null);
-        assert.equal(stripNameAndLocalTimeLines(undefined), undefined);
-        assert.equal(stripNameAndLocalTimeLines(''), '');
-    });
-
-    it('handles content with no Local time line (timezone not configured) — only the name line drops', () => {
-        const content = '**<@123>**\nAsk • 27\n💰300 · 🧰1';
-        const result = stripNameAndLocalTimeLines(content);
-        assert.equal(result, 'Ask • 27\n💰300 · 🧰1');
-    });
-
-    it('handles content that is JUST the name line (nothing else configured) — result is empty', () => {
-        assert.equal(stripNameAndLocalTimeLines('**<@123>**'), '');
     });
 });
 
