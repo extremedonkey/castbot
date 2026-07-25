@@ -15,7 +15,8 @@ import {
     COMPACT_ROW2_IDS,
     stripButtonLabels,
     COMPACT_DIRECT_ACTION_REMAP,
-    remapCompactButtonIds
+    remapCompactButtonIds,
+    buildCastDockEnabledNotice
 } from '../castDock.js';
 
 describe('CastDock — normalizeCastDockConfig', () => {
@@ -68,6 +69,58 @@ describe('CastDock — buildCastDockSelectRow', () => {
         const opts = options(buildCastDockSelectRow('x', undefined));
         assert.equal(opts.find(o => o.value === 'enable').default, false);
         assert.equal(opts.find(o => o.value === 'disable').default, true);
+    });
+});
+
+describe('CastDock — buildCastDockEnabledNotice', () => {
+    function textOf(notice) {
+        return notice.components[0].components.filter(c => c.type === 10).map(c => c.content).join('\n');
+    }
+    function ackButton(notice) {
+        const row = notice.components[0].components.find(c => c.type === 1);
+        return row.components[0];
+    }
+
+    it('player mode: ack button has the plain (unsuffixed) custom_id', async () => {
+        const notice = await buildCastDockEnabledNotice(false);
+        assert.equal(ackButton(notice).custom_id, 'castdock_ack_notice');
+    });
+
+    it('admin mode: ack button custom_id is suffixed with the target user id', async () => {
+        const notice = await buildCastDockEnabledNotice(true, '123456789012345678');
+        assert.equal(ackButton(notice).custom_id, 'castdock_ack_notice_123456789012345678');
+    });
+
+    it('explains what CastDock is before the privacy caveat (order matters — "what is" heading precedes "who can see")', async () => {
+        const notice = await buildCastDockEnabledNotice(false);
+        const text = textOf(notice);
+        assert.ok(text.indexOf('What is CastDock') < text.indexOf('Who can see'), 'the explanation must come first');
+    });
+
+    it('mentions the privacy caveat: public visibility + at least one concrete data example', async () => {
+        const text = textOf(await buildCastDockEnabledNotice(false));
+        assert.ok(/public/i.test(text), 'must say it is public');
+        assert.ok(/currency|item|stats/i.test(text), 'must name at least one concrete piece of exposed data');
+        assert.ok(/subs|submission|private channel/i.test(text), 'must recommend a private/subs channel');
+    });
+
+    it('uses the info/prep purple accent, NOT the red Critical Deletion / orange warning tiers — this is a heads-up, not a scary gate', async () => {
+        const notice = await buildCastDockEnabledNotice(false);
+        assert.equal(notice.components[0].accent_color, 0x9b59b6);
+        assert.notEqual(notice.components[0].accent_color, 0xed4245, 'must not use the red danger accent');
+        assert.notEqual(notice.components[0].accent_color, 0xf39c12, 'must not use the orange warning accent — lighter touch than that');
+    });
+
+    it('has exactly one button (a single acknowledgement, no cancel/confirm gate)', async () => {
+        const notice = await buildCastDockEnabledNotice(false);
+        const row = notice.components[0].components.find(c => c.type === 1);
+        assert.equal(row.components.length, 1);
+        assert.equal(row.components[0].label, 'Got it');
+    });
+
+    it('is flagged as Components V2', async () => {
+        const notice = await buildCastDockEnabledNotice(false);
+        assert.equal(notice.flags, (1 << 15));
     });
 });
 

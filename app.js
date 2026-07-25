@@ -9853,7 +9853,12 @@ To fix this:
     } else if (custom_id === 'player_menu_sel_castdock') {
       // PLAYER mode — self-service: a player toggling CastDock for their OWN menu/channel.
       return ButtonHandlerFactory.create({ id: 'player_menu_sel_castdock', security: 'public', updateMessage: true, handler: async (context) => {
-        await applyCastDockToggle(client, context.guildId, context.channelId, context.userId, parseCastDockAction(req.body.data.values), context.userId);
+        const action = parseCastDockAction(req.body.data.values);
+        await applyCastDockToggle(client, context.guildId, context.channelId, context.userId, action, context.userId);
+        if (action === 'enable') {
+          const { buildCastDockEnabledNotice } = await import('./castDock.js');
+          return await buildCastDockEnabledNotice(false);
+        }
         const guild = await context.client.guilds.fetch(context.guildId);
         const member = await guild.members.fetch(context.userId);
         const playerData = await loadPlayerData();
@@ -9864,9 +9869,29 @@ To fix this:
       // ADMIN mode — toggling CastDock on behalf of another player; requires elevated permission.
       return ButtonHandlerFactory.create({ id: 'player_menu_sel_castdock_admin', requiresPermission: PermissionFlagsBits.ManageRoles, permissionName: 'Manage Roles', updateMessage: true, handler: async (context) => {
         const targetUserId = custom_id.replace('player_menu_sel_castdock_', '');
-        await applyCastDockToggle(client, context.guildId, context.channelId, targetUserId, parseCastDockAction(req.body.data.values), context.userId);
+        const action = parseCastDockAction(req.body.data.values);
+        await applyCastDockToggle(client, context.guildId, context.channelId, targetUserId, action, context.userId);
+        if (action === 'enable') {
+          const { buildCastDockEnabledNotice } = await import('./castDock.js');
+          return await buildCastDockEnabledNotice(true, targetUserId);
+        }
         const { buildAdminPlayerMenu } = await import('./playerManagement.js');
         return await buildAdminPlayerMenu(context.client, context.guildId, targetUserId, context.userId, 'castdock');
+      }})(req, res, client);
+
+    } else if (custom_id === 'castdock_ack_notice' || custom_id.startsWith('castdock_ack_notice_')) {
+      // "Got it" on the post-enable notice — returns to the normal menu, CastDock category active.
+      return ButtonHandlerFactory.create({ id: 'castdock_ack_notice', security: 'public', updateMessage: true, handler: async (context) => {
+        const isAdminMode = custom_id.startsWith('castdock_ack_notice_');
+        const targetUserId = isAdminMode ? custom_id.replace('castdock_ack_notice_', '') : context.userId;
+        if (isAdminMode) {
+          const { buildAdminPlayerMenu } = await import('./playerManagement.js');
+          return await buildAdminPlayerMenu(context.client, context.guildId, targetUserId, context.userId, 'castdock');
+        }
+        const guild = await context.client.guilds.fetch(context.guildId);
+        const member = await guild.members.fetch(targetUserId);
+        const playerData = await loadPlayerData();
+        return await createPlayerManagementUI({ mode: PlayerManagementMode.PLAYER, targetMember: member, playerData, guildId: context.guildId, userId: targetUserId, activeButton: 'castdock', client: context.client, channelId: context.channelId });
       }})(req, res, client);
 
     } else if (custom_id === 'castdock_expand' || custom_id === 'castdock_collapse') {

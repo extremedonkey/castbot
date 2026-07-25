@@ -1378,6 +1378,8 @@ export const BUTTON_REGISTRY = {
   'castdock_view_navigate': { label: 'View Navigate Pane', description: 'CastDock compact: jump straight to the map navigate pane', emoji: '🗺️', style: 'Secondary', category: 'player_management' },
   'castdock_open_crafting': { label: 'Open Crafting Select', description: 'CastDock compact: show the crafting select inline', emoji: '🛠️', style: 'Secondary', category: 'player_management' },
   'castdock_open_challenges': { label: 'Open Challenges Select', description: 'CastDock compact: show the challenges select inline', emoji: '🏃', style: 'Secondary', category: 'player_management' },
+  'castdock_ack_notice': { label: 'Got it', description: 'Acknowledge the CastDock privacy notice, self mode', emoji: '📌', style: 'Secondary', category: 'player_management' },
+  'castdock_ack_notice_*': { label: 'Got it (Admin)', description: 'Acknowledge the CastDock privacy notice, admin mode', emoji: '📌', style: 'Secondary', category: 'player_management' },
 
   // === CHALLENGE ACTION CATEGORIES ===
   'challenge_action_cat_select_*': {

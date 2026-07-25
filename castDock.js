@@ -85,6 +85,39 @@ export function parseCastDockAction(values) {
   return values?.[0] === 'enable' ? 'enable' : 'disable';
 }
 
+/**
+ * Pure — the one-time heads-up shown right after enabling CastDock: what it is, then the
+ * privacy caveat (public message → currency/items/stats visible to the whole channel).
+ * Deliberately NOT the red Critical Deletion pattern — this isn't destructive or gated,
+ * just a "told you so" notice, so it uses the same purple "info tier" accent as the
+ * Safari import prep screen (app.js's safari_import_data handler) rather than orange/red.
+ * @param {boolean} isAdminMode
+ * @param {string} [targetUserId] - required when isAdminMode, to build the ack button's custom_id
+ */
+export async function buildCastDockEnabledNotice(isAdminMode, targetUserId = null) {
+  const { countComponents } = await import('./utils.js');
+  const ackId = isAdminMode ? `castdock_ack_notice_${targetUserId}` : 'castdock_ack_notice';
+  const container = {
+    type: 17, // Container
+    accent_color: 0x9b59b6, // Purple — info/prep tier, not a warning/danger color
+    components: [
+      { type: 10, content: '## 📌 CastDock Enabled' },
+      { type: 14 },
+      { type: 10, content: '### ```📌 What is CastDock?```' },
+      { type: 10, content: 'CastDock pins this menu as a **public** message in this channel — it\'s always the newest message here, automatically reposting itself whenever anyone sends a new message.' },
+      { type: 14 },
+      { type: 10, content: '### ```👀 Who can see this```' },
+      { type: 10, content: '-# Since it\'s public now, whatever shows on it — currency, item counts, safari stats — is visible to everyone in this channel. Best kept to a private submission/subs channel, not anywhere spectators or other players can see it.' },
+      { type: 14 },
+      { type: 1, components: [
+        { type: 2, custom_id: ackId, label: 'Got it', style: 1 }
+      ]}
+    ]
+  };
+  countComponents([container], { enableLogging: true, verbosity: 'summary', label: 'CastDock Enabled Notice' });
+  return { flags: (1 << 15), components: [container] };
+}
+
 // ── Anti-loop / cooldown decision (pure — the core unit-test target) ────────
 
 /**
