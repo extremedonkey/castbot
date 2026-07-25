@@ -13,8 +13,8 @@ import {
     parseCastDockAction,
     evaluateCastDockTrigger,
     COMPACT_ROW2_IDS,
-    COMPACT_ROW3_IDS,
-    stripButtonLabels
+    stripButtonLabels,
+    appendToggleToLastRow
 } from '../castDock.js';
 
 describe('CastDock — normalizeCastDockConfig', () => {
@@ -119,27 +119,58 @@ describe('CastDock — evaluateCastDockTrigger (anti-loop / cooldown truth table
 });
 
 describe('CastDock — compact view row composition', () => {
-    it('puts commands first, guaranteeing it chunks into the same ActionRow as currency (buildSectionRow groups in array order, 5 per row)', () => {
+    it('puts commands first, guaranteeing it chunks into the same ActionRow as the row\'s other early entries (buildSectionRow groups in array order, 5 per row)', () => {
         assert.equal(COMPACT_ROW2_IDS[0], 'commands');
-        assert.ok(COMPACT_ROW2_IDS.indexOf('commands') < 5, 'commands must land in the first 5-item chunk alongside currency');
-        assert.ok(COMPACT_ROW2_IDS.indexOf('currency') < 5, 'currency must also be in the first chunk for the two to ever share a row');
+        assert.ok(COMPACT_ROW2_IDS.indexOf('commands') < 5, 'commands must land in the first 5-item chunk');
     });
 
-    it('row 2 never includes attributes/castdock (those stay in row 3)', () => {
+    it('has no currency button, and does include challenges', () => {
+        assert.ok(!COMPACT_ROW2_IDS.includes('currency'), 'currency must be removed');
+        assert.ok(COMPACT_ROW2_IDS.includes('challenges'), 'challenges must be present');
+    });
+
+    it('has no Advanced-section ids at all — attributes/castdock are not in the compact row list', () => {
         assert.ok(!COMPACT_ROW2_IDS.includes('attributes'));
         assert.ok(!COMPACT_ROW2_IDS.includes('castdock'));
     });
 
-    it('row 3 no longer includes commands (relocated to row 2) but keeps attributes and castdock', () => {
-        assert.deepEqual(COMPACT_ROW3_IDS, ['attributes', 'castdock']);
-    });
-
-    it('row 1 (Castlists & Profile) ids are entirely absent from both compact rows', () => {
+    it('row 1 (Castlists & Profile) ids are entirely absent from the compact row', () => {
         const row1Ids = ['castlists', 'pronouns', 'timezone', 'age', 'vanity'];
         for (const id of row1Ids) {
-            assert.ok(!COMPACT_ROW2_IDS.includes(id), `${id} must not appear in compact row 2`);
-            assert.ok(!COMPACT_ROW3_IDS.includes(id), `${id} must not appear in compact row 3`);
+            assert.ok(!COMPACT_ROW2_IDS.includes(id), `${id} must not appear in the compact row`);
         }
+    });
+});
+
+describe('CastDock — appendToggleToLastRow', () => {
+    const toggle = { type: 2, style: 2, custom_id: 'castdock_expand', label: '^' };
+
+    it('appends the toggle to the last row when there is room (<5 buttons)', () => {
+        const rows = [{ type: 1, components: [{ type: 2, custom_id: 'a' }, { type: 2, custom_id: 'b' }] }];
+        const result = appendToggleToLastRow(rows, toggle);
+        assert.equal(result.length, 1, 'no new row needed');
+        assert.equal(result[0].components.length, 3);
+        assert.equal(result[0].components.at(-1), toggle, 'toggle must be the last (rightmost) button');
+    });
+
+    it('starts a new row when the last row is already full (5 buttons)', () => {
+        const fullRow = { type: 1, components: [1, 2, 3, 4, 5].map(n => ({ type: 2, custom_id: `b${n}` })) };
+        const result = appendToggleToLastRow([fullRow], toggle);
+        assert.equal(result.length, 2, 'a new row must be added');
+        assert.deepEqual(result[1], { type: 1, components: [toggle] });
+    });
+
+    it('starts a new row when there are no rows at all (nothing visible in that section)', () => {
+        const result = appendToggleToLastRow([], toggle);
+        assert.equal(result.length, 1);
+        assert.deepEqual(result[0], { type: 1, components: [toggle] });
+    });
+
+    it('accepts a single row object (not wrapped in an array) the same way', () => {
+        const singleRow = { type: 1, components: [{ type: 2, custom_id: 'a' }] };
+        const result = appendToggleToLastRow(singleRow, toggle);
+        assert.equal(result.length, 1);
+        assert.equal(result[0].components.length, 2);
     });
 });
 

@@ -1522,17 +1522,6 @@ export async function createPlayerManagementUI(options) {
     content: `## ${title}`
   });
 
-  // ── CastDock: collapse toggle (only in a channel where the sticky menu is active) ──
-  // Channel-scoped, not mode-scoped — anyone rendering a menu in a CastDock-enabled
-  // channel sees this, regardless of how they reached the full view.
-  if (client?.castDockChannels?.has(channelId)) {
-    container.components.push({
-      type: 9, // Section
-      components: [{ type: 10, content: '-# 📌 CastDock is pinned in this channel' }],
-      accessory: { type: 2, custom_id: 'castdock_collapse', label: '⌄', style: 2 }
-    });
-  }
-
   // ── Admin: User Select ──
   if (showUserSelect) {
     container.components.push({ type: 14 }); // Separator
@@ -1714,6 +1703,12 @@ export async function createPlayerManagementUI(options) {
         custom_id: 'safari_guide_0',
         emoji: { name: '🦁' }
       });
+    }
+
+    // CastDock: collapse toggle — always last/rightmost in the bottom row, in any
+    // channel where the sticky menu is active (channel-scoped, not mode-scoped).
+    if (client?.castDockChannels?.has(channelId)) {
+      footerButtons.push({ type: 2, style: 2, custom_id: 'castdock_collapse', label: '⌄' });
     }
 
     if (footerButtons.length > 0) {
