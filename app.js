@@ -9851,14 +9851,15 @@ To fix this:
       }})(req, res, client);
 
     } else if (custom_id === 'player_menu_sel_castdock') {
-      // PLAYER mode — self-service: a player toggling CastDock for their OWN menu/channel.
+      // PLAYER mode — self-service. 'enable' only shows the setup screen (deferred
+      // activation — nothing persists/posts until "Activate CastDock" is clicked there).
       return ButtonHandlerFactory.create({ id: 'player_menu_sel_castdock', security: 'public', updateMessage: true, handler: async (context) => {
         const action = parseCastDockAction(req.body.data.values);
-        await applyCastDockToggle(client, context.guildId, context.channelId, context.userId, action, context.userId);
         if (action === 'enable') {
-          const { buildCastDockEnabledNotice } = await import('./castDock.js');
-          return await buildCastDockEnabledNotice(false);
+          const { buildCastDockSetupScreen } = await import('./castDock.js');
+          return await buildCastDockSetupScreen(context.guildId, context.channelId, false, context.userId);
         }
+        await applyCastDockToggle(client, context.guildId, context.channelId, context.userId, action, context.userId);
         const guild = await context.client.guilds.fetch(context.guildId);
         const member = await guild.members.fetch(context.userId);
         const playerData = await loadPlayerData();
@@ -9870,20 +9871,38 @@ To fix this:
       return ButtonHandlerFactory.create({ id: 'player_menu_sel_castdock_admin', requiresPermission: PermissionFlagsBits.ManageRoles, permissionName: 'Manage Roles', updateMessage: true, handler: async (context) => {
         const targetUserId = custom_id.replace('player_menu_sel_castdock_', '');
         const action = parseCastDockAction(req.body.data.values);
-        await applyCastDockToggle(client, context.guildId, context.channelId, targetUserId, action, context.userId);
         if (action === 'enable') {
-          const { buildCastDockEnabledNotice } = await import('./castDock.js');
-          return await buildCastDockEnabledNotice(true, targetUserId);
+          const { buildCastDockSetupScreen } = await import('./castDock.js');
+          return await buildCastDockSetupScreen(context.guildId, context.channelId, true, targetUserId);
         }
+        await applyCastDockToggle(client, context.guildId, context.channelId, targetUserId, action, context.userId);
         const { buildAdminPlayerMenu } = await import('./playerManagement.js');
         return await buildAdminPlayerMenu(context.client, context.guildId, targetUserId, context.userId, 'castdock');
       }})(req, res, client);
 
-    } else if (custom_id === 'castdock_ack_notice' || custom_id.startsWith('castdock_ack_notice_')) {
-      // "Got it" on the post-enable notice — returns to the normal menu, CastDock category active.
-      return ButtonHandlerFactory.create({ id: 'castdock_ack_notice', security: 'public', updateMessage: true, handler: async (context) => {
-        const isAdminMode = custom_id.startsWith('castdock_ack_notice_');
-        const targetUserId = isAdminMode ? custom_id.replace('castdock_ack_notice_', '') : context.userId;
+    } else if (custom_id === 'castdock_select_buttons') {
+      // Updating which compact buttons show, on the setup screen (pre-activation, player mode).
+      return ButtonHandlerFactory.create({ id: 'castdock_select_buttons', security: 'public', updateMessage: true, handler: async (context) => {
+        const { setCastDockButtonSelection, buildCastDockSetupScreen } = await import('./castDock.js');
+        await setCastDockButtonSelection(context.guildId, context.channelId, context.userId, req.body.data.values || []);
+        return await buildCastDockSetupScreen(context.guildId, context.channelId, false, context.userId);
+      }})(req, res, client);
+
+    } else if (custom_id.startsWith('castdock_select_buttons_')) {
+      // Same, admin mode — requires elevated permission, matching the enable/disable select's gate.
+      return ButtonHandlerFactory.create({ id: 'castdock_select_buttons_admin', requiresPermission: PermissionFlagsBits.ManageRoles, permissionName: 'Manage Roles', updateMessage: true, handler: async (context) => {
+        const targetUserId = custom_id.replace('castdock_select_buttons_', '');
+        const { setCastDockButtonSelection, buildCastDockSetupScreen } = await import('./castDock.js');
+        await setCastDockButtonSelection(context.guildId, context.channelId, targetUserId, req.body.data.values || []);
+        return await buildCastDockSetupScreen(context.guildId, context.channelId, true, targetUserId);
+      }})(req, res, client);
+
+    } else if (custom_id === 'castdock_activate' || custom_id.startsWith('castdock_activate_')) {
+      // "Activate CastDock" on the setup screen — THIS is what actually enables + first-posts.
+      return ButtonHandlerFactory.create({ id: 'castdock_activate', security: 'public', updateMessage: true, handler: async (context) => {
+        const isAdminMode = custom_id.startsWith('castdock_activate_');
+        const targetUserId = isAdminMode ? custom_id.replace('castdock_activate_', '') : context.userId;
+        await applyCastDockToggle(client, context.guildId, context.channelId, targetUserId, 'enable', context.userId);
         if (isAdminMode) {
           const { buildAdminPlayerMenu } = await import('./playerManagement.js');
           return await buildAdminPlayerMenu(context.client, context.guildId, targetUserId, context.userId, 'castdock');

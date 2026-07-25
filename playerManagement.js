@@ -595,7 +595,7 @@ async function calculateVisibility(guildId, targetUserId, playerData, safariData
   vis.currency = { show: isAdmin ? showInventory : (showInventory && hasTarget && hasEconomyActivity), disabled: isAdmin && !hasTarget, label: customTerms.currencyName || 'Currency', emoji: customTerms.currencyEmoji || '🪙' };
   vis.inventory = { show: isAdmin ? showInventory : (showInventory && hasTarget && hasEconomyActivity), disabled: isAdmin && !hasTarget, label: customTerms.inventoryName || 'Inventory', emoji: customTerms.inventoryEmoji || '🧰' };
   // Map: admins see it whenever a map exists (to init/manage); players only when on the map.
-  vis.map = { show: isAdmin ? !!activeMapId : (hasTarget && isInitialized && hasMapLocation), disabled: isAdmin && !hasTarget, label: 'Safari Map', emoji: '🗺️', coordinate: currentCoordinate };
+  vis.map = { show: isAdmin ? !!activeMapId : (hasTarget && isInitialized && hasMapLocation), disabled: isAdmin && !hasTarget, label: 'Map', emoji: '🗺️', coordinate: currentCoordinate };
   // Stamina (admin-only): grant/edit a player's stamina. Sits right of Safari Map; shown when a map exists.
   vis.stamina = { show: isAdmin && !!activeMapId, disabled: isAdmin && !hasTarget, label: 'Stamina', emoji: '⚡' };
   vis.challenges = { show: isAdmin ? hasChallengeActions : hasChallengeActions, disabled: isAdmin && !hasTarget, label: 'Challenges', emoji: '🏃' };

@@ -12,28 +12,39 @@ import {
     buildCastDockSelectRow,
     parseCastDockAction,
     evaluateCastDockTrigger,
-    COMPACT_ROW2_IDS,
+    CASTDOCK_SELECTABLE_BUTTONS,
+    resolveCompactRowIds,
+    buildCastDockButtonSelectRow,
     stripButtonLabels,
     COMPACT_DIRECT_ACTION_REMAP,
-    remapCompactButtonIds,
-    buildCastDockEnabledNotice
+    remapCompactButtonIds
 } from '../castDock.js';
 
 describe('CastDock — normalizeCastDockConfig', () => {
-    it('defaults missing/malformed data to disabled', () => {
-        assert.deepEqual(normalizeCastDockConfig(null), { enabled: false });
-        assert.deepEqual(normalizeCastDockConfig(undefined), { enabled: false });
-        assert.deepEqual(normalizeCastDockConfig({}), { enabled: false });
-        assert.deepEqual(normalizeCastDockConfig('garbage'), { enabled: false });
-        assert.deepEqual(normalizeCastDockConfig({ enabled: true }), { enabled: false }); // no targetUserId
+    it('defaults missing/malformed data to disabled with no button selection', () => {
+        assert.deepEqual(normalizeCastDockConfig(null), { enabled: false, selectedButtons: null });
+        assert.deepEqual(normalizeCastDockConfig(undefined), { enabled: false, selectedButtons: null });
+        assert.deepEqual(normalizeCastDockConfig({}), { enabled: false, selectedButtons: null });
+        assert.deepEqual(normalizeCastDockConfig('garbage'), { enabled: false, selectedButtons: null });
+        assert.deepEqual(normalizeCastDockConfig({ enabled: true }), { enabled: false, selectedButtons: null }); // no targetUserId
     });
 
     it('passes through a well-formed config, coercing enabled to a strict boolean', () => {
         const raw = { enabled: true, targetUserId: '123', enabledBy: '456', enabledAt: 999 };
-        assert.deepEqual(normalizeCastDockConfig(raw), { enabled: true, targetUserId: '123', enabledBy: '456', enabledAt: 999 });
+        assert.deepEqual(normalizeCastDockConfig(raw), { enabled: true, targetUserId: '123', enabledBy: '456', enabledAt: 999, selectedButtons: null });
 
         const truthyEnabled = { enabled: 'yes', targetUserId: '123' };
         assert.equal(normalizeCastDockConfig(truthyEnabled).enabled, false);
+    });
+
+    it('passes through selectedButtons when it is a real array, including an explicit empty one', () => {
+        assert.deepEqual(normalizeCastDockConfig({ targetUserId: '1', selectedButtons: ['commands', 'map'] }).selectedButtons, ['commands', 'map']);
+        assert.deepEqual(normalizeCastDockConfig({ targetUserId: '1', selectedButtons: [] }).selectedButtons, []);
+    });
+
+    it('coerces a garbage (non-array) selectedButtons to null rather than trusting it', () => {
+        assert.equal(normalizeCastDockConfig({ targetUserId: '1', selectedButtons: 'commands' }).selectedButtons, null);
+        assert.equal(normalizeCastDockConfig({ targetUserId: '1', selectedButtons: { commands: true } }).selectedButtons, null);
     });
 });
 
@@ -72,55 +83,76 @@ describe('CastDock — buildCastDockSelectRow', () => {
     });
 });
 
-describe('CastDock — buildCastDockEnabledNotice', () => {
-    function textOf(notice) {
-        return notice.components[0].components.filter(c => c.type === 10).map(c => c.content).join('\n');
+describe('CastDock — CASTDOCK_SELECTABLE_BUTTONS (the fixed selectable + render order)', () => {
+    it('has exactly the 6 specified buttons, in this exact order', () => {
+        assert.deepEqual(CASTDOCK_SELECTABLE_BUTTONS.map(b => b.id), ['commands', 'inventory', 'actions', 'challenges', 'crafting', 'map']);
+    });
+
+    it('does not include stamina or stores — dropped from compact mode entirely', () => {
+        const ids = CASTDOCK_SELECTABLE_BUTTONS.map(b => b.id);
+        assert.ok(!ids.includes('stamina'));
+        assert.ok(!ids.includes('stores'));
+    });
+
+    it('every entry has a label and description (used verbatim as the select option text)', () => {
+        for (const b of CASTDOCK_SELECTABLE_BUTTONS) {
+            assert.ok(b.label, `${b.id} needs a label`);
+            assert.ok(b.description, `${b.id} needs a description`);
+        }
+    });
+});
+
+describe('CastDock — resolveCompactRowIds', () => {
+    it('defaults to all 6, in reference order, when selectedButtons is null/undefined (never configured)', () => {
+        assert.deepEqual(resolveCompactRowIds(null), ['commands', 'inventory', 'actions', 'challenges', 'crafting', 'map']);
+        assert.deepEqual(resolveCompactRowIds(undefined), ['commands', 'inventory', 'actions', 'challenges', 'crafting', 'map']);
+    });
+
+    it('reorders an explicit subset to the fixed reference order, regardless of input order', () => {
+        assert.deepEqual(resolveCompactRowIds(['map', 'commands', 'crafting']), ['commands', 'crafting', 'map']);
+    });
+
+    it('respects an explicit empty array as a real choice (show nothing), NOT a fallback to defaults', () => {
+        assert.deepEqual(resolveCompactRowIds([]), []);
+    });
+
+    it('silently drops unknown/garbage ids (e.g. stale stamina/stores from before they were removed)', () => {
+        assert.deepEqual(resolveCompactRowIds(['commands', 'stamina', 'stores', 'nonsense']), ['commands']);
+    });
+});
+
+describe('CastDock — buildCastDockButtonSelectRow', () => {
+    function options(row) {
+        return row.components[0].options;
     }
-    function ackButton(notice) {
-        const row = notice.components[0].components.find(c => c.type === 1);
-        return row.components[0];
-    }
 
-    it('player mode: ack button has the plain (unsuffixed) custom_id', async () => {
-        const notice = await buildCastDockEnabledNotice(false);
-        assert.equal(ackButton(notice).custom_id, 'castdock_ack_notice');
+    it('has 6 options in CASTDOCK_SELECTABLE_BUTTONS order with placeholder "Default buttons selected"', () => {
+        const row = buildCastDockButtonSelectRow('castdock_select_buttons', null);
+        assert.equal(row.components[0].placeholder, 'Default buttons selected');
+        assert.deepEqual(options(row).map(o => o.value), ['commands', 'inventory', 'actions', 'challenges', 'crafting', 'map']);
     });
 
-    it('admin mode: ack button custom_id is suffixed with the target user id', async () => {
-        const notice = await buildCastDockEnabledNotice(true, '123456789012345678');
-        assert.equal(ackButton(notice).custom_id, 'castdock_ack_notice_123456789012345678');
+    it('defaults every option to selected when selectedButtons is null (never configured)', () => {
+        const opts = options(buildCastDockButtonSelectRow('x', null));
+        assert.ok(opts.every(o => o.default === true));
     });
 
-    it('explains what CastDock is before the privacy caveat (order matters — "what is" heading precedes "who can see")', async () => {
-        const notice = await buildCastDockEnabledNotice(false);
-        const text = textOf(notice);
-        assert.ok(text.indexOf('What is CastDock') < text.indexOf('Who can see'), 'the explanation must come first');
+    it('marks only the stored subset as default when selectedButtons is an explicit array', () => {
+        const opts = options(buildCastDockButtonSelectRow('x', ['commands', 'map']));
+        assert.equal(opts.find(o => o.value === 'commands').default, true);
+        assert.equal(opts.find(o => o.value === 'map').default, true);
+        for (const id of ['inventory', 'actions', 'challenges', 'crafting']) {
+            assert.equal(opts.find(o => o.value === id).default, false, `${id} must not be default`);
+        }
     });
 
-    it('mentions the privacy caveat: public visibility + at least one concrete data example', async () => {
-        const text = textOf(await buildCastDockEnabledNotice(false));
-        assert.ok(/public/i.test(text), 'must say it is public');
-        assert.ok(/currency|item|stats/i.test(text), 'must name at least one concrete piece of exposed data');
-        assert.ok(/subs|submission|private channel/i.test(text), 'must recommend a private/subs channel');
+    it('marks nothing as default when selectedButtons is an explicit empty array', () => {
+        const opts = options(buildCastDockButtonSelectRow('x', []));
+        assert.ok(opts.every(o => o.default === false));
     });
 
-    it('uses the info/prep purple accent, NOT the red Critical Deletion / orange warning tiers — this is a heads-up, not a scary gate', async () => {
-        const notice = await buildCastDockEnabledNotice(false);
-        assert.equal(notice.components[0].accent_color, 0x9b59b6);
-        assert.notEqual(notice.components[0].accent_color, 0xed4245, 'must not use the red danger accent');
-        assert.notEqual(notice.components[0].accent_color, 0xf39c12, 'must not use the orange warning accent — lighter touch than that');
-    });
-
-    it('has exactly one button (a single acknowledgement, no cancel/confirm gate)', async () => {
-        const notice = await buildCastDockEnabledNotice(false);
-        const row = notice.components[0].components.find(c => c.type === 1);
-        assert.equal(row.components.length, 1);
-        assert.equal(row.components[0].label, 'Got it');
-    });
-
-    it('is flagged as Components V2', async () => {
-        const notice = await buildCastDockEnabledNotice(false);
-        assert.equal(notice.flags, (1 << 15));
+    it('min_values is 0 (allowing a deliberate zero-button selection)', () => {
+        assert.equal(buildCastDockButtonSelectRow('x', null).components[0].min_values, 0);
     });
 });
 
@@ -172,30 +204,6 @@ describe('CastDock — evaluateCastDockTrigger (anti-loop / cooldown truth table
     });
 });
 
-describe('CastDock — compact view row composition', () => {
-    it('puts commands first, guaranteeing it chunks into the same ActionRow as the row\'s other early entries (buildSectionRow groups in array order, 5 per row)', () => {
-        assert.equal(COMPACT_ROW2_IDS[0], 'commands');
-        assert.ok(COMPACT_ROW2_IDS.indexOf('commands') < 5, 'commands must land in the first 5-item chunk');
-    });
-
-    it('has no currency button, and does include challenges', () => {
-        assert.ok(!COMPACT_ROW2_IDS.includes('currency'), 'currency must be removed');
-        assert.ok(COMPACT_ROW2_IDS.includes('challenges'), 'challenges must be present');
-    });
-
-    it('has no Advanced-section ids at all — attributes/castdock are not in the compact row list', () => {
-        assert.ok(!COMPACT_ROW2_IDS.includes('attributes'));
-        assert.ok(!COMPACT_ROW2_IDS.includes('castdock'));
-    });
-
-    it('row 1 (Castlists & Profile) ids are entirely absent from the compact row', () => {
-        const row1Ids = ['castlists', 'pronouns', 'timezone', 'age', 'vanity'];
-        for (const id of row1Ids) {
-            assert.ok(!COMPACT_ROW2_IDS.includes(id), `${id} must not appear in the compact row`);
-        }
-    });
-});
-
 describe('CastDock — remapCompactButtonIds', () => {
     it('remaps inventory/map/crafting/challenges to their CastDock-specific custom_ids', () => {
         const row = { type: 1, components: [
@@ -211,8 +219,8 @@ describe('CastDock — remapCompactButtonIds', () => {
         assert.equal(row.components[3].custom_id, 'castdock_open_challenges');
     });
 
-    it('leaves every other button untouched (commands, stamina, actions, stores, castdock, etc.)', () => {
-        const untouched = ['player_enter_command_global', 'player_set_stamina', 'player_set_actions', 'player_set_stores', 'player_set_castdock', 'player_set_attributes'];
+    it('leaves every other button untouched (commands, actions, etc.)', () => {
+        const untouched = ['player_enter_command_global', 'player_set_actions', 'player_set_castdock', 'player_set_attributes'];
         const row = { type: 1, components: untouched.map(custom_id => ({ type: 2, custom_id })) };
         remapCompactButtonIds(row);
         assert.deepEqual(row.components.map(c => c.custom_id), untouched);

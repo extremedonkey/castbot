@@ -1378,8 +1378,10 @@ export const BUTTON_REGISTRY = {
   'castdock_view_navigate': { label: 'View Navigate Pane', description: 'CastDock compact: jump straight to the map navigate pane', emoji: '🗺️', style: 'Secondary', category: 'player_management' },
   'castdock_open_crafting': { label: 'Open Crafting Select', description: 'CastDock compact: show the crafting select inline', emoji: '🛠️', style: 'Secondary', category: 'player_management' },
   'castdock_open_challenges': { label: 'Open Challenges Select', description: 'CastDock compact: show the challenges select inline', emoji: '🏃', style: 'Secondary', category: 'player_management' },
-  'castdock_ack_notice': { label: 'Got it', description: 'Acknowledge the CastDock privacy notice, self mode', emoji: '📌', style: 'Secondary', category: 'player_management' },
-  'castdock_ack_notice_*': { label: 'Got it (Admin)', description: 'Acknowledge the CastDock privacy notice, admin mode', emoji: '📌', style: 'Secondary', category: 'player_management' },
+  'castdock_activate': { label: 'Activate CastDock', description: 'Actually enable CastDock from the setup screen, self mode', emoji: '📌', style: 'Primary', category: 'player_management' },
+  'castdock_activate_*': { label: 'Activate CastDock (Admin)', description: 'Actually enable CastDock from the setup screen, admin mode', emoji: '📌', style: 'Primary', category: 'player_management' },
+  'castdock_select_buttons': { label: 'Select CastDock Buttons', description: 'Choose which buttons show on the compact CastDock view, self mode', emoji: '🔘', style: 'Secondary', category: 'player_management' },
+  'castdock_select_buttons_*': { label: 'Select CastDock Buttons (Admin)', description: 'Choose which buttons show on the compact CastDock view, admin mode', emoji: '🔘', style: 'Secondary', category: 'player_management' },
 
   // === CHALLENGE ACTION CATEGORIES ===
   'challenge_action_cat_select_*': {

@@ -6,9 +6,17 @@
  * the previous CastDock message is deleted and a fresh one is posted at the bottom.
  *
  * Storage: playerData[guildId].castDock.channels[channelId] = { enabled, targetUserId,
- * enabledBy, enabledAt, disabledAt }. Only the enabled flag + target are persisted —
- * lastMessageId/lastRepostAt live only in the in-memory client.castDockChannels cache
- * (mirrors client.roleReactions) to avoid a playerData write on every chat message.
+ * enabledBy, enabledAt, disabledAt, selectedButtons }. selectedButtons is null until the
+ * owner customizes the button select (defaults to all of CASTDOCK_SELECTABLE_BUTTONS), or
+ * an explicit array (including []) once they have. lastMessageId/lastRepostAt live only in
+ * the in-memory client.castDockChannels cache (mirrors client.roleReactions) to avoid a
+ * playerData write on every chat message.
+ *
+ * Activation is deferred: choosing "Enable" shows buildCastDockSetupScreen (explains what
+ * CastDock is, the privacy caveat, and the button-selection multi-select) WITHOUT touching
+ * playerData or posting anything. Only clicking "Activate CastDock" (castdock_activate in
+ * app.js) actually calls applyCastDockToggle — the same function the old immediate-enable
+ * flow used.
  *
  * storage.js and playerManagement.js are imported dynamically inside functions:
  * playerManagement.js imports this module's pure builders statically, so a static
@@ -21,12 +29,13 @@ export const CASTDOCK_COOLDOWN_MS = 3000;
 
 /** Pure — coerce stored/partial data to a safe shape. */
 export function normalizeCastDockConfig(raw) {
-  if (!raw || typeof raw !== 'object' || !raw.targetUserId) return { enabled: false };
+  if (!raw || typeof raw !== 'object' || !raw.targetUserId) return { enabled: false, selectedButtons: null };
   return {
     enabled: raw.enabled === true,
     targetUserId: raw.targetUserId,
     enabledBy: raw.enabledBy || null,
-    enabledAt: raw.enabledAt || null
+    enabledAt: raw.enabledAt || null,
+    selectedButtons: Array.isArray(raw.selectedButtons) ? raw.selectedButtons : null
   };
 }
 
@@ -53,6 +62,27 @@ export async function setCastDockConfig(guildId, channelId, { enabled, targetUse
     }
     await savePlayerData(playerData);
     return channels[channelId] || { enabled: false };
+  });
+}
+
+/**
+ * Config-only write — persists which compact-view buttons are selected without touching
+ * `enabled` (preserves whatever it already was). Used while the setup screen is still
+ * showing, before "Activate CastDock" has been clicked (and also usable later if a
+ * reconfigure-while-active entry point is ever added).
+ * @param {string[]} selectedButtons - ids from CASTDOCK_SELECTABLE_BUTTONS; [] is a valid,
+ *   respected choice (show none), distinct from null/undefined (never configured → defaults)
+ */
+export async function setCastDockButtonSelection(guildId, channelId, targetUserId, selectedButtons) {
+  const { withStorageLock, loadPlayerData, savePlayerData } = await import('./storage.js');
+  return withStorageLock(async () => {
+    const playerData = await loadPlayerData();
+    if (!playerData[guildId]) playerData[guildId] = {};
+    const channels = (playerData[guildId].castDock ||= {}).channels ||= {};
+    const existing = channels[channelId] || {};
+    channels[channelId] = { ...existing, targetUserId, selectedButtons, enabled: existing.enabled === true };
+    await savePlayerData(playerData);
+    return channels[channelId];
   });
 }
 
@@ -85,23 +115,79 @@ export function parseCastDockAction(values) {
   return values?.[0] === 'enable' ? 'enable' : 'disable';
 }
 
+// The complete set of buttons a CastDock owner can choose to show on the compact view.
+// Order here IS the render order — buttons always render in this order regardless of the
+// order they were picked in the multi-select. 'stamina'/'stores' are deliberately absent —
+// dropped from compact mode entirely (the full menu is unaffected).
+export const CASTDOCK_SELECTABLE_BUTTONS = [
+  { id: 'commands', label: 'Commands', emoji: '🕹️', description: 'Lets player type in commands in actions' },
+  { id: 'inventory', label: 'Inventory', emoji: '🧰', description: "Shows the players' inventory" },
+  { id: 'actions', label: 'Actions', emoji: '⚡', description: 'Shows any actions configured to player menu' },
+  { id: 'challenges', label: 'Challenges', emoji: '🏃', description: 'Shows any active challenge actions' },
+  { id: 'crafting', label: 'Crafting', emoji: '🛠️', description: 'Shows crafting options' },
+  { id: 'map', label: 'Map', emoji: '🗺️', description: 'Shows the navigate pane if the player is in Safari' },
+];
+
 /**
- * Pure — the one-time heads-up shown right after enabling CastDock: what it is, then the
- * privacy caveat (public message → currency/items/stats visible to the whole channel).
- * Deliberately NOT the red Critical Deletion pattern — this isn't destructive or gated,
- * just a "told you so" notice, so it uses the same purple "info tier" accent as the
- * Safari import prep screen (app.js's safari_import_data handler) rather than orange/red.
- * @param {boolean} isAdminMode
- * @param {string} [targetUserId] - required when isAdminMode, to build the ack button's custom_id
+ * Pure — resolves which compact-row ids to render, in CASTDOCK_SELECTABLE_BUTTONS order.
+ * null/undefined (never configured) → all 6, in order. An explicit array — including [] —
+ * is a real, respected choice, not defaulted. Unknown/garbage ids are silently dropped.
  */
-export async function buildCastDockEnabledNotice(isAdminMode, targetUserId = null) {
+export function resolveCompactRowIds(selectedButtons) {
+  const chosen = Array.isArray(selectedButtons) ? new Set(selectedButtons) : new Set(CASTDOCK_SELECTABLE_BUTTONS.map(b => b.id));
+  return CASTDOCK_SELECTABLE_BUTTONS.filter(b => chosen.has(b.id)).map(b => b.id);
+}
+
+/**
+ * Pure — the "Select CastDock buttons" multi-select shown on the setup screen. Options are
+ * always in CASTDOCK_SELECTABLE_BUTTONS order; `default:` reflects the current selection
+ * (or all 6 if selectedButtons is null/undefined — never configured yet).
+ */
+export function buildCastDockButtonSelectRow(customId, selectedButtons) {
+  const chosen = Array.isArray(selectedButtons) ? new Set(selectedButtons) : new Set(CASTDOCK_SELECTABLE_BUTTONS.map(b => b.id));
+  return {
+    type: 1, // ActionRow
+    components: [{
+      type: 3, // String Select
+      custom_id: customId,
+      placeholder: 'Default buttons selected',
+      min_values: 0,
+      max_values: 10,
+      options: CASTDOCK_SELECTABLE_BUTTONS.map(b => ({
+        label: b.label,
+        value: b.id,
+        description: b.description,
+        emoji: { name: b.emoji },
+        default: chosen.has(b.id)
+      }))
+    }]
+  };
+}
+
+/**
+ * Impure — the setup screen shown after choosing "Enable": explains what CastDock is, the
+ * privacy caveat, and lets the owner pick which buttons show — all BEFORE anything actually
+ * activates. Nothing is persisted or posted until "Activate CastDock" is clicked (a separate
+ * handler in app.js). Deliberately NOT the red Critical Deletion pattern — this isn't
+ * destructive or gated, just informational, so it uses the same purple "info tier" accent
+ * as the Safari import prep screen (app.js's safari_import_data handler) rather than
+ * orange/red.
+ * @param {string} guildId
+ * @param {string} channelId
+ * @param {boolean} isAdminMode
+ * @param {string} [targetUserId] - required when isAdminMode, to build custom_ids
+ */
+export async function buildCastDockSetupScreen(guildId, channelId, isAdminMode, targetUserId = null) {
   const { countComponents } = await import('./utils.js');
-  const ackId = isAdminMode ? `castdock_ack_notice_${targetUserId}` : 'castdock_ack_notice';
+  const { getBotEmoji } = await import('./botEmojis.js');
+  const config = await getCastDockConfig(guildId, channelId);
+  const activateId = isAdminMode ? `castdock_activate_${targetUserId}` : 'castdock_activate';
+  const selectButtonsId = isAdminMode ? `castdock_select_buttons_${targetUserId}` : 'castdock_select_buttons';
   const container = {
     type: 17, // Container
     accent_color: 0x9b59b6, // Purple — info/prep tier, not a warning/danger color
     components: [
-      { type: 10, content: '## 📌 CastDock Enabled' },
+      { type: 10, content: '## 📌 Set Up CastDock' },
       { type: 14 },
       { type: 10, content: '### ```📌 What is CastDock?```' },
       { type: 10, content: 'CastDock pins this menu as a **public** message in this channel — it\'s always the newest message here, automatically reposting itself whenever anyone sends a new message.' },
@@ -109,12 +195,16 @@ export async function buildCastDockEnabledNotice(isAdminMode, targetUserId = nul
       { type: 10, content: '### ```👀 Who can see this```' },
       { type: 10, content: '-# Since it\'s public now, whatever shows on it — currency, item counts, safari stats — is visible to everyone in this channel. Best kept to a private submission/subs channel, not anywhere spectators or other players can see it.' },
       { type: 14 },
+      { type: 10, content: '### ```🔘 Select CastDock buttons```' },
+      { type: 10, content: '-# Choose which buttons appear on CastDock (shown in this order: Commands, Inventory, Actions, Challenges, Crafting, Map). A selected button still only shows if its own requirements are met — e.g. Inventory stays hidden for a player carrying nothing.' },
+      buildCastDockButtonSelectRow(selectButtonsId, config.selectedButtons),
+      { type: 14 },
       { type: 1, components: [
-        { type: 2, custom_id: ackId, label: 'Got it', style: 1 }
+        { type: 2, custom_id: activateId, label: 'Activate CastDock', style: 1, emoji: getBotEmoji('castbot_logo') }
       ]}
     ]
   };
-  countComponents([container], { enableLogging: true, verbosity: 'summary', label: 'CastDock Enabled Notice' });
+  countComponents([container], { enableLogging: true, verbosity: 'summary', label: 'CastDock Setup Screen' });
   return { flags: (1 << 15), components: [container] };
 }
 
@@ -176,13 +266,6 @@ export async function initCastDockCache(client) {
 
 // ── Compact view (the CastDock steady-state UI) ─────────────────────────────
 
-// 'commands' listed first so it always lands in the same ActionRow as currency/inventory —
-// buildSectionRow chunks visible buttons into rows of 5 in array order, so whatever's
-// first is guaranteed to share row 1 with the row's other early entries. No 'currency' —
-// no 'attributes'/'castdock' either — the Advanced section doesn't exist in compact mode;
-// reconfiguring CastDock itself happens from the expanded full menu.
-export const COMPACT_ROW2_IDS = ['commands', 'inventory', 'map', 'stamina', 'challenges', 'crafting', 'actions', 'stores'];
-
 /** Pure — drops the label from every button in a row (or array of rows), keeping only its emoji. */
 export function stripButtonLabels(rows) {
   for (const row of [].concat(rows)) {
@@ -196,8 +279,7 @@ export function stripButtonLabels(rows) {
 // Compact-mode-only custom_ids for buttons that skip the hot-swap select and either act
 // directly (inventory/map) or open a select scoped to CastDock's own safe fallback
 // (crafting/challenges — see buildCompactCastDockMenu's activeSelectCategory param).
-// Every other row2 button (commands, stamina, actions, stores) is untouched, still routing
-// through the same custom_ids the full menu uses.
+// 'commands' and 'actions' are untouched, still routing through the full menu's custom_ids.
 export const COMPACT_DIRECT_ACTION_REMAP = {
   player_set_inventory: 'castdock_view_inventory',
   player_set_map: 'castdock_view_navigate',
@@ -256,7 +338,9 @@ export async function buildCompactCastDockMenu(client, guildId, targetMember, pl
 
   container.components.push({ type: 14 }); // Separator
 
-  const row2 = buildSectionRow(COMPACT_ROW2_IDS, targetUserId, null, visibility, PlayerManagementMode.PLAYER);
+  const config = await getCastDockConfig(guildId, channelId, playerData);
+  const rowIds = resolveCompactRowIds(config.selectedButtons);
+  const row2 = buildSectionRow(rowIds, targetUserId, null, visibility, PlayerManagementMode.PLAYER);
   stripButtonLabels(row2);
   remapCompactButtonIds(row2);
   row2.forEach(r => container.components.push(r));
