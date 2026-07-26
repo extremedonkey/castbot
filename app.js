@@ -4524,34 +4524,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               
               if (targetChannelId && targetChannelId !== sourceChannelId) {
                 // Post arrival message with Navigate button
-                const arrivalMessage = {
-                  flags: (1 << 15), // IS_COMPONENTS_V2
-                  components: [{
-                    type: 17, // Container
-                    accent_color: 0x2ecc71, // Green for movement
-                    components: [
-                      {
-                        type: 10, // Text Display
-                        content: `<@${context.userId}> has arrived at **${targetCoordinate}**`
-                      },
-                      {
-                        type: 1, // Action Row
-                        components: [{
-                          type: 2, // Button
-                          custom_id: `safari_navigate_${context.userId}_${targetCoordinate}`,
-                          label: 'Navigate',
-                          style: 1, // Primary
-                          emoji: { name: '🗺️' }
-                        }]
-                      }
-                    ]
-                  }]
-                };
-                
+                const { buildArrivalPanelUI } = await import('./mapNavigationUI.js');
                 console.log(`🔍 DEBUG: Posting arrival message to new channel ${targetChannelId}`);
                 await DiscordRequest(`channels/${targetChannelId}/messages`, {
                   method: 'POST',
-                  body: arrivalMessage
+                  body: buildArrivalPanelUI(context.userId, targetCoordinate)
                 });
               }
               
@@ -4699,6 +4676,37 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       })(req, res, client);
     }
     
+    // === NAVIGATE TIDY (Tools → Cleanup): bulk-delete stale navigation panels ===
+    if (custom_id === 'nav_tidy_open') {
+      return ButtonHandlerFactory.create({
+        id: 'nav_tidy_open',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        deferred: true,
+        ephemeral: true,
+        handler: async (context) => (await import('./navigateTidy.js')).runTidyScan(context.guildId, context.client)
+      })(req, res, client);
+    }
+    if (custom_id === 'nav_tidy_confirm') {
+      return ButtonHandlerFactory.create({
+        id: 'nav_tidy_confirm',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        deferred: true,
+        updateMessage: true,
+        handler: async (context) => (await import('./navigateTidy.js')).runTidyDelete(context.guildId)
+      })(req, res, client);
+    }
+    if (custom_id === 'nav_tidy_cancel') {
+      return ButtonHandlerFactory.create({
+        id: 'nav_tidy_cancel',
+        updateMessage: true,
+        handler: async () => ({
+          components: [{ type: 17, components: [{ type: 10, content: '❌ Navigate Tidy cancelled.' }] }]
+        })
+      })(req, res, client);
+    }
+
     // === ADMIN: DELETE STALE NAVIGATION PANEL (offered via safari_navigate_ admin branch) ===
     if (custom_id.startsWith('safari_nav_delete_panel_')) {
       const panelMessageId = custom_id.replace('safari_nav_delete_panel_', '');

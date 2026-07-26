@@ -15,6 +15,33 @@
 export const NAV_DELETE_PANEL_PREFIX = 'safari_nav_delete_panel_';
 
 /**
+ * The public arrival card posted to a cell's channel when a player moves in
+ * ("<@user> has arrived at **C2**" + Navigate button). Posted by app.js safari_move_*.
+ */
+export function buildArrivalPanelUI(userId, coordinate) {
+    return {
+        flags: 1 << 15, // IS_COMPONENTS_V2
+        components: [{
+            type: 17, // Container
+            accent_color: 0x2ecc71, // Green for movement
+            components: [
+                { type: 10, content: `<@${userId}> has arrived at **${coordinate}**` },
+                {
+                    type: 1, // Action Row
+                    components: [{
+                        type: 2, // Button
+                        custom_id: `safari_navigate_${userId}_${coordinate}`,
+                        label: 'Navigate',
+                        style: 1, // Primary
+                        emoji: { name: '🗺️' }
+                    }]
+                }
+            ]
+        }]
+    };
+}
+
+/**
  * Shown when a non-admin player clicks another player's Navigate button.
  * Points them at the anchor message's Explore button — the always-available movement path.
  */

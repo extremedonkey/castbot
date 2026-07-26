@@ -2565,6 +2565,32 @@ export const BUTTON_REGISTRY = {
     category: 'safari_movement'
   },
 
+  // Navigate Tidy (Tools → Cleanup): bulk stale-panel cleanup
+  'nav_tidy_open': {
+    label: 'Navigate Tidy',
+    description: 'Scan map channels for stale navigation panels',
+    emoji: '🗺️',
+    style: 'Secondary',
+    category: 'safari_movement',
+    parent: 'setup_menu'
+  },
+  'nav_tidy_confirm': {
+    label: 'Delete Panels',
+    description: 'Delete all stale navigation panels found by the scan',
+    emoji: '🧹',
+    style: 'Danger',
+    category: 'safari_movement',
+    parent: 'nav_tidy_open'
+  },
+  'nav_tidy_cancel': {
+    label: 'Cancel',
+    description: 'Dismiss the Navigate Tidy scan',
+    emoji: '❌',
+    style: 'Secondary',
+    category: 'safari_movement',
+    parent: 'nav_tidy_open'
+  },
+
   // Admin: delete a stale arrival/navigation panel (offered when Production clicks another player's Navigate)
   'safari_nav_delete_panel_*': {
     label: 'Delete Panel',
