@@ -702,3 +702,40 @@ describe('Regen interval guard (interval <= 0 disables regeneration)', () => {
         assert.equal(result.data.current, 1);
     });
 });
+
+// ─── Default stamina config ratchet (static scan, per repo convention) ───
+// New-server defaults aligned 2026-07-26: 1/1 stamina, 720-minute (12h) regen.
+// Env vars STAMINA_MAX / STAMINA_REGEN_MINUTES can still override, but the code
+// literals must not silently drift back to the old 3-minute / 10-max values.
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+
+const __ratchetDir = path.dirname(fileURLToPath(import.meta.url));
+const SAFARI_MANAGER_SRC = readFileSync(path.join(__ratchetDir, '..', 'safariManager.js'), 'utf8');
+const POINTS_MANAGER_SRC = readFileSync(path.join(__ratchetDir, '..', 'pointsManager.js'), 'utf8');
+
+describe('Stamina defaults — 1/1 with 720-minute regen for never-configured servers (ratchet)', () => {
+    it('getStaminaConfig falls back to 720-minute regen', () => {
+        assert.ok(/STAMINA_REGEN_MINUTES \|\| '720'/.test(SAFARI_MANAGER_SRC),
+            "getStaminaConfig regen fallback drifted from '720' — new servers would get the wrong cadence");
+    });
+
+    it('getStaminaConfig falls back to 1 for starting/max stamina', () => {
+        const matches = SAFARI_MANAGER_SRC.match(/STAMINA_MAX \|\| '1'/g) || [];
+        assert.ok(matches.length >= 2,
+            "getStaminaConfig starting/max fallbacks must both be '1' (found " + matches.length + ')');
+    });
+
+    it('getDefaultPointsConfig (legacy points path) matches: max 1, 720-minute interval', () => {
+        assert.ok(/STAMINA_MAX \|\| '1'/.test(POINTS_MANAGER_SRC),
+            "getDefaultPointsConfig defaultMax fallback drifted from '1'");
+        assert.ok(/STAMINA_REGEN_MINUTES \|\| '720'/.test(POINTS_MANAGER_SRC),
+            "getDefaultPointsConfig regen fallback drifted from '720'");
+    });
+
+    it('resetCustomTerms seeds the same defaults (1/1, 720) instead of the old 10/60', () => {
+        assert.ok(/startingStamina: 1,\s*\n\s*maxStamina: 1,\s*\n\s*staminaRegenerationMinutes: 720,/.test(SAFARI_MANAGER_SRC),
+            'resetCustomTerms stamina seed must match the live getStaminaConfig fallbacks (1/1, 720min)');
+    });
+});

@@ -5757,10 +5757,10 @@ async function resetCustomTerms(guildId) {
         round3GoodProbability: 25,
         // Location
         defaultStartingCoordinate: 'A1',
-        // Stamina (defaults match getStaminaConfig fallbacks)
+        // Stamina (defaults match getStaminaConfig fallbacks: 1/1, 720 min regen)
         startingStamina: 1,
-        maxStamina: 10,
-        staminaRegenerationMinutes: 60,
+        maxStamina: 1,
+        staminaRegenerationMinutes: 720,
         staminaRegenerationAmount: null, // null = full reset to max
         // Player Menu visibility
         enableGlobalCommands: true,
@@ -9771,7 +9771,7 @@ export async function getStaminaConfig(guildId) {
 
         regenerationMinutes: safariConfig.staminaRegenerationMinutes !== undefined
             ? safariConfig.staminaRegenerationMinutes
-            : parseInt(process.env.STAMINA_REGEN_MINUTES || '3'),
+            : parseInt(process.env.STAMINA_REGEN_MINUTES || '720'),
 
         // null = "max" (legacy full reset behavior), number = specific amount per cooldown
         regenerationAmount: safariConfig.staminaRegenerationAmount ?? null,

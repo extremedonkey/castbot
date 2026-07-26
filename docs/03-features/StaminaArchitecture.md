@@ -191,13 +191,13 @@ classDiagram
 const config = {
   startingStamina:   safariConfig.startingStamina   ?? parseInt(process.env.STAMINA_MAX || '1'),
   maxStamina:        safariConfig.maxStamina        ?? parseInt(process.env.STAMINA_MAX || '1'),
-  regenerationMinutes: safariConfig.staminaRegenerationMinutes ?? parseInt(process.env.STAMINA_REGEN_MINUTES || '3'),
+  regenerationMinutes: safariConfig.staminaRegenerationMinutes ?? parseInt(process.env.STAMINA_REGEN_MINUTES || '720'),
   regenerationAmount: safariConfig.staminaRegenerationAmount ?? null,  // null = full reset
   defaultStartingCoordinate: customTerms.defaultStartingCoordinate || 'A1'
 };
 ```
 
-> ⚠️ **The `STAMINA_MAX || '1'` footgun.** If a server has **never** opened the Stamina config modal, `safariConfig.maxStamina` is `undefined`, so both starting and max stamina fall back to `process.env.STAMINA_MAX` — and if *that* is unset, **`1`**. New servers therefore default to a max of **1**, which surprises hosts who expect a generous default. (Note the inconsistency: `resetCustomTerms` seeds `maxStamina: 10` / `regen: 60min` — `safariManager.js:5608` — but the *live fallback* in `getStaminaConfig` and `getDefaultPointsConfig` is `1` / `3min`. The seed only applies when custom terms are explicitly reset.) `getDefaultPointsConfig()` (`pointsManager.js:194`) carries the same `STAMINA_MAX || '1'` default for the legacy points path.
+> **The intended default for never-configured servers is 1/1 stamina with 720-minute (12h) regen** (aligned 2026-07-26). If a server has **never** opened the Stamina config modal, `safariConfig.maxStamina` is `undefined`, so both starting and max stamina fall back to `process.env.STAMINA_MAX` (set to `1` on prod and test), and regen to `process.env.STAMINA_REGEN_MINUTES` (`720` on both) — with the code literals now matching (`'1'` / `'720'`) if the env vars are unset. `resetCustomTerms` seeds the same values (`safariManager.js` — was inconsistently `10` / `60min` before the alignment), and `getDefaultPointsConfig()` (`pointsManager.js:194`) carries the same defaults for the legacy points path.
 
 **`regenerationAmount` semantics — the field that controls everything:**
 

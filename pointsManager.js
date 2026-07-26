@@ -200,7 +200,7 @@ export function getDefaultPointsConfig() {
             defaultMin: 0,
             regeneration: {
                 type: "full_reset",
-                interval: (parseInt(process.env.STAMINA_REGEN_MINUTES || '3')) * 60000,
+                interval: (parseInt(process.env.STAMINA_REGEN_MINUTES || '720')) * 60000,
                 amount: "max"
             },
             visibility: "hidden" // For MVP, just show cooldown
