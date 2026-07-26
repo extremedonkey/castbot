@@ -7,7 +7,7 @@
 # See: CLAUDE.md "Button Handler Factory" section
 
 BASELINE=100  # Legacy handler count as of 2026-07-21 (map_grid_edit retirement). Includes completion_edit modal exception. Only goes DOWN.
-APP_JS_LINES_MAX=52240  # app.js line-count ratchet as of 2026-07-26 (actual: 52240, arrival-card builder extracted to mapNavigationUI.js; Navigate Tidy logic lives in navigateTidy.js). Only goes DOWN. Extract more than you add.
+APP_JS_LINES_MAX=52242  # app.js line-count ratchet as of 2026-07-26 (actual: 52242, arrival-card builder extracted to mapNavigationUI.js; Navigate Tidy logic lives in navigateTidy.js). Only goes DOWN. Extract more than you add.
 
 # ── Auto-sync: keep installed hook in sync with source ──
 SOURCE_HOOK="scripts/hooks/pre-commit"

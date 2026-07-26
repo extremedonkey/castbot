@@ -4700,6 +4700,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     if (custom_id === 'nav_tidy_cancel') {
       return ButtonHandlerFactory.create({
         id: 'nav_tidy_cancel',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
         updateMessage: true,
         handler: async () => ({
           components: [{ type: 17, components: [{ type: 10, content: '❌ Navigate Tidy cancelled.' }] }]
