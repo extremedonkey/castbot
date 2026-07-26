@@ -111,6 +111,11 @@ function actionBullets(executedActions, resolveItem) {
         details.push(`Points: ${pts > 0 ? '+' : ''}${pts} (${cfg.entityId || cfg.pointsId || '?'})`);
         break;
       }
+      case 'give_stamina': {
+        const staminaAmt = cfg.amount || 0;
+        details.push(`Stamina: ${staminaAmt > 0 ? '+' : ''}${staminaAmt}`);
+        break;
+      }
       case 'follow_up_button':
       case 'follow_up':
         details.push('Follow-up button');

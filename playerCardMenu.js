@@ -116,16 +116,25 @@ async function buildSafariStatusLine(targetUserId, playerData, safariData, guild
   const invEmoji = customTerms?.inventoryEmoji || '🎒';
   parts.push(`${invEmoji} **${invName}:** ${itemCount} items`);
 
-  // Stamina
-  const stamina = safari.points?.stamina;
-  if (stamina) {
-    const current = stamina.current ?? 0;
-    const max = stamina.maximum ?? current;
-    const pct = max > 0 ? Math.floor((current / max) * 100) : 0;
-    const filled = Math.floor(pct / 10);
-    const empty = 10 - filled;
-    const bar = '█'.repeat(filled) + '░'.repeat(empty);
-    parts.push(`⚡ **Stamina:** ${bar} ${current}/${max}`);
+  // Stamina — gate on the legacy mirror existing (marks an initialized player), but read
+  // the LIVE value from entityPoints: the mirror is only written at init/admin-set, never
+  // by moves or give_stamina/consumables, so it goes stale (frozen 0/0 in scavenger mode).
+  if (safari.points?.stamina) {
+    try {
+      const { getEntityPoints } = await import('./pointsManager.js');
+      const live = await getEntityPoints(guildId, `player_${targetUserId}`, 'stamina');
+      const current = live?.current ?? 0;
+      const max = live?.max ?? current;
+      // Clamp: over-max (consumables/scavenger mode) would push filled past 10 and make
+      // '░'.repeat() negative — a RangeError, not a display quirk.
+      const pct = max > 0 ? Math.min(100, Math.floor((current / max) * 100)) : 0;
+      const filled = Math.floor(pct / 10);
+      const empty = 10 - filled;
+      const bar = '█'.repeat(filled) + '░'.repeat(empty);
+      parts.push(`⚡ **Stamina:** ${bar} ${current}/${max}`);
+    } catch (e) {
+      console.error('Player card stamina read error:', e.message);
+    }
   }
 
   // Safari state

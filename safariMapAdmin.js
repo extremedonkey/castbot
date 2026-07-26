@@ -791,7 +791,7 @@ export async function createStaminaModal(userId, guildId) {
 
   const maxDescription = itemBoost > 0
     ? `Base capacity before item boosts. Items currently add +${itemBoost} on top. Server default: ${serverMax}`
-    : `Base capacity (the denominator). Server default: ${serverMax}`;
+    : `Base capacity (the denominator). 0 = no natural regeneration. Server default: ${serverMax}`;
 
   return {
     custom_id: `map_admin_stamina_modal_${userId}`,

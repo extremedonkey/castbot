@@ -1186,7 +1186,7 @@ export const BUTTON_REGISTRY = {
   },
   'setup_castbot': {
     label: 'Run Setup',
-    description: 'Execute initial CastBot setup - creates pronoun and timezone roles',
+    description: 'Execute CastBot setup - creates pronoun and timezone roles. Appears in the Setup Wizard (Run Setup, disabled once complete) and Tools → Utilities (Re-Run Setup, always enabled for refreshing old role regimes)',
     emoji: '🪛',
     style: 'Primary',
     category: 'admin',
@@ -4322,6 +4322,17 @@ export const BUTTON_REGISTRY = {
     description: 'Reset all claims for this attribute action, allowing players to use it again',
     emoji: '🔄',
     style: 'Secondary',
+    category: 'safari_custom_actions'
+  },
+
+  // Give Stamina outcome config — one factory id routes all safari_give_stamina_*
+  // controls (amount button → modal, display select, limit select); bodies live in
+  // customActionUI.handleGiveStaminaComponent
+  'safari_give_stamina': {
+    label: 'Give Stamina Config',
+    description: 'Configure a give_stamina outcome: signed amount (negative drains), display mode, usage limit',
+    emoji: '⚡',
+    style: 'Primary',
     category: 'safari_custom_actions'
   },
 

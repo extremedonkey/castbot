@@ -373,7 +373,11 @@ async function calculateRegenerationWithCharges(pointData, config, guildId, enti
         console.log(`⚠️ POINTS CONFIG MISMATCH (${pointType}): stored max=${newData.max}, effectiveMax=${effectiveMax} — leaving as-is (may be an admin-set custom max)`);
     }
 
-    if (config.regeneration.type === 'full_reset') {
+    // A non-positive interval must mean "no regeneration", never "instant refill":
+    // periods = floor(elapsed / 0) is Infinity, which would mint to max on every read.
+    // Unreachable via the settings modal (validates 1-99999) but reachable through
+    // safari import and updateCustomTerms, which don't validate.
+    if (config.regeneration.type === 'full_reset' && config.regeneration.interval > 0) {
         const regenAmount = (config.regeneration.amount === 'max' || !config.regeneration.amount)
             ? effectiveMax
             : config.regeneration.amount;
@@ -512,8 +516,8 @@ export async function getTimeUntilRegeneration(guildId, entityId, pointType) {
         config = safariData[guildId]?.pointsConfig?.definitions?.[pointType] || getDefaultPointsConfig()[pointType];
     }
 
-    if (!config?.regeneration) {
-        return "N/A";
+    if (!config?.regeneration || !(config.regeneration.interval > 0)) {
+        return "N/A"; // no regen configured (interval <= 0 = regeneration disabled)
     }
 
     if (pointData.current >= pointData.max) {
@@ -588,6 +592,7 @@ export async function getRegenRemainingMs(guildId, entityId, pointType) {
         if (!config?.regeneration?.interval) return null;
         interval = config.regeneration.interval;
     }
+    if (!(interval > 0)) return null; // regeneration disabled — nothing pending
 
     const now = Date.now();
     if (pointData.current >= pointData.max) return null;
@@ -664,7 +669,7 @@ export async function setEntityPoints(guildId, entityId, pointType, current, max
     points.current = Math.max(0, current); // Never go below 0
 
     if (max !== null) {
-        points.max = Math.max(1, max); // Max must be at least 1
+        points.max = Math.max(0, max); // Max 0 is legal (scavenger mode: no natural regen), never negative
         // Only cap at max if not allowing over-max
         if (!allowOverMax) {
             points.current = Math.min(points.current, points.max);
@@ -912,12 +917,17 @@ export async function getPointsDisplay(guildId, entityId, pointType) {
         if (points.current > 0) {
             return { canUse: true, display: null };
         } else {
+            // null = nothing will ever regenerate (max 0 / regen disabled) — "Rest for Full" is a lie
+            const remainingMs = await getRegenRemainingMs(guildId, entityId, pointType);
+            if (remainingMs === null) {
+                return { canUse: false, display: `Out of ${config.displayName || pointType}!` };
+            }
             const timeUntil = await getTimeUntilRegeneration(guildId, entityId, pointType);
             return { canUse: false, display: `Rest for ${timeUntil}` };
         }
     } else if (config.visibility === 'bar') {
-        // Future: return bar representation
-        const percentage = (points.current / points.max) * 100;
+        // Future: return bar representation (max 0 → empty bar, over-max clamps to full)
+        const percentage = points.max > 0 ? Math.min(100, (points.current / points.max) * 100) : 0;
         return {
             canUse: points.current > 0,
             display: `${config.emoji} ${'█'.repeat(Math.floor(percentage/10))}${'░'.repeat(10-Math.floor(percentage/10))} ${points.current}/${points.max}`

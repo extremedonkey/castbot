@@ -356,9 +356,16 @@ async function createCurrentSettingsDisplay(guildId, config) {
         : 'Full refill';
     display += `**⚡ Stamina Settings**\n`;
     display += `• Starting Stamina: ${staminaConfig.startingStamina}\n`;
-    display += `• Max Stamina: ${staminaConfig.maxStamina}\n`;
-    display += `• ♻️ Regeneration Time: ${regenTimeDisplay}\n`;
-    display += `• Regeneration Style: ${regenStyleDisplay}\n\n`;
+    if (staminaConfig.maxStamina === 0) {
+        // Max 0 = scavenger mode: regen only fires while current < max, so at 0 capacity
+        // it never fires (unless a permanent item raises the max) — regen settings are moot.
+        display += `• Max Stamina: 0 (scavenger mode — no natural regeneration)\n`;
+        display += `• ♻️ Regeneration: none — stamina comes from action outcomes and items\n\n`;
+    } else {
+        display += `• Max Stamina: ${staminaConfig.maxStamina}\n`;
+        display += `• ♻️ Regeneration Time: ${regenTimeDisplay}\n`;
+        display += `• Regeneration Style: ${regenStyleDisplay}\n\n`;
+    }
 
     // --- Events ---
     if (config.goodEventName || config.badEventName || config.goodEventEmoji || config.badEventEmoji) {

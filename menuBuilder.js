@@ -116,6 +116,9 @@ export class MenuBuilder {
       {
         type: 1,
         components: [
+          // Same handler as the Setup Wizard's Run Setup — always enabled here so admins can
+          // re-run setup (idempotent: detects existing roles) e.g. to refresh old timezone roles
+          { type: 2, custom_id: 'setup_castbot', label: 'Re-Run Setup', style: 1, emoji: { name: '🪛' } },
           { type: 2, custom_id: 'prod_availability', label: 'Availability', style: 2, emoji: { name: '🕐' } },
           { type: 2, custom_id: 'emoji_editor', label: 'Emoji Editor', style: 2, emoji: { name: '🎨' } },
           { type: 2, custom_id: 'map_admin_refresh_anchors', label: 'Refresh Anchors', style: 2, emoji: { name: '🔄' } },

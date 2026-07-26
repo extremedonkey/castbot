@@ -5013,6 +5013,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_modify_attr_amount_') &&
         !custom_id.startsWith('safari_modify_attr_limit_') &&
         !custom_id.startsWith('safari_modify_attr_reset_') &&
+        !custom_id.startsWith('safari_give_stamina_') &&
         !custom_id.startsWith('condition_qty_select_') &&
         !custom_id.startsWith('entity_clone_select_') &&
         !custom_id.startsWith('emoji_picker_') &&
@@ -16422,7 +16423,7 @@ Your server is now ready for Tycoons gameplay!`;
               {
                 type: 18, // Label
                 label: 'Starting Stamina',
-                description: `Initial stamina for new players (0-${MAX_STAMINA})`,
+                description: `Initial stamina for new players (0-${MAX_STAMINA}). May exceed Max — the excess won't regen back`,
                 component: {
                   type: 4, // Text Input
                   custom_id: 'starting_stamina',
@@ -16439,7 +16440,7 @@ Your server is now ready for Tycoons gameplay!`;
               {
                 type: 18, // Label
                 label: 'Max Stamina',
-                description: `The tank size — most stamina a player can store (1-${MAX_STAMINA}, before item boosts)`,
+                description: `Tank size (0-${MAX_STAMINA}, before item boosts). 0 = no natural regen — stamina from items/actions only`,
                 component: {
                   type: 4, // Text Input
                   custom_id: 'max_stamina',
@@ -20812,6 +20813,11 @@ Your server is now ready for Tycoons gameplay!`;
             const { showModifyAttributeConfig } = await import('./customActionUI.js');
             return await showModifyAttributeConfig(context.guildId, buttonId, actionIndex);
 
+          // For give_stamina, eager-save with defaults then show its config screen
+          } else if (actionType === 'give_stamina') {
+            const { createGiveStaminaOutcome } = await import('./customActionUI.js');
+            return await createGiveStaminaOutcome(context.guildId, buttonId, executeOn);
+
           // For update_currency, delegate to safari_add_action handler
           } else if (actionType === 'update_currency') {
             // Simulate the safari_add_action custom_id and call its handler
@@ -22823,6 +22829,9 @@ Your server is now ready for Tycoons gameplay!`;
               } else if (action.type === 'modify_attribute') {
                 const { showModifyAttributeConfig } = await import('./customActionUI.js');
                 return await showModifyAttributeConfig(context.guildId, actionId, actionIndex);
+              } else if (action.type === 'give_stamina') {
+                const { showGiveStaminaConfig } = await import('./customActionUI.js');
+                return await showGiveStaminaConfig(context.guildId, actionId, actionIndex);
               } else if (action.type === 'manage_player_state') {
                 const { showManagePlayerStateConfig } = await import('./customActionUI.js');
                 return await showManagePlayerStateConfig(context.guildId, actionId, actionIndex);
@@ -23148,6 +23157,12 @@ Your server is now ready for Tycoons gameplay!`;
             console.log(`✅ SUCCESS: safari_edit_action - showing modify_attribute config for ${actionId}[${actionIndex}]`);
             const { showModifyAttributeConfig } = await import('./customActionUI.js');
             return await showModifyAttributeConfig(context.guildId, actionId, actionIndex);
+
+          } else if (action.type === 'give_stamina') {
+            // Show give stamina configuration entity
+            console.log(`✅ SUCCESS: safari_edit_action - showing give_stamina config for ${actionId}[${actionIndex}]`);
+            const { showGiveStaminaConfig } = await import('./customActionUI.js');
+            return await showGiveStaminaConfig(context.guildId, actionId, actionIndex);
 
           } else if (action.type === 'manage_player_state') {
             // Show manage player state configuration
@@ -24653,6 +24668,20 @@ Your server is now ready for Tycoons gameplay!`;
           ]
         }
       });
+
+    } else if (custom_id.startsWith('safari_give_stamina_')) {
+      // give_stamina outcome config controls (amount modal / display / limit) —
+      // bodies in customActionUI.handleGiveStaminaComponent; openCustomLimitScreen is app.js-local
+      return ButtonHandlerFactory.create({
+        id: 'safari_give_stamina',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const { handleGiveStaminaComponent } = await import('./customActionUI.js');
+          return await handleGiveStaminaComponent(context, { openCustomLimitScreen });
+        }
+      })(req, res, client);
 
     } else if (custom_id.startsWith('safari_drop_type_')) {
       // Handle drop type selection
@@ -35413,9 +35442,9 @@ Your server is now ready for Tycoons gameplay!`;
         handler: async (context) => {
           console.log(`🗺️ START: safari_map_init_player - user ${context.userId}`);
           
-          // Import functions  
+          // Import functions
           const { initializePlayerOnMap } = await import('./safariMapAdmin.js');
-          const { loadSafariContent } = await import('./safariManager.js');
+          const { loadSafariContent, getStaminaConfig } = await import('./safariManager.js');
           
           // Get active map
           const safariData = await loadSafariContent();
@@ -35469,8 +35498,9 @@ Your server is now ready for Tycoons gameplay!`;
           } catch (e) { console.error('Init logging error:', e); }
 
           console.log(`✅ SUCCESS: safari_map_init_player - player initialized at ${resolvedCoordinate}`);
+          const { startingStamina } = await getStaminaConfig(context.guildId);
           return {
-            content: `✅ **Welcome to the Safari Map!**\n\nYou've been initialized at coordinate **${resolvedCoordinate}** with **1 stamina**.\n\nHead to <#${channelId}> to start exploring! Your movement options are waiting for you there.`,
+            content: `✅ **Welcome to the Safari Map!**\n\nYou've been initialized at coordinate **${resolvedCoordinate}** with **${startingStamina} stamina**.\n\nHead to <#${channelId}> to start exploring! Your movement options are waiting for you there.`,
             ephemeral: true
           };
         }
@@ -40669,84 +40699,29 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
 
-    } else if (custom_id.startsWith('modal_modify_attr_amount_')) {
-      // Handle modify attribute amount modal (Custom Action config)
-      // Format: modal_modify_attr_amount_{buttonId}_{actionIndex}
-      const parts = custom_id.replace('modal_modify_attr_amount_', '').split('_');
-      const actionIndex = parseInt(parts[parts.length - 1]);
-      const buttonId = parts.slice(0, -1).join('_');
-      const guildId = req.body.guild_id;
-
-      // Extract form values
-      const getFieldValue = (fieldId) => {
-        for (const row of components) {
-          for (const comp of row.components) {
-            if (comp.custom_id === fieldId) {
-              return comp.value;
-            }
-          }
-        }
-        return null;
-      };
-
-      const newAmount = parseInt(getFieldValue('attr_amount'));
-
-      if (isNaN(newAmount) || newAmount < 0) {
+    } else if (custom_id.startsWith('modal_give_stamina_amount_')) {
+      // give_stamina amount modal submit — body in customActionUI (app.js is a router)
+      try {
+        const { handleGiveStaminaAmountModal } = await import('./customActionUI.js');
+        return res.send(await handleGiveStaminaAmountModal(req.body.guild_id, custom_id, components));
+      } catch (error) {
+        console.error(`❌ Failed to update give_stamina amount: ${error.message}`);
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Invalid amount - please enter a positive number',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
+          data: { content: `❌ Error updating amount: ${error.message}`, flags: InteractionResponseFlags.EPHEMERAL }
         });
       }
 
+    } else if (custom_id.startsWith('modal_modify_attr_amount_')) {
+      // modify_attribute amount modal submit — body in customActionUI (app.js is a router)
       try {
-        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
-        const safariData = await loadSafariContent();
-        const button = safariData[guildId]?.buttons?.[buttonId];
-
-        if (!button || !button.actions?.[actionIndex]) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Action not found',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-
-        // Ensure config exists
-        if (!button.actions[actionIndex].config) {
-          button.actions[actionIndex].config = {};
-        }
-
-        // Update the amount
-        button.actions[actionIndex].config.amount = newAmount;
-
-        // Save updated data
-        await saveSafariContent(safariData);
-
-        console.log(`📊 Updated modify_attribute amount for ${buttonId}[${actionIndex}]: ${newAmount}`);
-
-        // Return updated configuration UI (UPDATE_MESSAGE to stay on the same ephemeral message)
-        const { showModifyAttributeConfig } = await import('./customActionUI.js');
-        const updatedConfig = await showModifyAttributeConfig(guildId, buttonId, actionIndex);
-
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: {
-            components: updatedConfig.components
-          }
-        });
+        const { handleModifyAttrAmountModal } = await import('./customActionUI.js');
+        return res.send(await handleModifyAttrAmountModal(req.body.guild_id, custom_id, components));
       } catch (error) {
         console.error(`❌ Failed to update amount: ${error.message}`);
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: `❌ Failed to update amount: ${error.message}`,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
+          data: { content: `❌ Failed to update amount: ${error.message}`, flags: InteractionResponseFlags.EPHEMERAL }
         });
       }
 
@@ -44758,11 +44733,11 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
-      if (maxAmount !== null && (isNaN(maxAmount) || maxAmount < 1 || maxAmount > MAX_STAMINA)) {
+      if (maxAmount !== null && (isNaN(maxAmount) || maxAmount < 0 || maxAmount > MAX_STAMINA)) {
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `❌ Invalid max stamina. Please enter a number between 1 and ${MAX_STAMINA}.`,
+            content: `❌ Invalid max stamina. Please enter a number between 0 and ${MAX_STAMINA} (0 = no natural regeneration).`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -44988,8 +44963,8 @@ Your server is now ready for Tycoons gameplay!`;
       if (isNaN(amount) || amount < 0 || amount > MAX_STAMINA) {
         return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ Invalid current stamina. Enter a number between 0 and ${MAX_STAMINA}.`, flags: InteractionResponseFlags.EPHEMERAL } });
       }
-      if (maxAmount !== null && (isNaN(maxAmount) || maxAmount < 1 || maxAmount > MAX_STAMINA)) {
-        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ Invalid max stamina. Enter a number between 1 and ${MAX_STAMINA}.`, flags: InteractionResponseFlags.EPHEMERAL } });
+      if (maxAmount !== null && (isNaN(maxAmount) || maxAmount < 0 || maxAmount > MAX_STAMINA)) {
+        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ Invalid max stamina. Enter a number between 0 and ${MAX_STAMINA} (0 = no natural regeneration).`, flags: InteractionResponseFlags.EPHEMERAL } });
       }
 
       await res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
@@ -45020,7 +44995,7 @@ Your server is now ready for Tycoons gameplay!`;
       // NOTE: totalMs = 0 is valid ("refresh now") — no minimum floor.
       const { getRegenRemainingMs, setRegenCountdown } = await import('./pointsManager.js');
       if (await getRegenRemainingMs(guildId, `player_${targetUserId}`, 'stamina') === null) {
-        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `⚡ Player's stamina is already full (♻️ MAX) — there is no refresh to set.`, flags: InteractionResponseFlags.EPHEMERAL } });
+        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `⚡ Nothing is regenerating for this player (♻️ MAX, or regeneration disabled) — there is no refresh to set.`, flags: InteractionResponseFlags.EPHEMERAL } });
       }
 
       await res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
@@ -46830,11 +46805,12 @@ Your server is now ready for Tycoons gameplay!`;
           errors.push(`Starting Stamina must be 0-${MAX_STAMINA} (got "${startingStaminaValue}")`);
         }
 
-        // 2. Max Stamina (1-MAX_STAMINA, must be >= starting)
-        if (isNaN(maxStamina) || maxStamina < 1 || maxStamina > MAX_STAMINA) {
-          errors.push(`Max Stamina must be 1-${MAX_STAMINA} (got "${maxStaminaValue}")`);
-        } else if (maxStamina < startingStamina) {
-          errors.push(`Max Stamina (${maxStamina}) must be >= Starting Stamina (${startingStamina})`);
+        // 2. Max Stamina (0-MAX_STAMINA). 0 = scavenger mode: natural regen never fires
+        // (regen only runs while current < effectiveMax) — stamina comes only from action
+        // outcomes and items. Starting > max is also legal: over-max stamina simply never
+        // regenerates back (same rule consumables already rely on).
+        if (isNaN(maxStamina) || maxStamina < 0 || maxStamina > MAX_STAMINA) {
+          errors.push(`Max Stamina must be 0-${MAX_STAMINA} — 0 means no natural regeneration (got "${maxStaminaValue}")`);
         }
 
         // 3. Regen Minutes (1-99999 = no practical cap)
@@ -49279,6 +49255,11 @@ Your server is now ready for Tycoons gameplay!`;
             data: await showModifyAttributeConfig(guildId, buttonId, actionIndex)
           });
 
+        } else if (suffix.startsWith('stamina_')) {
+          // Immediate save — body in customActionUI (app.js is a router)
+          const { setGiveStaminaPeriodLimit } = await import('./customActionUI.js');
+          return res.send(await setGiveStaminaPeriodLimit(guildId, suffix.replace('stamina_', ''), totalMs));
+
         } else if (suffix.startsWith('enemy_')) {
           // Immediate save: write directly to safariData
           const remaining = suffix.replace('enemy_', '');
@@ -51675,8 +51656,8 @@ const dropConfigState = new Map();
 
 // ─── Custom Usage Limit (⚙️) working-state plumbing ───────────────────────
 // ctx encodes the outcome: "<type>:<buttonId>:<actionIndex>[:<itemId>]" where
-// type ∈ {currency,item,attr,enemy}. item/currency use deferred dropConfigState;
-// attr/enemy save immediately to safariContent (matches their existing editors).
+// type ∈ {currency,item,attr,enemy,stamina}. item/currency use deferred dropConfigState;
+// attr/enemy/stamina save immediately to safariContent (matches their existing editors).
 function parseCustomCtx(ctx) {
   const parts = ctx.split(':');
   const type = parts[0];
@@ -51754,6 +51735,10 @@ async function rerenderOutcomeEditor(guildId, parsed) {
   if (parsed.type === 'attr') {
     const { showModifyAttributeConfig } = await import('./customActionUI.js');
     return await showModifyAttributeConfig(guildId, parsed.buttonId, parsed.actionIndex);
+  }
+  if (parsed.type === 'stamina') {
+    const { showGiveStaminaConfig } = await import('./customActionUI.js');
+    return await showGiveStaminaConfig(guildId, parsed.buttonId, parsed.actionIndex);
   }
   if (parsed.type === 'enemy') {
     const { showFightEnemyConfig } = await import('./customActionUI.js');

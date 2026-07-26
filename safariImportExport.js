@@ -741,9 +741,12 @@ function filterConfigForExport(config) {
         ...(config.round2GoodProbability !== undefined && { round2GoodProbability: config.round2GoodProbability }),
         ...(config.round3GoodProbability !== undefined && { round3GoodProbability: config.round3GoodProbability }),
 
-        // Stamina Settings
+        // Stamina Settings (all four fields — a scavenger config like start 3 / max 0
+        // must round-trip; startingStamina/regenerationAmount were missing until 2026-07)
         ...(config.staminaRegenerationMinutes !== undefined && { staminaRegenerationMinutes: config.staminaRegenerationMinutes }),
         ...(config.maxStamina !== undefined && { maxStamina: config.maxStamina }),
+        ...(config.startingStamina !== undefined && { startingStamina: config.startingStamina }),
+        ...(config.staminaRegenerationAmount !== undefined && { staminaRegenerationAmount: config.staminaRegenerationAmount }),
 
         // Crafting (custom theme, e.g. "🌱 Gardening")
         ...(config.craftingName !== undefined && { craftingName: config.craftingName }),

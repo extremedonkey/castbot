@@ -409,6 +409,7 @@ const ACTION_TYPES = {
     APPLY_REGENERATION: 'apply_regeneration', // NEW: Force regeneration check
     // Attribute System Actions
     MODIFY_ATTRIBUTE: 'modify_attribute', // NEW: Add/subtract/set player attributes
+    GIVE_STAMINA: 'give_stamina',        // Grant/drain CURRENT stamina (consumable pattern: over-max OK, anchors untouched)
     // Enemy Combat Actions
     FIGHT_ENEMY: 'fight_enemy', // NEW: Initiate combat against an enemy
     // Player State Actions
@@ -2271,6 +2272,18 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
                     }
                     break;
 
+                case ACTION_TYPES.GIVE_STAMINA:
+                    try {
+                        console.log(`⚡ DEBUG: Executing give_stamina action for guild ${guildId}`);
+                        // Find the original action index in the unsorted button.actions array for claim tracking
+                        const staminaActionIndex = button.actions.findIndex(a => a === action);
+                        result = await executeGiveStamina(action.config, guildId, userId, interaction, buttonId, staminaActionIndex);
+                        if (result) responses.push(result);
+                    } catch (error) {
+                        console.error('Error executing give_stamina action:', error);
+                    }
+                    break;
+
                 default:
                     console.log(`⚠️ Unknown action type: ${action.type}`);
             }
@@ -3627,6 +3640,97 @@ async function executeModifyPoints(config, guildId, userId, interaction) {
         console.error('Error modifying points:', error);
         return {
             content: '❌ Error modifying points.',
+            flags: InteractionResponseFlags.EPHEMERAL
+        };
+    }
+}
+
+/**
+ * Execute give_stamina action — grant or drain CURRENT stamina (numerator only).
+ *
+ * Follows the consumable-item pattern (addBonusPoints): over-max is allowed, negative
+ * amounts floor at 0, and the regen anchors are never touched — granted stamina must not
+ * restart a cooldown, and drains must not hand the player a fresh timer. Max (denominator)
+ * increases stay item-based: non-consumable items with staminaBoost. This is the primary
+ * stamina source in max-0 "scavenger mode" servers, where natural regen never fires.
+ *
+ * NOT executeModifyPoints: its positive path clamps to max and resets both regen anchors —
+ * at max 0 that would wipe over-max stamina to 0.
+ */
+async function executeGiveStamina(config, guildId, userId, interaction, buttonId = null, actionIndex = null) {
+    try {
+        const amount = parseInt(config.amount);
+        if (!amount) {
+            console.log('⚡ give_stamina: no amount configured — skipping');
+            return null;
+        }
+
+        const amountLabel = `${amount > 0 ? '+' : ''}${amount}`;
+        const label = `⚡ ${amountLabel} Stamina`;
+
+        // Enforce usage limit BEFORE the grant — one gate for every limit type.
+        if (config.limit && config.limit.type !== 'unlimited') {
+            // Custom limits track live counters — read fresh from the live action.
+            const liveLimit = config.limit.type === 'custom'
+                ? (await getLiveActionLimit(guildId, buttonId, actionIndex, 'give_stamina') || config.limit)
+                : config.limit;
+            const gate = checkLimitGate(liveLimit, userId);
+            if (gate.blocked) {
+                if (String(gate.reason || '').startsWith('custom')) {
+                    return buildCustomLimitRejection(gate, label);
+                }
+                const msg = gate.reason === 'once_globally'
+                    ? `❌ **${label}** has already been claimed and is no longer available.`
+                    : gate.reason === 'once_per_period'
+                        ? `⏱️ You can claim **${label}** again in **${formatCountdown(gate.remainingMs)}**.`
+                        : `❌ You've already claimed **${label}**!`;
+                return {
+                    flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+                    components: [{ type: 17, accent_color: 0xE74C3C, components: [{ type: 10, content: msg }] }]
+                };
+            }
+        }
+
+        // Apply via the consumable pattern: over-max OK, floors at 0, anchors untouched.
+        const { addBonusPoints } = await import('./pointsManager.js');
+        const points = await addBonusPoints(guildId, `player_${userId}`, 'stamina', amount);
+        console.log(`⚡ give_stamina: ${amountLabel} for ${userId} → ${points.current}/${points.max}`);
+
+        // Record the claim (every limit type) inside the safari lock — an unlocked
+        // load+save here would race concurrent claims of the same action.
+        if (config.limit && config.limit.type !== 'unlimited') {
+            if (buttonId && actionIndex != null) {
+                await withSafariLock(async () => {
+                    const freshData = await loadSafariContent();
+                    const liveAction = freshData[guildId]?.buttons?.[buttonId]?.actions?.[actionIndex];
+                    if (liveAction?.type === ACTION_TYPES.GIVE_STAMINA && liveAction.config?.limit) {
+                        recordLimitClaim(liveAction.config.limit, userId);
+                        await saveSafariContent(freshData);
+                        console.log(`✅ Updated claim tracking for give_stamina action ${buttonId}[${actionIndex}]`);
+                    }
+                });
+            } else {
+                console.warn(`⚠️ give_stamina has a usage limit but no buttonId/actionIndex — claim NOT recorded`);
+            }
+        }
+
+        if (config.displayMode === 'silent') return null;
+
+        const content = config.message
+            ? config.message
+                .replace('{amount}', amountLabel)
+                .replace('{current}', String(points.current))
+                .replace('{max}', String(points.max))
+            : `⚡ **${amountLabel} Stamina** (${points.current}/${points.max})`;
+
+        return {
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+            components: [{ type: 17, accent_color: 0x2ECC71, components: [{ type: 10, content }] }]
+        };
+    } catch (error) {
+        console.error('Error executing give_stamina:', error);
+        return {
+            content: '❌ Error granting stamina.',
             flags: InteractionResponseFlags.EPHEMERAL
         };
     }

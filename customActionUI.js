@@ -1,11 +1,11 @@
 // Custom Action UI Module for Safari Map Locations
 // Handles the new trigger-based action system for map coordinates
 
-import { SAFARI_LIMITS } from './config/safariLimits.js';
+import { SAFARI_LIMITS, MAX_STAMINA } from './config/safariLimits.js';
 import { loadEntity, updateEntity } from './entityManager.js';
-import { loadSafariContent, getCustomTerms } from './safariManager.js';
+import { loadSafariContent, saveSafariContent, getCustomTerms } from './safariManager.js';
 import { scheduler } from './scheduler.js';
-import { formatPeriod, formatCountdown, buildLimitOptions } from './utils/periodUtils.js';
+import { formatPeriod, formatCountdown, buildLimitOptions, buildPeriodModalComponents } from './utils/periodUtils.js';
 import { parseTextEmoji, resolveEmoji } from './utils/emojiUtils.js';
 import { buildImageFieldLabel, collectModalFields, resolveUploadedImageField } from './src/images/modalImageUpload.js';
 
@@ -21,6 +21,7 @@ const OUTCOME_TYPE_OPTIONS = [
   { label: 'Give Role', value: 'give_role', emoji: { name: '👑' }, description: 'Assign a Discord role to the player' },
   { label: 'Remove Role', value: 'remove_role', emoji: { name: '🚫' }, description: 'Remove a Discord role from the player' },
   { label: 'Modify Attribute', value: 'modify_attribute', emoji: { name: '📊' }, description: 'Change a player stat like HP, Mana, or Strength' },
+  { label: 'Give / Remove Stamina', value: 'give_stamina', emoji: { name: '⚡' }, description: 'Grant or drain stamina (over max allowed) with usage limits' },
   { label: 'Follow-up Action', value: 'follow_up_button', emoji: { name: '🔗' }, description: 'Chain into another action after this one completes' },
   { label: 'Calculate Results', value: 'calculate_results', emoji: { name: '🌾' }, description: 'Process harvest/income for all or the triggering player' },
   { label: 'Calculate Attack', value: 'calculate_attack', emoji: { name: '⚔️' }, description: 'Run combat calculations between players or vs environment' },
@@ -886,7 +887,7 @@ function getActionListComponents(actions, actionId, guildItems = {}, guildButton
     // Match emoji to outcome type (same as OUTCOME_TYPE_OPTIONS)
     const outcomeEmoji = {
       display_text: '📄', give_currency: '🪙', give_item: '🎁', give_role: '👑',
-      remove_role: '🚫', modify_attribute: '📊', follow_up_button: '🔗', follow_up: '🔗',
+      remove_role: '🚫', modify_attribute: '📊', give_stamina: '⚡', follow_up_button: '🔗', follow_up: '🔗',
       calculate_results: '🌾', calculate_attack: '⚔️', manage_player_state: '🚀',
       fight_enemy: '🐙'
     }[action.type] || '▫️';
@@ -894,7 +895,7 @@ function getActionListComponents(actions, actionId, guildItems = {}, guildButton
     // Build options array
     const atMax = allActions && allActions.length >= SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON;
     // Player Claims option: only for outcome types that track claims AND when a (non-unlimited) limit is set
-    const CLAIM_OUTCOME_TYPES = ['give_item', 'give_currency', 'modify_attribute', 'fight_enemy'];
+    const CLAIM_OUTCOME_TYPES = ['give_item', 'give_currency', 'modify_attribute', 'give_stamina', 'fight_enemy'];
     const claimsManageable = CLAIM_OUTCOME_TYPES.includes(action.type)
       && !!action.config?.limit?.type && action.config.limit.type !== 'unlimited';
     const options = [
@@ -1001,6 +1002,13 @@ function getActionSummaryPlain(action, number, guildItems = {}, guildButtons = {
       summary = `${number}. Modify Attribute | ${attrId} ${sym}${Math.abs(amt)}`;
       break;
     }
+    case 'give_stamina': {
+      const staminaAmt = action?.config?.amount || 0;
+      const staminaDisplay = staminaAmt > 0 ? `+${staminaAmt}` : `${staminaAmt}`;
+      const staminaLimitText = action.config?.limit?.type ? ` (${action.config.limit.type.replace(/_/g, ' ')})` : '';
+      summary = `${number}. Give Stamina | ${staminaDisplay}${staminaLimitText}`;
+      break;
+    }
     case 'manage_player_state': {
       const modeLabels = { initialize: 'Init', teleport: 'Teleport', init_or_teleport: 'Init/Teleport', deinitialize: 'De-init' };
       const mode = modeLabels[action?.config?.mode] || 'Init';
@@ -1055,6 +1063,8 @@ function getActionTypeLabel(action) {
       return 'Calculate Attack';
     case 'modify_attribute':
       return 'Modify Attribute';
+    case 'give_stamina':
+      return 'Give Stamina';
     case 'manage_player_state':
       return 'Safari Player State';
     case 'fight_enemy':
@@ -1146,6 +1156,12 @@ function getActionSummary(action, number, guildItems = {}, guildButtons = {}, is
       const attrAmount = action?.config?.amount || 0;
       const attrOpSymbol = attrOperation === 'add' ? '+' : (attrOperation === 'subtract' ? '-' : '=');
       return `**\`${number}. Modify Attribute\`** ${attrId} ${attrOpSymbol}${Math.abs(attrAmount)}`;
+    case 'give_stamina': {
+      const giveStaminaAmt = action?.config?.amount || 0;
+      const giveStaminaDisplay = giveStaminaAmt > 0 ? `+${giveStaminaAmt}` : `${giveStaminaAmt}`;
+      const giveStaminaLimit = action.config?.limit?.type ? ` (${action.config.limit.type.replace(/_/g, ' ')})` : '';
+      return `**\`${number}. Give Stamina\`** ⚡ ${giveStaminaDisplay}${giveStaminaLimit}`;
+    }
     case 'manage_player_state': {
       const modeLabels = { initialize: '🚀 Init', teleport: '🌀 Teleport', init_or_teleport: '🔄 Init/Teleport', deinitialize: '❌ De-init' };
       const stateMode = modeLabels[action?.config?.mode] || '🚀 Init';
@@ -4553,6 +4569,368 @@ export async function showModifyAttributeConfig(guildId, buttonId, actionIndex) 
     flags: (1 << 15), // IS_COMPONENTS_V2
     ephemeral: true
   };
+}
+
+/**
+ * Show Give Stamina outcome configuration screen.
+ * Grants/drains CURRENT stamina only (consumable pattern: over-max allowed, regen timer
+ * untouched). Max increases stay item-based (non-consumable items with Stamina Boost).
+ */
+export async function showGiveStaminaConfig(guildId, buttonId, actionIndex) {
+  const safariData = await loadSafariContent();
+  const action = safariData[guildId]?.buttons?.[buttonId]?.actions?.[actionIndex] || null;
+
+  const currentAmount = action?.config?.amount ?? 1;
+  const currentDisplayMode = action?.config?.displayMode || 'feedback';
+  const currentLimit = action?.config?.limit?.type || 'unlimited';
+  const amountDisplay = currentAmount > 0 ? `+${currentAmount}` : `${currentAmount}`;
+
+  return {
+    components: [{
+      type: 17, // Container
+      accent_color: 0xF1C40F, // Gold accent for stamina
+      components: [
+        {
+          type: 10, // Text Display
+          content: `## ⚡ Give Stamina Configuration`
+        },
+
+        { type: 14 }, // Separator
+
+        {
+          type: 10,
+          content: "Grant (or drain) the player's current stamina when this outcome executes. Stamina can exceed the player's max and never restarts their regen timer; drains stop at 0.\n-# To raise a player's MAX stamina instead, give them a non-consumable item with a Stamina Boost."
+        },
+
+        { type: 14 }, // Separator
+
+        // Amount Button (opens modal)
+        {
+          type: 10,
+          content: `### Amount\nCurrent: **${amountDisplay}**`
+        },
+        {
+          type: 1, // Action Row
+          components: [{
+            type: 2, // Button
+            custom_id: `safari_give_stamina_amount_${buttonId}_${actionIndex}`,
+            label: 'Set Amount',
+            style: 1, // Primary
+            emoji: { name: '✏️' }
+          }]
+        },
+
+        { type: 14 }, // Separator
+
+        // Display Mode Selection
+        {
+          type: 10,
+          content: '### Display Mode\nShould feedback be shown to the player?'
+        },
+        {
+          type: 1, // Action Row
+          components: [{
+            type: 3, // String Select
+            custom_id: `safari_give_stamina_display_${buttonId}_${actionIndex}`,
+            placeholder: 'Select display mode...',
+            options: [
+              {
+                label: 'Show Feedback',
+                value: 'feedback',
+                description: 'Tell player their stamina changed (⚡ +N)',
+                emoji: { name: '💬' },
+                default: currentDisplayMode === 'feedback'
+              },
+              {
+                label: 'Silent - No feedback',
+                value: 'silent',
+                description: 'Change stamina without a message',
+                emoji: { name: '🔇' },
+                default: currentDisplayMode === 'silent'
+              }
+            ]
+          }]
+        },
+
+        { type: 14 }, // Separator
+
+        // Usage Limit section
+        {
+          type: 10,
+          content: '### Usage Limit\nHow many times can this outcome be claimed?'
+        },
+        {
+          type: 1, // Action Row
+          components: [{
+            type: 3, // String Select
+            custom_id: `safari_give_stamina_limit_${buttonId}_${actionIndex}`,
+            placeholder: 'Select usage limit...',
+            options: await (await import('./customUsageLimitUI.js')).buildLimitSelectOptions({ guildId, currentLimit, periodMs: action?.config?.limit?.periodMs, currentTemplateId: action?.config?.limit?.templateId, limitObj: action?.config?.limit })
+          }]
+        },
+
+        { type: 14 }, // Separator
+
+        // Back, Player Claims (if limit set), and Delete Action buttons
+        {
+          type: 1, // Action Row
+          components: [
+            {
+              type: 2, // Button
+              custom_id: `custom_action_editor_${buttonId}`,
+              label: '← Back',
+              style: 2, // Secondary
+              emoji: { name: '⚡' }
+            },
+            ...(currentLimit !== 'unlimited' ? [
+            {
+              type: 2,
+              custom_id: `safari_view_claims_${buttonId}_${actionIndex}`,
+              label: 'Player Claims',
+              style: 2,
+              emoji: { name: '👥' }
+            }] : []),
+            {
+              type: 2, // Button
+              custom_id: `safari_remove_action_${buttonId}_${actionIndex}`,
+              label: 'Delete Action',
+              style: 4, // Danger (red)
+              emoji: { name: '🗑️' }
+            }
+          ]
+        }
+      ]
+    }],
+    flags: (1 << 15), // IS_COMPONENTS_V2
+    ephemeral: true
+  };
+}
+
+// ─── give_stamina handler bodies (app.js is a router — logic lives here) ──────
+
+// Interaction response constants, numeric to match this file's numeric-type style
+// (4 = CHANNEL_MESSAGE_WITH_SOURCE, 7 = UPDATE_MESSAGE, 9 = MODAL, 64 = EPHEMERAL flag)
+const RT_CHANNEL_MESSAGE = 4;
+const RT_UPDATE_MESSAGE = 7;
+const RT_MODAL = 9;
+const FLAG_EPHEMERAL = 64;
+
+/**
+ * Load → validate → mutate config → save → return the refreshed config UI.
+ * Returns null when the action is missing or isn't a give_stamina outcome.
+ */
+async function updateGiveStaminaConfig(guildId, buttonId, actionIndex, mutate) {
+  const safariData = await loadSafariContent();
+  const action = safariData[guildId]?.buttons?.[buttonId]?.actions?.[actionIndex];
+  if (!action || action.type !== 'give_stamina') return null;
+  if (!action.config) action.config = {};
+  mutate(action.config);
+  await saveSafariContent(safariData);
+  return await showGiveStaminaConfig(guildId, buttonId, actionIndex);
+}
+
+/**
+ * Creation path (safari_action_type_select): eager-save a give_stamina outcome with
+ * defaults, then return its config screen.
+ */
+export async function createGiveStaminaOutcome(guildId, buttonId, executeOn) {
+  const safariData = await loadSafariContent();
+  const currentButton = safariData[guildId]?.buttons?.[buttonId];
+  if (!currentButton) {
+    return { content: '❌ Button not found.', ephemeral: true };
+  }
+  if (!currentButton.actions) currentButton.actions = [];
+  const actionIndex = currentButton.actions.length;
+  currentButton.actions[actionIndex] = {
+    type: 'give_stamina',
+    order: actionIndex,
+    config: { amount: 1, displayMode: 'feedback' },
+    executeOn
+  };
+  await saveSafariContent(safariData);
+  console.log(`💾 SAVED: created give_stamina outcome with defaults for ${buttonId}[${actionIndex}]`);
+  return await showGiveStaminaConfig(guildId, buttonId, actionIndex);
+}
+
+/**
+ * Single dispatcher for the safari_give_stamina_* config controls
+ * (amount button → modal, display select, limit select).
+ * openCustomLimitScreen is app.js-local, passed in as a callback.
+ */
+export async function handleGiveStaminaComponent(context, { openCustomLimitScreen }) {
+  const cid = context.customId;
+  const sub = cid.startsWith('safari_give_stamina_display_') ? 'display'
+    : cid.startsWith('safari_give_stamina_limit_') ? 'limit'
+    : cid.startsWith('safari_give_stamina_amount_') ? 'amount' : null;
+  if (!sub) return { content: '❌ Unknown stamina control.', ephemeral: true };
+
+  const parts = cid.replace(`safari_give_stamina_${sub}_`, '').split('_');
+  const actionIndex = parseInt(parts[parts.length - 1]);
+  const buttonId = parts.slice(0, -1).join('_');
+
+  if (sub === 'amount') {
+    const safariData = await loadSafariContent();
+    const currentAmount = safariData[context.guildId]?.buttons?.[buttonId]?.actions?.[actionIndex]?.config?.amount ?? 1;
+    return {
+      type: RT_MODAL,
+      data: {
+        custom_id: `modal_give_stamina_amount_${buttonId}_${actionIndex}`,
+        title: 'Set Stamina Amount',
+        components: [{
+          type: 18, // Label
+          label: 'Amount',
+          description: 'Positive grants, negative drains (stops at 0). Can exceed the player\'s max.',
+          component: {
+            type: 4, // Text Input
+            custom_id: 'stamina_amount',
+            style: 1, // Short
+            placeholder: 'e.g. 2 or -1 (negative removes)',
+            required: true,
+            max_length: 4,
+            value: String(currentAmount)
+          }
+        }]
+      }
+    };
+  }
+
+  if (sub === 'display') {
+    const displayModeValue = context.values[0];
+    const ui = await updateGiveStaminaConfig(context.guildId, buttonId, actionIndex, cfg => {
+      cfg.displayMode = displayModeValue;
+    });
+    console.log(`✅ SUCCESS: safari_give_stamina display → ${displayModeValue}`);
+    return ui || { content: '❌ Action not found.', ephemeral: true };
+  }
+
+  // sub === 'limit'
+  const limitValue = context.values[0];
+  console.log(`⚡ LIMIT: safari_give_stamina limit → ${limitValue} for ${buttonId}[${actionIndex}]`);
+
+  if (limitValue === 'custom' || limitValue.startsWith('tmpl:')) {
+    return await openCustomLimitScreen(context.guildId, { type: 'stamina', buttonId, actionIndex }, limitValue);
+  }
+
+  if (limitValue === 'once_per_period') {
+    const safariData = await loadSafariContent();
+    const currentPeriodMs = safariData[context.guildId]?.buttons?.[buttonId]?.actions?.[actionIndex]?.config?.limit?.periodMs || 0;
+    return {
+      type: RT_MODAL,
+      data: {
+        custom_id: `period_modal_stamina_${buttonId}_${actionIndex}`,
+        title: 'Set Cooldown Period',
+        components: buildPeriodModalComponents({ currentPeriodMs })
+      }
+    };
+  }
+
+  const ui = await updateGiveStaminaConfig(context.guildId, buttonId, actionIndex, cfg => {
+    if (limitValue === 'unlimited') {
+      delete cfg.limit;
+    } else {
+      cfg.limit = { type: limitValue, claimedBy: limitValue === 'once_per_player' ? [] : null };
+    }
+  });
+  return ui || { content: '❌ Action not found.', ephemeral: true };
+}
+
+/**
+ * Modal submit: modal_give_stamina_amount_{buttonId}_{actionIndex}.
+ * Returns a full { type, data } interaction response for res.send().
+ */
+export async function handleGiveStaminaAmountModal(guildId, customId, components) {
+  const parts = customId.replace('modal_give_stamina_amount_', '').split('_');
+  const actionIndex = parseInt(parts[parts.length - 1]);
+  const buttonId = parts.slice(0, -1).join('_');
+
+  // Label-wrapped component (type 18): value lives at components[0].component.value
+  const getModalVal = (comp) => comp?.component?.value ?? comp?.components?.[0]?.value;
+  const newAmount = parseInt(getModalVal(components[0])?.trim());
+
+  if (isNaN(newAmount) || newAmount === 0 || Math.abs(newAmount) > MAX_STAMINA) {
+    return {
+      type: RT_CHANNEL_MESSAGE,
+      data: {
+        content: `❌ Invalid amount — enter a non-zero number between -${MAX_STAMINA} and ${MAX_STAMINA} (negative drains stamina).`,
+        flags: FLAG_EPHEMERAL
+      }
+    };
+  }
+
+  const ui = await updateGiveStaminaConfig(guildId, buttonId, actionIndex, cfg => {
+    cfg.amount = newAmount;
+  });
+  if (!ui) {
+    return { type: RT_CHANNEL_MESSAGE, data: { content: '❌ Action not found', flags: FLAG_EPHEMERAL } };
+  }
+  console.log(`⚡ Updated give_stamina amount for ${buttonId}[${actionIndex}]: ${newAmount}`);
+  return { type: RT_UPDATE_MESSAGE, data: { components: ui.components } };
+}
+
+/**
+ * period_modal_stamina_* submit: persist a once_per_period limit for a give_stamina
+ * outcome. `rest` is "{buttonId}_{actionIndex}". Returns { type, data } for res.send().
+ */
+export async function setGiveStaminaPeriodLimit(guildId, rest, totalMs) {
+  const lastUnderscore = rest.lastIndexOf('_');
+  const actionIndex = parseInt(rest.substring(lastUnderscore + 1));
+  const buttonId = rest.substring(0, lastUnderscore);
+
+  const ui = await updateGiveStaminaConfig(guildId, buttonId, actionIndex, cfg => {
+    cfg.limit = { type: 'once_per_period', periodMs: totalMs, claimedBy: {} };
+  });
+  if (!ui) {
+    return { type: RT_CHANNEL_MESSAGE, data: { content: '❌ Action not found.', flags: FLAG_EPHEMERAL } };
+  }
+  console.log(`⏱️ Set once_per_period (${formatPeriod(totalMs)}) for give_stamina ${buttonId}[${actionIndex}]`);
+  return { type: RT_UPDATE_MESSAGE, data: { components: ui.components } };
+}
+
+/**
+ * Modal submit: modal_modify_attr_amount_{buttonId}_{actionIndex} (extracted verbatim
+ * from app.js — behavior unchanged; that modal still uses legacy ActionRow+TextInput,
+ * hence the row-iterating field lookup). Returns { type, data } for res.send().
+ */
+export async function handleModifyAttrAmountModal(guildId, customId, components) {
+  const parts = customId.replace('modal_modify_attr_amount_', '').split('_');
+  const actionIndex = parseInt(parts[parts.length - 1]);
+  const buttonId = parts.slice(0, -1).join('_');
+
+  const getFieldValue = (fieldId) => {
+    for (const row of components) {
+      for (const comp of row.components) {
+        if (comp.custom_id === fieldId) {
+          return comp.value;
+        }
+      }
+    }
+    return null;
+  };
+
+  const newAmount = parseInt(getFieldValue('attr_amount'));
+
+  if (isNaN(newAmount) || newAmount < 0) {
+    return {
+      type: RT_CHANNEL_MESSAGE,
+      data: { content: '❌ Invalid amount - please enter a positive number', flags: FLAG_EPHEMERAL }
+    };
+  }
+
+  const safariData = await loadSafariContent();
+  const button = safariData[guildId]?.buttons?.[buttonId];
+  if (!button || !button.actions?.[actionIndex]) {
+    return { type: RT_CHANNEL_MESSAGE, data: { content: '❌ Action not found', flags: FLAG_EPHEMERAL } };
+  }
+  if (!button.actions[actionIndex].config) {
+    button.actions[actionIndex].config = {};
+  }
+  button.actions[actionIndex].config.amount = newAmount;
+  await saveSafariContent(safariData);
+
+  console.log(`📊 Updated modify_attribute amount for ${buttonId}[${actionIndex}]: ${newAmount}`);
+
+  const ui = await showModifyAttributeConfig(guildId, buttonId, actionIndex);
+  return { type: RT_UPDATE_MESSAGE, data: { components: ui.components } };
 }
 
 export async function handleDisplayTextEdit(guildId, userId, customId) {

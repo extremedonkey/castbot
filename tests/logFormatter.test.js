@@ -146,6 +146,7 @@ describe('logFormatter — custom actions', () => {
     { type: 'display_text', config: { content: 'A very long text that should get truncated because it exceeds sixty characters total' } },
     { type: 'give_item', config: { itemId: 'paper_303083', quantity: 2 } },
     { type: 'give_currency', config: { amount: 7 } },
+    { type: 'give_stamina', config: { amount: 2 } },
     { type: 'move_player', config: { coordinate: 'B3' } },
     { type: 'follow_up_button', config: {} },
     { type: 'some_unknown_type', config: {} }
@@ -159,6 +160,7 @@ describe('logFormatter — custom actions', () => {
     assert.ok(line.includes(`> • Text: "${expectedPreview}"`));
     assert.ok(line.includes('> • Give Item: 📦 paper_303083 (x2)')); // no resolver → raw id
     assert.ok(line.includes('> • Currency: +7'));
+    assert.ok(line.includes('> • Stamina: +2'));
     assert.ok(line.includes('> • Move: → B3'));
     assert.ok(line.includes('> • Follow-up button'));
     assert.ok(!line.includes('some_unknown_type'));

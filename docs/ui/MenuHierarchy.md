@@ -68,7 +68,7 @@
 │
 ├─ 🪛 Tools Menu [EPHEMERAL]
 │  │
-│  ├─ 🪛 Run Setup
+│  ├─ 🪛 Re-Run Setup (same setup_castbot handler as the Setup Wizard's Run Setup; always enabled here)
 │  ├─ 🎯 Reaction Roles → 🎯 Reaction Roles Menu
 │  ├─ 🔥 Tribes (Legacy)
 │  ├─ 🕐 Availability → 🕐 Availability Menu

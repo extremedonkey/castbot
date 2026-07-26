@@ -40,6 +40,12 @@ function calculatePhase1Regen(pointData, config, now, pointType = 'stamina') {
         hasChanged = true;
     }
 
+    // Non-positive interval = regeneration disabled — MUST match the engine guard
+    // (interval 0 made periods Infinity = instant refill on every read).
+    if (!(config.regeneration.interval > 0)) {
+        return { data: newData, hasChanged };
+    }
+
     const regenAmount = (config.regeneration.amount === 'max' || !config.regeneration.amount)
         ? effectiveMax
         : config.regeneration.amount;
@@ -616,5 +622,83 @@ describe('Stamina regen display summary (navigate pane + player card)', () => {
 
     it('Ready! razor edge renders as "now"', () => {
         assert.equal(summarize({ current: 0, max: 3 }, 'Ready!', 2).timeText, 'now');
+    });
+});
+
+// ─── Scavenger mode (max 0) — natural regen never fires ──────────────────────
+// maxStamina 0 is legal since 2026-07: effectiveMax is 0 unless permanent items raise
+// it, regen only runs while current < effectiveMax (never true at 0 capacity), and all
+// granted stamina (give_stamina outcomes, consumables) sits over-max and never regens.
+
+describe('Scavenger mode — max 0', () => {
+    const HOUR = 3600000;
+    const now = 1000000000;
+
+    it('0/0: regen never fires no matter how long elapses', () => {
+        const data = makePointData(0, 0, now - 100 * HOUR, now - 100 * HOUR);
+        const result = calculatePhase1Regen(data, makeConfig(0, 'max', HOUR), now);
+        assert.equal(result.data.current, 0, 'no stamina minted at 0 capacity');
+        assert.equal(result.hasChanged, false);
+    });
+
+    it('over-max stamina (3/0 start, one spent) never regenerates back', () => {
+        const data = makePointData(2, 0, now - 100 * HOUR, now - 100 * HOUR);
+        const result = calculatePhase1Regen(data, makeConfig(0, 'max', HOUR), now);
+        assert.equal(result.data.current, 2, 'over-max stamina is never topped back up');
+    });
+
+    it('reconcile snaps a stale stored max down to 0, leaving current untouched', () => {
+        const data = makePointData(3, 5, now - 1000, now - 1000); // stored max predates config change
+        const result = calculatePhase1Regen(data, makeConfig(0, 'max', HOUR), now);
+        assert.equal(result.data.max, 0, 'stored max reconciled to config');
+        assert.equal(result.data.current, 3, 'current (now over-max) untouched');
+        assert.equal(result.hasChanged, true);
+    });
+
+    it('permanent item raises effectiveMax and re-enables regen up to the boost only (the Shelter)', () => {
+        const data = makePointData(0, 0, now - 100 * HOUR, now - 100 * HOUR);
+        const result = calculatePhase1Regen(data, makeConfig(0, 'max', HOUR, 2), now);
+        assert.equal(result.data.current, 2, 'full reset fills to the item-provided capacity and stops');
+        assert.equal(result.data.max, 2);
+    });
+
+    it('drip at max 0 mints nothing (current < effectiveMax is never true)', () => {
+        const data = makePointData(0, 0, now - 100 * HOUR, now - 100 * HOUR);
+        const result = calculatePhase1Regen(data, makeConfig(0, 3, HOUR), now);
+        assert.equal(result.data.current, 0, 'no drip grants at 0 capacity');
+    });
+
+    it('remaining-ms is null at 0/0 — drives the "out of stamina" refusal copy', () => {
+        const data = { current: 0, max: 0, lastUse: now - HOUR, lastRegeneration: now - HOUR };
+        assert.equal(computeRemainingMs(data, 12 * HOUR, now), null, 'nothing pending → scavenger copy branch');
+    });
+});
+
+// ─── Regen interval guard — interval <= 0 must mean OFF, not instant refill ──
+// Unreachable via the settings modal (validates 1-99999) but reachable through safari
+// import and updateCustomTerms, which don't validate. Without the guard, periods =
+// floor(elapsed / 0) = Infinity → mint to max on every read.
+
+describe('Regen interval guard (interval <= 0 disables regeneration)', () => {
+    const HOUR = 3600000;
+    const now = 1000000000;
+
+    it('interval 0 does not mint', () => {
+        const data = makePointData(0, 3, now - 100 * HOUR, now - 100 * HOUR);
+        const result = calculatePhase1Regen(data, makeConfig(3, 'max', 0), now);
+        assert.equal(result.data.current, 0, 'no regen with interval 0');
+    });
+
+    it('negative and NaN intervals also disable regen', () => {
+        const data = makePointData(1, 3, now - 100 * HOUR, now - 100 * HOUR);
+        assert.equal(calculatePhase1Regen(data, makeConfig(3, 'max', -5), now).data.current, 1);
+        assert.equal(calculatePhase1Regen(data, makeConfig(3, 'max', NaN), now).data.current, 1);
+    });
+
+    it('max reconcile still applies even when regen is disabled', () => {
+        const data = makePointData(1, 5, now - HOUR, now - HOUR);
+        const result = calculatePhase1Regen(data, makeConfig(3, 'max', 0), now);
+        assert.equal(result.data.max, 3, 'reconcile is independent of the regen guard');
+        assert.equal(result.data.current, 1);
     });
 });

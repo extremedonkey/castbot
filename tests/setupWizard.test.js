@@ -96,6 +96,39 @@ describe('Setup Wizard — Run Setup (Task 1) action button', () => {
   });
 });
 
+describe('Tools menu — Re-Run Setup (same setup_castbot handler, always enabled)', () => {
+  // Old-timezone-regime servers need a way to re-run setup after the wizard's own
+  // button has gone green/disabled — Tools → Utilities carries an always-enabled copy.
+  it('Utilities row carries a blue 🪛 Re-Run Setup button wired to setup_castbot', async () => {
+    const { MenuBuilder } = await import('../menuBuilder.js');
+    const menu = MenuBuilder.buildSetupMenu({ title: 'x' }, { userId: '1', guildId: '2' });
+    const rows = menu.components.filter(c => c.type === 1);
+    const btn = rows.flatMap(r => r.components).find(b => b.custom_id === 'setup_castbot');
+    assert.ok(btn, 'Re-Run Setup missing from the Tools menu');
+    assert.equal(btn.label, 'Re-Run Setup');
+    assert.equal(btn.style, 1);              // Primary / blue — matches the wizard's Run Setup
+    assert.equal(btn.emoji.name, '🪛');
+    assert.ok(!btn.disabled);                // always enabled, unlike the wizard's copy
+  });
+
+  it('no ActionRow in the Tools menu exceeds the 5-button Discord cap (worst-case flags)', async () => {
+    const { MenuBuilder } = await import('../menuBuilder.js');
+    // Reece + test-instance is the widest render (extra Ask CastBot / Archive / Data buttons)
+    const prevRole = process.env.INSTANCE_ROLE;
+    process.env.INSTANCE_ROLE = 'test';
+    try {
+      const menu = MenuBuilder.buildSetupMenu({ title: 'x' }, { userId: '391415444084490240', guildId: '2' });
+      for (const row of menu.components.filter(c => c.type === 1)) {
+        assert.ok(row.components.length <= 5,
+          `ActionRow with ${row.components.length} buttons (max 5): ${row.components.map(b => b.custom_id).join(', ')}`);
+      }
+    } finally {
+      if (prevRole === undefined) delete process.env.INSTANCE_ROLE;
+      else process.env.INSTANCE_ROLE = prevRole;
+    }
+  });
+});
+
 describe('Setup Wizard — gating model (gate disables, done greens)', () => {
   // gate signals: Season+Castlist = hasSetup, Post = hasCastlist
   it('Season Manager (Task 2) gated on hasSetup, green ✅ Season Created when a season exists', () => {

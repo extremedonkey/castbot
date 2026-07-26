@@ -1,7 +1,7 @@
 import { PermissionFlagsBits } from 'discord.js';
 import { loadPlayerData, savePlayerData, withStorageLock } from './storage.js';
 import { loadSafariContent } from './safariManager.js';
-import { hasEnoughPoints, usePoints, getTimeUntilRegeneration, initializeEntityPoints, getEntityPoints, getStaminaRegenSummary } from './pointsManager.js';
+import { hasEnoughPoints, usePoints, getTimeUntilRegeneration, getRegenRemainingMs, initializeEntityPoints, getEntityPoints, getStaminaRegenSummary } from './pointsManager.js';
 
 /**
  * Map Movement System for Safari
@@ -198,10 +198,20 @@ export async function movePlayer(guildId, userId, newCoordinate, client, options
     if (!bypassStamina) {
         const canMove = await canPlayerMove(guildId, userId);
         if (!canMove) {
+            // canPlayerMove already ran getEntityPoints, so the stored max is reconciled.
+            // null = nothing will ever regenerate (max 0 scavenger mode / regen disabled) —
+            // "Rest for X" would render "Rest for Full" there.
+            const remainingMs = await getRegenRemainingMs(guildId, entityId, 'stamina');
+            if (remainingMs === null) {
+                return {
+                    success: false,
+                    message: `You're out of stamina! Find a way to restore it.`
+                };
+            }
             const timeUntil = await getTimeUntilRegeneration(guildId, entityId, 'stamina');
-            return { 
-                success: false, 
-                message: `You're too tired to move! Rest for ${timeUntil} before moving again.` 
+            return {
+                success: false,
+                message: `You're too tired to move! Rest for ${timeUntil} before moving again.`
             };
         }
     }
@@ -555,9 +565,12 @@ export async function getMovementDisplay(guildId, userId, coordinate, isDeferred
 
     if (canMove) {
         description = `Choose a direction to move:`;
-    } else {
-        // Timing now lives on the ♻️ line above — keep this to the state itself.
+    } else if (regen) {
+        // Timing lives on the ♻️ line above — keep this to the state itself.
         description = `*You're too tired to move! Rest until your stamina regenerates.*`;
+    } else {
+        // No regen pending and none coming (max 0 scavenger mode / regen disabled)
+        description = `*You're out of stamina! Find a way to restore it.*`;
     }
     
     // Always use Components V2 format since ButtonHandlerFactory automatically adds the flag

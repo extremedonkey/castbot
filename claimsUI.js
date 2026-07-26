@@ -46,6 +46,10 @@ async function describeOutcome(safariData, guildId, action, actionIndex) {
       const op = action.config.operation === 'add' ? '+' : action.config.operation === 'subtract' ? '-' : '=';
       return `${attrDef?.emoji || '📊'} ${op}${action.config.amount || 0} ${attrDef?.name || action.config.attributeId || 'Unknown Attribute'}`;
     }
+    case 'give_stamina': {
+      const staminaAmt = action.config.amount || 0;
+      return `⚡ ${staminaAmt > 0 ? '+' : ''}${staminaAmt} Stamina`;
+    }
     case 'fight_enemy': {
       const enemy = enemies[action.config.enemyId];
       return `${enemy?.emoji || '🐙'} Fight ${enemy?.name || 'Unknown Enemy'}`;
