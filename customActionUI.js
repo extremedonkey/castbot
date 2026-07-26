@@ -3022,8 +3022,9 @@ async function createItemConditionUI(condition, actionId, conditionIndex, curren
     description: 'Click to search for specific items'
   }];
   
-  // Add items (max 24 since search takes 1 slot)
+  // Add items (max 24 since search takes 1 slot), most recently updated first
   Object.entries(items)
+    .sort(([, a], [, b]) => (b.metadata?.lastModified || b.metadata?.createdAt || 0) - (a.metadata?.lastModified || a.metadata?.createdAt || 0))
     .slice(0, 24)
     .forEach(([itemId, item]) => {
       // Use existing emoji parser that handles all formats properly
