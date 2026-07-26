@@ -14,15 +14,17 @@ import {
 } from '../src/settings/generalSettings.js';
 
 describe('General Settings — normalizeImageUploadMode', () => {
-    it('defaults null/undefined/unknown to textUrl', () => {
-        assert.equal(normalizeImageUploadMode(null), 'textUrl');
-        assert.equal(normalizeImageUploadMode(undefined), 'textUrl');
-        assert.equal(normalizeImageUploadMode(''), 'textUrl');
-        assert.equal(normalizeImageUploadMode('garbage'), 'textUrl');
-        assert.equal(normalizeImageUploadMode(42), 'textUrl');
+    // Default flipped to uploadComponent on 2026-07-26: new servers and guilds that
+    // never made an explicit choice get native uploads; explicit textUrl is preserved.
+    it('defaults null/undefined/unknown to uploadComponent', () => {
+        assert.equal(normalizeImageUploadMode(null), 'uploadComponent');
+        assert.equal(normalizeImageUploadMode(undefined), 'uploadComponent');
+        assert.equal(normalizeImageUploadMode(''), 'uploadComponent');
+        assert.equal(normalizeImageUploadMode('garbage'), 'uploadComponent');
+        assert.equal(normalizeImageUploadMode(42), 'uploadComponent');
     });
 
-    it('passes through the two valid modes', () => {
+    it('passes through the two valid modes (explicit textUrl choices are kept)', () => {
         assert.equal(normalizeImageUploadMode('textUrl'), IMAGE_UPLOAD_MODES.TEXT_URL);
         assert.equal(normalizeImageUploadMode('uploadComponent'), IMAGE_UPLOAD_MODES.UPLOAD_COMPONENT);
     });
@@ -44,18 +46,18 @@ describe('General Settings — buildGeneralSettingsModal', () => {
         assert.deepEqual(label.component.options.map(o => o.value), ['textUrl', 'uploadComponent']);
     });
 
-    it('pre-selects Paste URL when unset/textUrl/garbage', () => {
-        for (const mode of [null, undefined, 'textUrl', 'garbage']) {
+    it('pre-selects Upload Component when unset/uploadComponent/garbage (the default)', () => {
+        for (const mode of [null, undefined, 'uploadComponent', 'garbage']) {
             const options = radioOptions(buildGeneralSettingsModal(mode));
-            assert.equal(options[0].default, true, `Paste URL default for mode=${mode}`);
-            assert.ok(!('default' in options[1]), `Upload option carries NO default key for mode=${mode}`);
+            assert.equal(options[1].default, true, `Upload Component default for mode=${mode}`);
+            assert.ok(!('default' in options[0]), `Paste URL option carries NO default key for mode=${mode}`);
         }
     });
 
-    it('pre-selects Upload Component when set', () => {
-        const options = radioOptions(buildGeneralSettingsModal('uploadComponent'));
-        assert.equal(options[1].default, true);
-        assert.ok(!('default' in options[0]), 'Paste URL option carries NO default key');
+    it('pre-selects Paste URL only when explicitly set', () => {
+        const options = radioOptions(buildGeneralSettingsModal('textUrl'));
+        assert.equal(options[0].default, true);
+        assert.ok(!('default' in options[1]), 'Upload option carries NO default key');
     });
 
     it('never emits an explicit default:false (suppresses whole-group pre-selection)', () => {
@@ -89,14 +91,14 @@ describe('General Settings — parseGeneralSettingsSubmit', () => {
         assert.equal(parseGeneralSettingsSubmit(components), 'textUrl');
     });
 
-    it('falls back to textUrl on missing field, empty submit, or garbage value', () => {
-        assert.equal(parseGeneralSettingsSubmit([]), 'textUrl');
-        assert.equal(parseGeneralSettingsSubmit(undefined), 'textUrl');
+    it('falls back to the default (uploadComponent) on missing field, empty submit, or garbage value', () => {
+        assert.equal(parseGeneralSettingsSubmit([]), 'uploadComponent');
+        assert.equal(parseGeneralSettingsSubmit(undefined), 'uploadComponent');
         assert.equal(parseGeneralSettingsSubmit([
             { type: 18, component: { type: 21, custom_id: 'image_upload_mode', value: 'nonsense' } }
-        ]), 'textUrl');
+        ]), 'uploadComponent');
         assert.equal(parseGeneralSettingsSubmit([
-            { type: 18, component: { type: 21, custom_id: 'other_field', value: 'uploadComponent' } }
-        ]), 'textUrl');
+            { type: 18, component: { type: 21, custom_id: 'other_field', value: 'textUrl' } }
+        ]), 'uploadComponent');
     });
 });

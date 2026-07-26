@@ -3,9 +3,10 @@
  *
  * Currently holds one setting: Image Uploads mode, controlling how image fields
  * across CastBot collect images:
- * - 'textUrl' (default): legacy paste-a-CDN-URL text inputs
- * - 'uploadComponent': native modal File Upload (type 19); files are re-hosted in
- *   the #🗺️castbot-images channel (see src/images/)
+ * - 'uploadComponent' (default since 2026-07-26): native modal File Upload (type 19);
+ *   files are re-hosted in the #🗺️castbot-images channel (see src/images/)
+ * - 'textUrl': legacy paste-a-CDN-URL text inputs — only guilds that explicitly
+ *   picked (or re-confirm) Paste URL stay on it
  *
  * Storage: playerData[guildId].settings.imageUploadMode — the guild-level
  * `settings` namespace is created lazily on first write (mirrors the
@@ -25,18 +26,20 @@ export const IMAGE_UPLOAD_MODES = {
 };
 
 /**
- * Pure — coerce any stored/submitted value to a valid mode ('textUrl' default).
+ * Pure — coerce any stored/submitted value to a valid mode.
+ * Unset/invalid → 'uploadComponent' (the default for new servers and any guild
+ * that never made an explicit choice). An explicitly stored 'textUrl' is preserved.
  * @param {*} value
  * @returns {string}
  */
 export function normalizeImageUploadMode(value) {
-    return value === IMAGE_UPLOAD_MODES.UPLOAD_COMPONENT
-        ? IMAGE_UPLOAD_MODES.UPLOAD_COMPONENT
-        : IMAGE_UPLOAD_MODES.TEXT_URL;
+    return value === IMAGE_UPLOAD_MODES.TEXT_URL
+        ? IMAGE_UPLOAD_MODES.TEXT_URL
+        : IMAGE_UPLOAD_MODES.UPLOAD_COMPONENT;
 }
 
 /**
- * Read the guild's Image Uploads mode (read-time fallback — unset guilds are 'textUrl').
+ * Read the guild's Image Uploads mode (read-time fallback — unset guilds are 'uploadComponent').
  * @param {string} guildId
  * @param {Object} [playerData] - full playerData if the caller already has it loaded
  * @returns {Promise<string>}
@@ -121,7 +124,8 @@ export function parseGeneralSettingsSubmit(components) {
             return normalizeImageUploadMode(Array.isArray(comp.values) ? comp.values[0] : comp.value);
         }
     }
-    return IMAGE_UPLOAD_MODES.TEXT_URL;
+    // Radio Group is required so this is defensive only — fall back to the default mode
+    return normalizeImageUploadMode(undefined);
 }
 
 /**

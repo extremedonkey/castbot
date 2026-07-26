@@ -41,8 +41,8 @@ flowchart TD
 
     subgraph PerField["🧩 EACH converted field (only map_cell today)"]
         OPEN["Modal opener reads<br/>getImageUploadMode(guildId)"] --> WHICH{mode?}
-        WHICH -->|textUrl default| TEXT["Legacy Text Input<br/>UNCHANGED"]:::green
-        WHICH -->|uploadComponent| FILE["Label + File Upload type 19<br/>Label shows 'Current: name.png'"]:::yellow
+        WHICH -->|textUrl explicit opt-out| TEXT["Legacy Text Input<br/>UNCHANGED"]:::green
+        WHICH -->|uploadComponent default| FILE["Label + File Upload type 19<br/>Label shows 'Current: name.png'"]:::yellow
         FILE -->|submit, post-defer| RESOLVE["resolveUploadedImageField()<br/>src/images/modalImageUpload.js"]
         RESOLVE --> VALIDATE["validateImageAttachment()<br/>image/* whitelist, ≤15MB"]
         VALIDATE --> REHOST["uploadBufferToImageStorage()"]
@@ -76,8 +76,9 @@ All three keep heavy imports (discord.js, storage.js, safariConfigUI.js) **dynam
 
 **New guild setting** (`playerData.json`, created lazily — absent means default, no migration needed):
 ```jsonc
-playerData[guildId].settings.imageUploadMode  // 'textUrl' (default, unset) | 'uploadComponent'
+playerData[guildId].settings.imageUploadMode  // 'uploadComponent' (default, unset — flipped 2026-07-26) | 'textUrl'
 ```
+> **Default flip (2026-07-26):** unset guilds — new servers and every server that never opened the toggle — now resolve to `uploadComponent`. Only guilds with an explicitly stored `'textUrl'` (they submitted the General Settings modal with Paste URL chosen) stay on paste-URL. The flip lives entirely in `normalizeImageUploadMode()`; nothing was migrated in playerData.
 Read via `getImageUploadMode()`, written via `setImageUploadMode()` (which wraps the load→mutate→save cycle in `withStorageLock` — see CLAUDE.md's storage-lock rule). Mirrors the existing `playerData[guildId].permissions` namespace idiom.
 
 **The pilot field itself is UNCHANGED in shape** — this is the whole point of the backwards-compat requirement:
@@ -117,7 +118,7 @@ This is the pilot conversion. Full flow, with line numbers as of commit `ef4ced3
    - Both call `getImageUploadMode(guildId)` then `createFieldGroupModal(entityType, entityId, fieldGroup, entity, { imageUploadMode })`.
 
 2. **Modal construction** — [fieldEditors.js:831](../../fieldEditors.js#L831) `createMapCellFieldModal(..., options)` → for the `info` field group, the image field comes from [fieldEditors.js:793](../../fieldEditors.js#L793) `buildMapCellImageField(currentValues, imageUploadMode)`:
-   - `textUrl` (default): unchanged Label + Text Input, exactly as before this feature existed.
+   - `textUrl` (explicit opt-out; was the default until 2026-07-26): unchanged Label + Text Input, exactly as before this feature existed.
    - `uploadComponent`: Label + File Upload (`custom_id: IMAGE_UPLOAD_COMPONENT_ID = 'image_upload'`, `min_values: 0, max_values: 1`). The Label's `description` carries the existing-image state (`Current: a2_location.png — uploading replaces it.` via `filenameFromImageUrl`) — **there is deliberately no "remove image" control**; 0 files submitted = keep the current image. To clear an image, switch the guild back to Paste URL mode and empty the text field there.
 
 3. **Modal submit** — the shared `entity_modal_submit_*` handler at [app.js:49351](../../app.js#L49351)+. After the existing `DEFERRED_UPDATE_MESSAGE` ack (validation must stay synchronous; everything below can be slow), a new block at [app.js:49435-49440](../../app.js#L49435-L49440) runs **only for `map_cell` + `info`**:
@@ -218,12 +219,12 @@ Done as a prerequisite for the pilot (the upload needed a general-purpose host, 
 Run on **CastBot Test** in Discord (TEST/castbot-blue — never prod without explicit sign-off):
 
 1. `/menu` → **Settings** → confirm a **General** button (CastBot logo emoji) sits left of **Player Menu**.
-2. Click it → modal shows an "Image Uploads" field with **🔗 Paste URL** pre-selected (radio buttons, not a dropdown) when nothing's been set yet.
-3. Switch to **🖼️ Upload Component**, submit → Settings menu refreshes, **⚙️ General** section now shows `Image Uploads: 🖼️ Upload Component`.
-4. Open **Map Explorer**, edit a location's **info** field group → the "Location Image" field is now a native file-upload control instead of a text box. Upload an image.
-5. Confirm the image now appears under the map in that location's anchor message (Media Gallery), and that `#🗺️castbot-images` exists in the server (renamed from `#🗺️map-storage` if the guild had used maps before; freshly created with the pinned DO-NOT-DELETE banner otherwise) with your image posted as `<coord>_location.<ext>`.
-6. Re-open the same modal → the Label under "Location Image" should read `Current: <coord>_location.<ext> — uploading replaces it.` Submit with 0 files uploaded → confirm the image is unchanged (not cleared).
-7. Switch the guild back to **🔗 Paste URL** → re-open the same modal → confirm it's back to a text input, prefilled with the stored (re-hosted) CDN URL, and normal paste/clear editing still works.
+2. Click it → modal shows an "Image Uploads" field with **🖼️ Upload Component** pre-selected (radio buttons, not a dropdown) when nothing's been set yet — the default since 2026-07-26. The **⚙️ General** section of the Settings menu should likewise show `Image Uploads: 🖼️ Upload Component` for an untouched guild.
+3. Open **Map Explorer**, edit a location's **info** field group → the "Location Image" field is a native file-upload control (no toggle interaction needed — that's the default now). Upload an image.
+4. Confirm the image now appears under the map in that location's anchor message (Media Gallery), and that `#🗺️castbot-images` exists in the server (renamed from `#🗺️map-storage` if the guild had used maps before; freshly created with the pinned DO-NOT-DELETE banner otherwise) with your image posted as `<coord>_location.<ext>`.
+5. Re-open the same modal → the Label under "Location Image" should read `Current: <coord>_location.<ext> — uploading replaces it.` Submit with 0 files uploaded → confirm the image is unchanged (not cleared).
+6. Switch the guild to **🔗 Paste URL** (Settings → General), submit → Settings menu refreshes, **⚙️ General** shows `Image Uploads: 🔗 Paste URL` → re-open the same location modal → confirm it's back to a text input, prefilled with the stored (re-hosted) CDN URL, and normal paste/clear editing still works.
+7. Re-open Settings → General → confirm **🔗 Paste URL** stays pre-selected (an explicit opt-out is preserved, not overridden by the new default).
 
 Automated coverage: `node --test tests/generalSettings.test.js tests/imageStorageChannel.test.js tests/modalImageUpload.test.js` (32 tests; also runs as part of the full suite in `win-restart.js` / `dev-restart.sh`).
 

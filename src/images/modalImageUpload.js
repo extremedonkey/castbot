@@ -141,7 +141,10 @@ export function filenameFromImageUrl(url, maxLength = 60) {
 /**
  * Build the image field Label for a modal, honoring the guild's Image Uploads mode.
  * Shared by every converted display-URL field (enemy, rich card, dice results, tips):
- * - textUrl (default): Label + Text Input — the legacy paste-a-CDN-link field.
+ * - textUrl: Label + Text Input — the legacy paste-a-CDN-link field. (Guild-level
+ *   default is uploadComponent since 2026-07-26; textUrl is an explicit opt-out.
+ *   An omitted imageUploadMode param still renders text — callers must thread the
+ *   guild mode through for the default to apply.)
  * - uploadComponent: Label + File Upload (type 19, 0-1 files); the Label's
  *   description carries the existing-image state ("Current: name.png — uploading
  *   replaces it.") since 0 files submitted = keep the current image.
