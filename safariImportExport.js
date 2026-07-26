@@ -157,6 +157,36 @@ export function resolveGridDimensions(map) {
 }
 
 /**
+ * Grid dimensions an IMPORTED map should be treated as having (map auto-creation,
+ * mismatch warnings). Priority:
+ *   1. Package manifest's mapImage grid — the packaged image was cropped to exactly
+ *      that grid, so a map created from it must match or the cells misalign.
+ *   2. The map's own resolved dimensions, expanded (never shrunk) to the bounding
+ *      box of its exported coordinates. Exports written before gridWidth/gridHeight
+ *      were included can carry a stale legacy gridSize (e.g. 2 on a 7x4 map) — the
+ *      coordinates themselves are the ground truth for how big the grid really is.
+ * @param {Object} map - Imported map data object
+ * @param {Object|null} manifest - Parsed package manifest (null for legacy/JSON imports)
+ * @returns {{width: number, height: number}|null} Dimensions, or null if unknown
+ */
+export function resolveImportGridDims(map, manifest = null) {
+    const img = manifest?.mapImage;
+    if (img?.gridWidth > 0 && img?.gridHeight > 0) {
+        return { width: img.gridWidth, height: img.gridHeight };
+    }
+    const dims = resolveGridDimensions(map);
+    let maxW = 0, maxH = 0;
+    for (const coord of Object.keys(map?.coordinates || {})) {
+        const match = /^([A-Z])(\d+)$/.exec(String(coord).trim().toUpperCase());
+        if (!match) continue;
+        maxW = Math.max(maxW, match[1].charCodeAt(0) - 64);
+        maxH = Math.max(maxH, parseInt(match[2]));
+    }
+    if (!dims) return (maxW > 0 && maxH > 0) ? { width: maxW, height: maxH } : null;
+    return { width: Math.max(dims.width, maxW), height: Math.max(dims.height, maxH) };
+}
+
+/**
  * Check whether a coordinate (e.g. "C3") fits within grid dimensions.
  * @param {string} coord - Coordinate string
  * @param {{width: number, height: number}} dims - Grid dimensions
@@ -380,6 +410,8 @@ export async function importSafariData(guildId, importJson, context = {}, option
                         id: targetMapId,
                         name: mapData.name,
                         gridSize: mapData.gridSize,
+                        ...(mapData.gridWidth > 0 && mapData.gridHeight > 0 &&
+                            { gridWidth: mapData.gridWidth, gridHeight: mapData.gridHeight }),
                         coordinates: {},
                         metadata: {
                             createdAt: Date.now(),
@@ -395,14 +427,15 @@ export async function importSafariData(guildId, importJson, context = {}, option
                 // NEVER overwrite an existing map's gridSize — on old maps (no gridWidth/gridHeight)
                 // it drives movement bounds, and importing a bigger template's gridSize would let
                 // players move into coordinates that have no channels
+                const importDims = resolveImportGridDims(mapData);
                 if (!existingMap.gridSize) {
                     existingMap.gridSize = mapData.gridSize;
-                } else if (mapData.gridSize && targetDims && resolveGridDimensions(mapData) &&
-                           (resolveGridDimensions(mapData).width !== targetDims.width ||
-                            resolveGridDimensions(mapData).height !== targetDims.height)) {
+                } else if (targetDims && importDims &&
+                           (importDims.width !== targetDims.width ||
+                            importDims.height !== targetDims.height)) {
                     summary.warnings.push({
                         type: 'grid_size_mismatch',
-                        message: `Imported map grid (${resolveGridDimensions(mapData).width}x${resolveGridDimensions(mapData).height}) differs from active map (${targetDims.width}x${targetDims.height}) — out-of-grid data was skipped`
+                        message: `Imported map grid (${importDims.width}x${importDims.height}) differs from active map (${targetDims.width}x${targetDims.height}) — out-of-grid data was skipped`
                     });
                 }
                 if (mapData.blacklistedCoordinates) {
@@ -647,10 +680,16 @@ function filterMapsForExport(maps) {
             continue;
         }
         
+        const dims = resolveGridDimensions(mapData);
         filtered[mapId] = {
             id: mapData.id,
             name: mapData.name,
             gridSize: mapData.gridSize,
+            // gridWidth/gridHeight are the authoritative dimensions — gridSize can be a
+            // stale legacy value on re-imaged maps (a 7x4 map that started life as 2x2
+            // still carries gridSize: 2, and exporting only gridSize shrank its import
+            // to a 2x2 grid, silently dropping 24 of 28 cells)
+            ...(dims && { gridWidth: dims.width, gridHeight: dims.height }),
             coordinates: {},
             // Include blacklisted coordinates if they exist
             ...(mapData.blacklistedCoordinates && { blacklistedCoordinates: mapData.blacklistedCoordinates })
@@ -1480,7 +1519,7 @@ export async function planSafariImport(guildId, parsed) {
     const importedMaps = Object.entries(data.maps || {}).filter(([k]) => k !== 'active');
     plan.mapCount = importedMaps.length;
     const firstMap = importedMaps[0]?.[1] || null;
-    plan.importGrid = firstMap ? resolveGridDimensions(firstMap) : null;
+    plan.importGrid = firstMap ? resolveImportGridDims(firstMap, parsed.manifest) : null;
     plan.mapCells = firstMap ? Object.keys(firstMap.coordinates || {}).length : 0;
 
     const actionsWithCoords = Object.values(data.customActions || {}).some(a => a.coordinates?.length);
@@ -1493,7 +1532,7 @@ export async function planSafariImport(guildId, parsed) {
 
     if (activeMap && firstMap) {
         const targetDims = resolveGridDimensions(activeMap);
-        const importDims = resolveGridDimensions(firstMap);
+        const importDims = resolveImportGridDims(firstMap, parsed.manifest);
         if (targetDims && importDims &&
             (targetDims.width !== importDims.width || targetDims.height !== importDims.height)) {
             plan.warnings.push(`Grid mismatch: import is ${importDims.width}x${importDims.height}, your active map is ${targetDims.width}x${targetDims.height} — out-of-grid cells will be skipped`);

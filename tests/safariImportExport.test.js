@@ -75,6 +75,19 @@ describe('Safari Import/Export — map grid safety on import (ratchet)', () => {
     assert.ok(/isCoordInGrid\(coord, targetDims\)/.test(SOURCE) && /out_of_grid_blacklist/.test(SOURCE),
       'out-of-grid filtering missing — orphan coordinates/blacklist entries would import silently');
   });
+
+  it('filterMapsForExport exports gridWidth/gridHeight, not just gridSize', () => {
+    const block = functionBlock('filterMapsForExport');
+    assert.ok(block.includes('gridWidth') && block.includes('gridHeight'),
+      'gridWidth/gridHeight missing from filterMapsForExport — a re-imaged 7x4 map with stale ' +
+      'legacy gridSize: 2 exported as 2x2 and imported with 24 of 28 cells silently dropped (2026-07-26)');
+  });
+
+  it('import planner sizes map auto-creation via resolveImportGridDims with the package manifest', () => {
+    assert.ok(/resolveImportGridDims\(firstMap, parsed\.manifest\)/.test(SOURCE),
+      'planSafariImport must use manifest/coordinate-aware grid resolution — raw resolveGridDimensions ' +
+      'trusts a stale gridSize and creates a too-small map');
+  });
 });
 
 describe('Safari Import/Export — safariConfig crafting terms (whitelist ratchet)', () => {
@@ -197,6 +210,63 @@ describe('Safari Import/Export — grid dimension resolution and coordinate boun
     assert.equal(isCoordInGrid('', dims), false);
     assert.equal(isCoordInGrid('5D', dims), false);
     assert.equal(isCoordInGrid('global', dims), false);
+  });
+});
+
+// Replicated from safariImportExport.js resolveImportGridDims (pure)
+function resolveImportGridDims(map, manifest = null) {
+  const img = manifest?.mapImage;
+  if (img?.gridWidth > 0 && img?.gridHeight > 0) {
+    return { width: img.gridWidth, height: img.gridHeight };
+  }
+  const dims = resolveGridDimensions(map);
+  let maxW = 0, maxH = 0;
+  for (const coord of Object.keys(map?.coordinates || {})) {
+    const match = /^([A-Z])(\d+)$/.exec(String(coord).trim().toUpperCase());
+    if (!match) continue;
+    maxW = Math.max(maxW, match[1].charCodeAt(0) - 64);
+    maxH = Math.max(maxH, parseInt(match[2]));
+  }
+  if (!dims) return (maxW > 0 && maxH > 0) ? { width: maxW, height: maxH } : null;
+  return { width: Math.max(dims.width, maxW), height: Math.max(dims.height, maxH) };
+}
+
+describe('Safari Import/Export — imported-map grid resolution (the 7x4→2x2 regression)', () => {
+  // The 2026-07-26 incident: a 7x4 map re-imaged from an old 2x2 kept gridSize: 2;
+  // the export dropped gridWidth/gridHeight, so import auto-created a 2x2 map and
+  // skipped 24 of 28 cells. Coordinates are ground truth — never build a smaller grid.
+  const incidentMap = {
+    id: 'map_7x4_1774771750654', gridSize: 2,
+    coordinates: Object.fromEntries(
+      ['A', 'B', 'C', 'D', 'E', 'F', 'G'].flatMap(c => [1, 2, 3, 4].map(r => [`${c}${r}`, {}])))
+  };
+
+  it('expands a stale gridSize to the coordinate bounding box (old broken exports)', () => {
+    assert.deepEqual(resolveImportGridDims(incidentMap), { width: 7, height: 4 });
+  });
+
+  it('package manifest mapImage grid wins (the created map must match the packaged image crop)', () => {
+    const manifest = { mapImage: { gridWidth: 7, gridHeight: 4 } };
+    assert.deepEqual(resolveImportGridDims({ gridSize: 2 }, manifest), { width: 7, height: 4 });
+  });
+
+  it('modern exports with gridWidth/gridHeight resolve directly', () => {
+    assert.deepEqual(resolveImportGridDims({ gridWidth: 3, gridHeight: 5, gridSize: 2, coordinates: { A1: {} } }),
+      { width: 3, height: 5 });
+  });
+
+  it('no dims at all falls back to the coordinate bounding box', () => {
+    assert.deepEqual(resolveImportGridDims({ coordinates: { C2: {}, A4: {} } }), { width: 3, height: 4 });
+  });
+
+  it('never shrinks below declared dims (blacklist-trimmed exports keep the full grid)', () => {
+    assert.deepEqual(resolveImportGridDims({ gridWidth: 7, gridHeight: 7, coordinates: { A1: {}, B2: {} } }),
+      { width: 7, height: 7 });
+  });
+
+  it('returns null when nothing is resolvable (caller refuses auto-creation)', () => {
+    assert.equal(resolveImportGridDims({}), null);
+    assert.equal(resolveImportGridDims({ coordinates: { global: {} } }), null);
   });
 });
 
