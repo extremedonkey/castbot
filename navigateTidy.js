@@ -15,7 +15,9 @@
 
 const VIEW_CHANNEL = 1n << 10n; // PermissionFlagsBits.ViewChannel (kept literal: module top stays import-free)
 const SCAN_TTL_MS = 10 * 60 * 1000;
-const MAX_PAGES_PER_CHANNEL = 3; // 300 messages/channel safety cap
+// 1000 messages/channel: welcome/init cards sit at the very BOTTOM of busy channels (game start),
+// so shallow paging (was 3) missed them — pagination walks newest → oldest.
+const MAX_PAGES_PER_CHANNEL = 10;
 const LISTING_CHAR_BUDGET = 2600; // stay well under the 4000-char combined Text Display limit
 
 // guildId → { at, channels: [{coord, channelId, channelName, stale: [{messageId, userId}], keptCount}] }
@@ -104,7 +106,7 @@ export function buildTidyScanUI(scan) {
       type: 10,
       content: staleCount === 0
         ? `${summary}\n\n✅ Nothing to tidy — every navigation panel belongs to a player still in its channel.`
-        : `Deletes leftover **Navigate** panels from map channels. A panel is stale when its owner can no longer view the channel (moved on, reset, or left the server). Panels for players currently in their channel are kept.\n\n${summary}\n\n${buildStaleListing(scan.channels)}`
+        : `Deletes leftover **Navigate** panels (arrival, 🎉 welcome, and admin-move cards) from map channels. A panel is stale when its owner can no longer view the channel (moved on, reset, or left the server). Panels for players currently in their channel are kept.\n\n${summary}\n\n${buildStaleListing(scan.channels)}`
     },
     { type: 14 },
     {
@@ -168,6 +170,7 @@ export async function runTidyScan(guildId, client) {
     const coordinates = safariData[guildId]?.maps?.[activeMapId]?.coordinates || {};
 
     const guild = await client.guilds.fetch(guildId);
+    console.log(`🗺️ NavigateTidy scan starting: guild ${guildId} — ${Object.keys(coordinates).length} coordinates on map ${activeMapId}`);
     const channels = [];
     for (const [coord, coordData] of Object.entries(coordinates)) {
       if (!coordData?.channelId) continue;
@@ -225,15 +228,24 @@ export async function runTidyDelete(guildId) {
   running.add(guildId);
   try {
     const { DiscordRequest } = await import('./utils.js');
+    const staleTotal = totalStale(scan.channels);
+    const channelTotal = scan.channels.filter(c => c.stale.length > 0).length;
+    console.log(`🗺️ NavigateTidy delete starting: guild ${guildId} — ${staleTotal} stale panels across ${channelTotal} channels (~${Math.ceil(staleTotal * 0.35 / 60)} min at 350ms pacing)`);
     let deleted = 0, failed = 0, touched = 0;
     for (const c of scan.channels) {
       if (c.stale.length === 0) continue;
       touched++;
+      let chDeleted = 0, chFailed = 0;
       for (const p of c.stale) {
         const res = await DiscordRequest(`channels/${c.channelId}/messages/${p.messageId}`, { method: 'DELETE' });
-        res?.success ? deleted++ : failed++;
+        if (res?.success) { deleted++; chDeleted++; }
+        else {
+          failed++; chFailed++;
+          console.log(`⚠️ NavigateTidy: delete failed for message ${p.messageId} (owner ${p.userId}) in #${c.channelName}`);
+        }
         await sleep(350); // stay friendly with the delete rate bucket
       }
+      console.log(`🗺️ NavigateTidy: #${c.channelName} (${c.coord}) — ${chDeleted}/${c.stale.length} deleted${chFailed ? `, ${chFailed} failed` : ''} [${touched}/${channelTotal} channels, ${deleted + failed}/${staleTotal} total]`);
     }
     scanCache.delete(guildId);
     console.log(`🗺️ NavigateTidy delete: guild ${guildId} — ${deleted} deleted, ${failed} failed`);

@@ -41,6 +41,18 @@ describe('extractNavPanels', () => {
     assert.equal(panels.length, 0);
   });
 
+  it('matches welcome/init cards (same Navigate button as arrival cards)', () => {
+    // Shape posted by safariMapAdmin.js initializePlayerOnMap: text + safari_navigate button
+    const welcome = {
+      id: '9',
+      components: [{ type: 17, components: [
+        { type: 10, content: '🎉 **Welcome to the Safari Map!**\n\n<@111> has been initialized at coordinate **A1**.' },
+        { type: 1, components: [{ type: 2, custom_id: 'safari_navigate_111_A1', label: 'Navigate' }] }
+      ]}]
+    };
+    assert.deepEqual(extractNavPanels([welcome]), [{ messageId: '9', userId: '111' }]);
+  });
+
   it('dedupes by messageId', () => {
     const m = msg('1', 'safari_navigate_111_A1');
     m.components[0].components.push({ type: 1, components: [{ type: 2, custom_id: 'safari_navigate_111_A1' }] });
