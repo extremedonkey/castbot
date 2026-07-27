@@ -1,6 +1,6 @@
 # Prod Box Migration — Node-js-1 (512MB nano) → castbot-prod-2 (bigger bundle)
 
-**Status**: 🟡 Planned — cutover window **Mon 2026-07-28 17:00–18:00 AWST (09:00–10:00 UTC / 5–6am US Eastern)**
+**Status**: 🟢 **Phase 0 COMPLETE 2026-07-27 ~22:50 AWST** — castbot-prod-2 built, parked, verified. Cutover window **Mon 2026-07-28 17:00–18:00 AWST (09:00–10:00 UTC / 5–6am US Eastern)**
 **Driver**: [Incident 08](../incidents/08-SwapThrashFrozenLoop.md) — 94-min outage from swap-thrash on the 447MB-usable box; incident 06 already called the box "genuinely under-provisioned"
 **Verified pre-flight**: 2026-07-27 via read-only AWS CLI + SSH forensics on both boxes (3-agent sweep; no blockers)
 **Executor**: Claude drives every step via AWS CLI + SSH from the Windows machine; Reece authorizes each mutation phase and smoke-tests in Discord
@@ -54,6 +54,20 @@ Downtime: none. Prod runs untouched throughout.
 
 Parked cost while waiting: bundle price pro-rata (~40¢/day for small_3_2). Rollback of Phase 0 alone = `delete-instance castbot-prod-2` (keep the snapshot).
 
+## Phase 0 — Execution log (2026-07-27, all steps on Reece's "approved, go!")
+
+| Step | Result |
+|---|---|
+| temp/ cleanup | ✅ 566 `activity_overlay_*` files deleted (1.1GB), 65 legit files kept; disk 52%→47% |
+| Snapshot `castbot-prod-pre-migration-20260728` | ✅ available after ~18 min (20GB) — **prod's first valid backup in 13 months** |
+| castbot-prod-2 created | ✅ small_3_2 (2GB/60GB), ap-southeast-2a, running in ~20s, **ephemeral IP 13.211.61.198** |
+| Bot-stop guard | ✅ user-data disabled pm2-bitnami; stray boot PM2 daemon killed by hand; `app.js`/PM2 fully dead; pm2-bitnami `inactive`+`disabled` |
+| Firewall | ✅ 22/80/443 tcp open to 0.0.0.0/0 + ::/0 — verified matches Node-js-1 |
+| Park-verify | ✅ fs auto-expanded 20→59GB (15% used); data files exact sizes (playerData 4,331,164B, safariContent 2,492,005B); img/ 138M, logs/ 23M; `.env` present; remediate script 2924B mode 751; gonit up; nginx disabled; 2GB RAM with 247MB used, zero swap pressure |
+| **Gotcha found & fixed: Apache down at first boot** | Snapshot carried old box's stale `httpd.pid` ("713"); pid 713 exists on the new box (kernel thread) so **gonit believed Apache was Running and wouldn't start it** (`ctlscript` delegates to gonit → lying "Started apache"). Fix: `rm httpd.pid` + `gonit restart apache` → 4 workers, **local 443 → 503 = correct parked signature** (TLS up, backend intentionally dead) |
+| Gotcha noted: clone's `dump.pm2` rewritten by boot race | Slimmer than prod's reference (NODE_OPTIONS intact). Mitigation: **`/home/bitnami/.pm2/dump.pm2` added to the cutover sync list** — copy prod's battle-tested dump before enabling pm2-bitnami |
+| Note: `authorized_keys` now 4 lines | Expected — Lightsail appended `castbot-blue-key` at create; original 3 keys intact |
+
 ## Phase 1 — Pre-window checks (cutover day, before 17:00 AWST; read-only + one blue toggle)
 
 1. Re-verify: prod healthy, castbot-prod-2 still parked (bot stopped), snapshot `available`, blue healthy
@@ -70,7 +84,9 @@ Parked cost while waiting: bundle price pro-rata (~40¢/day for small_3_2). Roll
 | 4 | `systemctl enable pm2-bitnami && pm2 restart castbot-pm && pm2 save` | NEW box | — |
 | 5 | Verify (below); if healthy: ⏱️ stops | — | total ~4–6 min |
 
-**Cutover data file list** (from `BACKUP_FILES` + on-disk survey): `playerData.json` (~4.3MB), `safariContent.json` (~2.5MB), `scheduledJobs.json`, `dstState.json`, `data_whispers.json`, `challengeLibrary.json`, `messageHistory.json`, `restartHistory.json`, `safariData-CastBotGuild.json`, `img/guides/guides.json`, `img/tips/tips.json`, `logs/user-analytics.log` (~24MB), `logs/pm2-positions.json`. Exclude: `temp/`, `node_modules/`.
+**Cutover data file list** (from `BACKUP_FILES` + on-disk survey): `playerData.json` (~4.3MB), `safariContent.json` (~2.5MB), `scheduledJobs.json`, `dstState.json`, `data_whispers.json`, `challengeLibrary.json`, `messageHistory.json`, `restartHistory.json`, `safariData-CastBotGuild.json`, `img/guides/guides.json`, `img/tips/tips.json`, `logs/user-analytics.log` (~24MB), `logs/pm2-positions.json`, **`/home/bitnami/.pm2/dump.pm2`** (clone's copy was rewritten by the boot race — sync prod's). Exclude: `temp/`, `node_modules/`.
+
+**Phase 1 addition (from Phase 0 gotchas): re-verify Apache on the parked box before the window** — `curl -sk https://13.211.61.198/interactions` from anywhere should give 503 (or via SSH locally). If the box rebooted overnight the stale-pidfile issue is gone (Apache wrote a fresh pidfile), but verify anyway.
 
 **Immediate verification (Claude, ~2 min):**
 - `curl -I https://castbotaws.reecewagner.com/interactions` → 200
