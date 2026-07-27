@@ -748,6 +748,16 @@ The box has its own dedicated prod key: `~/.ssh/castbot-prod` (ed25519, comment 
 
 **Revocation:** delete the `moai@castbot-blue` line from prod's `~/.ssh/authorized_keys` — the box is locked out instantly, no key rotation needed.
 
+### ☁️ AWS CLI (Lightsail) — Windows machine
+
+AWS CLI v2 is installed on the Windows machine (`C:\Program Files\Amazon\AWSCLIV2\aws.exe` — full path needed if PATH is stale) with the `castbot-claude` IAM user (policy `lightsail:*`, region `ap-southeast-2`). Set up 2026-07-27 during incident 08 follow-up.
+
+**Soft controls (Reece's rule, mirrors prod SSH):**
+- ✅ **Read-only `lightsail:Get*` freely, no permission needed**: `get-instances`, `get-static-ips`, `get-instance-metric-data` (CPUUtilization, BurstCapacityPercentage), `get-instance-snapshots`, etc.
+- 🔴 **ANY mutation needs Reece's explicit word in the current conversation — every time**: stop/start/reboot/delete instances, attach/detach static IPs, create/delete snapshots, open-ports changes. One authorization = one action.
+
+**Instance inventory:** prod = `Node-js-1` (nano_3_2, 512MB/2vCPU, static IP `13.238.148.170` via resource `lightsailstaticIP`); test = `castbot-blue` (small_3_2, 2GB, static IP `13.210.218.153`).
+
 ## 📐 app.js Organization
 
 ### Key Imports

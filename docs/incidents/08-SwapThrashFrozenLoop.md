@@ -83,7 +83,7 @@ This is chapter five of one continuing story — an under-provisioned 448MB box 
 - **Incident 06 (Jul 19)**: drift accelerated to ~13MB/h under two live safari seasons; GC death spiral froze the loop for ~7 min before the FATAL OOM *crashed* the process and PM2 healed it. The doc declared the 24h restart cadence insufficient and the box "genuinely under-provisioned" (1GB migration: still pending).
 - **Incident 08 (today)**: same pressure, but swap kept the process *alive* through the freeze — removing the crash that had been functioning as the de-facto auto-restart. The failure mode every prior incident accidentally avoided finally happened: **hung, not dead — and nothing restarts "hung."**
 
-The flapping earlier in the window (07:29–07:41, and the previous evening's blips) was the same box drowning slowly — external probes timing out while local curl succeeded, SSH banner-exchange timeouts — until it went fully under at ~09:40. Lightsail burst-credit throttling may have contributed to the box-wide sluggishness but can't be confirmed from the box (no sysstat; steal counters can't be dated) — worth a glance at the Lightsail CPU burst-capacity graph for 07:00–12:00Z.
+The flapping earlier in the window (07:29–07:41, and the previous evening's blips) was the same box drowning slowly — external probes timing out while local curl succeeded, SSH banner-exchange timeouts — until it went fully under at ~09:40. **Lightsail burst-credit throttling is ruled out** (verified 2026-07-27 via the Lightsail API): burst capacity held at 98.9–100% through the whole window, and CPU utilization *averaged ~0.5%* during the frozen 10:00–11:15Z stretch (max spike 21% = the 11:29Z remediation restart). The box had full CPU headroom — the process was blocked on swap I/O, not compute-starved. Pure memory pressure.
 
 ## Also Found: the Remediation Script's Apache Branch Was Unreachable
 
@@ -123,7 +123,7 @@ Prod's `remediate-castbot.sh` (previously untracked, now versioned at [scripts/p
 | 4 | Persist SSH diagnostics + remediation output in blue's local logs | Code | ✅ Done 2026-07-27 |
 | 5 | **1GB+ Lightsail migration** — incident 06 #6, now the root capacity fix: 11.5h of normal load was enough to put a 447MB box ~495MB into swap | Infra | ⏳ Reece (urgent — this incident is what "under-provisioned" costs) |
 | 6 | playerData in-memory cache (incident 03 P1, incident 06 #4 — the dominant churn source) | Code | ⏳ |
-| 7 | Check Lightsail **CPU burst capacity** graph for Jul 27 07:00–12:00Z; install sysstat for future forensics | Prod ops | ✅ sysstat installed+enabled on TEST & PROD 2026-07-27 (10-min `sar` history incl. %steal); ⏳ burst-capacity graph check is console-only — Reece |
+| 7 | Check Lightsail **CPU burst capacity** for Jul 27 07:00–12:00Z; install sysstat for future forensics | Prod ops | ✅ Done 2026-07-27 — sysstat on TEST & PROD (10-min `sar` history incl. %steal); burst capacity pulled via Lightsail API: 98.9–100% all window → **throttling ruled out** |
 | 8 | Test-box restart self-announce (silent watchdog restarts) | Code | ✅ Already exists (app.js `🟦 [TEST] restart self-announce` — observed firing during this deploy; CLAUDE.md's "known gap" note was stale and has been corrected) |
 
 ## Appendix: 1GB Lightsail Migration Runbook (action #5)
@@ -131,9 +131,7 @@ Prod's `remediate-castbot.sh` (previously untracked, now versioned at [scripts/p
 The static-IP concern is step 0 — everything else is routine. **RaP 0896 §F's "no DNS change" claim was an assumption, not a verified fact** ("worth verifying in the Lightsail console"), so verify it first; it decides which of two cutover paths applies.
 
 **Pre-flight (no downtime, do anytime):**
-0. **Lightsail console → Networking tab: is `13.238.148.170` listed under _Static IPs_, attached to the prod instance?**
-   - **Yes** → the cutover is an IP reattach: minutes of downtime, zero DNS involvement. Proceed below.
-   - **No (it's the instance's default public IP)** → create a static IP NOW and attach it to the *current* instance (Lightsail assigns a **new** address — the old dynamic one cannot be kept), then update the `castbotaws.reecewagner.com` A record to it, drop TTL to 300s, and wait for propagation *before* migration day. Doing this ahead of time converts migration back into the easy path.
+0. ~~Verify the static IP~~ — **✅ VERIFIED 2026-07-27 via Lightsail API**: `13.238.148.170` is the static-IP resource `lightsailstaticIP` (created 2025-01-12), attached to prod instance **`Node-js-1`** (bundle `nano_3_2`, 512MB/2vCPU). The cutover is the easy path: IP reattach, minutes of downtime, zero DNS involvement. (Aside discovered en route: the TEST box `castbot-blue` is a `small_3_2` — **staging has 4× prod's RAM**.)
 1. Take an **instance snapshot** of prod (runs live, no downtime).
 2. Confirm region (ap-southeast-2) — static IPs reattach only within the same region.
 
