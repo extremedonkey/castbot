@@ -124,7 +124,7 @@ Prod's `remediate-castbot.sh` (previously untracked, now versioned at [scripts/p
 | 5 | **1GB+ Lightsail migration** — incident 06 #6, now the root capacity fix: 11.5h of normal load was enough to put a 447MB box ~495MB into swap | Infra | ⏳ Reece (urgent — this incident is what "under-provisioned" costs) |
 | 6 | playerData in-memory cache (incident 03 P1, incident 06 #4 — the dominant churn source) | Code | ⏳ |
 | 7 | Check Lightsail **CPU burst capacity** graph for Jul 27 07:00–12:00Z; consider installing sysstat on prod for future forensics | Prod ops | ⏳ Reece |
-| 8 | Test-box restart self-announce (silent watchdog restarts are still a blind spot — CLAUDE.md known gap) | Code | ⏳ backlog |
+| 8 | Test-box restart self-announce (silent watchdog restarts) | Code | ✅ Already exists (app.js `🟦 [TEST] restart self-announce` — observed firing during this deploy; CLAUDE.md's "known gap" note was stale and has been corrected) |
 
 ## Related
 
