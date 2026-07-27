@@ -145,14 +145,14 @@ When prod's bot is down, prod's own buttons are dead — but the test bot is a s
 - **Double gate:** restricted to Reece's user ID (`391415444084490240`) *and* no-ops unless `process.env.INSTANCE_ROLE === 'test'`. The button ships in the shared codebase everywhere but only functions on the test box.
 - **Mechanism:** `restart_prod_confirm` runs `ssh -i /home/ubuntu/.ssh/prod-remediate-key bitnami@13.238.148.170` with a 90s timeout. That key is registered in prod's `authorized_keys` as a **forced-command** — it can *only* execute `/home/bitnami/remediate-castbot.sh`, nothing else. Even a fully compromised test box can do exactly one thing with this key: run the remediation script.
 
-### `remediate-castbot.sh` (lives on prod, not in this repo)
+### `remediate-castbot.sh` (deployed on prod; source of truth in this repo)
 
-The script is prod-owned (so its contents can't be swapped from the test box) and supports two modes via the SSH command argument:
+The deployed script is prod-owned (so its contents can't be swapped from the test box) and supports two modes via the SSH command argument:
 
 - **default (remediate):** if the web layer is down, stop nginx and start Apache; then `pm2 restart castbot-pm` (preserves `NODE_OPTIONS`); print `pm2 list`. Idempotent — safe to mash.
 - **`status`:** read-only diagnostics (used by the watchdog for its alert body).
 
-> ⚠️ The script is **not version-controlled** because it lives outside the repo's deploy path on the prod box. If prod is ever rebuilt, this script and the forced-command `authorized_keys` entry must be re-created. Keep a copy with the deployment runbooks.
+> The source of truth is **[scripts/prod/remediate-castbot.sh](../../scripts/prod/remediate-castbot.sh)** (tracked since incident 08, which also fixed the `web_status()` bug that made the Apache-repair branch unreachable — see [incident 08](../incidents/08-SwapThrashFrozenLoop.md)). It is deliberately **outside the deploy path** — updating the prod copy is a manual `scp` that requires Reece's explicit permission. If prod is ever rebuilt, this script and the forced-command `authorized_keys` entry must be re-created.
 
 ---
 
@@ -161,10 +161,10 @@ The script is prod-owned (so its contents can't be swapped from the test box) an
 `src/monitoring/prodWatchdog.js` — an external prod liveness probe that runs *inside the test process*. Prod's own monitors can't report prod being down (a dead process writes no logs); the always-on test box probes prod from the outside.
 
 - **Probe:** HTTP `GET https://castbotaws.reecewagner.com/interactions` every 60s (exercises DNS + Apache + SSL + bot exactly as Discord does). Healthy = any status < 500; no-response or 5xx = unhealthy.
-- **State machine:** `evaluateProbe()` is pure and unit-tested (`tests/prodWatchdog.test.js`). Threshold defaults to **1** (alert on first failure). While down, it re-alerts every 30 min; it posts a recovery message when prod responds again.
+- **State machine:** `evaluateProbe()` is pure and unit-tested (`tests/prodWatchdog.test.js`). Threshold defaults to **1** (blue's `.env` sets `PROD_WATCHDOG_THRESHOLD=2` so planned nightly 🌙 restarts and single-probe flaps don't alert). While down, it re-alerts every 30 min (`PROD_WATCHDOG_REALERT_MS`); it posts a recovery message when prod responds again.
 - **Alert (preferred path):** posts **as the bot** to `#private-bugs` (`1335678517907816530`) with a Components V2 container, an `@mention`, the read-only `status` diagnostics, and a one-click **"Restart Prod Now"** button (custom_id `restart_prod_confirm` — the same handler the manual flow uses). This requires CastBot-Test to be a member of the community server.
 - **Alert (fallback):** if posting as the bot fails, it pings via `PROD_WATCHDOG_WEBHOOK_URL` (a manual webhook can't carry a working button, so it includes a "restart via TEST bot" instruction instead).
-- **Posture:** read-only on prod, alert-only — it never auto-remediates. Bulletproof: every tick is wrapped so an error can never crash the test box.
+- **Posture (changed by [incident 08](../incidents/08-SwapThrashFrozenLoop.md)):** alert-first with **bounded auto-remediation escalation**. After 15 minutes of *continuous* downtime it runs the same forced-command remediation as the button (max 2 attempts per down-episode, 30-min cooldown; any healthy probe resets the episode, so flapping never remediates). After the budget is exhausted it returns to reminder-only paging. Disable with `PROD_WATCHDOG_AUTO_REMEDIATE=0`; tune with `PROD_WATCHDOG_AUTO_REMEDIATE_AFTER_MS` / `…_COOLDOWN_MS` / `…_MAX`. The original alert-only posture left prod hung for 94 minutes on 2026-07-27 while the SSH remediation path was provably reachable the whole time. Bulletproof: every tick is wrapped so an error can never crash the test box.
 - **Gating:** no-ops unless `INSTANCE_ROLE=test` *and* `PROD_WATCHDOG_WEBHOOK_URL` is set. Started in the client `ready` handler (`app.js:1868-1869`).
 
 This is the "Option C auto-watchdog" the planning doc deferred to phase 2 — it's now live alongside the manual button.
@@ -182,6 +182,10 @@ Set on the **test box's** `.env` (not the dev-laptop `.env`, which has none of t
 | `INSTANCE_ROLE=test` | Master switch. Gates Restart Prod, the watchdog, and monitor behavior. Empty/absent on prod and dev. |
 | `PRODUCTION=FALSE` | Standard env flag |
 | `PROD_WATCHDOG_WEBHOOK_URL` | Fallback alert webhook (→ `#private-bugs`). Watchdog is disabled if unset. |
+| `PROD_WATCHDOG_THRESHOLD=2` | Consecutive probe failures before a DOWN alert (default 1). Set to 2 on blue so planned 🌙 restarts/flaps don't page. |
+| `PROD_WATCHDOG_AUTO_REMEDIATE` | Auto-remediation escalation master switch — **on by default**; set `0` to return to alert-only. |
+| `PROD_WATCHDOG_AUTO_REMEDIATE_AFTER_MS` / `…_COOLDOWN_MS` / `…_MAX` | Escalation tuning: continuous downtime before the first attempt (default 15m), gap between attempts (default 30m), attempts per down-episode (default 2). |
+| `PROD_WATCHDOG_REALERT_MS` | Reminder cadence while down (default 30m; was hardcoded before incident 08). |
 | `PROD_WATCHDOG_INTERVAL_MS` | Probe cadence (default 60000) |
 | `PROD_WATCHDOG_THRESHOLD` | Consecutive failures before DOWN alert (default 1) |
 
