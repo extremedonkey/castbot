@@ -119,12 +119,39 @@ Prod's `remediate-castbot.sh` (previously untracked, now versioned at [scripts/p
 |---|---|---|---|
 | 1 | Watchdog auto-remediation escalation (15m sustained → forced-command restart, 2/episode, 30m cooldown) | Code | ✅ Done 2026-07-27 |
 | 2 | `PROD_WATCHDOG_THRESHOLD=2` on blue | Config | ✅ Done 2026-07-27 |
-| 3 | Version-control + fix `remediate-castbot.sh` (web_status `000DOWN` bug → Apache branch unreachable) | Code | ✅ repo copy done; **⏳ prod deploy awaits Reece's word** (`scp scripts/prod/remediate-castbot.sh castbot-lightsail:/home/bitnami/remediate-castbot.sh`) |
+| 3 | Version-control + fix `remediate-castbot.sh` (web_status `000DOWN` bug → Apache branch unreachable) | Code | ✅ repo copy done; ✅ **deployed to prod 2026-07-27** on Reece's go (md5-verified, status-mode tested) |
 | 4 | Persist SSH diagnostics + remediation output in blue's local logs | Code | ✅ Done 2026-07-27 |
 | 5 | **1GB+ Lightsail migration** — incident 06 #6, now the root capacity fix: 11.5h of normal load was enough to put a 447MB box ~495MB into swap | Infra | ⏳ Reece (urgent — this incident is what "under-provisioned" costs) |
 | 6 | playerData in-memory cache (incident 03 P1, incident 06 #4 — the dominant churn source) | Code | ⏳ |
-| 7 | Check Lightsail **CPU burst capacity** graph for Jul 27 07:00–12:00Z; consider installing sysstat on prod for future forensics | Prod ops | ⏳ Reece |
+| 7 | Check Lightsail **CPU burst capacity** graph for Jul 27 07:00–12:00Z; install sysstat for future forensics | Prod ops | ✅ sysstat installed+enabled on TEST & PROD 2026-07-27 (10-min `sar` history incl. %steal); ⏳ burst-capacity graph check is console-only — Reece |
 | 8 | Test-box restart self-announce (silent watchdog restarts) | Code | ✅ Already exists (app.js `🟦 [TEST] restart self-announce` — observed firing during this deploy; CLAUDE.md's "known gap" note was stale and has been corrected) |
+
+## Appendix: 1GB Lightsail Migration Runbook (action #5)
+
+The static-IP concern is step 0 — everything else is routine. **RaP 0896 §F's "no DNS change" claim was an assumption, not a verified fact** ("worth verifying in the Lightsail console"), so verify it first; it decides which of two cutover paths applies.
+
+**Pre-flight (no downtime, do anytime):**
+0. **Lightsail console → Networking tab: is `13.238.148.170` listed under _Static IPs_, attached to the prod instance?**
+   - **Yes** → the cutover is an IP reattach: minutes of downtime, zero DNS involvement. Proceed below.
+   - **No (it's the instance's default public IP)** → create a static IP NOW and attach it to the *current* instance (Lightsail assigns a **new** address — the old dynamic one cannot be kept), then update the `castbotaws.reecewagner.com` A record to it, drop TTL to 300s, and wait for propagation *before* migration day. Doing this ahead of time converts migration back into the easy path.
+1. Take an **instance snapshot** of prod (runs live, no downtime).
+2. Confirm region (ap-southeast-2) — static IPs reattach only within the same region.
+
+**Build the new box (still no downtime):**
+3. Create instance **from the snapshot**, 1GB bundle (or 2GB ~$12/mo for headroom), same region. It boots as a full clone with a temporary IP.
+4. **Immediately SSH in (temp IP) and stop the cloned bot** — `pm2 stop castbot-pm` / `sudo systemctl stop pm2-bitnami`. The clone can't receive interactions (IP-routed) but its Discord.js client WILL connect to the gateway with the same token and double-fire scheduled work (backups, 🌙 restart posts, safari timers).
+5. On the new box while parked: raise `NODE_OPTIONS --max-old-space-size` (320 → ~640 for 1GB), review swap sizing, verify `.env` and node_modules survived the snapshot.
+
+**Cutover (~5–10 min downtime):**
+6. OLD box: `pm2 stop castbot-pm` — freezes data writes.
+7. **Re-sync live data OLD → NEW** (snapshot data is hours stale by now): playerData.json, safariContent.json, and the rest of the gitignored data tier + user-analytics.log archive.
+8. Console: detach static IP from old → attach to new.
+9. NEW box: start the bot; `curl -I https://castbotaws.reecewagner.com/interactions` → 200; test `/menu` in Discord. TLS cert and forced-command `authorized_keys` ride along in the snapshot (domain+IP unchanged → cert renewal unaffected).
+10. The blue watchdog confirms recovery. A 5–10 min cutover stays under the 15-min auto-remediation trigger, so it won't fight the migration; for belt-and-braces set `PROD_WATCHDOG_AUTO_REMEDIATE=0` on blue for the window and re-enable after.
+
+**Post-cutover:**
+11. Keep the old instance **stopped, not deleted**, for ~a week as instant rollback (reattach the IP back). Lightsail bills stopped instances until deleted.
+12. Update docs: mark incident 06 #6 and incident 08 #5 done; record new instance size in InfrastructureArchitecture.md.
 
 ## Related
 
