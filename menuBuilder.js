@@ -194,20 +194,17 @@ export class MenuBuilder {
    * @returns {Object} Menu container
    */
   static buildPremiumMenu(menuConfig, context) {
-    const isReece = ['391415444084490240', '1086246253819613274'].includes(context?.userId);
     const isTest = process.env.INSTANCE_ROLE === 'test';
 
     // 🔵 Ask CastBot — trusted super-users only, DEV/TEST only (prod has no Claude CLI).
-    // Everyone here already passed the Tools menu's Manage Roles gate; this narrows to
-    // whitelisted guilds + users. The handlers re-check — this is display, not security.
+    // Display-only gate; the handlers re-check.
     const specialFeatures = [
       { type: 2, custom_id: 'attribute_management', label: 'Attributes', style: 2, emoji: { name: '📊' } },
       { type: 2, custom_id: 'category_post', label: 'Category Post', style: 2, emoji: { name: '🖼️' } },
-      { type: 2, custom_id: 'safari_manage_enemies', label: 'Enemies', style: 2, emoji: { name: '🐙' } },
-      { type: 2, custom_id: 'tycoons_legacy', label: 'Tycoons', style: 2, emoji: { name: '💼' } }
+      { type: 2, custom_id: 'safari_manage_enemies', label: 'Enemies', style: 2, emoji: { name: '🐙' } }
     ];
     if (hasAskCastBotAccess({ userId: context?.userId, guildId: context?.guildId })) {
-      specialFeatures.push({ type: 2, custom_id: 'askcb_ask', label: 'Ask CastBot', style: 1, emoji: { name: '👾' } });
+      specialFeatures.unshift({ type: 2, custom_id: 'askcb_ask', label: 'Ask CastBot', style: 1, emoji: { name: '👾' } });
     }
 
     // Cleanup section — admin maintenance tools. Archive Channels is TEST-only for now.
@@ -238,36 +235,17 @@ export class MenuBuilder {
       {
         type: 1,
         components: [
-          // Same handler as the Setup Wizard's Run Setup — always enabled here so admins can
-          // re-run setup (idempotent: detects existing roles) e.g. to refresh old timezone roles
-          { type: 2, custom_id: 'setup_castbot', label: 'Re-Run Setup', style: 1, emoji: { name: '🪛' } },
           { type: 2, custom_id: 'prod_availability', label: 'Availability', style: 2, emoji: { name: '🕐' } },
           { type: 2, custom_id: 'emoji_editor', label: 'Emoji Editor', style: 2, emoji: { name: '🎨' } },
-          { type: 2, custom_id: 'map_admin_refresh_anchors', label: 'Refresh Anchors', style: 2, emoji: { name: '🔄' } },
-          { type: 2, custom_id: 'scheduled_jobs_dashboard', label: 'Scheduled Jobs', style: 2, emoji: { name: '⏰' } }
+          { type: 2, custom_id: 'tycoons_legacy', label: 'Tycoons', style: 2, emoji: { name: '💼' } }
         ]
-      },
-      { type: 10, content: `### \`\`\`📜 Info & Support\`\`\`` }
+      }
     ];
-
-    const infoRow = [];
-    if (isReece) {
-      infoRow.push(
-        { type: 2, custom_id: 'data_admin', label: 'Data', style: 4, emoji: { name: '🧮' } },
-        { type: 2, custom_id: 'reeces_stuff', label: "Reece's Stuff", style: 4, emoji: { name: '🐧' } }
-      );
-    }
-    infoRow.push(
-      { type: 2, custom_id: 'prod_terms_of_service', label: 'Terms of Service', style: 2, emoji: { name: '📜' } },
-      { type: 2, custom_id: 'prod_privacy_policy', label: 'Privacy Policy', style: 2, emoji: { name: '🔒' } },
-      { type: 2, label: 'Need Help?', style: 5, emoji: { name: '❓' }, url: 'https://discord.gg/H7MpJEjkwT' }
-    );
-    components.push({ type: 1, components: infoRow });
 
     // Navigation
     components.push(
       { type: 14 },
-      { type: 1, components: [{ type: 2, custom_id: 'prod_menu_back', label: 'Menu', style: 1, emoji: getBotEmoji('cb_transparent') }] }
+      { type: 1, components: [{ type: 2, custom_id: 'prod_menu_back', label: '← Menu', style: 2 }] }
     );
 
     return {
