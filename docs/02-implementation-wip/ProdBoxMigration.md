@@ -67,6 +67,9 @@ Parked cost while waiting: bundle price pro-rata (~40¢/day for small_3_2). Roll
 | **Gotcha found & fixed: Apache down at first boot** | Snapshot carried old box's stale `httpd.pid` ("713"); pid 713 exists on the new box (kernel thread) so **gonit believed Apache was Running and wouldn't start it** (`ctlscript` delegates to gonit → lying "Started apache"). Fix: `rm httpd.pid` + `gonit restart apache` → 4 workers, **local 443 → 503 = correct parked signature** (TLS up, backend intentionally dead) |
 | Gotcha noted: clone's `dump.pm2` rewritten by boot race | Slimmer than prod's reference (NODE_OPTIONS intact). Mitigation: **`/home/bitnami/.pm2/dump.pm2` added to the cutover sync list** — copy prod's battle-tested dump before enabling pm2-bitnami |
 | Note: `authorized_keys` now 4 lines | Expected — Lightsail appended `castbot-blue-key` at create; original 3 keys intact |
+| **Dry run A — data sync (the real cutover command)** | ✅ Full core-list tar pipe prod→parked via blue: **1.04 seconds** (in-region). `dump.pm2` synced (7,905B, prod's exact reference). Cutover data-gap window is seconds, not minutes |
+| **Dry run B — invalid-token boot test** | ✅ Full app.js init on the parked box: `.env`/dotenv loaded, node_modules good, `Listening on port 3000` logged, then discord.js exited on the planted invalid token (by design — zero Discord contact). Logger mode matches real prod exactly (both say `development mode, debug=true` — **pre-existing prod quirk**, explains the 6–17MB/day debug log spam; backlog item, not migration-related) |
+| Not rehearsable | Only the movement of prod's actual static IP — its exact mechanics (attach/detach on this very instance) are rehearsable via a throwaway static IP (proposed as dry run C, needs authorization) |
 
 ## Phase 1 — Pre-window checks (cutover day, before 17:00 AWST; read-only + one blue toggle)
 
