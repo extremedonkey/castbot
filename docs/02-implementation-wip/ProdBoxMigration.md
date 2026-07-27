@@ -13,6 +13,21 @@
 | 2 | **Pre-build tonight?** Phase 0 (snapshot + build + park the new box) can run the evening before — cutover day then contains only the 4-step flip (~5 min downtime) | **Yes** — shrinks the risky window and battle-tests the snapshot boot with a full day of slack |
 | 3 | **temp/ cleanup before snapshot** — prod repo carries **1.1GB of orphaned overlay images** (631 files, zero value; failure paths never unlink — see incident 08 addendum). Deleting first slims the snapshot | **Yes** — one `rm` of `temp/activity_overlay_*` + `*_compressed.jpg` (write op, needs the word) |
 
+## The DNS/registrar chain (verified live 2026-07-27 — nothing in it is touched by this migration)
+
+Reece flagged "IP complexity with Hover and DigitalOcean." Mapped and confirmed:
+
+```
+Hover (registrar only)          — delegates reecewagner.com NS → ns1/ns2/ns3.digitalocean.com  [verified]
+DigitalOcean (DNS host only)    — zone for reecewagner.com; A castbotaws → 13.238.148.170 (TTL 300)  [verified]
+AWS Lightsail                   — owns static IP 13.238.148.170 (resource `lightsailstaticIP`)  [verified]
+Discord Developer Portal        — knows only the URL castbotaws.reecewagner.com/interactions
+```
+
+- **CastBot runs no DigitalOcean compute.** DO only hosts the DNS zone. (The apex `reecewagner.com → 128.199.240.140` *is* a DO droplet — Reece's personal site — which is where the "DO in the mix" complexity memory comes from. Untouched and irrelevant here.)
+- Because the cutover moves the **IP between instances**, every layer above it — Hover, the DO zone, the A record, the Discord endpoint URL, the TLS cert — stays exactly as-is. No propagation, no TTL risk, no portal edits.
+- This is precisely [RaP 0919's (Apr 2026)](../01-RaP/0919_20260420_ProdCutoverStrategy_Analysis.md) conclusion — written when Reece first raised this fear: *"moving the static IP between instances is invisible to Discord... The Lightsail static IP is the magic atomic switch."* The DNS-cutover alternative it warned about (resolver caching, 5+ min lag observed on low TTLs) is exactly what we are NOT doing.
+
 ## Verified facts (all checked 2026-07-27, not assumed)
 
 - ✅ `13.238.148.170` is static-IP resource `lightsailstaticIP` → reattach cutover, **no DNS involvement**; DNS has **no AAAA record** (IPv6 trap n/a), A record → static IP
@@ -108,9 +123,10 @@ Parked cost while waiting: bundle price pro-rata (~40¢/day for small_3_2). Roll
 
 ## Related
 
+- [RaP 0919 — Prod Cutover Strategy](../01-RaP/0919_20260420_ProdCutoverStrategy_Analysis.md) — the April 2026 analysis that chose the static-IP-reattach approach this doc executes
 - [Incident 08 — SwapThrashFrozenLoop](../incidents/08-SwapThrashFrozenLoop.md) (incl. memory killing-blow addendum)
 - [Incident 06 — HeapDriftGCDeathSpiral](../incidents/06-HeapDriftGCDeathSpiral.md) · [RaP 0896 §F](../01-RaP/0896_20260718_MapCreationMemoryResilience_Analysis.md)
-- [TestInstanceBlueGreen.md](../03-features/TestInstanceBlueGreen.md)
+- [TestInstanceBlueGreen.md](../03-features/TestInstanceBlueGreen.md) · [InfrastructureArchitecture.md](../infrastructure-security/InfrastructureArchitecture.md) (Hover/DO/Lightsail diagram)
 
 ---
 **Last Updated**: 2026-07-27 · Pre-flight complete, awaiting Reece's decisions (bundle / pre-build tonight / temp cleanup)
