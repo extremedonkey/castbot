@@ -29,6 +29,7 @@ async function ensureButtonRegistry() {
 const BUTTON_LABEL_MAP = {
   // Production menu buttons
   'castbot_tools': '🪛 Tools',
+  'castbot_premium': '⭐ CastBot Premium',
   'prod_manage_pronouns_timezones': '🎯 Reaction Roles',
   'admin_manage_player': '🧑‍🤝‍🧑 Manage Players',
   'season_management_menu': '📝 Apps',

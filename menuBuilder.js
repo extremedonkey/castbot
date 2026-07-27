@@ -2,6 +2,7 @@
  * Menu Builder System for CastBot
  * Provides centralized menu creation and legacy tracking
  */
+import { InteractionResponseFlags } from 'discord-interactions';
 import { getBotEmoji } from './botEmojis.js';
 import { hasAskCastBotAccess } from './askCastBot.js';
 
@@ -16,6 +17,15 @@ export const MENU_REGISTRY = {
     accent: 0x3498DB, // Blue for standard menus
     ephemeral: true, // REQUIRED: Admin menu (default for all menus unless explicitly set to false)
     builder: 'buildSetupMenu', // Custom builder for Reece-only conditional button
+    sections: [] // Built dynamically
+  },
+
+  // Premium Menu - mockup clone of Tools (Reece-only entry point)
+  'premium_menu': {
+    title: '⭐ CastBot | Premium',
+    accent: 0x3498DB, // keep blue for faithful clone (gold 0xf39c12 is a 1-line iteration later)
+    ephemeral: true,
+    builder: 'buildPremiumMenu',
     sections: [] // Built dynamically
   },
 
@@ -67,12 +77,123 @@ export class MenuBuilder {
   }
 
   /**
+   * Build a full ephemeral factory-handler response for a registry menu:
+   * container + component-count logging + Components V2/ephemeral flags.
+   * Shared by the castbot_tools and castbot_premium handlers in app.js.
+   * @param {string} menuId - The menu identifier in MENU_REGISTRY
+   * @param {Object} context - Context object with guild, user, etc.
+   * @param {string} label - Label for the component-count log line
+   * @returns {Object} Factory handler response ({ flags, components })
+   */
+  static async buildMenuResponse(menuId, context, label) {
+    const container = await this.create(menuId, context);
+    const { countComponents } = await import('./utils.js');
+    countComponents([container], { verbosity: "full", label });
+    return {
+      flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL (admin UI)
+      components: [container]
+    };
+  }
+
+  /**
    * Build the setup_menu with conditional Reece-only button
    * @param {Object} menuConfig - Menu configuration from registry
    * @param {Object} context - Context object with userId
    * @returns {Object} Menu container
    */
   static buildSetupMenu(menuConfig, context) {
+    const isReece = ['391415444084490240', '1086246253819613274'].includes(context?.userId);
+    const isTest = process.env.INSTANCE_ROLE === 'test';
+
+    // 🔵 Ask CastBot — trusted super-users only, DEV/TEST only (prod has no Claude CLI).
+    // Everyone here already passed the Tools menu's Manage Roles gate; this narrows to
+    // whitelisted guilds + users. The handlers re-check — this is display, not security.
+    const specialFeatures = [
+      { type: 2, custom_id: 'attribute_management', label: 'Attributes', style: 2, emoji: { name: '📊' } },
+      { type: 2, custom_id: 'category_post', label: 'Category Post', style: 2, emoji: { name: '🖼️' } },
+      { type: 2, custom_id: 'safari_manage_enemies', label: 'Enemies', style: 2, emoji: { name: '🐙' } },
+      { type: 2, custom_id: 'tycoons_legacy', label: 'Tycoons', style: 2, emoji: { name: '💼' } }
+    ];
+    if (hasAskCastBotAccess({ userId: context?.userId, guildId: context?.guildId })) {
+      specialFeatures.push({ type: 2, custom_id: 'askcb_ask', label: 'Ask CastBot', style: 1, emoji: { name: '👾' } });
+    }
+
+    // Cleanup section — admin maintenance tools. Archive Channels is TEST-only for now.
+    const cleanupButtons = [];
+    if (isTest) cleanupButtons.push({ type: 2, custom_id: 'archive_channel', label: 'Archive Channels', style: 2, emoji: { name: '🧹' } });
+    cleanupButtons.push(
+      { type: 2, custom_id: 'nav_tidy_open', label: 'Navigate Tidy', style: 2, emoji: { name: '🗺️' } },
+      { type: 2, custom_id: 'prod_nuke_category', label: 'Nuke Category', style: 2, emoji: { name: '☢️' } },
+      { type: 2, custom_id: 'data_clear_vanity', label: 'Clear Vanity Roles', style: 2, emoji: { name: '💅' } }
+    );
+
+    const components = [
+      { type: 10, content: `## ${menuConfig.title}` },
+      { type: 14 },
+      { type: 10, content: `### \`\`\`🐙 Special Features\`\`\`` },
+      { type: 1, components: specialFeatures },
+      { type: 10, content: `### \`\`\`🧹 Cleanup\`\`\`` },
+      { type: 1, components: cleanupButtons },
+      { type: 10, content: `### \`\`\`❄️ Timers (Snowflake)\`\`\`` },
+      {
+        type: 1,
+        components: [
+          { type: 2, custom_id: 'snowflake_calculator', label: 'Calculator', style: 2, emoji: { name: '⏱️' } },
+          { type: 2, custom_id: 'snowflake_lookup', label: 'Lookup', style: 2, emoji: { name: '🔍' } }
+        ]
+      },
+      { type: 10, content: `### \`\`\`🔮 Utilities\`\`\`` },
+      {
+        type: 1,
+        components: [
+          // Same handler as the Setup Wizard's Run Setup — always enabled here so admins can
+          // re-run setup (idempotent: detects existing roles) e.g. to refresh old timezone roles
+          { type: 2, custom_id: 'setup_castbot', label: 'Re-Run Setup', style: 1, emoji: { name: '🪛' } },
+          { type: 2, custom_id: 'prod_availability', label: 'Availability', style: 2, emoji: { name: '🕐' } },
+          { type: 2, custom_id: 'emoji_editor', label: 'Emoji Editor', style: 2, emoji: { name: '🎨' } },
+          { type: 2, custom_id: 'map_admin_refresh_anchors', label: 'Refresh Anchors', style: 2, emoji: { name: '🔄' } },
+          { type: 2, custom_id: 'scheduled_jobs_dashboard', label: 'Scheduled Jobs', style: 2, emoji: { name: '⏰' } }
+        ]
+      },
+      { type: 10, content: `### \`\`\`📜 Info & Support\`\`\`` }
+    ];
+
+    const infoRow = [];
+    if (isReece) {
+      infoRow.push(
+        { type: 2, custom_id: 'data_admin', label: 'Data', style: 4, emoji: { name: '🧮' } },
+        { type: 2, custom_id: 'reeces_stuff', label: "Reece's Stuff", style: 4, emoji: { name: '🐧' } }
+      );
+    }
+    infoRow.push(
+      { type: 2, custom_id: 'prod_terms_of_service', label: 'Terms of Service', style: 2, emoji: { name: '📜' } },
+      { type: 2, custom_id: 'prod_privacy_policy', label: 'Privacy Policy', style: 2, emoji: { name: '🔒' } },
+      { type: 2, label: 'Need Help?', style: 5, emoji: { name: '❓' }, url: 'https://discord.gg/H7MpJEjkwT' }
+    );
+    components.push({ type: 1, components: infoRow });
+
+    // Navigation
+    components.push(
+      { type: 14 },
+      { type: 1, components: [{ type: 2, custom_id: 'prod_menu_back', label: 'Menu', style: 1, emoji: getBotEmoji('cb_transparent') }] }
+    );
+
+    return {
+      type: 17,
+      accent_color: menuConfig.accent || 0x3498DB,
+      components
+    };
+  }
+
+  /**
+   * Build the premium_menu — Premium mockup, fork of buildSetupMenu.
+   * Iterate HERE, never touch buildSetupMenu: this clone exists so the Premium
+   * menu can diverge without risking the live Tools menu.
+   * @param {Object} menuConfig - Menu configuration from registry
+   * @param {Object} context - Context object with userId
+   * @returns {Object} Menu container
+   */
+  static buildPremiumMenu(menuConfig, context) {
     const isReece = ['391415444084490240', '1086246253819613274'].includes(context?.userId);
     const isTest = process.env.INSTANCE_ROLE === 'test';
 

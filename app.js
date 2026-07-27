@@ -953,7 +953,9 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   const safariFeatureRow = new ActionRowBuilder().addComponents(safariFeatureButtons);
 
   // 💎 Advanced row (+ Setup, moved from Tools menu — red until onboarding complete, else grey)
+  // ⚠️ Premium (Reece-only mockup) fills the row to 5/5 and the menu to 40/40 components worst-case — the next addition throws for Reece first
   const advancedFeaturesButtons = [
+    ...(['391415444084490240', '1086246253819613274'].includes(userId) ? [new ButtonBuilder().setCustomId('castbot_premium').setLabel('CastBot Premium').setStyle(ButtonStyle.Primary).setEmoji('⭐')] : []),
     new ButtonBuilder().setCustomId('prod_donate').setLabel('Donate').setStyle(ButtonStyle.Secondary).setEmoji('☕'),
     new ButtonBuilder().setCustomId('castbot_settings').setLabel('Settings').setStyle(ButtonStyle.Secondary).setEmoji('⚙️'),
     new ButtonBuilder().setCustomId('castbot_tools').setLabel('Tools').setStyle(ButtonStyle.Secondary).setEmoji('🪛'),
@@ -7636,20 +7638,17 @@ To fix this:
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         ephemeral: true,
-        handler: async (context) => {
-          console.log(`🔍 START: prod_setup - user ${context.userId}`);
-
-          // Create setup menu using MenuBuilder
-          const setupContainer = await MenuBuilder.create('setup_menu', context);
-
-          const { countComponents } = await import('./utils.js');
-          countComponents([setupContainer], { verbosity: "full", label: "Tools Menu (setup_menu)" });
-
-          return {
-            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL (admin UI)
-            components: [setupContainer]
-          };
-        }
+        handler: async (context) => MenuBuilder.buildMenuResponse('setup_menu', context, 'Tools Menu (setup_menu)')
+      })(req, res, client);
+    } else if (custom_id === 'castbot_premium') {
+      // ⭐ Premium mockup (Reece-only Tools clone) — gate BEFORE factory (see reeces_stuff): prod menu can be public via viral_menu
+      if (!['391415444084490240', '1086246253819613274'].includes(req.body.member?.user?.id)) return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Access denied.', flags: InteractionResponseFlags.EPHEMERAL } });
+      return ButtonHandlerFactory.create({
+        id: 'castbot_premium',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        ephemeral: true,
+        handler: async (context) => MenuBuilder.buildMenuResponse('premium_menu', context, 'Premium Menu (premium_menu)')
       })(req, res, client);
     } else if (custom_id === 'scheduled_jobs_dashboard') {
       // Guild-wide scheduled jobs dashboard (Tools → Utilities)

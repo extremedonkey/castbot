@@ -1184,6 +1184,15 @@ export const BUTTON_REGISTRY = {
     category: 'admin',
     menu: 'setup_menu'
   },
+  'castbot_premium': {
+    label: 'CastBot Premium',
+    description: 'Premium menu mockup — Reece-only clone of Tools for independent iteration',
+    emoji: '⭐',
+    style: 'Primary',
+    category: 'admin',
+    menu: 'premium_menu',
+    restrictedUser: '391415444084490240' // documentation-only (RaP 0900) — real gate is pre-factory in app.js
+  },
   'setup_castbot': {
     label: 'Run Setup',
     description: 'Execute CastBot setup - creates pronoun and timezone roles. Appears in the Setup Wizard (Run Setup, disabled once complete) and Tools → Utilities (Re-Run Setup, always enabled for refreshing old role regimes)',
