@@ -12,6 +12,7 @@ import {
     loadPlayerData
 } from './storage.js';
 import { capitalize, countComponents } from './utils.js';
+import { getBotEmoji } from './botEmojis.js';
 import { sortCastlistMembers, sortVanityRolesForDisplay } from './castlistSorter.js';
 import { castlistManager } from './castlistManager.js';
 import { parseTextEmoji } from './utils/emojiUtils.js';
@@ -492,11 +493,9 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
             {
                 type: 2, // Button
                 style: 5, // Link style
-                label: "+Add to your ORG",
+                label: "Install CastBot",
                 url: `https://discord.com/oauth2/authorize?client_id=${process.env.APP_ID}&permissions=2684878912&integration_type=0&scope=bot+applications.commands`,
-                emoji: {
-                    name: "⬇️"
-                }
+                emoji: getBotEmoji('cb_blue') || { name: "⬇️" }
             }
         ]
     };
