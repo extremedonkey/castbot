@@ -6,12 +6,25 @@
 
 import os from 'os';
 import v8 from 'v8';
+import fs from 'fs';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { monitorEventLoopDelay } from 'perf_hooks';
 import { getBotEmoji } from '../../botEmojis.js';
 import { getRestartHistory } from './restartTracker.js';
 
 const execAsync = promisify(exec);
+
+// Armed once at module load (bot boot):
+// - Event-loop delay histogram — the freeze detector. Incident 08's box served nothing for
+//   94 minutes while PM2 said "online"; loop lag is the in-process signal that catches that
+//   class while it's still degradation, not death. Reset after each report so readings cover
+//   the window since the last check.
+// - Heap baseline — drift rate (MB/h) is the ceiling predictor from incident 06 (~13MB/h
+//   under load → 320MB cap in 17h). Measured from boot, reported with an ETA to 85% of limit.
+const loopDelay = monitorEventLoopDelay({ resolution: 20 });
+loopDelay.enable();
+const heapBaseline = { mb: process.memoryUsage().heapUsed / 1048576, at: Date.now() };
 
 // Detect environment for report title + webhook name. Three-way, matching the canonical
 // pattern in scripts/notify-restart.js — the always-on test box (castbot-blue) sets
@@ -118,6 +131,29 @@ export class HealthMonitor {
       metrics.heapPercent = Math.round((memUsage.heapUsed / heapStats.heap_size_limit) * 100);
       metrics.rss = Math.round(memUsage.rss / 1048576);
 
+      // Event-loop lag since the last check (ns → ms). Reset so each report is a window reading.
+      metrics.loopP50 = Math.round(loopDelay.percentile(50) / 1e6);
+      metrics.loopP99 = Math.round(loopDelay.percentile(99) / 1e6);
+      loopDelay.reset();
+
+      // Heap drift since boot + ETA to 85% of the V8 limit at the current rate.
+      // Needs ≥30 min of uptime to mean anything; ETA only shown while drift is real (>0.5MB/h).
+      const hoursUp = (Date.now() - heapBaseline.at) / 3600000;
+      if (hoursUp >= 0.5) {
+        metrics.driftMbPerHour = Math.round(((metrics.heapUsed - heapBaseline.mb) / hoursUp) * 10) / 10;
+        if (metrics.driftMbPerHour > 0.5) {
+          metrics.ceilingEtaHours = Math.round((0.85 * metrics.heapLimit - metrics.heapUsed) / metrics.driftMbPerHour);
+        }
+      }
+
+      // Unplanned restarts in the last 24h — the stability signal. (The lifetime PM2 counter
+      // only ever climbs, so scoring it degrades any long-lived box toward 0 for no reason.)
+      try {
+        const history = await getRestartHistory(20);
+        const dayAgo = Date.now() - 86400000;
+        metrics.recentUnplanned = history.filter(r => r.timestamp > dayAgo && !r.planned).length;
+      } catch { metrics.recentUnplanned = 0; }
+
       // CPU usage (simplified, works everywhere)
       const cpuUsage = process.cpuUsage();
       metrics.cpu = Math.round(cpuUsage.system / 1000000);
@@ -180,6 +216,20 @@ export class HealthMonitor {
       const loadAvg = os.loadavg();
       metrics.loadAverage = loadAvg.map(l => l.toFixed(2)).join(', ');
 
+      // Swap (Linux only; null elsewhere) — the box-thrash early warning. Incident 08's freeze
+      // was ~495MB of swap in use on a 447MB box; on the 2GB box sustained swap use is the
+      // "something is wrong" tripwire (see ProdBoxMigration.md swap decision).
+      try {
+        const meminfo = fs.readFileSync('/proc/meminfo', 'utf8');
+        const kb = (label) => parseInt(meminfo.match(new RegExp(`${label}:\\s+(\\d+)`))?.[1] ?? 'NaN');
+        const swapTotal = kb('SwapTotal') / 1024;
+        const swapFree = kb('SwapFree') / 1024;
+        if (Number.isFinite(swapTotal) && Number.isFinite(swapFree)) {
+          metrics.swapTotal = Math.round(swapTotal);
+          metrics.swapUsed = Math.round(swapTotal - swapFree);
+        }
+      } catch { /* non-Linux dev — leave undefined, renders n/a */ }
+
       // Try to get disk usage (may fail in some environments)
       try {
         const { stdout } = await execAsync('df -h / | tail -1');
@@ -215,26 +265,45 @@ export class HealthMonitor {
     };
 
     try {
-      // Memory health
-      const memory = metrics.bot.memory || 0;
-      if (memory < 150) scores.memory = 100;
-      else if (memory < 200) scores.memory = 75;
-      else if (memory < 250) scores.memory = 25;
+      // Memory health — self-calibrating: score the V8 heap against ITS OWN limit (the true
+      // OOM predictor), never absolute MB. The old 150/200/250MB RSS tiers were sized for the
+      // retired 512MB box and scored the healthy 2GB box 0/100 (post-migration, 2026-07-28).
+      const heapPct = metrics.bot.heapPercent ?? 0;
+      if (heapPct < 50) scores.memory = 100;
+      else if (heapPct < 70) scores.memory = 75;
+      else if (heapPct < 85) scores.memory = 40;
       else scores.memory = 0;
+      // Box-level pressure caps the score regardless of heap health:
+      if ((metrics.system.memoryPercent || 0) > 90) scores.memory = Math.min(scores.memory, 50);
+      const swapUsed = metrics.system.swapUsed;
+      if (Number.isFinite(swapUsed)) {
+        if (swapUsed > 300) scores.memory = 0;                                // incident-08 territory
+        else if (swapUsed > 100) scores.memory = Math.min(scores.memory, 40); // early warning
+      }
 
-      // Performance health
+      // Performance health — CPU plus event-loop responsiveness (a starved loop is the real
+      // "prod is down while PM2 says online" failure mode).
       const cpu = metrics.bot.cpu || 0;
       if (cpu < 5) scores.performance = 100;
       else if (cpu < 20) scores.performance = 75;
       else if (cpu < 50) scores.performance = 50;
       else scores.performance = 0;
+      const loopP99 = metrics.bot.loopP99;
+      if (Number.isFinite(loopP99)) {
+        if (loopP99 > 1000) scores.performance = 0;
+        else if (loopP99 > 250) scores.performance = Math.min(scores.performance, 50);
+        else if (loopP99 > 100) scores.performance = Math.min(scores.performance, 75);
+      }
 
-      // Stability health
-      const restarts = metrics.bot.restarts || 0;
-      if (restarts < 15) scores.stability = 100;
-      else if (restarts < 20) scores.stability = 50;
-      else if (restarts < 25) scores.stability = 25;
+      // Stability health — UNPLANNED restarts in the last 24h. (The lifetime PM2 counter only
+      // climbs; scoring it punished long-lived boxes and ignored planned 🌙 restarts.)
+      const unplanned = metrics.bot.recentUnplanned ?? 0;
+      if (unplanned === 0) scores.stability = 100;
+      else if (unplanned === 1) scores.stability = 75;
+      else if (unplanned === 2) scores.stability = 50;
+      else if (unplanned === 3) scores.stability = 25;
       else scores.stability = 0;
+      if (metrics.bot.status !== 'online') scores.stability = 0;
 
       // Overall (weighted average)
       scores.overall = Math.round(
@@ -269,19 +338,37 @@ export class HealthMonitor {
       healthColor = 0xe74c3c;
     }
 
-    // Check for alerts
+    // Check for alerts — every threshold here maps to a documented failure mode:
+    // heap % → incident 03/06 (V8 ceiling); swap → incident 08 (box thrash); loop lag →
+    // incident 06/08 (frozen loop behind an "online" PM2); unplanned restarts → crash loops.
     const alerts = [];
-    if (metrics.bot.memory > 250) {
-      alerts.push('🔴 **CRITICAL**: Bot memory exceeds 250MB');
-    }
     if (metrics.bot.status !== 'online') {
       alerts.push('🔴 **CRITICAL**: Bot is offline');
     }
-    if (metrics.system.memoryPercent > 85) {
-      alerts.push('🟠 **WARNING**: System memory above 85%');
+    if ((metrics.bot.heapPercent ?? 0) >= 85) {
+      alerts.push(`🔴 **CRITICAL**: Heap at ${metrics.bot.heapPercent}% of V8 limit — OOM imminent (incident 03/06 class)`);
+    } else if ((metrics.bot.heapPercent ?? 0) >= 70) {
+      alerts.push(`🟠 **WARNING**: Heap at ${metrics.bot.heapPercent}% of V8 limit`);
     }
-    if (metrics.bot.restarts > 20) {
-      alerts.push('🟠 **WARNING**: High restart count');
+    const swapUsed = metrics.system.swapUsed;
+    if (Number.isFinite(swapUsed) && swapUsed > 300) {
+      alerts.push(`🔴 **CRITICAL**: ${swapUsed}MB of swap in use — box is thrashing (incident 08 class)`);
+    } else if (Number.isFinite(swapUsed) && swapUsed > 100) {
+      alerts.push(`🟠 **WARNING**: ${swapUsed}MB of swap in use — memory pressure building`);
+    }
+    if (Number.isFinite(metrics.bot.loopP99) && metrics.bot.loopP99 > 1000) {
+      alerts.push(`🔴 **CRITICAL**: Event loop stalling (p99 ${metrics.bot.loopP99}ms) — interactions will time out`);
+    } else if (Number.isFinite(metrics.bot.loopP99) && metrics.bot.loopP99 > 250) {
+      alerts.push(`🟠 **WARNING**: Event loop lag elevated (p99 ${metrics.bot.loopP99}ms)`);
+    }
+    if ((metrics.system.memoryPercent || 0) > 90) {
+      alerts.push('🟠 **WARNING**: System memory above 90%');
+    }
+    if ((metrics.bot.recentUnplanned ?? 0) >= 3) {
+      alerts.push(`🟠 **WARNING**: ${metrics.bot.recentUnplanned} unplanned restarts in 24h — possible crash loop`);
+    }
+    if (Number.isFinite(metrics.bot.ceilingEtaHours) && metrics.bot.ceilingEtaHours < 24) {
+      alerts.push(`🟠 **WARNING**: Heap drift reaches 85% of limit in ~${metrics.bot.ceilingEtaHours}h at current rate`);
     }
 
     return {
@@ -290,6 +377,19 @@ export class HealthMonitor {
       alerts,
       content: await this.buildDiscordContent(metrics, scores, healthStatus, alerts)
     };
+  }
+
+  /**
+   * Drift line: heap growth rate since boot + ETA to 85% of the V8 limit.
+   * "warming up" under 30m uptime (rate meaningless), "stable" when drift ≤0.5MB/h.
+   */
+  formatDrift(bot) {
+    if (!Number.isFinite(bot.driftMbPerHour)) return 'warming up (<30m uptime)';
+    if (bot.driftMbPerHour <= 0.5) return `${bot.driftMbPerHour >= 0 ? '+' : ''}${bot.driftMbPerHour}MB/h (stable)`;
+    const eta = Number.isFinite(bot.ceilingEtaHours)
+      ? (bot.ceilingEtaHours > 168 ? ' (ceiling >1 week away)' : ` → 85% ceiling in ~${bot.ceilingEtaHours}h`)
+      : '';
+    return `+${bot.driftMbPerHour}MB/h${eta}`;
   }
 
   /**
@@ -314,12 +414,12 @@ export class HealthMonitor {
       { type: 14 },
       {
         type: 10,
-        content: `## 🤖 Bot Metrics\n\`\`\`\nMemory:   ${metrics.bot.memory}MB (RSS)\nHeap:     ${metrics.bot.heapUsed ?? '?'}/${metrics.bot.heapLimit ?? '?'}MB (${metrics.bot.heapPercent ?? '?'}% of limit)\nCPU:      ${metrics.bot.cpu}%\nUptime:   ${metrics.bot.uptime}\nRestarts: ${metrics.bot.restarts || 0}\nStatus:   ${metrics.bot.status === 'online' ? '🟢 Online' : '🔴 ' + metrics.bot.status}\n\`\`\``
+        content: `## 🤖 Bot Metrics\n\`\`\`\nHeap:     ${metrics.bot.heapUsed ?? '?'}/${metrics.bot.heapLimit ?? '?'}MB (${metrics.bot.heapPercent ?? '?'}% of limit)\nRSS:      ${metrics.bot.memory}MB\nDrift:    ${this.formatDrift(metrics.bot)}\nLoop lag: ${Number.isFinite(metrics.bot.loopP99) ? `p50 ${metrics.bot.loopP50}ms · p99 ${metrics.bot.loopP99}ms` : 'n/a'}\nCPU:      ${metrics.bot.cpu}%\nUptime:   ${metrics.bot.uptime}\nRestarts: ${metrics.bot.restarts || 0} lifetime · ${metrics.bot.recentUnplanned ?? 0} unplanned in 24h\nStatus:   ${metrics.bot.status === 'online' ? '🟢 Online' : '🔴 ' + metrics.bot.status}\n\`\`\``
       },
       { type: 14 },
       {
         type: 10,
-        content: `## 🖥️ System Resources\n\`\`\`\nMemory: ${metrics.system.memoryPercent}% (${metrics.system.memoryUsed}MB/${metrics.system.memoryTotal}MB)\nDisk:   ${metrics.system.diskPercent}% (${metrics.system.diskUsed}/${metrics.system.diskTotal})\nLoad:   ${metrics.system.loadAverage}\n\`\`\``
+        content: `## 🖥️ System Resources\n\`\`\`\nMemory: ${metrics.system.memoryPercent}% (${metrics.system.memoryUsed}MB/${metrics.system.memoryTotal}MB)\nSwap:   ${Number.isFinite(metrics.system.swapUsed) ? `${metrics.system.swapUsed}MB/${metrics.system.swapTotal}MB${metrics.system.swapUsed === 0 ? ' ✓' : ''}` : 'n/a'}\nDisk:   ${metrics.system.diskPercent}% (${metrics.system.diskUsed}/${metrics.system.diskTotal})\nLoad:   ${metrics.system.loadAverage}\n\`\`\``
       },
       { type: 14 },
       {
@@ -342,10 +442,7 @@ export class HealthMonitor {
     try {
       const restarts = await getRestartHistory(5);
       if (restarts.length > 0) {
-        const lines = restarts.map((r, i) => {
-          const d = new Date(r.timestamp);
-          const gmt8 = new Date(d.getTime() + 8 * 3600000);
-          const dateStr = gmt8.toISOString().replace('T', ' ').slice(0, 19);
+        const lines = restarts.map((r) => {
           const unixSec = Math.floor(r.timestamp / 1000);
           return `<t:${unixSec}:f> — <t:${unixSec}:R>${r.planned ? ' 🌙 planned' : ''}`;
         });
