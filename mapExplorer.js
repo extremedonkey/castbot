@@ -1874,38 +1874,50 @@ export function generateMultiColorLegend(sortedItems, itemColorMap, blacklistedC
     legendLines.push('🟥 Blacklisted (none configured)');
   }
 
-  // Items with unique colors (first 4) — include coordinates
+  // Coordinates listed on 2+ items are multi-key doors: players need ALL of them
+  const coordItemCount = new Map();
+  sortedItems.forEach(item => {
+    (item.coordinates || []).forEach(coord => {
+      coordItemCount.set(coord, (coordItemCount.get(coord) || 0) + 1);
+    });
+  });
+
   let hasNonBlacklistedCoords = false;
+  let hasMultiKeyCoords = false;
+  const formatCoords = (coords) => coords.map(coord => {
+    let formatted = coord;
+    if (!blacklistedCoords.includes(coord)) {
+      hasNonBlacklistedCoords = true;
+      formatted += '¹';
+    }
+    if (coordItemCount.get(coord) > 1) {
+      hasMultiKeyCoords = true;
+      formatted += '²';
+    }
+    return formatted;
+  }).join(', ');
+
+  // Items with unique colors (first 4) — include coordinates
   sortedItems.slice(0, 4).forEach(item => {
     const color = itemColorMap.get(item.id);
-    const coords = item.coordinates || [];
-    const formattedCoords = coords.map(coord => {
-      if (!blacklistedCoords.includes(coord)) {
-        hasNonBlacklistedCoords = true;
-        return `${coord}¹`;
-      }
-      return coord;
-    }).join(', ');
-    legendLines.push(`${color.emoji} ${item.emoji} ${item.name}: ${formattedCoords}`);
+    legendLines.push(`${color.emoji} ${item.emoji} ${item.name}: ${formatCoords(item.coordinates || [])}`);
   });
 
   // Overflow items (5+) — each gets its own brown row
   sortedItems.slice(4).forEach(item => {
-    const coords = item.coordinates || [];
-    const formattedCoords = coords.map(coord => {
-      if (!blacklistedCoords.includes(coord)) {
-        hasNonBlacklistedCoords = true;
-        return `${coord}¹`;
-      }
-      return coord;
-    }).join(', ');
-    legendLines.push(`🟫 ${item.emoji} ${item.name}: ${formattedCoords}`);
+    legendLines.push(`🟫 ${item.emoji} ${item.name}: ${formatCoords(item.coordinates || [])}`);
   });
 
   legendLines.push('🔳 Normal access (no overlay)');
 
-  if (hasNonBlacklistedCoords) {
-    legendLines.push('', '¹ Add to Blacklist or players can access without the item');
+  if (hasNonBlacklistedCoords || hasMultiKeyCoords) {
+    legendLines.push('');
+    if (hasNonBlacklistedCoords) {
+      legendLines.push('¹ Add to Blacklist or players can access without the item');
+    }
+    if (hasMultiKeyCoords) {
+      legendLines.push('² On multiple items — players need ALL of them to enter');
+    }
   }
 
   return legendLines.join('\n');

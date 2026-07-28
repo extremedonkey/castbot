@@ -62,6 +62,11 @@ These are the hard edges. A design that violates them cannot be built as written
   nothing). You need both. Holding **1** of the item is enough (quantity doesn't matter), and the
   unlock applies to **every** player who holds it (it's not per-player-customised). And remember: the
   unlocked cell must still be **adjacent** to somewhere the player can already reach.
+  **Multi-key doors are native (AND):** if the same cell is on *several* items' Reverse Blacklists,
+  a player must hold **all** of those items to enter — holding a subset leaves the door locked, with
+  no hint about what's missing. So never reuse a cell across two "alternative" keys expecting
+  either-or; a cell shared between items always means *all of them required*. "Three of the *same*
+  key" is still impossible (quantity is binary) — use crafting or an Action condition for that.
 
 **Actions / interactions**
 - An Action runs **at most 6 outcomes**. Action text ≤ 2000 chars. ≤ 100 Actions per server.
@@ -223,6 +228,7 @@ Map common adventure tropes (what a creative brief will say) → CastBot mechani
 | The brief says… | Build it as… |
 |---|---|
 | "Locked door / gated room; need the Key" | **Blacklist** the cells behind it + put those cells on the Key item's **Reverse Blacklist**. (Cell must be adjacent to reach.) |
+| "Door needs the Red Key AND the Blue Key (multi-key vault)" | **Blacklist** the cells + put them on **every** key's **Reverse Blacklist** — a cell shared across items requires ALL of them held (AND, not either-or). |
 | "A new area opens up after X happens" | The X-Action gives a **flag item** whose Reverse Blacklist covers the new cells. |
 | "Search the barrel / look under the newspaper → find an item" | A **Button Action** on that cell, outcome **Give Item**, **usage limit: once per player** (so it can't be farmed). |
 | "Talk to the NPC → get a hint" | A **Button Action**, outcome **Display Text**. Pure flavour NPCs ("bartender refuses") are just display text, no mechanic. |

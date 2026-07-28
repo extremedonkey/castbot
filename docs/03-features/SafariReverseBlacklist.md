@@ -4,9 +4,11 @@
 
 The Reverse Blacklist feature allows specific items to grant players access to normally blacklisted (restricted) coordinates on the Safari map. This creates strategic gameplay where items like boats, bridges, or keys can unlock previously inaccessible areas.
 
-**Status**: ✅ **IMPLEMENTED** - Deployed to production October 2025
+**Status**: ✅ **IMPLEMENTED** - Deployed to production October 2025. **Semantics changed to AND-across-items July 2026** (see Deployment History).
 
 **Example Use Case**: Deep water cells (A1-G1) are blacklisted, but holding a "Large Boat" item allows navigation through these coordinates.
+
+**🔑 AND Semantics (multi-key doors)**: A coordinate unlocks only when the player holds **every** item whose reverse blacklist lists it. One item listing a cell = classic single-key door. Two items listing the same cell = a door requiring **both** keys — holding just one leaves it locked, with no player-facing cue (identical to a plain blacklisted cell). Quantity remains binary (1 copy = 100 copies). Before July 2026 this was a union (any one item unlocked the cell); no way to express "all keys required" existed.
 
 **Related Features**:
 - [Map Blacklist Overlay](MapBlacklistOverlay.md) - Visual indicators for blacklisted/unlocked cells in Map Explorer
@@ -142,13 +144,53 @@ if (move.blacklisted) {
 - Empty inventory fast-path optimization
 - No deferred flag parameter needed (handled by ButtonHandlerFactory)
 
-#### 3.2 Reverse Blacklist Coverage Function ✅ AS-BUILT
+#### 3.2 Reverse Blacklist Coverage Function ✅ AS-BUILT (AND semantics, July 2026)
 
-**Implementation**: mapMovement.js:631-670
+**Implementation**: mapMovement.js — `computeReverseBlacklistCoverage` (pure, exported, unit-tested in tests/mapMovement.test.js) + `getPlayerReverseBlacklistCoverage` (async wrapper that loads inventory/items)
 
-**Critical Bug Fix** (mapMovement.js:658-670): Inventory structure is `{quantity, numAttacksAvailable}`, not direct numbers
+**Critical Bug Fix**: Inventory structure is `{quantity, numAttacksAvailable}`, not direct numbers
 
 ```javascript
+// Pure AND-semantics coverage. A coordinate unlocks only when the player holds EVERY
+// item whose reverseBlacklist lists it (qty >= 1 each; quantity beyond 1 is ignored).
+export function computeReverseBlacklistCoverage(inventory, items) {
+    const heldItemIds = new Set();
+    for (const [itemId, itemData] of Object.entries(inventory)) {
+        // Handle both old format (direct number) and new format (object with quantity property)
+        const quantity = typeof itemData === 'number' ? itemData : (itemData?.quantity || 0);
+        if (quantity > 0) {
+            heldItemIds.add(itemId);
+        }
+    }
+    if (heldItemIds.size === 0) {
+        return [];
+    }
+
+    // coordinate -> every itemId that lists it (ALL are required to unlock)
+    const requiredByCoord = new Map();
+    for (const [itemId, item] of Object.entries(items)) {
+        if (Array.isArray(item?.reverseBlacklist)) {
+            for (const coord of item.reverseBlacklist) {
+                if (!requiredByCoord.has(coord)) {
+                    requiredByCoord.set(coord, []);
+                }
+                requiredByCoord.get(coord).push(itemId);
+            }
+        }
+    }
+
+    const unlockedCoordinates = [];
+    for (const [coord, requiredIds] of requiredByCoord) {
+        if (requiredIds.every(id => heldItemIds.has(id))) {
+            unlockedCoordinates.push(coord);
+        } else if (requiredIds.some(id => heldItemIds.has(id))) {
+            const missing = requiredIds.filter(id => !heldItemIds.has(id));
+            console.log(`🔒 ${coord} stays locked: requires ALL of [${requiredIds.join(', ')}], missing [${missing.join(', ')}]`);
+        }
+    }
+    return unlockedCoordinates;
+}
+
 export async function getPlayerReverseBlacklistCoverage(guildId, userId) {
     const { loadPlayerData } = await import('./storage.js');
     const playerData = await loadPlayerData();
@@ -156,39 +198,23 @@ export async function getPlayerReverseBlacklistCoverage(guildId, userId) {
 
     // Fast-path: Empty inventory = no unlocks
     if (Object.keys(inventory).length === 0) {
-        console.log(`⚡ Fast-path: Player ${userId} has empty inventory, no reverse blacklist coverage`);
         return [];
     }
 
     const { loadSafariContent } = await import('./safariManager.js');
     const safariData = await loadSafariContent();
     const items = safariData[guildId]?.items || {};
-    const unlockedCoordinates = new Set();
 
-    // Check each inventory item for reverse blacklist
-    for (const [itemId, itemData] of Object.entries(inventory)) {
-        // Handle both old format (direct number) and new format (object with quantity property)
-        const quantity = typeof itemData === 'number' ? itemData : (itemData?.quantity || 0);
-
-        // Only items with quantity > 0 grant access
-        if (quantity > 0) {
-            const item = items[itemId];
-            if (item?.reverseBlacklist && Array.isArray(item.reverseBlacklist)) {
-                console.log(`🔓 Player has ${quantity}x ${item.name || itemId} unlocking: ${item.reverseBlacklist.join(', ')}`);
-                item.reverseBlacklist.forEach(coord => unlockedCoordinates.add(coord));
-            }
-        }
-    }
-
-    return Array.from(unlockedCoordinates);
+    return computeReverseBlacklistCoverage(inventory, items);
 }
 ```
 
 **Key Implementation Details**:
+- **AND across items**: iterates the guild's item *definitions* (not just the inventory) to build the per-coordinate required set, then unlocks only fully-held coordinates
 - **Inventory Structure Fix**: Handles `{quantity: 10, numAttacksAvailable: 0}` format
 - **Fast-path**: Returns immediately if inventory is empty (performance optimization)
-- **Set Usage**: Prevents duplicate coordinates from multiple items
-- **Quantity Check**: Only items with quantity > 0 grant access
+- **Quantity Check**: Binary — items with quantity > 0 count as held; extra copies are irrelevant
+- **Partial-hold logging**: cells locked because some-but-not-all required items are held log a `🔒` line naming the missing items (host debugging aid — players see nothing)
 
 #### 3.3 Movement Validation ✅ AS-BUILT
 
@@ -359,7 +385,7 @@ Consider caching reverse blacklist coverage per player:
 1. **Item Quantity Zero**: Ensure items with quantity 0 don't grant access
 2. **Invalid Coordinates**: Validate coordinate format during item configuration
 3. **Item Removal During Navigation**: Re-validate on actual movement
-4. **Multiple Items Same Coordinate**: Union of all unlocked coordinates
+4. **Multiple Items Same Coordinate**: ALL listing items required (AND) — this is the multi-key door mechanic, not an either-or
 5. **Performance with Large Inventories**: Use Set for O(1) lookups
 
 ## Security Considerations
@@ -379,6 +405,7 @@ Consider caching reverse blacklist coverage per player:
 
 ## Implementation Decisions
 
+0. **AND Across Items (July 2026)**: A cell listed on multiple items requires ALL of them held. Originally a union (any one item unlocked); flipped because hosts intuitively expect "both keys on this door = both keys required", and the union made multi-key doors impossible while AND still expresses single-key doors unchanged. At flip time no production guild had overlapping coordinates across items, so no live safari changed behavior. Locked-but-partially-held cells deliberately show NO player-facing cue (same grey 🚫 button as any blacklisted cell); Map Explorer's admin legend marks multi-key cells with ²
 1. **Item Stack Behavior**: Binary check - having 1 or 100 of an item provides the same unlock
 2. **Visual Feedback**: Green button color only, no label changes
 3. **UI Display**: Reverse blacklist info only shown in map admin and item configuration
@@ -399,6 +426,13 @@ Consider caching reverse blacklist coverage per player:
 2. **Performance**: Fast-path optimization for empty inventories
 3. **Security**: Server-side validation prevents client-side manipulation
 4. **Integration**: Seamlessly integrated with Map Blacklist Overlay feature
+
+### Semantics Change: Union → AND (2026-07-28)
+- **What**: A coordinate now unlocks only when the player holds EVERY item listing it (was: any one item)
+- **Why**: Multi-key doors ("needs Red Key AND Blue Key") were impossible; hosts assumed AND
+- **Migration risk**: None found — audited all production guilds at flip time; no coordinate appeared on more than one item's reverse blacklist
+- **Code**: `computeReverseBlacklistCoverage` extracted as a pure exported function in mapMovement.js, unit-tested in tests/mapMovement.test.js
+- **Admin UI**: Map Explorer legend marks multi-key cells with ² ("On multiple items — players need ALL of them to enter")
 
 ### Known Issues
 None reported as of production deployment.

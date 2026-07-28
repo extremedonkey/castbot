@@ -678,7 +678,50 @@ export async function getMapGridDimensions(guildId) {
     return { width, height };
 }
 
-// Get player's reverse blacklist coverage based on inventory items
+// Pure AND-semantics coverage. A coordinate unlocks only when the player holds EVERY
+// item whose reverseBlacklist lists it (qty >= 1 each; quantity beyond 1 is ignored).
+// One item listing a cell = single-key door (unchanged); two items listing the same
+// cell = a door needing both keys. A partially-held cell stays locked with no player-
+// facing cue — identical to a plain blacklisted cell.
+export function computeReverseBlacklistCoverage(inventory, items) {
+    const heldItemIds = new Set();
+    for (const [itemId, itemData] of Object.entries(inventory)) {
+        // Handle both old format (direct number) and new format (object with quantity property)
+        const quantity = typeof itemData === 'number' ? itemData : (itemData?.quantity || 0);
+        if (quantity > 0) {
+            heldItemIds.add(itemId);
+        }
+    }
+    if (heldItemIds.size === 0) {
+        return [];
+    }
+
+    // coordinate -> every itemId that lists it (ALL are required to unlock)
+    const requiredByCoord = new Map();
+    for (const [itemId, item] of Object.entries(items)) {
+        if (Array.isArray(item?.reverseBlacklist)) {
+            for (const coord of item.reverseBlacklist) {
+                if (!requiredByCoord.has(coord)) {
+                    requiredByCoord.set(coord, []);
+                }
+                requiredByCoord.get(coord).push(itemId);
+            }
+        }
+    }
+
+    const unlockedCoordinates = [];
+    for (const [coord, requiredIds] of requiredByCoord) {
+        if (requiredIds.every(id => heldItemIds.has(id))) {
+            unlockedCoordinates.push(coord);
+        } else if (requiredIds.some(id => heldItemIds.has(id))) {
+            const missing = requiredIds.filter(id => !heldItemIds.has(id));
+            console.log(`🔒 ${coord} stays locked: requires ALL of [${requiredIds.join(', ')}], missing [${missing.join(', ')}]`);
+        }
+    }
+    return unlockedCoordinates;
+}
+
+// Get player's reverse blacklist coverage based on inventory items (AND semantics)
 export async function getPlayerReverseBlacklistCoverage(guildId, userId) {
     const { loadPlayerData } = await import('./storage.js');
     const playerData = await loadPlayerData();
@@ -693,22 +736,5 @@ export async function getPlayerReverseBlacklistCoverage(guildId, userId) {
     const safariData = await loadSafariContent();
     const items = safariData[guildId]?.items || {};
 
-    const unlockedCoordinates = new Set();
-
-    // Check each inventory item for reverse blacklist
-    for (const [itemId, itemData] of Object.entries(inventory)) {
-        // Handle both old format (direct number) and new format (object with quantity property)
-        const quantity = typeof itemData === 'number' ? itemData : (itemData?.quantity || 0);
-
-        // Only items with quantity > 0 grant access
-        if (quantity > 0) {
-            const item = items[itemId];
-            if (item?.reverseBlacklist && Array.isArray(item.reverseBlacklist)) {
-                console.log(`🔓 Player has ${quantity}x ${item.name || itemId} unlocking: ${item.reverseBlacklist.join(', ')}`);
-                item.reverseBlacklist.forEach(coord => unlockedCoordinates.add(coord));
-            }
-        }
-    }
-
-    return Array.from(unlockedCoordinates);
+    return computeReverseBlacklistCoverage(inventory, items);
 }

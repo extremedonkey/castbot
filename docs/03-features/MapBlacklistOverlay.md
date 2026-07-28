@@ -110,7 +110,9 @@ sortedItems.forEach((item, index) => {
 
 ### Overlap Resolution Logic
 
-**Problem**: A single cell may be unlocked by multiple items. Which color should be drawn?
+**⚠️ Semantics note (July 2026)**: A cell listed on multiple items is a **multi-key door** — players need ALL of those items to enter (AND semantics, see [SafariReverseBlacklist.md](SafariReverseBlacklist.md)). The overlay still draws one color per cell (highest-priority item), so the color alone understates the requirement; the legend marks these cells with ² ("On multiple items — players need ALL of them to enter").
+
+**Problem**: A single cell may be covered by multiple items. Which color should be drawn?
 
 **Solution**: Draw the color of the **highest-priority item** (earliest in sorted order).
 

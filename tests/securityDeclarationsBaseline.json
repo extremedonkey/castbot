@@ -129,7 +129,6 @@
   "app.js::map_location_display",
   "app.js::map_player_locations_back",
   "app.js::moai_ask",
-  "app.js::moai_restart_dev",
   "app.js::moai_share",
   "app.js::modal_attr_edit",
   "app.js::modal_snowflake_calc",
