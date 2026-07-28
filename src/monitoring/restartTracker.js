@@ -10,7 +10,29 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const HISTORY_FILE = path.join(__dirname, '..', '..', 'restartHistory.json');
+const REASON_MARKER = path.join(__dirname, '..', '..', 'logs', 'restart-reason.json');
+const LEGACY_MARKER = path.join(__dirname, '..', '..', 'logs', 'planned-restart.json');
 const MAX_ENTRIES = 20;
+const MARKER_FRESH_MS = 10 * 60 * 1000;
+
+/**
+ * Restart types (the claimed-reason model): every deliberate restart initiator drops a
+ * marker via writeRestartMarker() before restarting; a boot that finds NO fresh marker is
+ * classified 'crash' — the restart nothing claimed is exactly the one you want flagged.
+ *   planned      🌙  scheduled 🌙 restart (restartScheduler)
+ *   deploy       📦  deploy pipelines (deploy-remote-wsl / win-restart / dev-restart / box-restart)
+ *   remediation  🐕  watchdog / Restart Prod button via remediate-castbot.sh
+ *   manual       🔁  Ultrathink panel Restart button
+ *   crash        💥  unclaimed (PM2 revived a dead process, or an untracked hand-restart)
+ */
+export async function writeRestartMarker(type) {
+  try {
+    await fs.mkdir(path.dirname(REASON_MARKER), { recursive: true });
+    await fs.writeFile(REASON_MARKER, JSON.stringify({ type, at: Date.now() }));
+  } catch (err) {
+    console.error('[RestartTracker] Failed to write restart marker:', err.message);
+  }
+}
 
 /**
  * Record a restart timestamp. Call once on bot startup.
@@ -27,17 +49,25 @@ export async function recordRestart() {
       }
     }
 
-    // If the RestartScheduler left a fresh planned-restart marker, label this
-    // entry so Ultrathink can tell planned restarts from crashes (RaP 0903)
-    let planned = false;
-    const markerPath = path.join(__dirname, '..', '..', 'logs', 'planned-restart.json');
-    try {
-      const marker = JSON.parse(await fs.readFile(markerPath, 'utf8'));
-      if (marker?.at && Date.now() - marker.at < 5 * 60 * 1000) planned = true;
-      await fs.unlink(markerPath);
-    } catch { /* no marker — normal (crash or manual restart) */ }
+    // Consume the typed reason marker (or the legacy planned-restart marker from
+    // pre-typed-scheduler code); stale markers (>10 min) are leftovers from a restart
+    // that never happened — ignore them so they can't mislabel a later crash.
+    let type = 'crash';
+    for (const [markerFile, legacyType] of [[REASON_MARKER, null], [LEGACY_MARKER, 'planned']]) {
+      try {
+        const marker = JSON.parse(await fs.readFile(markerFile, 'utf8'));
+        if (marker?.at && Date.now() - marker.at < MARKER_FRESH_MS) {
+          type = legacyType ?? marker.type ?? 'crash';
+        }
+        await fs.unlink(markerFile);
+        break;
+      } catch { /* marker absent — try next / default to crash */ }
+    }
 
-    history.push(planned ? { timestamp: Date.now(), planned: true } : { timestamp: Date.now() });
+    // planned:true kept alongside type for backward compat with older readers
+    history.push(type === 'planned'
+      ? { timestamp: Date.now(), planned: true, type }
+      : { timestamp: Date.now(), type });
 
     // Keep only the last MAX_ENTRIES
     if (history.length > MAX_ENTRIES) {

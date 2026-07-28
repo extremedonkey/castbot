@@ -140,6 +140,7 @@ if [ "$DEPLOY_TEST" = true ]; then
                 echo "  ⌨️  commands changed → deploy-commands"; npm run deploy-commands >/dev/null 2>&1
             fi
         fi
+        mkdir -p logs && printf "{\"type\":\"deploy\",\"at\":%s}" "$(date +%s%3N)" > logs/restart-reason.json
         pm2 restart castbot-pm >/dev/null
     '; then
         echo "✅ TEST deployed (castbot-blue)"

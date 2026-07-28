@@ -58,3 +58,75 @@ describe('Restart Tracker — History Trimming', () => {
     assert.equal(last2[1].timestamp, 2000);
   });
 });
+
+// ── Replicated from restartTracker.recordRestart type classification (keep in sync) ──
+// Claimed-reason model: a fresh marker types the restart; no fresh marker = 'crash'.
+function classifyRestart(markers, now = 1_000_000) {
+  const FRESH_MS = 10 * 60 * 1000;
+  for (const [marker, legacyType] of markers) {
+    if (!marker) continue;
+    if (marker.at && now - marker.at < FRESH_MS) return legacyType ?? marker.type ?? 'crash';
+    return 'crash'; // stale marker consumed but ignored
+  }
+  return 'crash';
+}
+
+describe('Restart Tracker — typed reason markers (claimed-reason model)', () => {
+  const now = 10 * 60 * 1000 + 1;
+
+  it('fresh typed markers classify correctly', () => {
+    for (const type of ['planned', 'deploy', 'remediation', 'manual']) {
+      assert.equal(classifyRestart([[{ type, at: now - 1000 }, null]], now), type);
+    }
+  });
+
+  it('no marker = crash (the restart nothing claimed)', () => {
+    assert.equal(classifyRestart([[null, null], [null, 'planned']], now), 'crash');
+  });
+
+  it('stale marker (>10min) = crash — leftovers from a restart that never happened', () => {
+    assert.equal(classifyRestart([[{ type: 'deploy', at: 0 }, null]], now), 'crash');
+  });
+
+  it('legacy planned-restart.json marker maps to planned', () => {
+    assert.equal(classifyRestart([[null, null], [{ at: now - 1000 }, 'planned']].filter(([m]) => m), now), 'planned');
+  });
+
+  it('typed marker without a type field defaults to crash, not undefined', () => {
+    assert.equal(classifyRestart([[{ at: now - 1000 }, null]], now), 'crash');
+  });
+});
+
+// ── Replicated from healthMonitor crashes24h counting (keep in sync) ──
+function countCrashes24h(history, now) {
+  const dayAgo = now - 86400000;
+  return history.filter(r => r.timestamp > dayAgo && (r.type ? r.type === 'crash' : !r.planned)).length;
+}
+
+describe('Restart Tracker — crash counting for stability score', () => {
+  const now = 100 * 86400000;
+
+  it('typed deploys/planned/manual/remediation do not count as crashes', () => {
+    const history = [
+      { timestamp: now - 1000, type: 'deploy' },
+      { timestamp: now - 2000, type: 'planned', planned: true },
+      { timestamp: now - 3000, type: 'manual' },
+      { timestamp: now - 4000, type: 'remediation' },
+      { timestamp: now - 5000, type: 'crash' }
+    ];
+    assert.equal(countCrashes24h(history, now), 1);
+  });
+
+  it('legacy untyped entries fall back to !planned (conservative)', () => {
+    const history = [
+      { timestamp: now - 1000 },                    // legacy unplanned → counts
+      { timestamp: now - 2000, planned: true }      // legacy planned → does not
+    ];
+    assert.equal(countCrashes24h(history, now), 1);
+  });
+
+  it('entries older than 24h age out', () => {
+    const history = [{ timestamp: now - 86400001, type: 'crash' }];
+    assert.equal(countCrashes24h(history, now), 0);
+  });
+});

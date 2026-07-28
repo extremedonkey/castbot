@@ -40,7 +40,7 @@ describe('Health Monitor — environment label (getEnvName)', () => {
 
 // ── Replicated from src/monitoring/healthMonitor.calculateHealthScores (keep in sync) ──
 // Self-calibrating scoring introduced post-migration (2026-07-28): heap % of its own V8
-// limit, swap/system caps, loop-lag caps, unplanned-restarts-in-24h stability.
+// limit, swap/system caps, loop-lag caps, crash-restarts-in-24h stability (typed).
 function calculateHealthScores(metrics) {
   const scores = { memory: 100, performance: 100, stability: 100, overall: 100 };
 
@@ -68,7 +68,7 @@ function calculateHealthScores(metrics) {
     else if (loopP99 > 100) scores.performance = Math.min(scores.performance, 75);
   }
 
-  const unplanned = metrics.bot.recentUnplanned ?? 0;
+  const unplanned = metrics.bot.crashes24h ?? 0;
   if (unplanned === 0) scores.stability = 100;
   else if (unplanned === 1) scores.stability = 75;
   else if (unplanned === 2) scores.stability = 50;
@@ -81,7 +81,7 @@ function calculateHealthScores(metrics) {
 }
 
 const m = (bot = {}, system = {}) => ({
-  bot: { status: 'online', cpu: 1, heapPercent: 10, recentUnplanned: 0, ...bot },
+  bot: { status: 'online', cpu: 1, heapPercent: 10, crashes24h: 0, ...bot },
   system: { memoryPercent: 40, ...system }
 });
 
@@ -121,17 +121,17 @@ describe('Health Monitor — self-calibrating scores (post-migration)', () => {
     assert.equal(calculateHealthScores(m({ loopP99: 1500 })).performance, 0);
   });
 
-  it('stability counts UNPLANNED restarts in 24h, not the lifetime PM2 counter', () => {
+  it('stability counts CRASH restarts in 24h, not the lifetime PM2 counter', () => {
     // Old code: lifetime counter ≥25 → 0/100 forever. A box with 30 lifetime restarts but a
     // quiet day is healthy; a box with 4 crashes today is not.
-    assert.equal(calculateHealthScores(m({ restarts: 33, recentUnplanned: 0 })).stability, 100);
-    assert.equal(calculateHealthScores(m({ recentUnplanned: 1 })).stability, 75);
-    assert.equal(calculateHealthScores(m({ recentUnplanned: 2 })).stability, 50);
-    assert.equal(calculateHealthScores(m({ recentUnplanned: 4 })).stability, 0);
+    assert.equal(calculateHealthScores(m({ restarts: 33, crashes24h: 0 })).stability, 100);
+    assert.equal(calculateHealthScores(m({ crashes24h: 1 })).stability, 75);
+    assert.equal(calculateHealthScores(m({ crashes24h: 2 })).stability, 50);
+    assert.equal(calculateHealthScores(m({ crashes24h: 4 })).stability, 0);
   });
 
   it('offline status zeroes stability regardless of restart history', () => {
-    assert.equal(calculateHealthScores(m({ status: 'stopped', recentUnplanned: 0 })).stability, 0);
+    assert.equal(calculateHealthScores(m({ status: 'stopped', crashes24h: 0 })).stability, 0);
   });
 
   it('incident-06 replay: heap pinned at 98% of limit scores CRITICAL overall (<50)', () => {

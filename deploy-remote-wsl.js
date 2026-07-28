@@ -413,8 +413,8 @@ async function deployToProduction() {
             log('RISK: High - Atomic restart, bot must start successfully', 'risk-high');
             log('IMPACT: Brief downtime during restart, bot offline if startup fails', 'warning');
             await execSSH(
-                `cd ${REMOTE_PATH} && pm2 restart castbot-pm`,
-                'Restarting pm2 process',
+                `cd ${REMOTE_PATH} && mkdir -p logs && printf '{"type":"deploy","at":%s}' "$(date +%s%3N)" > logs/restart-reason.json && pm2 restart castbot-pm`,
+                'Restarting pm2 process (typed 📦 deploy marker)',
                 'risk-high'
             );
             

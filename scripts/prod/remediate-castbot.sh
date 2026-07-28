@@ -49,6 +49,9 @@ else
 fi
 
 # 2) Bot layer: restart Node. Plain restart preserves PM2 saved env (NODE_OPTIONS). No --update-env.
+#    Typed marker → Ultrathink labels this restart 🐕 watchdog (remediation) instead of 💥 crash.
+mkdir -p /opt/bitnami/projects/castbot/logs
+printf '{"type":"remediation","at":%s}' "$(date +%s%3N)" > /opt/bitnami/projects/castbot/logs/restart-reason.json
 echo "[bot] restarting castbot-pm"
 pm2 restart castbot-pm 2>&1 | tail -2
 pm2 save 2>&1 | tail -1

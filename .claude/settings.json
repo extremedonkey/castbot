@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(ssh -i ~/.ssh/castbot-key.pem -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new bitnami@13.238.148.170 \"cd /opt/bitnami/projects/castbot && git log --oneline -1 && git status --short | head -5\")",
-      "Bash(ssh -i ~/.ssh/castbot-key.pem bitnami@13.238.148.170 'node -e \" *)"
+      "Bash(ssh -i ~/.ssh/castbot-key.pem bitnami@13.238.148.170 'node -e \" *)",
+      "PowerShell(node scripts/dev/win-restart.js \"Fix calculateComponentsForTribe estimator: tribe overhead is 2 \\(Container + header TextDisplay\\), not 3 - matches actual render since header separator removal, so 8-player page estimate is 40 not 41\")"
     ]
   }
 }

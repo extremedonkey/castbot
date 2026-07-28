@@ -67,6 +67,7 @@ fi
 # 4. Restart the test bot
 echo ""
 echo "🔄 Restarting test bot (pm2 castbot-pm)..."
+mkdir -p logs && printf '{"type":"deploy","at":%s}' "$(date +%s%3N)" > logs/restart-reason.json
 pm2 restart castbot-pm >/dev/null
 echo "✅ TEST bot restarted (castbot-blue)"
 echo ""

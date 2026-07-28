@@ -14031,95 +14031,44 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'prod_ultrathink_monitor') {
-      // Ultrathink production health monitor (Components V2)
+      // Ultrathink health monitor — panel built in src/monitoring/healthPanelUI.js
       return ButtonHandlerFactory.create({
         id: 'prod_ultrathink_monitor',
         deferred: true,
         updateMessage: false,
         ephemeral: true,
         handler: async (context) => {
-          // Security check - only allow specific Discord ID
-          if (context.userId !== '391415444084490240') {
-            return {
-              content: '❌ Access denied. This feature is restricted.'
-            };
-          }
-
-          console.log('[🌈 Ultramonitor] Starting health check');
-
-          try {
-            // Import and get singleton health monitor
-            const { getHealthMonitor, getMonitoringState } = await import('./src/monitoring/healthMonitor.js');
-            const monitor = getHealthMonitor(context.client);
-
-            // Collect metrics
-            const metrics = await monitor.collectMetrics();
-            const scores = monitor.calculateHealthScores(metrics);
-            const formatted = await monitor.formatForDiscord(metrics, scores);
-
-            // Get monitoring status
-            const status = monitor.getStatus();
-
-            console.log(`[🌈 Ultramonitor] Health score: ${scores.overall}/100`);
-
-            // Build container components
-            const containerComponents = formatted.content;
-
-            // Add monitoring status if active
-            if (status.active) {
-              containerComponents.push(
-                { type: 14 },
-                {
-                  type: 10,
-                  content: `## ⏰ Scheduled Monitoring\n**Interval**: Every ${status.hours} hours\n**Next Check**: <t:${Math.floor(status.nextRun?.getTime() / 1000)}:R>`
-                }
-              );
-            }
-
-            // Add divider before buttons
-            containerComponents.push({
-              type: 14 // Separator
-            });
-
-            // Add back, refresh, and schedule buttons
-            const backButton = new ButtonBuilder()
-              .setCustomId('data_admin')
-              .setLabel('← Data')
-              .setStyle(ButtonStyle.Secondary);
-
-            const refreshButton = new ButtonBuilder()
-              .setCustomId('prod_ultrathink_monitor')
-              .setLabel('Refresh')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('🔄');
-
-            const scheduleButton = new ButtonBuilder()
-              .setCustomId('health_monitor_schedule')
-              .setLabel('Schedule')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('📅');
-
-            const actionRow = new ActionRowBuilder().addComponents(backButton, refreshButton, scheduleButton);
-            containerComponents.push(actionRow.toJSON());
-
-            console.log(`[🌈 Ultramonitor] Complete - score: ${scores.overall}/100`);
-
-            return {
-              flags: (1 << 15), // IS_COMPONENTS_V2
-              components: [{
-                type: 17, // Container
-                accent_color: formatted.healthColor,
-                components: containerComponents
-              }]
-            };
-
-          } catch (error) {
-            console.error('[🌈 Ultramonitor] Error:', error.message);
-            return {
-              content: `❌ **Error running health monitor:**\n\`\`\`\n${error.message}\n\`\`\`\nThis is likely a temporary issue. Please try again.`
-            };
-          }
+          if (context.userId !== '391415444084490240') return { content: '❌ Access denied. This feature is restricted.' };
+          const { buildUltramonitorPanel } = await import('./src/monitoring/healthPanelUI.js');
+          return buildUltramonitorPanel(context.client);
         }
+      })(req, res, client);
+    } else if (custom_id === 'health_restart_bot') {
+      // Self-restart confirm (this instance; typed 🔁 manual) — healthPanelUI.js
+      return ButtonHandlerFactory.create({
+        id: 'health_restart_bot',
+        ephemeral: true,
+        handler: async (context) => {
+          if (context.userId !== '391415444084490240') return { content: '❌ Access denied.', ephemeral: true };
+          const { buildRestartConfirm } = await import('./src/monitoring/healthPanelUI.js');
+          return buildRestartConfirm();
+        }
+      })(req, res, client);
+    } else if (custom_id === 'health_restart_bot_confirm') {
+      return ButtonHandlerFactory.create({
+        id: 'health_restart_bot_confirm',
+        updateMessage: true,
+        handler: async (context) => {
+          if (context.userId !== '391415444084490240') return { content: '❌ Access denied.', ephemeral: true };
+          const { performManualRestart } = await import('./src/monitoring/healthPanelUI.js');
+          return performManualRestart(context.userId);
+        }
+      })(req, res, client);
+    } else if (custom_id === 'health_restart_cancel') {
+      return ButtonHandlerFactory.create({
+        id: 'health_restart_cancel',
+        updateMessage: true,
+        handler: async () => (await import('./src/monitoring/healthPanelUI.js')).buildRestartCancelled()
       })(req, res, client);
     } else if (custom_id === 'health_monitor_schedule') {
       // Health monitor scheduling modal

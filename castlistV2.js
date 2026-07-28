@@ -32,8 +32,9 @@ function calculateComponentsForTribe(playerCount, includeSeparators = true) {
     // IMPORTANT: Discord DOES count accessories as separate components!
     const playerComponents = playerCount * 3; // Section + TextDisplay + Thumbnail(accessory) per player
     const separatorCount = includeSeparators ? Math.max(0, playerCount - 1) : 0;
-    // Tribe overhead: Container + Header Section + Separator after header = 3 components (install button moved)
-    const tribeOverhead = 3; // Container + Header Section + Separator
+    // Tribe overhead: Container + Header TextDisplay = 2 components
+    // (no separator after header — removed so an 8-player page lands exactly on the 40 limit)
+    const tribeOverhead = 2; // Container + Header TextDisplay
     const installOverhead = includeSeparators ? 3 : 2; // Separator(conditional) + Install ActionRow + Install Button
     const messageOverhead = 0; // No ad text - removed completely
     // Navigation: ActionRow (1) + 3 buttons (2 arrows + manage profile) = 4 components

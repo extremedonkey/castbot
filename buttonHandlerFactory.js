@@ -791,6 +791,31 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'analytics'
   },
+  'health_restart_bot': {
+    label: 'Restart',
+    description: 'Ultrathink panel self-restart (confirm screen) — graceful exit under PM2, typed 🔁 manual',
+    emoji: '🔁',
+    style: 'Danger',
+    parent: 'prod_ultrathink_monitor',
+    restrictedUser: '391415444084490240',
+    category: 'analytics'
+  },
+  'health_restart_bot_confirm': {
+    label: 'Confirm Restart',
+    description: 'Execute the Ultrathink self-restart (writes manual restart marker, exits under PM2)',
+    emoji: '⚠️',
+    style: 'Danger',
+    parent: 'health_restart_bot',
+    restrictedUser: '391415444084490240',
+    category: 'analytics'
+  },
+  'health_restart_cancel': {
+    label: 'Cancel',
+    description: 'Cancel the Ultrathink self-restart confirm screen',
+    style: 'Secondary',
+    parent: 'health_restart_bot',
+    category: 'analytics'
+  },
   'restart_scheduler': {
     label: 'Auto-Restart',
     description: 'Configure scheduled self-restarts (heap reset / OOM prevention)',

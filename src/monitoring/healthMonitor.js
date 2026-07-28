@@ -146,13 +146,17 @@ export class HealthMonitor {
         }
       }
 
-      // Unplanned restarts in the last 24h — the stability signal. (The lifetime PM2 counter
-      // only ever climbs, so scoring it degrades any long-lived box toward 0 for no reason.)
+      // CRASH restarts in the last 24h — the stability signal. Typed entries count only
+      // type='crash' (deploys/planned/manual/remediation are all claimed, deliberate restarts);
+      // legacy untyped entries fall back to !planned as a conservative default and age out of
+      // the 24h window naturally.
       try {
         const history = await getRestartHistory(20);
         const dayAgo = Date.now() - 86400000;
-        metrics.recentUnplanned = history.filter(r => r.timestamp > dayAgo && !r.planned).length;
-      } catch { metrics.recentUnplanned = 0; }
+        metrics.crashes24h = history.filter(r =>
+          r.timestamp > dayAgo && (r.type ? r.type === 'crash' : !r.planned)
+        ).length;
+      } catch { metrics.crashes24h = 0; }
 
       // CPU usage (simplified, works everywhere)
       const cpuUsage = process.cpuUsage();
@@ -295,13 +299,14 @@ export class HealthMonitor {
         else if (loopP99 > 100) scores.performance = Math.min(scores.performance, 75);
       }
 
-      // Stability health — UNPLANNED restarts in the last 24h. (The lifetime PM2 counter only
-      // climbs; scoring it punished long-lived boxes and ignored planned 🌙 restarts.)
-      const unplanned = metrics.bot.recentUnplanned ?? 0;
-      if (unplanned === 0) scores.stability = 100;
-      else if (unplanned === 1) scores.stability = 75;
-      else if (unplanned === 2) scores.stability = 50;
-      else if (unplanned === 3) scores.stability = 25;
+      // Stability health — CRASH restarts in the last 24h (typed; deploys/planned/manual are
+      // deliberate and don't count). The lifetime PM2 counter only climbs; scoring it punished
+      // long-lived boxes and ignored planned 🌙 restarts.
+      const crashes = metrics.bot.crashes24h ?? 0;
+      if (crashes === 0) scores.stability = 100;
+      else if (crashes === 1) scores.stability = 75;
+      else if (crashes === 2) scores.stability = 50;
+      else if (crashes === 3) scores.stability = 25;
       else scores.stability = 0;
       if (metrics.bot.status !== 'online') scores.stability = 0;
 
@@ -364,8 +369,8 @@ export class HealthMonitor {
     if ((metrics.system.memoryPercent || 0) > 90) {
       alerts.push('🟠 **WARNING**: System memory above 90%');
     }
-    if ((metrics.bot.recentUnplanned ?? 0) >= 3) {
-      alerts.push(`🟠 **WARNING**: ${metrics.bot.recentUnplanned} unplanned restarts in 24h — possible crash loop`);
+    if ((metrics.bot.crashes24h ?? 0) >= 3) {
+      alerts.push(`🟠 **WARNING**: ${metrics.bot.crashes24h} crash restarts in 24h — possible crash loop`);
     }
     if (Number.isFinite(metrics.bot.ceilingEtaHours) && metrics.bot.ceilingEtaHours < 24) {
       alerts.push(`🟠 **WARNING**: Heap drift reaches 85% of limit in ~${metrics.bot.ceilingEtaHours}h at current rate`);
@@ -378,6 +383,29 @@ export class HealthMonitor {
       content: await this.buildDiscordContent(metrics, scores, healthStatus, alerts)
     };
   }
+
+  /**
+   * Traffic lights — thresholds encode CastBot's documented failure envelope, not generic
+   * defaults: heap tiers match the scoring (incidents 03/06), swap tiers match the incident-08
+   * tripwire in ProdBoxMigration.md, disk is ANOMALY-based (working set is ~9GB; 35GB+ means
+   * something pathological like runaway logs/dumps — the temp/ incident ×30), load is vs cores.
+   */
+  lights = {
+    heap: (pct) => pct < 50 ? '🟢' : pct < 70 ? '🟠' : '🔴',
+    sysMem: (pct) => pct < 70 ? '🟢' : pct < 90 ? '🟠' : '🔴',
+    swap: (mb) => !Number.isFinite(mb) ? '' : mb < 100 ? '🟢' : mb <= 300 ? '🟠' : '🔴',
+    diskGb: (gb) => !Number.isFinite(gb) ? '' : gb < 20 ? '🟢' : gb < 35 ? '🟠' : '🔴',
+    load: (oneMin, cores) => oneMin < cores * 0.5 ? '🟢' : oneMin < cores ? '🟠' : '🔴',
+  };
+
+  /** Restart-type labels for the Last N Restarts list (see restartTracker.js type model). */
+  static RESTART_LABELS = {
+    planned: '🌙 planned',
+    deploy: '📦 deploy',
+    remediation: '🐕 watchdog',
+    manual: '🔁 manual',
+    crash: '💥 crash',
+  };
 
   /**
    * Drift line: heap growth rate since boot + ETA to 85% of the V8 limit.
@@ -414,17 +442,12 @@ export class HealthMonitor {
       { type: 14 },
       {
         type: 10,
-        content: `## 🤖 Bot Metrics\n\`\`\`\nHeap:     ${metrics.bot.heapUsed ?? '?'}/${metrics.bot.heapLimit ?? '?'}MB (${metrics.bot.heapPercent ?? '?'}% of limit)\nRSS:      ${metrics.bot.memory}MB\nDrift:    ${this.formatDrift(metrics.bot)}\nLoop lag: ${Number.isFinite(metrics.bot.loopP99) ? `p50 ${metrics.bot.loopP50}ms · p99 ${metrics.bot.loopP99}ms` : 'n/a'}\nCPU:      ${metrics.bot.cpu}%\nUptime:   ${metrics.bot.uptime}\nRestarts: ${metrics.bot.restarts || 0} lifetime · ${metrics.bot.recentUnplanned ?? 0} unplanned in 24h\nStatus:   ${metrics.bot.status === 'online' ? '🟢 Online' : '🔴 ' + metrics.bot.status}\n\`\`\``
+        content: `## 🤖 Bot Metrics\n\`\`\`\nHeap:     ${metrics.bot.heapUsed ?? '?'}MB/${metrics.bot.heapLimit ?? '?'}MB (${metrics.bot.heapPercent ?? '?'}%) ${this.lights.heap(metrics.bot.heapPercent ?? 0)}\nDrift:    ${this.formatDrift(metrics.bot)}\nLoop lag: ${Number.isFinite(metrics.bot.loopP99) ? `p50 ${metrics.bot.loopP50}ms · p99 ${metrics.bot.loopP99}ms` : 'n/a'}\nUptime:   ${metrics.bot.uptime}\n\`\`\``
       },
       { type: 14 },
       {
         type: 10,
-        content: `## 🖥️ System Resources\n\`\`\`\nMemory: ${metrics.system.memoryPercent}% (${metrics.system.memoryUsed}MB/${metrics.system.memoryTotal}MB)\nSwap:   ${Number.isFinite(metrics.system.swapUsed) ? `${metrics.system.swapUsed}MB/${metrics.system.swapTotal}MB${metrics.system.swapUsed === 0 ? ' ✓' : ''}` : 'n/a'}\nDisk:   ${metrics.system.diskPercent}% (${metrics.system.diskUsed}/${metrics.system.diskTotal})\nLoad:   ${metrics.system.loadAverage}\n\`\`\``
-      },
-      { type: 14 },
-      {
-        type: 10,
-        content: `## 📊 Health Scores\n\`\`\`\nMemory:      ${scores.memory}/100\nPerformance: ${scores.performance}/100\nStability:   ${scores.stability}/100\n\`\`\``
+        content: `## 🖥️ System Resources\n\`\`\`\nMemory: ${metrics.system.memoryUsed}MB/${metrics.system.memoryTotal}MB (${metrics.system.memoryPercent}%) ${this.lights.sysMem(metrics.system.memoryPercent || 0)}\nSwap:   ${Number.isFinite(metrics.system.swapUsed) ? `${metrics.system.swapUsed}MB/${metrics.system.swapTotal}MB ${this.lights.swap(metrics.system.swapUsed)}` : 'n/a'}\nDisk:   ${String(metrics.system.diskUsed).replace(/G$/, 'GB')}/${String(metrics.system.diskTotal).replace(/G$/, 'GB')} (${metrics.system.diskPercent}%) ${this.lights.diskGb(parseFloat(metrics.system.diskUsed))}\nLoad:   ${(os.loadavg()[0]).toFixed(2)}/${os.cpus().length}.0 cores (1m avg) ${this.lights.load(os.loadavg()[0], os.cpus().length)}\n\`\`\`\n-# Load = average processes wanting CPU; at ${os.cpus().length}.0 the box is saturated`
       }
     ];
 
@@ -438,13 +461,17 @@ export class HealthMonitor {
       );
     }
 
-    // Last 5 restarts in GMT+8
+    // Last 10 restarts, labeled by claimed type (unclaimed = 💥 crash; legacy untyped
+    // entries show only their planned flag rather than being falsely branded crashes)
     try {
-      const restarts = await getRestartHistory(5);
+      const restarts = await getRestartHistory(10);
       if (restarts.length > 0) {
         const lines = restarts.map((r) => {
           const unixSec = Math.floor(r.timestamp / 1000);
-          return `<t:${unixSec}:f> — <t:${unixSec}:R>${r.planned ? ' 🌙 planned' : ''}`;
+          const label = r.type
+            ? ` ${HealthMonitor.RESTART_LABELS[r.type] ?? r.type}`
+            : (r.planned ? ' 🌙 planned' : '');
+          return `<t:${unixSec}:f> — <t:${unixSec}:R>${label}`;
         });
         components.push(
           { type: 14 },
@@ -659,9 +686,20 @@ export class HealthMonitor {
           {
             type: 2, // Button
             custom_id: 'health_monitor_schedule',
-            label: 'Adjust Schedule',
+            label: 'Schedule',
             style: 2, // Secondary
             emoji: { name: '📅' }
+          },
+          {
+            // Self-restart (this instance): graceful exit under PM2 with a typed 'manual'
+            // marker. Routes to THIS bot (webhook buttons route to the owning app), so it
+            // works whenever the bot is alive — hard-outage restarts remain the watchdog's
+            // job from castbot-blue (incident 08 escalation).
+            type: 2, // Button
+            custom_id: 'health_restart_bot',
+            label: 'Restart',
+            style: 4, // Danger
+            emoji: { name: '🔁' }
           }
         ]
       };

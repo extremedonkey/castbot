@@ -398,11 +398,10 @@ class RestartScheduler {
       return;
     }
 
-    // Planned-restart marker so RestartTracker/Ultrathink can label this restart
+    // Typed restart marker so RestartTracker/Ultrathink label this 🌙 planned
     try {
-      const fs = await import('fs');
-      if (!fs.existsSync('./logs')) fs.mkdirSync('./logs', { recursive: true });
-      fs.writeFileSync('./logs/planned-restart.json', JSON.stringify({ reason: 'scheduled-restart', at: Date.now() }));
+      const { writeRestartMarker } = await import('./restartTracker.js');
+      await writeRestartMarker('planned');
     } catch (e) {
       console.error('[RestartScheduler] Marker write failed (continuing):', e.message);
     }
