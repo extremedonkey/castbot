@@ -14059,7 +14059,9 @@ To fix this:
         id: 'health_restart_bot_confirm',
         updateMessage: true,
         handler: async (context) => {
-          if (context.userId !== '391415444084490240') return { content: '❌ Access denied.', ephemeral: true };
+          if (context.userId !== '391415444084490240') {
+            return { components: [{ type: 17, components: [{ type: 10, content: '❌ Access denied.' }] }] };
+          }
           const { performManualRestart } = await import('./src/monitoring/healthPanelUI.js');
           return performManualRestart(context.userId);
         }
@@ -14068,7 +14070,12 @@ To fix this:
       return ButtonHandlerFactory.create({
         id: 'health_restart_cancel',
         updateMessage: true,
-        handler: async () => (await import('./src/monitoring/healthPanelUI.js')).buildRestartCancelled()
+        handler: async (context) => {
+          if (context.userId !== '391415444084490240') {
+            return { components: [{ type: 17, components: [{ type: 10, content: '❌ Access denied.' }] }] };
+          }
+          return (await import('./src/monitoring/healthPanelUI.js')).buildRestartCancelled();
+        }
       })(req, res, client);
     } else if (custom_id === 'health_monitor_schedule') {
       // Health monitor scheduling modal
