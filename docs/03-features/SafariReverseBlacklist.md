@@ -4,11 +4,20 @@
 
 The Reverse Blacklist feature allows specific items to grant players access to normally blacklisted (restricted) coordinates on the Safari map. This creates strategic gameplay where items like boats, bridges, or keys can unlock previously inaccessible areas.
 
-**Status**: ✅ **IMPLEMENTED** - Deployed to production October 2025. **Semantics changed to AND-across-items July 2026** (see Deployment History).
+**Status**: ✅ **IMPLEMENTED** - Deployed to production October 2025. **Optional AND-across-items mode added July 2026** (see Deployment History).
 
 **Example Use Case**: Deep water cells (A1-G1) are blacklisted, but holding a "Large Boat" item allows navigation through these coordinates.
 
-**🔑 AND Semantics (multi-key doors)**: A coordinate unlocks only when the player holds **every** item whose reverse blacklist lists it. One item listing a cell = classic single-key door. Two items listing the same cell = a door requiring **both** keys — holding just one leaves it locked, with no player-facing cue (identical to a plain blacklisted cell). Quantity remains binary (1 copy = 100 copies). Before July 2026 this was a union (any one item unlocked the cell); no way to express "all keys required" existed.
+**🔑 Two modes — per guild, opt-in**: controlled by `safariConfig.reverseBlacklistRequireAll` (Settings → 📍 Location → **Require ALL Key Items**).
+
+| Mode | Setting | A cell listed on 2+ items |
+|---|---|---|
+| **OR** (default, legacy) | unset / unchecked | **Any one** of those items unlocks it — alternative keys |
+| **AND** (opt-in) | checked | Player must hold **every** one — multi-key doors |
+
+A cell listed on only ONE item behaves identically in both modes. Quantity is always binary (1 copy = 100 copies), so "three of the same key" remains impossible on the item side — use crafting or an Action condition.
+
+**Unset = OR**, so guilds that never touch the toggle keep their exact existing behavior. In AND mode a partially-held cell stays locked with **no player-facing cue** — it renders as a plain blacklisted cell (grey 🚫), deliberately.
 
 **Related Features**:
 - [Map Blacklist Overlay](MapBlacklistOverlay.md) - Visual indicators for blacklisted/unlocked cells in Map Explorer
@@ -144,16 +153,18 @@ if (move.blacklisted) {
 - Empty inventory fast-path optimization
 - No deferred flag parameter needed (handled by ButtonHandlerFactory)
 
-#### 3.2 Reverse Blacklist Coverage Function ✅ AS-BUILT (AND semantics, July 2026)
+#### 3.2 Reverse Blacklist Coverage Function ✅ AS-BUILT (mode-aware, July 2026)
 
-**Implementation**: mapMovement.js — `computeReverseBlacklistCoverage` (pure, exported, unit-tested in tests/mapMovement.test.js) + `getPlayerReverseBlacklistCoverage` (async wrapper that loads inventory/items)
+**Implementation**: mapMovement.js — `computeReverseBlacklistCoverage(inventory, items, requireAll)` (pure, exported, unit-tested in tests/mapMovement.test.js) + `getPlayerReverseBlacklistCoverage` (async wrapper that loads inventory/items **and the guild's mode**)
+
+The `requireAll` parameter defaults to `false` (legacy OR) so any caller that forgets it gets the safe, backwards-compatible branch.
 
 **Critical Bug Fix**: Inventory structure is `{quantity, numAttacksAvailable}`, not direct numbers
 
 ```javascript
-// Pure AND-semantics coverage. A coordinate unlocks only when the player holds EVERY
-// item whose reverseBlacklist lists it (qty >= 1 each; quantity beyond 1 is ignored).
-export function computeReverseBlacklistCoverage(inventory, items) {
+// requireAll = false (default) → legacy OR; true → AND across items.
+// Quantity is binary in both modes.
+export function computeReverseBlacklistCoverage(inventory, items, requireAll = false) {
     const heldItemIds = new Set();
     for (const [itemId, itemData] of Object.entries(inventory)) {
         // Handle both old format (direct number) and new format (object with quantity property)
@@ -166,7 +177,20 @@ export function computeReverseBlacklistCoverage(inventory, items) {
         return [];
     }
 
-    // coordinate -> every itemId that lists it (ALL are required to unlock)
+    // Legacy OR: union of every held item's coordinates
+    if (!requireAll) {
+        const unlocked = new Set();
+        for (const itemId of heldItemIds) {
+            const item = items[itemId];
+            if (Array.isArray(item?.reverseBlacklist)) {
+                item.reverseBlacklist.forEach(coord => unlocked.add(coord));
+            }
+        }
+        return Array.from(unlocked);
+    }
+
+    // AND: coordinate -> every itemId that lists it (ALL are required to unlock).
+    // Iterates item DEFINITIONS, not just held items.
     const requiredByCoord = new Map();
     for (const [itemId, item] of Object.entries(items)) {
         if (Array.isArray(item?.reverseBlacklist)) {
@@ -204,17 +228,29 @@ export async function getPlayerReverseBlacklistCoverage(guildId, userId) {
     const { loadSafariContent } = await import('./safariManager.js');
     const safariData = await loadSafariContent();
     const items = safariData[guildId]?.items || {};
+    const requireAll = safariData[guildId]?.safariConfig?.reverseBlacklistRequireAll === true;
 
-    return computeReverseBlacklistCoverage(inventory, items);
+    return computeReverseBlacklistCoverage(inventory, items, requireAll);
 }
 ```
 
 **Key Implementation Details**:
+- **Mode read per call**: `safariConfig.reverseBlacklistRequireAll === true`; anything else (missing, null, false) = legacy OR
 - **AND across items**: iterates the guild's item *definitions* (not just the inventory) to build the per-coordinate required set, then unlocks only fully-held coordinates
 - **Inventory Structure Fix**: Handles `{quantity: 10, numAttacksAvailable: 0}` format
 - **Fast-path**: Returns immediately if inventory is empty (performance optimization)
 - **Quantity Check**: Binary — items with quantity > 0 count as held; extra copies are irrelevant
-- **Partial-hold logging**: cells locked because some-but-not-all required items are held log a `🔒` line naming the missing items (host debugging aid — players see nothing)
+- **Partial-hold logging** (AND mode only): cells locked because some-but-not-all required items are held log a `🔒` line naming the missing items (host debugging aid — players see nothing)
+
+#### 3.2b Configuration UI ✅ AS-BUILT
+
+**Location**: `/menu` → Production Menu → ⚙️ CastBot Settings → 📍 **Location** → **Require ALL Key Items** checkbox
+
+- Field defined in editFramework.js SAFARI_CONFIG `location` group as `type: 'boolean'`
+- Rendered by safariConfigUI.js `createFieldGroupModal` as a **Checkbox (type 23)** inside a Label (type 18) — the first boolean in this field-group system
+- `processFieldGroupSubmission` handles booleans **before** the empty-value skip and the string branch: `false` is a real value (unchecking must persist) and `.trim()` would throw on a boolean
+- An omitted checkbox in the payload is written as `false`, never left `undefined`
+- **Excluded from `resetCustomTerms`** on purpose — a cosmetic settings reset must not silently open every multi-key door in a live game. Enforced by a test in tests/safariSettingsUI.test.js (`resetExemptFields`) and surfaced in the reset confirmation's "Will NOT reset" list
 
 #### 3.3 Movement Validation ✅ AS-BUILT
 
@@ -385,7 +421,7 @@ Consider caching reverse blacklist coverage per player:
 1. **Item Quantity Zero**: Ensure items with quantity 0 don't grant access
 2. **Invalid Coordinates**: Validate coordinate format during item configuration
 3. **Item Removal During Navigation**: Re-validate on actual movement
-4. **Multiple Items Same Coordinate**: ALL listing items required (AND) — this is the multi-key door mechanic, not an either-or
+4. **Multiple Items Same Coordinate**: mode-dependent — OR (default) = any one unlocks; AND (opt-in) = all required (multi-key door)
 5. **Performance with Large Inventories**: Use Set for O(1) lookups
 
 ## Security Considerations
@@ -405,7 +441,7 @@ Consider caching reverse blacklist coverage per player:
 
 ## Implementation Decisions
 
-0. **AND Across Items (July 2026)**: A cell listed on multiple items requires ALL of them held. Originally a union (any one item unlocked); flipped because hosts intuitively expect "both keys on this door = both keys required", and the union made multi-key doors impossible while AND still expresses single-key doors unchanged. At flip time no production guild had overlapping coordinates across items, so no live safari changed behavior. Locked-but-partially-held cells deliberately show NO player-facing cue (same grey 🚫 button as any blacklisted cell); Map Explorer's admin legend marks multi-key cells with ²
+0. **Optional AND Across Items (July 2026)**: Per-guild toggle, **default OR (legacy)**. Hosts intuitively expect "both keys on this door = both keys required", and the union made multi-key doors impossible — but flipping it globally would rewrite live game rules for 190 guilds, so it ships opt-in. Unset = OR means a guild that never opens the setting is untouched. Locked-but-partially-held cells deliberately show NO player-facing cue (same grey 🚫 button as any blacklisted cell); Map Explorer's admin legend marks multi-key cells with ² **only in AND mode** (in OR mode a shared cell is just an alternative key)
 1. **Item Stack Behavior**: Binary check - having 1 or 100 of an item provides the same unlock
 2. **Visual Feedback**: Green button color only, no label changes
 3. **UI Display**: Reverse blacklist info only shown in map admin and item configuration
@@ -427,12 +463,12 @@ Consider caching reverse blacklist coverage per player:
 3. **Security**: Server-side validation prevents client-side manipulation
 4. **Integration**: Seamlessly integrated with Map Blacklist Overlay feature
 
-### Semantics Change: Union → AND (2026-07-28)
-- **What**: A coordinate now unlocks only when the player holds EVERY item listing it (was: any one item)
-- **Why**: Multi-key doors ("needs Red Key AND Blue Key") were impossible; hosts assumed AND
-- **Migration risk**: None found — audited all production guilds at flip time; no coordinate appeared on more than one item's reverse blacklist
-- **Code**: `computeReverseBlacklistCoverage` extracted as a pure exported function in mapMovement.js, unit-tested in tests/mapMovement.test.js
-- **Admin UI**: Map Explorer legend marks multi-key cells with ² ("On multiple items — players need ALL of them to enter")
+### Optional AND Mode (2026-07-29)
+- **What**: New per-guild setting `safariConfig.reverseBlacklistRequireAll`. When on, a coordinate unlocks only if the player holds EVERY item listing it. When off/unset (default), legacy OR behavior is unchanged
+- **Why**: Multi-key doors ("needs Red Key AND Blue Key") were impossible to express; hosts assumed AND. Shipped as opt-in rather than a global flip so no live game's rules change without the host asking
+- **Migration risk**: Zero by construction — unset = OR. (Audit at design time also found no production guild with a coordinate on more than one item's reverse blacklist, so even a global flip would have been inert; opt-in was chosen anyway because that audit is a point-in-time fact, not a guarantee)
+- **Code**: `computeReverseBlacklistCoverage(inventory, items, requireAll = false)` — pure, exported, in mapMovement.js; unit-tested for both modes in tests/mapMovement.test.js
+- **Admin UI**: Settings → 📍 Location → "Require ALL Key Items" checkbox; current mode shown in the Settings summary; Map Explorer legend marks multi-key cells with ² when AND is on
 
 ### Known Issues
 None reported as of production deployment.

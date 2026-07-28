@@ -1862,9 +1862,11 @@ export async function getBlacklistedCoordinates(guildId) {
  * @param {Array} sortedItems - Reverse blacklist items sorted by priority (lastModified desc → alphabetical)
  * @param {Map} itemColorMap - Map of itemId -> color object with emoji and name
  * @param {Array} blacklistedCoords - Array of blacklisted coordinate strings
+ * @param {boolean} [requireAllItems=false] - guild's safariConfig.reverseBlacklistRequireAll;
+ *   when true, coordinates shared by 2+ items are multi-key doors and get a ² marker
  * @returns {string} Formatted legend text with color coding and warnings
  */
-export function generateMultiColorLegend(sortedItems, itemColorMap, blacklistedCoords) {
+export function generateMultiColorLegend(sortedItems, itemColorMap, blacklistedCoords, requireAllItems = false) {
   const legendLines = ['### ```Legend```'];
 
   // Blacklisted coordinates with red square
@@ -1874,13 +1876,16 @@ export function generateMultiColorLegend(sortedItems, itemColorMap, blacklistedC
     legendLines.push('🟥 Blacklisted (none configured)');
   }
 
-  // Coordinates listed on 2+ items are multi-key doors: players need ALL of them
+  // In AND mode, coordinates listed on 2+ items are multi-key doors: players need ALL of
+  // them. In legacy OR mode a shared coordinate is just an alternative key — no marker.
   const coordItemCount = new Map();
-  sortedItems.forEach(item => {
-    (item.coordinates || []).forEach(coord => {
-      coordItemCount.set(coord, (coordItemCount.get(coord) || 0) + 1);
+  if (requireAllItems) {
+    sortedItems.forEach(item => {
+      (item.coordinates || []).forEach(coord => {
+        coordItemCount.set(coord, (coordItemCount.get(coord) || 0) + 1);
+      });
     });
-  });
+  }
 
   let hasNonBlacklistedCoords = false;
   let hasMultiKeyCoords = false;
@@ -2353,8 +2358,12 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
       // Get blacklisted coordinates for warning detection
       const blacklistedCoords = await getBlacklistedCoordinates(guildId);
 
+      // Multi-key doors only exist when the guild opted into AND mode
+      const safariDataForMode = await loadSafariContent();
+      const requireAllItems = safariDataForMode[guildId]?.safariConfig?.reverseBlacklistRequireAll === true;
+
       // Generate multi-color legend with warnings for non-blacklisted coords
-      legendContent = generateMultiColorLegend(sortedItems, itemColorMap, blacklistedCoords);
+      legendContent = generateMultiColorLegend(sortedItems, itemColorMap, blacklistedCoords, requireAllItems);
     } else {
       // No reverse blacklist items - show basic legend
       const blacklistedCoords = await getBlacklistedCoordinates(guildId);

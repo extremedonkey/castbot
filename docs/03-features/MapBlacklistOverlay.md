@@ -110,7 +110,7 @@ sortedItems.forEach((item, index) => {
 
 ### Overlap Resolution Logic
 
-**⚠️ Semantics note (July 2026)**: A cell listed on multiple items is a **multi-key door** — players need ALL of those items to enter (AND semantics, see [SafariReverseBlacklist.md](SafariReverseBlacklist.md)). The overlay still draws one color per cell (highest-priority item), so the color alone understates the requirement; the legend marks these cells with ² ("On multiple items — players need ALL of them to enter").
+**⚠️ Semantics note (July 2026)**: When the guild enables **Require ALL Key Items** (`safariConfig.reverseBlacklistRequireAll`, see [SafariReverseBlacklist.md](SafariReverseBlacklist.md)), a cell listed on multiple items becomes a **multi-key door** — players need ALL of those items. The overlay still draws one color per cell (highest-priority item), so the color alone understates the requirement; in that mode the legend marks these cells with ² ("On multiple items — players need ALL of them to enter"). With the setting off (default), a shared cell is just an alternative key and gets no marker.
 
 **Problem**: A single cell may be covered by multiple items. Which color should be drawn?
 

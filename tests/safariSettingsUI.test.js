@@ -43,6 +43,15 @@ function buildFieldGroupModal(groupKey, currentConfig = {}) {
     if (fieldKey === 'craftingEmoji' && !currentValue) currentValue = '🛠️';
     if (fieldKey === 'craftingName' && !currentValue) currentValue = 'Crafting';
 
+    if (fieldConfig.type === 'boolean') {
+      components.push({
+        type: 18,
+        label: fieldConfig.label,
+        component: { type: 23, custom_id: fieldKey, required: false, default: currentValue === true }
+      });
+      return;
+    }
+
     const textInput = {
       type: 4,
       custom_id: fieldKey,
@@ -91,6 +100,12 @@ function processFieldGroupSubmission(groupKey, modalData) {
 
   Object.entries(groupConfig.fields).forEach(([fieldKey, fieldConfig]) => {
     const value = valuesByCustomId[fieldKey];
+
+    if (fieldConfig.type === 'boolean') {
+      updates[fieldKey] = value === true;
+      return;
+    }
+
     if (value !== undefined && value !== '') {
       if (fieldConfig.type === 'number') {
         const num = parseInt(value, 10);
@@ -130,6 +145,11 @@ describe('Safari Settings — Field Group Definitions', () => {
     assert.ok(groups.location);
     assert.ok(groups.location.fields.defaultStartingCoordinate);
     assert.equal(groups.location.fields.defaultStartingCoordinate.maxLength, 4);
+  });
+
+  it('location group has the reverseBlacklistRequireAll boolean field', () => {
+    assert.equal(groups.location.fields.reverseBlacklistRequireAll.type, 'boolean');
+    assert.equal(groups.location.fields.reverseBlacklistRequireAll.required, false);
   });
 
   it('crafting group has craftingName + craftingEmoji', () => {
@@ -197,11 +217,27 @@ describe('Safari Settings — Modal generation', () => {
     assert.equal(emojiInput.component.value, '🛠️');
   });
 
-  it('location modal contains exactly one Label+TextInput', () => {
+  it('location modal contains the coordinate TextInput + the require-all Checkbox', () => {
     const modal = buildFieldGroupModal('location', {});
-    assert.equal(modal.components.length, 1);
+    assert.equal(modal.components.length, 2);
     assert.equal(modal.components[0].type, 18);
     assert.equal(modal.components[0].component.custom_id, 'defaultStartingCoordinate');
+    assert.equal(modal.components[0].component.type, 4);
+    assert.equal(modal.components[1].type, 18);
+    assert.equal(modal.components[1].component.custom_id, 'reverseBlacklistRequireAll');
+    assert.equal(modal.components[1].component.type, 23); // Checkbox
+  });
+
+  it('require-all checkbox renders unchecked when the guild never set it (legacy default)', () => {
+    const modal = buildFieldGroupModal('location', {});
+    const checkbox = modal.components.find(r => r.component.custom_id === 'reverseBlacklistRequireAll');
+    assert.equal(checkbox.component.default, false);
+  });
+
+  it('require-all checkbox renders checked when the guild opted in', () => {
+    const modal = buildFieldGroupModal('location', { reverseBlacklistRequireAll: true });
+    const checkbox = modal.components.find(r => r.component.custom_id === 'reverseBlacklistRequireAll');
+    assert.equal(checkbox.component.default, true);
   });
 
   it('rounds modal contains the legacy warning text-display at index 0', () => {
@@ -244,6 +280,49 @@ describe('Safari Settings — Modal submission processing', () => {
     assert.equal(updates.round1GoodProbability, 80);
     assert.equal(updates.round2GoodProbability, 60);
     assert.equal(updates.round3GoodProbability, 40);
+  });
+
+  it('location: checkbox true is stored as boolean true (opt into AND)', () => {
+    const modalData = {
+      components: [
+        { type: 18, component: { custom_id: 'defaultStartingCoordinate', value: 'B2' } },
+        { type: 18, component: { custom_id: 'reverseBlacklistRequireAll', value: true } }
+      ]
+    };
+    const updates = processFieldGroupSubmission('location', modalData);
+    assert.equal(updates.defaultStartingCoordinate, 'B2');
+    assert.equal(updates.reverseBlacklistRequireAll, true);
+  });
+
+  it('location: unchecking persists false (must not be skipped as "empty")', () => {
+    const modalData = {
+      components: [
+        { type: 18, component: { custom_id: 'defaultStartingCoordinate', value: 'A1' } },
+        { type: 18, component: { custom_id: 'reverseBlacklistRequireAll', value: false } }
+      ]
+    };
+    const updates = processFieldGroupSubmission('location', modalData);
+    assert.equal(updates.reverseBlacklistRequireAll, false);
+    assert.ok('reverseBlacklistRequireAll' in updates, 'false must be written, not dropped');
+  });
+
+  it('location: a boolean value never hits the string branch (.trim would throw)', () => {
+    const modalData = {
+      components: [
+        { type: 18, component: { custom_id: 'reverseBlacklistRequireAll', value: true } }
+      ]
+    };
+    assert.doesNotThrow(() => processFieldGroupSubmission('location', modalData));
+  });
+
+  it('location: a checkbox omitted from the payload defaults to false, not undefined', () => {
+    const modalData = {
+      components: [
+        { type: 18, component: { custom_id: 'defaultStartingCoordinate', value: 'A1' } }
+      ]
+    };
+    const updates = processFieldGroupSubmission('location', modalData);
+    assert.equal(updates.reverseBlacklistRequireAll, false);
   });
 
   it('parses number fields as integers', () => {
@@ -370,15 +449,31 @@ describe('Safari Settings — Reset coverage', () => {
     'enableGlobalCommands', 'inventoryVisibilityMode', 'globalStoresVisibilityMode', 'showCustomCastlists'
   ];
 
-  it('reset covers every UI-exposed fieldGroup field', () => {
+  // Game-logic fields deliberately EXEMPT from reset. Resetting these would change
+  // live game rules, not just cosmetics — see resetCustomTerms in safariManager.js.
+  // Adding to this list requires the same justification; it is not a dumping ground.
+  const resetExemptFields = [
+    // Flipping back to OR would silently open every multi-key door mid-game
+    'reverseBlacklistRequireAll'
+  ];
+
+  it('reset covers every UI-exposed fieldGroup field (except documented exemptions)', () => {
     const groups = EDIT_CONFIGS[EDIT_TYPES.SAFARI_CONFIG].fieldGroups;
     for (const [groupKey, group] of Object.entries(groups)) {
       for (const fieldKey of Object.keys(group.fields)) {
+        if (resetExemptFields.includes(fieldKey)) continue;
         assert.ok(
           resetKeys.includes(fieldKey),
           `Field "${fieldKey}" in group "${groupKey}" is not covered by resetCustomTerms`
         );
       }
+    }
+  });
+
+  it('exempt fields are genuinely absent from reset (exemption is real, not stale)', () => {
+    for (const fieldKey of resetExemptFields) {
+      assert.equal(resetKeys.includes(fieldKey), false,
+        `"${fieldKey}" is listed as reset-exempt but resetCustomTerms sets it — remove one or the other`);
     }
   });
 

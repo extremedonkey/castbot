@@ -1,5 +1,5 @@
 /**
- * Reverse blacklist coverage — pure logic tests (AND semantics).
+ * Reverse blacklist coverage — pure logic tests (both modes).
  *
  * Replicated inline from mapMovement.js (computeReverseBlacklistCoverage) per
  * Testing Standards: mapMovement.js has heavy static top-level imports
@@ -7,14 +7,16 @@
  * directly would drag those in for a test that only needs the pure logic.
  * Replica omits the debug console.log only.
  *
- * Semantics under test: a coordinate unlocks only when the player holds EVERY
- * item whose reverseBlacklist lists it. Two items listing the same cell form a
- * door needing both keys — NOT an either/or (the pre-2026-07 union behavior).
+ * Semantics under test — governed by safariConfig.reverseBlacklistRequireAll:
+ *   unset/false (legacy default): OR — any one listing item unlocks the cell.
+ *   true:                         AND — the player must hold EVERY listing item
+ *                                 (multi-key doors). Cells listed on a single item
+ *                                 behave identically in both modes.
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-function computeReverseBlacklistCoverage(inventory, items) {
+function computeReverseBlacklistCoverage(inventory, items, requireAll = false) {
     const heldItemIds = new Set();
     for (const [itemId, itemData] of Object.entries(inventory)) {
         const quantity = typeof itemData === 'number' ? itemData : (itemData?.quantity || 0);
@@ -24,6 +26,17 @@ function computeReverseBlacklistCoverage(inventory, items) {
     }
     if (heldItemIds.size === 0) {
         return [];
+    }
+
+    if (!requireAll) {
+        const unlocked = new Set();
+        for (const itemId of heldItemIds) {
+            const item = items[itemId];
+            if (Array.isArray(item?.reverseBlacklist)) {
+                item.reverseBlacklist.forEach(coord => unlocked.add(coord));
+            }
+        }
+        return Array.from(unlocked);
     }
 
     const requiredByCoord = new Map();
@@ -54,15 +67,44 @@ const ITEMS = {
     torch: { name: 'Torch' },
 };
 
-describe('Reverse Blacklist — AND semantics across items', () => {
-    it('locks a two-key cell when only one key is held (the Red/Blue Key scenario)', () => {
+describe('Reverse Blacklist — OR mode (legacy default, guild never set the toggle)', () => {
+    it('defaults to OR when the flag is omitted entirely', () => {
         const coverage = computeReverseBlacklistCoverage({ blue_key: { quantity: 1 } }, ITEMS);
+        assert.equal(coverage.includes('A1'), true);
+    });
+
+    it('either key alone opens a shared cell', () => {
+        assert.equal(computeReverseBlacklistCoverage(
+            { red_key: { quantity: 1 } }, ITEMS, false).includes('A1'), true);
+        assert.equal(computeReverseBlacklistCoverage(
+            { blue_key: { quantity: 1 } }, ITEMS, false).includes('A1'), true);
+    });
+
+    it('explicit false behaves identically to omitting the flag', () => {
+        const held = { boat: { quantity: 1 }, red_key: { quantity: 1 } };
+        assert.deepEqual(
+            computeReverseBlacklistCoverage(held, ITEMS).sort(),
+            computeReverseBlacklistCoverage(held, ITEMS, false).sort()
+        );
+    });
+
+    it('ignores quantity 0 and unknown items in OR mode too', () => {
+        assert.deepEqual(computeReverseBlacklistCoverage(
+            { red_key: { quantity: 0 } }, ITEMS, false), []);
+        assert.deepEqual(computeReverseBlacklistCoverage(
+            { deleted_item: { quantity: 3 }, torch: { quantity: 1 } }, ITEMS, false), []);
+    });
+});
+
+describe('Reverse Blacklist — AND mode (guild opted into multi-key doors)', () => {
+    it('locks a two-key cell when only one key is held (the Red/Blue Key scenario)', () => {
+        const coverage = computeReverseBlacklistCoverage({ blue_key: { quantity: 1 } }, ITEMS, true);
         assert.equal(coverage.includes('A1'), false);
     });
 
     it('unlocks a two-key cell when both keys are held', () => {
         const coverage = computeReverseBlacklistCoverage(
-            { red_key: { quantity: 1 }, blue_key: { quantity: 1 } }, ITEMS);
+            { red_key: { quantity: 1 }, blue_key: { quantity: 1 } }, ITEMS, true);
         assert.equal(coverage.includes('A1'), true);
     });
 
@@ -73,43 +115,50 @@ describe('Reverse Blacklist — AND semantics across items', () => {
             bone: { reverseBlacklist: ['V1'] },
         };
         assert.deepEqual(computeReverseBlacklistCoverage(
-            { brass: { quantity: 1 }, iron: { quantity: 1 } }, items), []);
+            { brass: { quantity: 1 }, iron: { quantity: 1 } }, items, true), []);
         assert.deepEqual(computeReverseBlacklistCoverage(
-            { brass: { quantity: 1 }, iron: { quantity: 1 }, bone: { quantity: 1 } }, items), ['V1']);
+            { brass: { quantity: 1 }, iron: { quantity: 1 }, bone: { quantity: 1 } }, items, true), ['V1']);
     });
 
-    it('single-key cells behave as before (one item alone unlocks its own cells)', () => {
-        const coverage = computeReverseBlacklistCoverage({ boat: { quantity: 1 } }, ITEMS);
-        assert.deepEqual(coverage.sort(), ['B1', 'B2']);
+    it('single-key cells behave identically in both modes', () => {
+        const held = { boat: { quantity: 1 } };
+        assert.deepEqual(computeReverseBlacklistCoverage(held, ITEMS, true).sort(), ['B1', 'B2']);
+        assert.deepEqual(computeReverseBlacklistCoverage(held, ITEMS, false).sort(), ['B1', 'B2']);
     });
 
     it('quantity is binary: 100 copies of one key do not substitute for the other key', () => {
-        const coverage = computeReverseBlacklistCoverage({ blue_key: { quantity: 100 } }, ITEMS);
+        const coverage = computeReverseBlacklistCoverage({ blue_key: { quantity: 100 } }, ITEMS, true);
         assert.equal(coverage.includes('A1'), false);
     });
 
     it('ignores held items with quantity 0', () => {
         const coverage = computeReverseBlacklistCoverage(
-            { red_key: { quantity: 0 }, blue_key: { quantity: 1 } }, ITEMS);
+            { red_key: { quantity: 0 }, blue_key: { quantity: 1 } }, ITEMS, true);
         assert.equal(coverage.includes('A1'), false);
     });
 
     it('supports legacy direct-number inventory format', () => {
-        const coverage = computeReverseBlacklistCoverage({ red_key: 1, blue_key: 2 }, ITEMS);
+        const coverage = computeReverseBlacklistCoverage({ red_key: 1, blue_key: 2 }, ITEMS, true);
         assert.equal(coverage.includes('A1'), true);
     });
 
     it('returns [] for empty inventory and tolerates unknown/keyless items', () => {
-        assert.deepEqual(computeReverseBlacklistCoverage({}, ITEMS), []);
+        assert.deepEqual(computeReverseBlacklistCoverage({}, ITEMS, true), []);
         const coverage = computeReverseBlacklistCoverage(
-            { deleted_item: { quantity: 3 }, torch: { quantity: 1 } }, ITEMS);
+            { deleted_item: { quantity: 3 }, torch: { quantity: 1 } }, ITEMS, true);
         assert.deepEqual(coverage, []);
     });
 
     it('keeps distinct single-key doors independent when holding multiple keys', () => {
         const coverage = computeReverseBlacklistCoverage(
-            { boat: { quantity: 1 }, red_key: { quantity: 1 } }, ITEMS);
+            { boat: { quantity: 1 }, red_key: { quantity: 1 } }, ITEMS, true);
         assert.equal(coverage.includes('B1'), true);
         assert.equal(coverage.includes('A1'), false); // still missing blue_key
+    });
+
+    it('the two modes genuinely disagree on a shared cell (guard against a no-op toggle)', () => {
+        const held = { red_key: { quantity: 1 } };
+        assert.equal(computeReverseBlacklistCoverage(held, ITEMS, false).includes('A1'), true);
+        assert.equal(computeReverseBlacklistCoverage(held, ITEMS, true).includes('A1'), false);
     });
 });

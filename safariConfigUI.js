@@ -203,7 +203,8 @@ export async function createFieldGroupModal(groupKey, currentConfig) {
         round1GoodProbability: 'Chance of a good event in round 1 (0-100).',
         round2GoodProbability: 'Chance of a good event in round 2 (0-100).',
         round3GoodProbability: 'Chance of a good event in round 3 (0-100).',
-        defaultStartingCoordinate: 'Where new players spawn on the map (e.g. A1).'
+        defaultStartingCoordinate: 'Where new players spawn on the map (e.g. A1).',
+        reverseBlacklistRequireAll: 'Multi-key doors: when a blocked cell is unlocked by several items, players must hold ALL of them. Off = any one item unlocks it.'
     };
 
     const components = [];
@@ -222,6 +223,20 @@ export async function createFieldGroupModal(groupKey, currentConfig) {
         if (fieldKey === 'inventoryEmoji' && !currentValue) currentValue = '🧰';
         if (fieldKey === 'craftingEmoji' && !currentValue) currentValue = '🛠️';
         if (fieldKey === 'craftingName' && !currentValue) currentValue = 'Crafting';
+
+        // Boolean fields render as a Checkbox (type 23) inside the Label, not a text input.
+        // Unset/undefined must render UNCHECKED so legacy guilds see their real (legacy) state.
+        if (fieldConfig.type === 'boolean') {
+            const label = {
+                type: 18,
+                label: fieldConfig.label,
+                component: { type: 23, custom_id: fieldKey, required: false, default: currentValue === true }
+            };
+            const boolDesc = fieldDescriptions[fieldKey];
+            if (boolDesc) label.description = boolDesc;
+            components.push(label);
+            return;
+        }
 
         const textInput = {
             type: 4, // Text Input
@@ -289,6 +304,14 @@ export function processFieldGroupSubmission(groupKey, modalData) {
 
     Object.entries(groupConfig.fields).forEach(([fieldKey, fieldConfig]) => {
         const value = valuesByCustomId[fieldKey];
+
+        // Checkboxes (type 23) submit a boolean. Handled before the empty-value skip below
+        // because `false` is a real value — unchecking must persist, not be treated as
+        // "unchanged" — and before the string branch because .trim() would throw on it.
+        if (fieldConfig.type === 'boolean') {
+            updates[fieldKey] = value === true;
+            return;
+        }
 
         if (value !== undefined && value !== '') {
             if (fieldConfig.type === 'number') {
@@ -389,7 +412,8 @@ async function createCurrentSettingsDisplay(guildId, config) {
 
     // --- Location ---
     display += `**📍 Location**\n`;
-    display += `• Starting Coordinate: ${config.defaultStartingCoordinate || 'A1'}\n\n`;
+    display += `• Starting Coordinate: ${config.defaultStartingCoordinate || 'A1'}\n`;
+    display += `• Key Items on Shared Cells: ${config.reverseBlacklistRequireAll === true ? '🔑 Require ALL (multi-key doors)' : '🗝️ Any One Unlocks'}\n\n`;
 
     // --- Player Menu ---
     const enableGlobalCommands = config.enableGlobalCommands !== false;
@@ -445,7 +469,7 @@ export function createResetConfirmationUI() {
     const containerComponents = [
         {
             type: 10, // Text Display component
-            content: `## ⚠️ Reset CastBot Settings\n\nAre you sure you want to reset all settings to default values?\n\n**This will reset:**\n• 🪙 Currency & Inventory (name, emoji, starting amount)\n• 🛠️ Crafting (name, emoji)\n• ☄️ Event names and emojis\n• 🎲 Round probabilities (75%, 50%, 25%)\n• 📍 Default starting coordinate (A1)\n• ⚡ Stamina settings\n• 🕹️ Player Menu visibility\n\n**Will NOT reset:**\n• 🔐 Roles & Security whitelist\n• 📊 Safari Log channel\n• ❗ Command prefixes\n\n**This action cannot be undone.**`
+            content: `## ⚠️ Reset CastBot Settings\n\nAre you sure you want to reset all settings to default values?\n\n**This will reset:**\n• 🪙 Currency & Inventory (name, emoji, starting amount)\n• 🛠️ Crafting (name, emoji)\n• ☄️ Event names and emojis\n• 🎲 Round probabilities (75%, 50%, 25%)\n• 📍 Default starting coordinate (A1)\n• ⚡ Stamina settings\n• 🕹️ Player Menu visibility\n\n**Will NOT reset:**\n• 🔐 Roles & Security whitelist\n• 📊 Safari Log channel\n• ❗ Command prefixes\n• 🔑 Require ALL Key Items (would unlock multi-key doors mid-game)\n\n**This action cannot be undone.**`
         },
         {
             type: 1, // Action Row

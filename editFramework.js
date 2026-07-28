@@ -181,9 +181,12 @@ export const EDIT_CONFIGS = {
       },
       location: {
         label: 'Location',
-        description: 'Set default starting map location for new players',
+        description: 'Set default starting map location and map access rules',
         fields: {
-          defaultStartingCoordinate: { type: 'text', maxLength: 4, required: false, label: 'Starting Coordinate', placeholder: 'A1' }
+          defaultStartingCoordinate: { type: 'text', maxLength: 4, required: false, label: 'Starting Coordinate', placeholder: 'A1' },
+          // Off (unset) = legacy OR: any one listing item unlocks the cell.
+          // On = AND: player must hold EVERY item listing the cell (multi-key doors).
+          reverseBlacklistRequireAll: { type: 'boolean', required: false, label: 'Require ALL Key Items' }
         }
       }
     },

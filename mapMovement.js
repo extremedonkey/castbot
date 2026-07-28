@@ -678,12 +678,27 @@ export async function getMapGridDimensions(guildId) {
     return { width, height };
 }
 
-// Pure AND-semantics coverage. A coordinate unlocks only when the player holds EVERY
-// item whose reverseBlacklist lists it (qty >= 1 each; quantity beyond 1 is ignored).
-// One item listing a cell = single-key door (unchanged); two items listing the same
-// cell = a door needing both keys. A partially-held cell stays locked with no player-
-// facing cue — identical to a plain blacklisted cell.
-export function computeReverseBlacklistCoverage(inventory, items) {
+/**
+ * Which blacklisted coordinates a player's inventory unlocks.
+ *
+ * Quantity is always binary — 1 copy unlocks exactly as much as 100.
+ *
+ * When a coordinate is listed on only ONE item, both modes behave identically
+ * (hold it → unlocked). The modes differ only where several items list the SAME cell:
+ *   requireAll = false (default, legacy): OR — any one of them unlocks it.
+ *   requireAll = true:                    AND — the player must hold EVERY one of them.
+ *                                         This is the multi-key door. A partially-held
+ *                                         cell stays locked with no player-facing cue,
+ *                                         identical to a plain blacklisted cell.
+ *
+ * Default is OR so a guild that has never set the toggle keeps its existing behaviour.
+ *
+ * @param {Object} inventory - player's safari inventory ({itemId: {quantity}} or legacy {itemId: number})
+ * @param {Object} items - the guild's item definitions
+ * @param {boolean} [requireAll=false] - true = AND across items (safariConfig.reverseBlacklistRequireAll)
+ * @returns {string[]} unlocked coordinates
+ */
+export function computeReverseBlacklistCoverage(inventory, items, requireAll = false) {
     const heldItemIds = new Set();
     for (const [itemId, itemData] of Object.entries(inventory)) {
         // Handle both old format (direct number) and new format (object with quantity property)
@@ -696,7 +711,21 @@ export function computeReverseBlacklistCoverage(inventory, items) {
         return [];
     }
 
-    // coordinate -> every itemId that lists it (ALL are required to unlock)
+    // Legacy OR: union of every held item's coordinates
+    if (!requireAll) {
+        const unlocked = new Set();
+        for (const itemId of heldItemIds) {
+            const item = items[itemId];
+            if (Array.isArray(item?.reverseBlacklist)) {
+                item.reverseBlacklist.forEach(coord => unlocked.add(coord));
+            }
+        }
+        return Array.from(unlocked);
+    }
+
+    // AND: coordinate -> every itemId that lists it (ALL are required to unlock).
+    // Iterates item DEFINITIONS, not just held items — a cell's full requirement set
+    // includes keys the player doesn't have.
     const requiredByCoord = new Map();
     for (const [itemId, item] of Object.entries(items)) {
         if (Array.isArray(item?.reverseBlacklist)) {
@@ -721,7 +750,8 @@ export function computeReverseBlacklistCoverage(inventory, items) {
     return unlockedCoordinates;
 }
 
-// Get player's reverse blacklist coverage based on inventory items (AND semantics)
+// Get player's reverse blacklist coverage based on inventory items.
+// Mode comes from safariConfig.reverseBlacklistRequireAll (unset = legacy OR).
 export async function getPlayerReverseBlacklistCoverage(guildId, userId) {
     const { loadPlayerData } = await import('./storage.js');
     const playerData = await loadPlayerData();
@@ -735,6 +765,7 @@ export async function getPlayerReverseBlacklistCoverage(guildId, userId) {
     const { loadSafariContent } = await import('./safariManager.js');
     const safariData = await loadSafariContent();
     const items = safariData[guildId]?.items || {};
+    const requireAll = safariData[guildId]?.safariConfig?.reverseBlacklistRequireAll === true;
 
-    return computeReverseBlacklistCoverage(inventory, items);
+    return computeReverseBlacklistCoverage(inventory, items, requireAll);
 }

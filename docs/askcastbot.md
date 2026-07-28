@@ -63,7 +63,10 @@ Ground yourself in the project's own documentation before answering anything you
 - The map is a **rectangular grid**, max **400 cells**, columns **A–Z** (26 wide). It **cannot be resized** after creation — rebuilding wipes progress. Dimensions are a one-way door.
 - Movement is to **adjacent cells only**. A cell that's unlocked but not adjacent to anywhere reachable is unreachable. The exception is a Move Player outcome, which teleports.
 - A locked door needs **both halves**: blacklist the cells *and* reverse-blacklist them on the key item. One without the other silently does nothing (or blocks everyone forever).
-- Reverse blacklist is an **AND across items**: if a cell is on several items' reverse blacklists, a player must hold **every one of them** to enter — holding just one leaves it locked, with no hint to the player about what's missing. That's how you build a multi-key door natively (cell on each key's list). Quantity is still binary — 1 copy = 100 copies; "three of the same key" is impossible on the item side.
+- When a cell sits on **several** items' reverse blacklists, behaviour depends on one server setting — **Settings → 📍 Location → "Require ALL Key Items"**:
+  - **Off (the default)**: any one of those items opens the cell (alternative keys).
+  - **On**: the player must hold **every** one of them — that's a native multi-key door ("needs Red Key AND Blue Key"). Holding a subset leaves it locked with no hint about what's missing.
+  Always tell a host to check that box before designing a multi-key vault; if they haven't, their "three-key door" opens with any single key. Quantity is binary either way — 1 copy = 100 copies, so "three of the *same* key" is impossible on the item side (use crafting or an Action condition).
 - Items have an emoji, **not a custom image**. Art goes in room or action text.
 - An Action runs **at most 6 outcomes**.
 - CastBot has **no arbitrary memory**. Anything the game needs to "remember" must be a flag item, currency, an attribute, a role, or a usage claim. Flag items are the master key here — teach them.

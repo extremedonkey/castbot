@@ -5538,6 +5538,9 @@ async function getCustomTerms(guildId) {
             craftingEmoji: config.craftingEmoji || '🛠️',
             defaultStartingCurrencyValue: config.defaultStartingCurrencyValue ?? 100,
             defaultStartingCoordinate: config.defaultStartingCoordinate || 'A1',
+            // Reverse blacklist semantics — unset/false = legacy OR (any one listing item
+            // unlocks the cell); true = AND (player must hold EVERY listing item)
+            reverseBlacklistRequireAll: config.reverseBlacklistRequireAll === true,
 
             // Game settings - Challenge Game Logic
             round1GoodProbability: config.round1GoodProbability || 75,
@@ -5646,6 +5649,9 @@ async function updateCustomTerms(guildId, terms) {
         }
         if (terms.defaultStartingCoordinate !== undefined) {
             safariData[guildId].safariConfig.defaultStartingCoordinate = terms.defaultStartingCoordinate || 'A1';
+        }
+        if (terms.reverseBlacklistRequireAll !== undefined) {
+            safariData[guildId].safariConfig.reverseBlacklistRequireAll = terms.reverseBlacklistRequireAll === true;
         }
 
         // Update game settings - Challenge Game Logic
@@ -5757,6 +5763,8 @@ async function resetCustomTerms(guildId) {
         round3GoodProbability: 25,
         // Location
         defaultStartingCoordinate: 'A1',
+        // NOT reset: reverseBlacklistRequireAll. Flipping it back to OR would silently
+        // open every multi-key door in a live game — a cosmetic reset must not do that.
         // Stamina (defaults match getStaminaConfig fallbacks: 1/1, 720 min regen)
         startingStamina: 1,
         maxStamina: 1,

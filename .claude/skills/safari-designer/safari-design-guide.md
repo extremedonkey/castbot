@@ -62,11 +62,13 @@ These are the hard edges. A design that violates them cannot be built as written
   nothing). You need both. Holding **1** of the item is enough (quantity doesn't matter), and the
   unlock applies to **every** player who holds it (it's not per-player-customised). And remember: the
   unlocked cell must still be **adjacent** to somewhere the player can already reach.
-  **Multi-key doors are native (AND):** if the same cell is on *several* items' Reverse Blacklists,
-  a player must hold **all** of those items to enter — holding a subset leaves the door locked, with
-  no hint about what's missing. So never reuse a cell across two "alternative" keys expecting
-  either-or; a cell shared between items always means *all of them required*. "Three of the *same*
-  key" is still impossible (quantity is binary) — use crafting or an Action condition for that.
+  **Multi-key doors (a cell on several items' Reverse Blacklists) depend on one setting:**
+  **Settings → 📍 Location → "Require ALL Key Items"**.
+  - **Off (default):** any one of those items opens the cell — they're alternative keys.
+  - **On:** the player needs **all** of them — a true "Red Key AND Blue Key" vault. A subset leaves
+    the door locked with no hint about what's missing.
+  Tick that box *before* building a multi-key vault, or it silently opens with a single key. "Three
+  of the *same* key" is impossible either way (quantity is binary) — use crafting or an Action condition.
 
 **Actions / interactions**
 - An Action runs **at most 6 outcomes**. Action text ≤ 2000 chars. ≤ 100 Actions per server.
@@ -228,7 +230,8 @@ Map common adventure tropes (what a creative brief will say) → CastBot mechani
 | The brief says… | Build it as… |
 |---|---|
 | "Locked door / gated room; need the Key" | **Blacklist** the cells behind it + put those cells on the Key item's **Reverse Blacklist**. (Cell must be adjacent to reach.) |
-| "Door needs the Red Key AND the Blue Key (multi-key vault)" | **Blacklist** the cells + put them on **every** key's **Reverse Blacklist** — a cell shared across items requires ALL of them held (AND, not either-or). |
+| "Door needs the Red Key AND the Blue Key (multi-key vault)" | Turn on **Settings → 📍 Location → Require ALL Key Items**, then **Blacklist** the cells + put them on **every** key's **Reverse Blacklist**. Without that setting the door opens with any one key. |
+| "Either the Boat *or* the Raft can cross" | Leave **Require ALL Key Items** off (the default) and put the cells on both items' Reverse Blacklists. |
 | "A new area opens up after X happens" | The X-Action gives a **flag item** whose Reverse Blacklist covers the new cells. |
 | "Search the barrel / look under the newspaper → find an item" | A **Button Action** on that cell, outcome **Give Item**, **usage limit: once per player** (so it can't be farmed). |
 | "Talk to the NPC → get a hint" | A **Button Action**, outcome **Display Text**. Pure flavour NPCs ("bartender refuses") are just display text, no mechanic. |
@@ -256,6 +259,10 @@ Map common adventure tropes (what a creative brief will say) → CastBot mechani
 - **Truly arbitrary memory / variables.** → Encode as flag items, currency, attributes, roles, or claims.
 - **Per-player-different unlocks from the same item.** → Reverse-blacklist is the same for all holders;
   use separate items or role conditions for per-player differences.
+- **Mixing "needs all" and "either one" doors on the same map.** → "Require ALL Key Items" is a single
+  server-wide setting, not per-cell. With it on, *every* shared cell needs all its items. For a
+  server that needs both patterns, keep alternative-key cells on disjoint coordinate lists (give each
+  key its own cells), or gate one door with an Action + AND conditions granting a flag item instead.
 - **Item images / inventory art.** → Emoji only; put art in room/Action text.
 - **A map that's a non-grid web of rooms.** → Either embed it on a grid (keep connected rooms adjacent)
   or switch to the **Action-Graph** paradigm.
