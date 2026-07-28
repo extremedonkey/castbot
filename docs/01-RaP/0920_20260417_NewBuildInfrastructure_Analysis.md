@@ -13,6 +13,8 @@ related:
 
 # 🏗️ New Build Infrastructure — Migrating Dev off the Laptop
 
+> **OUTCOME NOTE (2026-07-28):** The dedicated build/dev box was never created — dev remains laptop-based. But this analysis seeded castbot-blue (TestInstanceBlueGreen.md), and its snapshot/provisioning legwork was reused for the prod migration executed 2026-07-28 ([ProdBoxMigration.md](../03-features/ProdBoxMigration.md) — static-IP reattach, <2 min downtime).
+
 ## 📋 Original Context / Trigger Prompt
 
 > I don't love having to use ngrok and keeping the server up the whole time on my laptop, but i love developing using claude.

@@ -143,6 +143,10 @@ function execSSH(remoteCommand, description = '', riskLevel = 'info') {
             '-i', SSH_KEY_PATH,
             '-o', 'ConnectTimeout=30',
             '-o', 'ServerAliveInterval=60',
+            // accept-new: auto-pin unknown hosts (fresh machine / post-migration box) but still
+            // hard-fail on a CHANGED key. If prod's host key legitimately changes (instance
+            // migration, e.g. 2026-07-28), run once: ssh-keygen -R 13.238.148.170
+            '-o', 'StrictHostKeyChecking=accept-new',
             SSH_TARGET,
             remoteCommand
         ], {

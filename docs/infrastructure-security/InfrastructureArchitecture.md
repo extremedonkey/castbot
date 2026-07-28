@@ -143,7 +143,7 @@ graph TB
 | **Git Integration** | Auto-commit on restart | Pull from GitHub |
 | **Environment** | .env loaded manually | .env via PM2 ecosystem |
 | **DNS Provider** | N/A | DigitalOcean (NS records from Hover) |
-| **Node Version** | Latest available | 22.11.0 (stable) |
+| **Node Version** | Latest available | 22.12.0 (stable) |
 
 ## Development Environment
 
@@ -226,15 +226,17 @@ if (DEBUG) {
 
 #### AWS Lightsail Instance
 - **Platform**: Ubuntu 20.04 LTS with Bitnami LAMP Stack
-- **Instance Specifications**: 512 MB RAM, 2 vCPUs, 20 GB SSD
+- **Instance**: `castbot-prod-2` (Lightsail bundle `small_3_2`; migrated 2026-07-28 from `Node-js-1` 512MB via snapshot + static-IP reattach — see [ProdBoxMigration.md](../03-features/ProdBoxMigration.md))
+- **Instance Specifications**: 2 GB RAM, 2 vCPUs, 60 GB SSD
+- **Node heap cap**: `NODE_OPTIONS=--max-old-space-size=1024` (raised from 320 at migration)
 - **AWS Region**: ap-southeast-2a (Sydney)
 - **Static IP**: 13.238.148.170
-- **IPv6 Address**: 2406:da1c:5b:7a00:450e:d561:e949:d529
-- **Private IPv4**: 172.26.0.160
+- **IPv6 Address**: 2406:da1c:5b:7a00:3e04:34e1:fcf5:c86b
+- **Private IPv4**: 172.26.2.51
 - **Domain**: castbotaws.reecewagner.com
 - **Interactions Endpoint**: https://castbotaws.reecewagner.com/interactions
 - **Discord Application ID**: 1319912453248647170
-- **Node Version**: 22.11.0
+- **Node Version**: 22.12.0
 - **Web Server**: Apache (via Bitnami)
 - **SSL Management**: bncert-tool (Bitnami HTTPS Configuration Tool)
 
@@ -848,11 +850,13 @@ Print this and keep it handy for emergencies:
 
 **CRITICAL: Never use `os.freemem()` for memory guards on Linux.** It reports `MemFree` which is misleadingly low because Linux uses free RAM for disk cache. The cache is reclaimable under pressure — it's effectively available memory.
 
-| Metric | Source | What it measures | Typical value (448MB server) |
+| Metric | Source | What it measures | Typical value (2GB server, post 2026-07-28) |
 |--------|--------|-----------------|------------------------------|
-| `MemFree` | `/proc/meminfo` | Truly unused RAM (no cache) | 12-20MB |
-| `MemAvailable` | `/proc/meminfo` | Usable memory (free + reclaimable cache) | 90-130MB |
-| `os.freemem()` | Node.js `os` module | Approximately `MemFree + Buffers + Cached` | 80-120MB |
+| `MemFree` | `/proc/meminfo` | Truly unused RAM (no cache) | ~500-750MB |
+| `MemAvailable` | `/proc/meminfo` | Usable memory (free + reclaimable cache) | ~1.1-1.3GB |
+| `os.freemem()` | Node.js `os` module | Approximately `MemFree + Buffers + Cached` | ~1.1-1.3GB |
+
+(On the retired 448MB box these ran far tighter — MemAvailable typically 90-130MB — which is the historical context for why these guards exist.)
 
 **The right approach for memory guards:**
 ```javascript
@@ -885,13 +889,13 @@ Sharp decompresses images to raw RGBA (4 bytes/pixel). A 5.6MB compressed image 
 | 8x8 | 3000x3000 | ~38MB |
 | 10x10 | 4000x4000 | ~65MB |
 
-### Production Server Specs (2026-03)
+### Production Server Specs (2026-07, post-migration)
 
-- **Instance:** AWS Lightsail $3.50/month
-- **RAM:** 512MB (448MB usable after kernel)
-- **CastBot process:** 200-250MB typical (grows with guild count, currently 142)
-- **Available for operations:** ~100-130MB under normal load
-- **Swap:** 634MB configured (regularly 300-400MB used)
+- **Instance:** `castbot-prod-2`, AWS Lightsail `small_3_2` (~$12/month), migrated 2026-07-28 ([ProdBoxMigration.md](../03-features/ProdBoxMigration.md))
+- **RAM:** 2GB (~1.9GB usable); MemAvailable typically ~1.2GB
+- **Heap cap:** `--max-old-space-size=1024` (was 320 on the old 512MB box)
+- **CastBot process:** ~200-300MB typical (grows with guild count)
+- **Swap:** 1GB single `/swapfile2` (fstab), normally ~0 used — sustained >~100MB is an early-warning signal (incident 08)
 
 ## Troubleshooting
 
@@ -921,6 +925,8 @@ tail -f /tmp/castbot-dev.log
 - No HTTPS on port 443 (Discord can't reach bot)
 - Bot's Discord client connects (outgoing works)
 - Incoming webhook requests fail (HTTPS broken)
+
+**Auto-remediation:** this failure class is now also auto-remediated — ProdWatchdog on castbot-blue runs `remediate-castbot.sh` (stops nginx / starts Apache) after 15 min of sustained downtime ([incident 08](../incidents/08-SwapThrashFrozenLoop.md)).
 
 **Quick Diagnosis** (30 seconds):
 ```bash
@@ -1003,7 +1009,7 @@ curl -I https://castbotaws.reecewagner.com/interactions
 # 6. Check bot status
 pm2 list
 # Status: online (not errored/stopped)
-# Memory: ~60-150MB (normal range)
+# Memory: ~90MB fresh boot, ~200-300MB typical; heap cap 1024MB — sustained >600MB between nightly restarts warrants investigation
 # Restarts (↺): Should not be increasing
 
 # 7. Check bot logs for errors

@@ -40,6 +40,8 @@ async function executeSSH(command, description = '') {
   return new Promise((resolve, reject) => {
     const sshProcess = spawn('ssh', [
       '-i', SSH_KEY_PATH,
+      '-o', 'ConnectTimeout=15',
+      '-o', 'StrictHostKeyChecking=accept-new',
       SSH_TARGET,
       command
     ], {
@@ -188,10 +190,13 @@ function calculateHealthScores(pm2Data, sysMemory, logErrors) {
     overall: 100
   };
 
-  // Memory score (0-100, lower is better)
-  if (pm2Data.memory > 250) scores.memory = 0;
-  else if (pm2Data.memory > 200) scores.memory = 25;
-  else if (pm2Data.memory > 150) scores.memory = 75;
+  // Memory score (0-100, lower is better) — envelope re-based 2026-07-28 for the 2GB box
+  // with a 1024MB heap cap (old 150/200/250MB tiers were sized for the retired 512MB nano
+  // and scored a healthy box 0/100). The in-bot Ultrathink monitor self-calibrates against
+  // the V8 limit; this CLI reads only PM2 RSS, so tiers approximate the same envelope.
+  if (pm2Data.memory > 850) scores.memory = 0;
+  else if (pm2Data.memory > 600) scores.memory = 25;
+  else if (pm2Data.memory > 450) scores.memory = 75;
   else scores.memory = 100;
 
   // Performance score

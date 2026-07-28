@@ -5,6 +5,8 @@
 **Author:** Claude (Fable 5) at Reece's request
 **Follows:** [Incident 06 — Heap-Drift GC Death Spiral](../incidents/06-HeapDriftGCDeathSpiral.md) · [RaP 0896 — Map Creation Memory](0896_20260718_MapCreationMemoryResilience_Analysis.md) · [RaP 0903 — Memory Footprint](0903_20260706_MemoryFootprint_Analysis.md) · [RaP 0915 — Memory Leak OOM](0915_20260603_MemoryLeakOOM_Analysis.md)
 
+> **Outcome 2026-07-28:** Lever D2 executed as 2GB `castbot-prod-2` (heap cap 1024MB); A1's 12h cadence ran Jul 26–28 then relaxed to 24h — see [ProdBoxMigration.md](../03-features/ProdBoxMigration.md).
+
 ---
 
 ## 📜 Original Context (User's Full Prompt — Verbatim)

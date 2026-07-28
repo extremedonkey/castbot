@@ -121,7 +121,7 @@ Prod's `remediate-castbot.sh` (previously untracked, now versioned at [scripts/p
 | 2 | `PROD_WATCHDOG_THRESHOLD=2` on blue | Config | ✅ Done 2026-07-27 |
 | 3 | Version-control + fix `remediate-castbot.sh` (web_status `000DOWN` bug → Apache branch unreachable) | Code | ✅ repo copy done; ✅ **deployed to prod 2026-07-27** on Reece's go (md5-verified, status-mode tested) |
 | 4 | Persist SSH diagnostics + remediation output in blue's local logs | Code | ✅ Done 2026-07-27 |
-| 5 | **1GB+ Lightsail migration** — incident 06 #6, now the root capacity fix: 11.5h of normal load was enough to put a 447MB box ~495MB into swap | Infra | ⏳ Reece (urgent — this incident is what "under-provisioned" costs) |
+| 5 | **1GB+ Lightsail migration** — incident 06 #6, now the root capacity fix: 11.5h of normal load was enough to put a 447MB box ~495MB into swap | Infra | ✅ **Done 2026-07-28** — went 2GB (`small_3_2`, castbot-prod-2), snapshot + static-IP reattach, <2 min downtime; heap cap 320→1024MB; 🌙 cadence relaxed 12h→24h. See [ProdBoxMigration.md](../03-features/ProdBoxMigration.md) |
 | 6 | playerData in-memory cache (incident 03 P1, incident 06 #4 — the dominant churn source) | Code | ⏳ |
 | 7 | Check Lightsail **CPU burst capacity** for Jul 27 07:00–12:00Z; install sysstat for future forensics | Prod ops | ✅ Done 2026-07-27 — sysstat on TEST & PROD (10-min `sar` history incl. %steal); burst capacity pulled via Lightsail API: 98.9–100% all window → **throttling ruled out** |
 | 8 | Test-box restart self-announce (silent watchdog restarts) | Code | ✅ Already exists (app.js `🟦 [TEST] restart self-announce` — observed firing during this deploy; CLAUDE.md's "known gap" note was stale and has been corrected) |
@@ -136,11 +136,11 @@ Reece's PM2 error-channel screenshots (the `Stale safariContent read discarded (
 4. **Proven peak**: one generation bump (299→300) discarded **26 concurrent in-flight playerData reads** — ~26 flows each pinning a ~15MB parsed copy of the 4.3MB file ≈ **350–400MB of heap demand** on a box with <50MB free. GC + swap thrash starved the loop; the TLS/upload errors are the *symptom* of a starved event loop (identical uploads succeeded instantly 6× after the 11:29Z restart), not a Discord outage.
 5. Two aggravating finds: **`temp/` holds 1.1GB of orphaned overlay images** (566+ files — failure paths never unlink, and `_compressed.jpg` is never deleted even on success); and under lag, **duplicate action executions** occurred (a `once_per_player` remove ran twice) — a data-integrity audit item.
 
-**Mitigations (code, post-migration follow-ups)**: (a) memoryGuard pre-flight + **single-flight per (guild,user)** + short TTL re-use on the overlay path, drop the redundant encode cycle, downscale/JPEG the upload (~1MB not 7.2MB), unlink temp files in `finally`; (b) coalesce/debounce safariContent saves (or move claim/stamina state out of the 2.5MB monolith) to kill the generation churn; (c) clean the 1.1GB `temp/` backlog; (d) audit idempotency of custom-action remove under re-clicks. Tracked in [ProdBoxMigration.md](../02-implementation-wip/ProdBoxMigration.md) follow-ups.
+**Mitigations (code, post-migration follow-ups)**: (a) memoryGuard pre-flight + **single-flight per (guild,user)** + short TTL re-use on the overlay path, drop the redundant encode cycle, downscale/JPEG the upload (~1MB not 7.2MB), unlink temp files in `finally`; (b) coalesce/debounce safariContent saves (or move claim/stamina state out of the 2.5MB monolith) to kill the generation churn; (c) clean the 1.1GB `temp/` backlog; (d) audit idempotency of custom-action remove under re-clicks. Tracked in [ProdBoxMigration.md](../03-features/ProdBoxMigration.md) follow-ups.
 
 ## Appendix: 1GB Lightsail Migration Runbook (action #5)
 
-> **⚠️ SUPERSEDED 2026-07-27**: the full battle-tested runbook (3-agent pre-flight: env delta, Lightsail control-plane checks, exact mutation commands, rollback gates, blue validation plan) now lives at **[docs/02-implementation-wip/ProdBoxMigration.md](../02-implementation-wip/ProdBoxMigration.md)**. This appendix is kept as the original sketch.
+> **⚠️ SUPERSEDED 2026-07-27**: the full battle-tested runbook (3-agent pre-flight: env delta, Lightsail control-plane checks, exact mutation commands, rollback gates, blue validation plan) now lives at **[docs/03-features/ProdBoxMigration.md](../03-features/ProdBoxMigration.md)**. This appendix is kept as the original sketch.
 
 The static-IP concern is step 0 — everything else is routine. **RaP 0896 §F's "no DNS change" claim was an assumption, not a verified fact** ("worth verifying in the Lightsail console"), so verify it first; it decides which of two cutover paths applies.
 
@@ -178,3 +178,4 @@ The static-IP concern is step 0 — everything else is routine. **RaP 0896 §F's
 
 **Last Updated**: 2026-07-27
 **Status**: Prod online (restart #32, PID 659807, revision 88acdd27); watchdog escalation deployed to blue; prod-side script fix and 1GB migration awaiting Reece
+**2026-07-28**: migration executed — prod now castbot-prod-2 (2GB, 1024MB heap). This incident's capacity root cause is closed; code mitigations (overlay single-flight, safariContent save coalescing, temp/ cleanup automation, idempotency audit) remain open follow-ups.

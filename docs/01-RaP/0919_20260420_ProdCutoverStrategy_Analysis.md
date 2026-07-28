@@ -1,7 +1,7 @@
 ---
 title: Prod Infrastructure Cutover — Migrating to a Larger Lightsail Instance
 date: 2026-04-20
-status: Analysis / Pre-Implementation
+status: Executed 2026-07-28 — see Outcome note
 author: Reece + Claude
 related:
   - docs/01-RaP/0920_20260417_NewBuildInfrastructure_Analysis.md
@@ -11,6 +11,8 @@ related:
 ---
 
 # 🔄 Prod Cutover Strategy — Bigger Box, No Drama
+
+> **✅ OUTCOME (2026-07-28):** Executed as analyzed — snapshot of Node-js-1 → `castbot-prod-2` (`small_3_2`, 2GB) → static-IP `13.238.148.170` reattach. **Actual downtime <2 minutes**; zero DNS/Discord-portal changes, exactly as this RaP predicted ('the magic atomic switch'). Runbook + execution log: [ProdBoxMigration.md](../03-features/ProdBoxMigration.md)
 
 ## 📋 Original Context / Trigger Prompt
 

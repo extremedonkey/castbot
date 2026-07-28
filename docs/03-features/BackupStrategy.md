@@ -124,7 +124,8 @@ Documented in CLAUDE.md under "Data File Standards":
 ## TODO
 
 - [ ] Add auto-cleanup to `deploy-remote-wsl.js` — keep last 5 deployment backups, delete older (prevents disk fill, was at 11.2 GB / 139 dirs before manual cleanup)
-- [ ] Monitor disk usage on prod — 20GB disk, deployment backups are ~135MB each
+- [ ] Monitor disk usage on prod — 60GB disk since the 2026-07-28 migration (~15% used), deployment backups are ~135MB each
+- [ ] Enable Lightsail AutoSnapshot on `castbot-prod-2` — planned post-soak layer; prior to 2026-07-28 prod had NO instance-level backup
 
 ## Key Files
 

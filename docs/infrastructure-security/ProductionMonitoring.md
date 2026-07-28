@@ -175,8 +175,8 @@ Shows actual totals alongside percentages (matches Lightsail dashboard):
 
 ```bash
 🖥️ SYSTEM METRICS:
-   Memory Usage: 72% (321Mi/447Mi)
-   Disk Usage: 48% (9G/20G)
+   Memory Usage: 36% (689Mi/1941Mi)
+   Disk Usage: 15% (8.0G/59G)
    15:05:12 up 252 days, 23:59, 1 user, load average: 0.11, 0.04, 0.01
 ```
 
@@ -191,25 +191,28 @@ Shows actual totals alongside percentages (matches Lightsail dashboard):
 ### Alert Categories
 
 #### Critical Alerts
-- **Bot Memory >250MB**: Immediate restart recommended
+- **Bot Memory >850MB**: Approaching the 1024MB heap cap — restart recommended
 - **Bot Offline**: Immediate intervention required
 - **System Memory >85%**: Memory crisis condition
 
 #### Warning Alerts
+- **Bot Memory >600MB**: Investigate heap growth before the next nightly restart
 - **High Restart Count**: >20 restarts indicates instability
 - **System Memory 85%+**: Monitor for memory leaks
+
+(thresholds re-based 2026-07-28 after the 2GB migration; the in-bot Ultrathink monitor now self-calibrates against the V8 heap limit)
 
 ### Alert Format
 
 ```bash
 ⚠️ ALERTS & RECOMMENDATIONS:
-   🔴 CRITICAL: Bot memory usage at 275MB (>250MB threshold)
+   🔴 CRITICAL: Bot memory usage at 900MB (>850MB threshold)
    📋 Action: Consider immediate restart
 ```
 
 ## 🌙 Scheduled Auto-Restart
 
-Planned, cancellable self-restarts that reset the V8 heap before the multi-day drift reaches the OOM ceiling (the every-~3–5-day crash class from [RaP 0903](../01-RaP/0903_20260706_MemoryFootprint_Analysis.md)). Configured via Data menu → **🌙 Auto-Restart** (modal: enable/disable, interval like `1d`, warning channel). Thirty minutes before each restart, the warning channel gets a Components V2 message that pings Reece with a **Cancel** button; at T+0 the bot cleanly exits and PM2 autorestart revives it in ~50s. The Ultrathink restart history labels these `🌙 planned`. Ships disabled; nine runaway-state guards (min interval 4h, no-warning→no-restart, supervision gating, etc.). Full reference: [ScheduledRestart.md](../03-features/ScheduledRestart.md).
+Planned, cancellable self-restarts that reset the V8 heap before the multi-day drift reaches the OOM ceiling (the every-~3–5-day crash class from [RaP 0903](../01-RaP/0903_20260706_MemoryFootprint_Analysis.md)). Configured via Data menu → **🌙 Auto-Restart** (modal: enable/disable, interval like `1d`, warning channel). Thirty minutes before each restart, the warning channel gets a Components V2 message that pings Reece with a **Cancel** button; at T+0 the bot cleanly exits and PM2 autorestart revives it in ~50s. The Ultrathink restart history labels these `🌙 planned`. Ships disabled by default; nine runaway-state guards (min interval 4h, no-warning→no-restart, supervision gating, etc.). Enabled on prod since Jul 2026; current config (2026-07-28): every 24h anchored 22:00 UTC (was 12h on the old 320MB-heap box — relaxed after the 2GB/1024MB migration). The 3–5-day OOM crash class it was built against belongs to the retired 448MB box. Full reference: [ScheduledRestart.md](../03-features/ScheduledRestart.md).
 
 ## 📋 PM2 Error Logger
 

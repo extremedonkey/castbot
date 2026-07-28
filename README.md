@@ -338,7 +338,7 @@ The app service is also launched in dev using ./start-and-push.ps1 and ngrok run
 ### Production
 PRODUCTION is hosted on an AWS Lightsail instance using a bitnami image. This runs 24/7 and is in use by players live. The production endpoint is always [https://castbotaws.reecewagner.com/interactions](vscode-file://vscode-app/c:/Users/extre/AppData/Local/Programs/Microsoft%20VS%20Code/resources/app/out/vs/code/electron-sandbox/workbench/workbench.html).
 
-An equivalent of ngrok is not required in Prod, as Let's Encrypt provides a reverse proxy plus certificate to ensure the required HTTP / TLS connection required by the discord interactions API. DigitalOcean provides the DNS hosting for the domain name reecewagner.com, with the subdomain castbot.reecewagner.com pointing to the AWS Lightsail instance static IP of `13.238.148.170`. The instance is running on a machine with 512 MB RAM, 2 vCPUs, 20 GB SSD in AWS zone ap-southeast-2a.
+An equivalent of ngrok is not required in Prod, as Let's Encrypt provides a reverse proxy plus certificate to ensure the required HTTP / TLS connection required by the discord interactions API. DigitalOcean provides the DNS hosting for the domain name reecewagner.com, with the subdomain castbotaws.reecewagner.com pointing to the AWS Lightsail instance static IP of `13.238.148.170`. The instance is running on a machine with 2 GB RAM, 2 vCPUs, 60 GB SSD (`castbot-prod-2`, since 2026-07-28) in AWS zone ap-southeast-2a.
 
 The production architecture is summarised below.
 ![[Pasted image 20250301125028.png]]

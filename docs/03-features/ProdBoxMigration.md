@@ -1,6 +1,6 @@
 # Prod Box Migration — Node-js-1 (512MB nano) → castbot-prod-2 (bigger bundle)
 
-**Status**: ✅ **CUTOVER COMPLETE 2026-07-28 17:45 AWST (09:45 UTC)** — prod is now castbot-prod-2 (2GB). **Actual downtime: <2 minutes** (bot stopped ~09:44Z → "Discord client is ready!" 09:45:36Z). Soak period until ~Aug 4.
+**Status**: ✅ **Executed 2026-07-28 — soak follow-ups open (until ~Aug 4)**. Cutover complete 17:45 AWST (09:45 UTC) — prod is now castbot-prod-2 (2GB). **Actual downtime: <2 minutes** (bot stopped ~09:44Z → "Discord client is ready!" 09:45:36Z).
 
 **Phase 2 execution log (2026-07-28)**: Reece cancelled the 18:00-AWST 🌙 fire (scheduler verified advanced to 22:00Z) · blue auto-remediation muted → restored after · pre-stop off-box backups of playerData (4,372,738B) + safariContent (2,520,439B) to the Windows machine · old bot stopped → final sizes byte-identical to backups (no writes in between) · zero img/ changes since snapshot (sync skipped) · rehearsed data sync + prod dump.pm2 → sizes verified on new box · IP flip detach/attach both `Succeeded`, `13.238.148.170 → castbot-prod-2` confirmed · pm2-bitnami enabled+started, castbot-pm + pm2-logrotate resurrected · domain 200 externally, clean boot, no env errors · **NODE_OPTIONS raised 320→1024MB** + `pm2 save` · smoke test verified in analytics log: pre-freeze events (Jun's safari cluster 16:32, sicnarf's full application flow 17:06) survived the sync AND Reece's post-cutover clicks (17:48–17:49) logged by the new box — zero event gap.
 
@@ -13,13 +13,13 @@
 **Verified pre-flight**: 2026-07-27 via read-only AWS CLI + SSH forensics on both boxes (3-agent sweep; no blockers)
 **Executor**: Claude drives every step via AWS CLI + SSH from the Windows machine; Reece authorizes each mutation phase and smoke-tests in Discord
 
-## Decisions needed from Reece
+## Decisions taken (2026-07-27)
 
-| # | Decision | Recommendation |
+| # | Decision | Taken |
 |---|---|---|
-| 1 | **Bundle**: `micro_3_2` 1GB/40GB/$7-mo (+$2) vs `small_3_2` 2GB/60GB/$12-mo (+$7) | **small_3_2 (2GB)** — matches castbot-blue, 4× current RAM, $5/mo more than the minimum step; incident 06/08 showed 1GB is only ~2× a ceiling we already hit |
-| 2 | **Pre-build tonight?** Phase 0 (snapshot + build + park the new box) can run the evening before — cutover day then contains only the 4-step flip (~5 min downtime) | **Yes** — shrinks the risky window and battle-tests the snapshot boot with a full day of slack |
-| 3 | **temp/ cleanup before snapshot** — prod repo carries **1.1GB of orphaned overlay images** (631 files, zero value; failure paths never unlink — see incident 08 addendum). Deleting first slims the snapshot | **Yes** — one `rm` of `temp/activity_overlay_*` + `*_compressed.jpg` (write op, needs the word) |
+| 1 | **Bundle**: `micro_3_2` 1GB/40GB/$7-mo (+$2) vs `small_3_2` 2GB/60GB/$12-mo (+$7) | ✅ **small_3_2 (2GB) chosen** — matches castbot-blue, 4× current RAM, $5/mo more than the minimum step; incident 06/08 showed 1GB is only ~2× a ceiling we already hit |
+| 2 | **Pre-build the evening before** — Phase 0 (snapshot + build + park the new box), leaving cutover day only the 4-step flip | ✅ **Done evening prior (2026-07-27)** — shrank the risky window and battle-tested the snapshot boot with a full day of slack (see Phase 0 execution log) |
+| 3 | **temp/ cleanup before snapshot** — prod repo carried **1.1GB of orphaned overlay images** (zero value; failure paths never unlink — see incident 08 addendum) | ✅ **Done — 1.1GB deleted** (`temp/activity_overlay_*` + `*_compressed.jpg`) before the snapshot |
 
 ## The DNS/registrar chain (verified live 2026-07-27 — nothing in it is touched by this migration)
 
@@ -157,4 +157,4 @@ Parked cost while waiting: bundle price pro-rata (~40¢/day for small_3_2). Roll
 - [TestInstanceBlueGreen.md](../03-features/TestInstanceBlueGreen.md) · [InfrastructureArchitecture.md](../infrastructure-security/InfrastructureArchitecture.md) (Hover/DO/Lightsail diagram)
 
 ---
-**Last Updated**: 2026-07-27 · Pre-flight complete, awaiting Reece's decisions (bundle / pre-build tonight / temp cleanup)
+**Last Updated**: 2026-07-28 · Executed — cutover complete; soak follow-ups open (until ~Aug 4)

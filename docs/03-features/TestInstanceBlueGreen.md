@@ -14,7 +14,7 @@
 
 1. **Staging gate** — `dev-restart.sh` deploys to test automatically on every change, so changes soak on a real Lightsail box (real SSL, real PM2, prod-scale data) before any prod deploy.
 2. **Out-of-band ops console** — a bot that's *up when prod is down*, so the "Restart Prod" button and the automated watchdog can remediate prod when its own process is dead and its own buttons are useless.
-3. **Prod-in-waiting** — built on the stack we want prod to be on (Ubuntu 24.04 + nginx, not the retired Bitnami image), so a future cutover is a static-IP swap rather than a rebuild. The box is "blue"; the legacy Bitnami prod box is implicitly "green"/legacy.
+3. **Prod-in-waiting** — built on the stack we want prod to be on (Ubuntu 24.04 + nginx, not the retired Bitnami image), so a future cutover is a static-IP swap rather than a rebuild. The box is "blue"; the legacy Bitnami prod box is implicitly "green"/legacy. (Since 2026-07-28 prod is `castbot-prod-2` — 2GB, still Bitnami/Apache — so the future flip's remaining motivation is stack modernization (Bitnami→Ubuntu+nginx), not capacity.)
 
 The name describes the **box** (`castbot-blue`); `INSTANCE_ROLE=test` in its `.env` describes its current **role**. At a future flip, the role flag flips to prod; the box name doesn't.
 
@@ -22,20 +22,20 @@ The name describes the **box** (`castbot-blue`); `INSTANCE_ROLE=test` in its `.e
 
 ## At a Glance — The Two Boxes
 
-| | **PROD** (legacy) | **TEST** (`castbot-blue`) |
+| | **PROD** (`castbot-prod-2`, since 2026-07-28) | **TEST** (`castbot-blue`) |
 |---|---|---|
 | IP | `13.238.148.170` | `13.210.218.153` |
 | SSH alias | `castbot-lightsail` | `castbot-blue` |
 | SSH user | `bitnami` | `ubuntu` |
 | SSH key | `~/.ssh/castbot-key.pem` | `~/.ssh/castbot-blue-key.pem` |
 | Repo path | `/opt/bitnami/projects/castbot` | `/home/ubuntu/castbot` |
-| OS / stack | Lightsail 512MB Bitnami, Apache+SSL (nginx dormant) | Lightsail 2GB Ubuntu 24.04, nginx + certbot (snap) |
+| OS / stack | Lightsail 2GB (`small_3_2`) Bitnami snapshot-derived, Apache+SSL (nginx dormant) | Lightsail 2GB Ubuntu 24.04, nginx + certbot (snap) |
 | Public domain | `castbotaws.reecewagner.com` | `castbotblue.reecewagner.com` |
 | Region | ap-southeast-2a (Sydney) | ap-southeast-2a (Sydney) |
 | Runtime | Node 22, PM2 `castbot-pm` | Node 22, PM2 `castbot-pm` (same name on purpose) |
 | `.env` role | `PRODUCTION=TRUE` | `PRODUCTION=FALSE`, `INSTANCE_ROLE=test` |
 | Deploy command | `npm run deploy-remote-wsl` (permissioned) | `npm run deploy-test` (free; also automatic on `dev-restart.sh`) |
-| Cost/mo | ~$3.50 (grandfathered) | ~$12 (2GB dual-stack) |
+| Cost/mo | ~$12 (2GB dual-stack) | ~$12 (2GB dual-stack) |
 
 The PM2 process name is **deliberately identical** (`castbot-pm`) on both boxes so every existing script and runbook works unchanged on either.
 
@@ -56,7 +56,7 @@ flowchart LR
         ARec2[castbotblue → 13.210.218.153]
     end
 
-    subgraph ProdBox [PROD — Lightsail 512MB Bitnami — frozen platform]
+    subgraph ProdBox [PROD — castbot-prod-2 — Lightsail 2GB Bitnami snapshot-derived]
         Apache[Apache :443 SSL] --> NodeP[node app.js :3000<br/>pm2 castbot-pm]
         Remediate[remediate-castbot.sh<br/>forced-command target]
     end
@@ -238,13 +238,15 @@ The box was built for an eventual blue/green cutover that retires the legacy Bit
 2. Issue a cert for the **prod** domain on the test box *before* flip day via DNS-01 (`certbot-dns-digitalocean` + DO API token) — DNS-01 doesn't need DNS to point at the box yet.
 3. **Flip sequence (~30-60s downtime):** stop test identity → final data delta rsync from prod → swap `.env` to prod creds + `PRODUCTION=TRUE` → stop prod bot → detach static IP `13.238.148.170` from old box, attach to test box → start bot (nginx already has the prod vhost+cert) → verify → hold old box 48h for rollback, then delete. Discord sees nothing: domain, IP, and endpoint URL all unchanged.
 
+**Update 2026-07-28:** not executed to this box, but the [ProdBoxMigration.md](ProdBoxMigration.md) cutover battle-proved the core mechanic (static-IP reattach, <2 min downtime, hold-old-box rollback); capacity motive is settled, stack-modernization motive remains.
+
 ---
 
 ## Why These Choices (condensed)
 
 - **Ubuntu 24.04 + nginx, not Bitnami:** Broadcom retired Bitnami from AWS Marketplace/Lightsail (2026-06-10); the Node.js blueprint stopped getting updates. Since the test box is the *future prod*, committing it to a dead platform made no sense. nginx also eliminates the recurring "post-reboot nginx grabs port 80, Apache can't bind, interactions dead" outage class that the two-server Bitnami image causes.
 - **Subdomain (`castbotblue.reecewagner.com`), not a new domain:** a brand-new A record resolves worldwide in ~1-5 min (propagation is only slow for *changed* records), and certbot can issue immediately. A vanity domain is additive at any time with zero downtime, so it never needed to block the build.
-- **2GB box:** it's the future prod, so under-provisioning would force a rebuild before flip. 2GB is ~4.5× current prod RAM, which also makes it a free "leak lab" for RaP 0915's heap-dump work (dumps freeze prod ~74s; harmless on the spare box).
+- **2GB box:** it's the future prod, so under-provisioning would force a rebuild before flip. 2GB matched prod's post-2026-07-28 size (both `small_3_2`), which also makes it a free "leak lab" for RaP 0915's heap-dump work (dumps freeze prod ~74s; harmless on the spare box).
 
 ---
 

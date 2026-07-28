@@ -1,12 +1,12 @@
 # Scheduled Auto-Restart (🌙)
 
-**Status:** Built 2026-07-06, ships **disabled** — enable via the Data menu. Not yet enabled on prod.
+**Status:** Built 2026-07-06; **LIVE on prod** — every 24h anchored 22:00 UTC (set 2026-07-28 after the 2GB migration; was 12h Jul 26–28 on the old 320MB-heap box). Ships disabled by default; enable via the Data menu.
 **Design/rationale:** [RaP 0903 — Memory Footprint Analysis](../01-RaP/0903_20260706_MemoryFootprint_Analysis.md)
 **Module:** [src/monitoring/restartScheduler.js](../../src/monitoring/restartScheduler.js)
 
 ## What & Why
 
-Prod (448MB Lightsail, V8 heap capped at 320MB) accumulates heap drift and OOM-crashes every ~3–5 days (see [incident 03](../incidents/03-V8HeapOOMCrash.md), RaP 0915/0903). This feature converts those random crashes into **planned, warned, cancellable** restarts: the bot cleanly `process.exit(0)`s on a schedule, PM2 `autorestart: true` revives it in ~50s (the same path that recovers every crash today), and the heap resets to its ~85MB baseline — the OOM ceiling is never reached.
+Built for the old prod (448MB Lightsail, 320MB heap cap), which OOM-crashed every ~3–5 days (see [incident 03](../incidents/03-V8HeapOOMCrash.md), RaP 0915/0903). Since the 2026-07-28 migration (2GB box, 1024MB heap cap) restarts are heap hygiene rather than crash avoidance. This feature converts those random crashes into **planned, warned, cancellable** restarts: the bot cleanly `process.exit(0)`s on a schedule, PM2 `autorestart: true` revives it in ~50s (the same path that recovers every crash today), and the heap resets to its ~85MB baseline — the OOM ceiling is never reached.
 
 ## Configuration UI
 
@@ -77,7 +77,7 @@ flowchart LR
 
 1. Deploy the code (`npm run deploy-remote-wsl` — needs Reece's explicit permission, as always)
 2. **Set `PROD_WATCHDOG_THRESHOLD=2` in the TEST box `.env`** and restart the test bot. The watchdog probes prod every 60s with failure-threshold 1 — a planned ~50s restart would otherwise fire false `🔴 Prod Down`/`🟢 Recovered` alert pairs most cycles. Threshold 2 still alerts on genuine >2min outages
-3. In prod Discord: Data menu → 🌙 Auto-Restart → Enable, `1d`, health-monitor channel. First restart lands one interval later — pick the submission time so the cadence hits the quiet window (6PM AWST / 10:00 UTC is the established maintenance window; submitting at 6PM AWST gives 6PM AWST daily)
+3. In prod Discord: Data menu → 🌙 Auto-Restart → Enable, interval, health-monitor channel. First restart lands one interval later, so the submission time sets the anchor. **Current prod config (set 2026-07-28): every 24h anchored 22:00 UTC (6AM AWST).** To change the anchor, re-submit the modal at the desired anchor time; to change the cadence, just update the interval fields
 4. Watch the first cycle: warning at T-30 in the channel, `🌙 planned` in the next Ultrathink restart history
 
 ## Testing

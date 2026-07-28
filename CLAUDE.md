@@ -535,6 +535,7 @@ When a feature is **deployed to production and working**, move/rename its doc in
 - **🔐 ROLES & SECURITY** → [docs/03-features/RolesSecurity.md](docs/03-features/RolesSecurity.md) - `globalRoleAccess` whitelist: Settings UI + creation-time channel grants (Season Apps: View/Send/ReadHistory; Safari map locations/categories/castbot-images storage: View/Send/ManageChannels). Helper: [utils/roleAccessUtils.js](utils/roleAccessUtils.js)
 - **🌍 INFRASTRUCTURE ARCHITECTURE** → [docs/infrastructure-security/InfrastructureArchitecture.md](docs/infrastructure-security/InfrastructureArchitecture.md)
 - **🧪 TEST INSTANCE (BLUE/GREEN)** → [docs/03-features/TestInstanceBlueGreen.md](docs/03-features/TestInstanceBlueGreen.md) - castbot-blue always-on staging box, `npm run deploy-test`, Restart Prod button + ProdWatchdog, future flip
+- **📦 PROD BOX MIGRATION** → [docs/03-features/ProdBoxMigration.md](docs/03-features/ProdBoxMigration.md) - The 2026-07-28 snapshot + static-IP-reattach migration (Node-js-1 512MB → castbot-prod-2 2GB): runbook, rollback gates, execution log, soak follow-ups. Reference for any future Lightsail resize/flip
 - **🎯 PRODUCTION MONITORING** → [docs/infrastructure-security/ProductionMonitoring.md](docs/infrastructure-security/ProductionMonitoring.md)
 - **🌙 SCHEDULED AUTO-RESTART** → [docs/03-features/ScheduledRestart.md](docs/03-features/ScheduledRestart.md) - Planned, cancellable heap-reset restarts (Data menu → Auto-Restart; T-30 warning + Cancel button; ships disabled). Module: [restartScheduler.js](src/monitoring/restartScheduler.js). Design: [RaP 0903](docs/01-RaP/0903_20260706_MemoryFootprint_Analysis.md)
 - **📊 ANALYTICS** → [docs/infrastructure-security/Analytics.md](docs/infrastructure-security/Analytics.md)
@@ -756,7 +757,7 @@ AWS CLI v2 is installed on the Windows machine (`C:\Program Files\Amazon\AWSCLIV
 - ✅ **Read-only `lightsail:Get*` freely, no permission needed**: `get-instances`, `get-static-ips`, `get-instance-metric-data` (CPUUtilization, BurstCapacityPercentage), `get-instance-snapshots`, etc.
 - 🔴 **ANY mutation needs Reece's explicit word in the current conversation — every time**: stop/start/reboot/delete instances, attach/detach static IPs, create/delete snapshots, open-ports changes. One authorization = one action.
 
-**Instance inventory:** prod = `Node-js-1` (nano_3_2, 512MB/2vCPU, static IP `13.238.148.170` via resource `lightsailstaticIP`); test = `castbot-blue` (small_3_2, 2GB, static IP `13.210.218.153`).
+**Instance inventory:** prod = `castbot-prod-2` (small_3_2, 2GB/2vCPU/60GB, static IP `13.238.148.170` via resource `lightsailstaticIP` — migrated from Node-js-1 on 2026-07-28, see [ProdBoxMigration.md](docs/03-features/ProdBoxMigration.md)); test = `castbot-blue` (small_3_2, 2GB, static IP `13.210.218.153`). `Node-js-1` = stopped warm-rollback (ephemeral IP, bot stopped) until post-soak deletion — **do not start/modify it**.
 
 ## 📐 app.js Organization
 
