@@ -11,7 +11,7 @@ import {
     getPlayer,
     loadPlayerData
 } from './storage.js';
-import { capitalize } from './utils.js';
+import { capitalize, countComponents } from './utils.js';
 import { sortCastlistMembers, sortVanityRolesForDisplay } from './castlistSorter.js';
 import { castlistManager } from './castlistManager.js';
 import { parseTextEmoji } from './utils/emojiUtils.js';
@@ -705,15 +705,16 @@ function createCastlistV2Layout(tribes, castlistName, guild, navigationRows = []
         // Removed separate manage profile row - now integrated into navigation
     ];
 
-    // DEBUG: Count actual components
-    const componentCount = countComponents(finalComponents);
+    const componentCount = countComponents(finalComponents, {
+        enableLogging: process.env.DEBUG_VERBOSE === 'true',
+        label: 'Castlist Layout'
+    });
 
     // Only show detailed breakdown in VERBOSE mode
     if (process.env.DEBUG_VERBOSE === 'true') {
         console.log(`🔍 ACTUAL COMPONENT COUNT: ${componentCount} components`);
         console.log(`   Tribe components: ${components.length}`);
         console.log(`   Navigation rows: ${navigationRows.length}`);
-        console.log(`   Manage profile row: 1`);
     }
     
     // DEBUG: JSON dump removed to avoid spam
@@ -732,56 +733,6 @@ function createCastlistV2Layout(tribes, castlistName, guild, navigationRows = []
         flags: 1 << 15, // IS_COMPONENTS_V2 flag
         components: finalComponents
     };
-}
-
-// DEBUG: Component counting function
-function countComponents(components) {
-    let count = 0;
-    
-    const typeNames = {
-        1: 'ActionRow',
-        2: 'Button', 
-        9: 'Section',
-        10: 'TextDisplay',
-        11: 'Thumbnail',
-        14: 'Separator',
-        17: 'Container'
-    };
-    
-    function countRecursive(items, depth = 0, verbose = false) {
-        if (!Array.isArray(items)) return;
-
-        for (const item of items) {
-            count++; // Count the item itself
-
-            if (verbose) {
-                const indent = '  '.repeat(depth);
-                const typeName = typeNames[item.type] || `Unknown(${item.type})`;
-                const hasAccessory = item.accessory ? ' [HAS ACCESSORY]' : '';
-                console.log(`${indent}${count}. ${typeName}${hasAccessory}`);
-
-                // Show accessory details if present
-                if (item.accessory && depth < 3) {
-                    const accessoryType = typeNames[item.accessory.type] || `Unknown(${item.accessory.type})`;
-                    console.log(`${indent}   └─ Accessory: ${accessoryType}`);
-                }
-            }
-
-            // Recursively count nested components
-            if (item.components) {
-                countRecursive(item.components, depth + 1, verbose);
-            }
-        }
-    }
-
-    // Only show detailed breakdown in VERBOSE mode (not STANDARD)
-    const isVerbose = process.env.DEBUG_VERBOSE === 'true';
-
-    if (isVerbose) {
-        console.log('📋 DETAILED COMPONENT BREAKDOWN:');
-    }
-    countRecursive(components, 0, isVerbose);
-    return count;
 }
 
 /**
@@ -998,7 +949,6 @@ export async function buildCastlist2ResponseData(guild, tribes, castlistId, navi
   }
 
   // Count components for debugging (responseData.components contains Containers)
-  const { countComponents } = await import('./utils.js');
   countComponents(responseData.components, {
     enableLogging: true,
     label: `/castlist - ${castlistName || castlistId}`

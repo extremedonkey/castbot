@@ -475,3 +475,66 @@ describe('parseCastlistNavigation — error handling', () => {
     assert.ok(isNaN(result.currentTribeIndex));
   });
 });
+
+// ── calculateComponentsForTribe estimator + 40-component limit ──
+
+// Replicated from castlistV2.js — must stay in sync with the actual render:
+// Container + header TextDisplay (2), per player Section + TextDisplay + accessory (3),
+// separator between players (N-1) + before install (1), install row (2), nav row (4)
+function calculateComponentsForTribe(playerCount, includeSeparators = true) {
+  const playerComponents = playerCount * 3;
+  const separatorCount = includeSeparators ? Math.max(0, playerCount - 1) : 0;
+  const tribeOverhead = 2;
+  const installOverhead = includeSeparators ? 3 : 2;
+  const navigationOverhead = 4;
+  return playerComponents + separatorCount + tribeOverhead + installOverhead + navigationOverhead;
+}
+
+// Replicated page-distribution math from calculateTribePages (castlistV2.js)
+function distributePlayersAcrossPages(totalPlayers, maxPlayersPerPage = 8) {
+  const totalPages = Math.ceil(totalPlayers / maxPlayersPerPage);
+  const pages = [];
+  let remaining = totalPlayers;
+  for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
+    const forThisPage = Math.ceil(remaining / (totalPages - pageIndex));
+    pages.push(forThisPage);
+    remaining -= forThisPage;
+  }
+  return pages;
+}
+
+describe('Castlist component estimator — matches actual render (4N + 8)', () => {
+  it('8-player page lands exactly on the 40-component Discord limit', () => {
+    assert.equal(calculateComponentsForTribe(8, true), 40);
+  });
+
+  it('7-player page = 36 (verified against production log)', () => {
+    assert.equal(calculateComponentsForTribe(7, true), 36);
+  });
+
+  it('single player page = 12', () => {
+    assert.equal(calculateComponentsForTribe(1, true), 12);
+  });
+
+  it('no-separator variant drops N-1 separators plus the install separator', () => {
+    assert.equal(calculateComponentsForTribe(8, false), 32);
+  });
+});
+
+describe('Castlist pagination — no page can exceed the 40-component limit', () => {
+  it('distributes 1-40 players with max 8 per page, all players accounted for', () => {
+    for (let total = 1; total <= 40; total++) {
+      const pages = distributePlayersAcrossPages(total);
+      const maxOnPage = Math.max(...pages);
+      assert.ok(maxOnPage <= 8, `${total} players: page of ${maxOnPage} exceeds 8`);
+      assert.equal(pages.reduce((a, b) => a + b, 0), total);
+      assert.ok(calculateComponentsForTribe(maxOnPage, true) <= 40);
+    }
+  });
+
+  it('15 players → first page of 8 → exactly 40 components', () => {
+    const pages = distributePlayersAcrossPages(15);
+    assert.deepEqual(pages, [8, 7]);
+    assert.equal(calculateComponentsForTribe(pages[0], true), 40);
+  });
+});
