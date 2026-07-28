@@ -21,7 +21,8 @@
  *   - Tools menu (`askcb_ask`)        → admins, whitelisted guilds/users only.
  *   - Posted button (`askcb_public_ask`) → ANYONE who can see the channel it was posted
  *     in. Deliberate: Reece posts these into limited areas and lets channel permissions
- *     be the gate. Both routes are DEV/TEST-only and share the concurrency cap.
+ *     be the gate. Both routes run on DEV/TEST and (since 2026-07-28, behind the
+ *     CLAUDE_PROD_FEATURES=TRUE opt-in) on PROD; they share the concurrency cap.
  *
  * @module askCastBot
  */
@@ -76,7 +77,16 @@ const CLI_DENY = [
   'Read(./.env.*)',
   'Read(./*.pem)',
   'Read(./.git/**)',
-  'Read(./backups/**)'
+  'Read(./backups/**)',
+  // Absolute/global variants (added with the prod rollout 2026-07-28): the './' rules
+  // only match repo-relative paths, but Read accepts absolute paths too — and on prod a
+  // leak of /opt/.../.env (bot token) or /home/bitnami (SSH keys, Claude creds, Bitnami
+  // passwords) posts straight into a public channel. Same hardening protects blue.
+  'Read(**/.env)',
+  'Read(**/.env.*)',
+  'Read(**/*.pem)',
+  'Read(/home/bitnami/**)',
+  'Read(/home/ubuntu/**)'
 ];
 
 /** Additional deny rules for player data — lifted only for SUPER_READ_GUILD_IDS. */
@@ -174,11 +184,13 @@ let inFlight = 0;
 
 /**
  * Is this instance allowed to run Ask CastBot at all?
- * DEV and TEST only — prod has no Claude CLI and no business spawning one.
+ * DEV and TEST always; PROD only with the explicit CLAUDE_PROD_FEATURES=TRUE opt-in
+ * (added 2026-07-28 after the 2GB migration — the old 512MB box genuinely couldn't
+ * afford a CLI spawn; the new one can, and the CLI + auth are installed on it).
  * @returns {boolean}
  */
 export function isAskCastBotEnvironment() {
-  return process.env.PRODUCTION !== 'TRUE';
+  return process.env.PRODUCTION !== 'TRUE' || process.env.CLAUDE_PROD_FEATURES === 'TRUE';
 }
 
 /**

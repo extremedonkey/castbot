@@ -17,7 +17,7 @@ const ALLOWED_USER_IDS = ['1398896688646590494', '909852958525636660', '69185062
 
 // Replicated from askCastBot.js — keep in sync.
 function isAskCastBotEnvironment(env) {
-  return env.PRODUCTION !== 'TRUE';
+  return env.PRODUCTION !== 'TRUE' || env.CLAUDE_PROD_FEATURES === 'TRUE';
 }
 function hasAskCastBotAccess({ userId, guildId } = {}, env = {}) {
   if (!isAskCastBotEnvironment(env)) return false;
@@ -40,10 +40,17 @@ describe('Ask CastBot — environment gate', () => {
     assert.equal(hasAskCastBotAccess({ userId: STRANGER, guildId: ALLOWED_GUILD_IDS[0] }, TEST), true);
   });
 
-  it('is NEVER available in prod, even for whitelisted users', () => {
+  it('is unavailable in prod WITHOUT the CLAUDE_PROD_FEATURES opt-in, even for whitelisted users', () => {
     for (const userId of ALLOWED_USER_IDS) {
       assert.equal(hasAskCastBotAccess({ userId, guildId: ALLOWED_GUILD_IDS[0] }, PROD), false);
     }
+  });
+
+  it('is available in prod WITH CLAUDE_PROD_FEATURES=TRUE (2026-07-28 rollout) — whitelists still apply', () => {
+    const PROD_OPTED_IN = { PRODUCTION: 'TRUE', CLAUDE_PROD_FEATURES: 'TRUE' };
+    assert.equal(hasAskCastBotAccess({ userId: STRANGER, guildId: ALLOWED_GUILD_IDS[0] }, PROD_OPTED_IN), true);
+    assert.equal(hasAskCastBotAccess({ userId: STRANGER, guildId: RANDOM_GUILD }, PROD_OPTED_IN), false,
+      'the env opt-in must not bypass the guild/user whitelists');
   });
 });
 

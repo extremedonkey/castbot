@@ -15,20 +15,44 @@ import {
   buildPrompt
 } from '../moai.js';
 
-describe('Moai — isMoaiEnvironment (DEV/TEST only)', () => {
+describe('Moai — isMoaiEnvironment (DEV/TEST always; PROD behind CLAUDE_PROD_FEATURES)', () => {
+  const withEnv = (vars, fn) => {
+    const prev = {};
+    for (const [k, v] of Object.entries(vars)) {
+      prev[k] = process.env[k];
+      if (v === undefined) delete process.env[k]; else process.env[k] = v;
+    }
+    try { fn(); } finally {
+      for (const [k, v] of Object.entries(prev)) {
+        if (v === undefined) delete process.env[k]; else process.env[k] = v;
+      }
+    }
+  };
+
   it('is true when PRODUCTION is not TRUE', () => {
-    const prev = process.env.PRODUCTION;
-    delete process.env.PRODUCTION;
-    assert.equal(isMoaiEnvironment(), true);
-    if (prev !== undefined) process.env.PRODUCTION = prev;
+    withEnv({ PRODUCTION: undefined, CLAUDE_PROD_FEATURES: undefined }, () => {
+      assert.equal(isMoaiEnvironment(), true);
+    });
   });
 
-  it('is false in production', () => {
-    const prev = process.env.PRODUCTION;
-    process.env.PRODUCTION = 'TRUE';
-    assert.equal(isMoaiEnvironment(), false);
-    if (prev === undefined) delete process.env.PRODUCTION;
-    else process.env.PRODUCTION = prev;
+  it('is false in production without the opt-in flag', () => {
+    withEnv({ PRODUCTION: 'TRUE', CLAUDE_PROD_FEATURES: undefined }, () => {
+      assert.equal(isMoaiEnvironment(), false);
+    });
+  });
+
+  it('is true in production WITH CLAUDE_PROD_FEATURES=TRUE (2026-07-28 rollout)', () => {
+    withEnv({ PRODUCTION: 'TRUE', CLAUDE_PROD_FEATURES: 'TRUE' }, () => {
+      assert.equal(isMoaiEnvironment(), true);
+    });
+  });
+
+  it('opt-in must be exactly TRUE — "true"/"1" do not count', () => {
+    for (const bad of ['true', '1', 'yes']) {
+      withEnv({ PRODUCTION: 'TRUE', CLAUDE_PROD_FEATURES: bad }, () => {
+        assert.equal(isMoaiEnvironment(), false, `value "${bad}"`);
+      });
+    }
   });
 });
 

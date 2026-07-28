@@ -42,12 +42,14 @@ function truncate(text, max) {
 }
 
 /**
- * Is the Moai present on this box at all? DEV and TEST only — prod has no Claude CLI
- * installed (yet; "maybe in the future"). Same gate as Ask CastBot's environment check.
+ * Is the Moai present on this box at all? DEV and TEST always; PROD only with the
+ * CLAUDE_PROD_FEATURES=TRUE opt-in ("maybe in the future" arrived 2026-07-28, when the
+ * 2GB migration made CLI spawns affordable and the CLI + auth were installed on prod).
+ * Same gate as Ask CastBot's environment check. Access stays KEEPER_IDS-only regardless.
  * @returns {boolean}
  */
 export function isMoaiEnvironment() {
-  return process.env.PRODUCTION !== 'TRUE';
+  return process.env.PRODUCTION !== 'TRUE' || process.env.CLAUDE_PROD_FEATURES === 'TRUE';
 }
 
 /**
