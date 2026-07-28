@@ -2,10 +2,7 @@
   "permissions": {
     "allow": [
       "Read(**)",
-      "Grep(**)",
-      "Glob(**)",
       "Edit(**)",
-      "Write(**)",
       "WebSearch",
       "WebFetch(domain:discordjs.guide)",
       "WebFetch(domain:discord.com)",

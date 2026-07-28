@@ -11027,11 +11027,17 @@ To fix this:
       })(req, res, client);
 
     } else if (custom_id === 'moai_restart_dev') {
-      // 🔄 Restart Dev — runs dev-restart.sh from Discord
+      // 🔄 Restart Dev — keeper-gated, dev-laptop ONLY (rides on public Moai cards; found ungated in the 2026-07-28 CLAUDE_PROD_FEATURES sweep)
       return ButtonHandlerFactory.create({
         id: 'moai_restart_dev',
         deferred: true,
         handler: async (context) => {
+          if (!['391415444084490240', '1086246253819613274'].includes(context.userId)) {
+            return { content: '🗿 The Moai listens only to its keeper.', ephemeral: true };
+          }
+          if (process.env.PRODUCTION === 'TRUE' || process.env.INSTANCE_ROLE === 'test') {
+            return { content: '🗿 Restart Dev only works on the dev laptop. For this box, use the Ultrathink panel 🔁 Restart.', ephemeral: true };
+          }
           const { spawn } = await import('child_process');
 
           console.log(`🔄 [MOAI] Dev restart triggered by ${context.userId} via Discord`);
