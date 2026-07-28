@@ -137,6 +137,29 @@ export function sendRoleErrorFollowup(context, { roleType = 'these', roleName, c
 }
 
 /**
+ * prod_setup_tycoons button body — creates the Tycoons role set and formats the full
+ * response message. Extracted from app.js (the factory block there only routes).
+ * @param {Object} guild - Discord guild object
+ * @returns {Promise<string>} the complete response message
+ */
+export async function runProdSetupTycoons(guild) {
+  const result = await handleSetupTycoons(guild);
+  return `Tycoons roles have been created successfully. Here are the role IDs in the format you requested:
+
+${result.formattedOutput}
+
+## Tycoons Setup Complete!
+
+✅ **Created roles:**
+• Host
+• Juror
+• Spectator
+• Pre-Jury
+
+Your server is now ready for Tycoons gameplay!`;
+}
+
+/**
  * Setup specialized Tycoons game roles
  * @param {Object} guild - Discord guild object
  * @returns {Object} Result object with created role IDs and formatted output

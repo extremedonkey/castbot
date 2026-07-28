@@ -38,7 +38,7 @@ export function isChannelAdmin(userId) {
  */
 const pendingPlans = new Map();
 
-function stashPlan(userId, plan) {
+export function stashPlan(userId, plan) {
   const now = Date.now();
   for (const [k, v] of pendingPlans) if (now - v.at > PLAN_TTL_MS) pendingPlans.delete(k);
   const token = `${userId}_${now.toString(36)}`;
@@ -551,6 +551,7 @@ export async function executePlan({ plan, guildId, userId, client, interactionTo
 
     let summary;
     if (plan.type === 'broadcast') summary = await execBroadcast({ plan, progress });
+    else if (plan.type?.startsWith('alliance_')) summary = await (await import('./allianceHandlers.js')).execAlliance({ plan, guild, snapshot, playerData, userId, invokedChannelId });
     else if (plan.type === 'delete') summary = await execDelete({ plan, guild, buffer, flush, progress, invokedChannelId });
     else if (plan.type === 'player_roles') summary = await execPlayerRoles({ plan, guild, snapshot, buffer, flush, progress });
     else if (plan.type === 'convert') summary = await execConvert({ plan, guild, snapshot, playerData, buffer, flush, progress });
@@ -564,7 +565,9 @@ export async function executePlan({ plan, guildId, userId, client, interactionTo
       summary: { at: new Date().toISOString(), userId, created: summary.created, skipped: summary.skipped, failed: summary.failed }
     }]);
 
-    return renderSummary(plan, summary);
+    // Alliance execs hand back the re-rendered manager (with the alliance selected) instead
+    // of the generic summary card.
+    return summary.screen || renderSummary(plan, summary);
   } finally {
     releaseJobLock(guildId, action);
   }
@@ -853,6 +856,7 @@ function keyForChannel(plan, channelId) {
 
 function planAction(plan) {
   if (plan.type === 'broadcast') return ACTIONS.BROADCAST;
+  if (plan.type?.startsWith('alliance_')) return ACTIONS.ALLIANCES;
   if (plan.type === 'player_roles') return ACTIONS.PLAYER_ROLES;
   if (plan.type === 'oneonone' || plan.kind === 'oneonone') return ACTIONS.ONE_ON_ONES;
   if (plan.kind === 'subs') return ACTIONS.SUBS;
@@ -861,6 +865,7 @@ function planAction(plan) {
 
 function planTitle(plan) {
   if (plan.type === 'broadcast') return '📨 Posting message';
+  if (plan.type?.startsWith('alliance_')) return '🤐 Alliances';
   if (plan.type === 'delete') return '🗑️ Deleting channels';
   if (plan.type === 'player_roles') return '🎭 Creating player roles';
   if (plan.type === 'convert') return '🗳️ Converting applications to subs';

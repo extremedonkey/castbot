@@ -115,6 +115,7 @@ export async function ensureChannel(guild, {
   overwrites = [],
   topic = undefined,
   allowRename = false,
+  adoptByName = true,
   snapshot,
   reason = 'CastBot channel admin'
 }) {
@@ -122,8 +123,10 @@ export async function ensureChannel(guild, {
   let channel = registryId ? (snapshot?.channels.get(registryId) || (await guild.channels.fetch(registryId).catch(() => null))) : null;
   let action = channel ? 'reused' : null;
 
-  // 2. Adopt an existing channel by name (recovers orphans from an interrupted run)
-  if (!channel) {
+  // 2. Adopt an existing channel by name (recovers orphans from an interrupted run).
+  // Alliances OPT OUT (adoptByName: false): they deliberately share the generic name
+  // 'alliance', so name-adoption would merge two alliances' memberships — a leak (RaP 0892).
+  if (!channel && adoptByName) {
     channel = snapshot?.findByName(name, parentId);
     if (channel) action = 'adopted';
   }
@@ -199,6 +202,39 @@ export async function applyAccess(channel, overwrites) {
   }
 
   return { edited, skipped };
+}
+
+/**
+ * DELETE permission overwrites for the given principal ids (users or roles) on a channel.
+ *
+ * Counterpart to applyAccess for membership REMOVAL (alliance edits): the overwrite is
+ * deleted outright, not zeroed — a lingering all-deny entry would still leak that the
+ * principal was once here. Ids absent from the cache are skipped; one failing delete
+ * never aborts the rest.
+ *
+ * @param {Object} channel
+ * @param {string[]} principalIds
+ * @returns {Promise<{removed: number, skipped: number}>}
+ */
+export async function removeAccess(channel, principalIds, { reason = 'CastBot channel admin' } = {}) {
+  let removed = 0;
+  let skipped = 0;
+
+  for (const id of principalIds || []) {
+    if (!id) continue;
+    if (!channel.permissionOverwrites?.cache?.has(id)) {
+      skipped++;
+      continue;
+    }
+    try {
+      await channel.permissionOverwrites.delete(id, reason);
+      removed++;
+    } catch (e) {
+      console.warn(`⚠️ [CHANNEL_ADMIN] Overwrite removal for ${id} on #${channel.name}: ${e.message}`);
+    }
+  }
+
+  return { removed, skipped };
 }
 
 /**

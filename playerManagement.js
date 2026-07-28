@@ -22,6 +22,7 @@ import { getTimeUntilRegeneration } from './pointsManager.js';
 import { getChallengeActions, normalizeLinks, extractActionIds } from './challengeActionCreate.js';
 import { formatBotEmoji } from './botEmojis.js';
 import { getCastDockConfig, buildCastDockSelectRow } from './castDock.js';
+import { CHANNEL_ADMIN_USER_IDS } from './src/channels/channelAdminConfig.js';
 
 /**
  * Player management modes
@@ -606,6 +607,9 @@ async function calculateVisibility(guildId, targetUserId, playerData, safariData
   // === Row 3: Advanced ===
   vis.attributes = { show: isAdmin ? hasAttributesConfigured : hasAttributesConfigured, disabled: isAdmin && !hasTarget, label: 'Stats', emoji: '📊' };
   vis.commands = { show: enableGlobalCommands, disabled: isAdmin && !hasTarget, label: 'Commands', emoji: '🕹️', immediate: true };
+  // Alliance requests (RaP 0892) — whitelist-only while the feature is a hidden mockup; the
+  // handler re-checks. Player mode only: targetUserId IS the viewer there.
+  vis.alliance = { show: !isAdmin && CHANNEL_ADMIN_USER_IDS.includes(String(targetUserId)), disabled: false, label: 'Alliance', emoji: '🤐', immediate: true };
   vis.castdock = { show: true, disabled: isAdmin && !hasTarget, label: 'CastDock', emoji: formatBotEmoji('castbot_logo') };
   vis.vanity = { show: isAdmin, disabled: isAdmin && !hasTarget, label: 'Vanity Roles', emoji: '🎭' };
   vis.navigate = { show: hasTarget && isInitialized && hasMapLocation, disabled: false, label: 'Navigate', emoji: '🗺️', immediate: true, coordinate: currentCoordinate };
@@ -647,6 +651,8 @@ function buildSectionRow(buttonIds, targetUserId, activeCategory, visibility, mo
       customId = `safari_navigate_${targetUserId}_${vis.coordinate || 'unknown'}`;
     } else if (id === 'commands') {
       customId = 'player_enter_command_global';
+    } else if (id === 'alliance') {
+      customId = 'player_request_alliance';
     } else {
       customId = `${prefix}_set_${id}${isDisabled ? '_pending' : ''}${userIdPart}`;
     }
@@ -1604,7 +1610,7 @@ export async function createPlayerManagementUI(options) {
     // Row 3: Advanced (conditional — hide if no buttons visible)
     // 'navigate' removed — superseded by the Map category's "Show Navigate Pane" option.
     // 'vanity' moved to row 1 (Castlists & Profile) as the 5th button.
-    const row3Ids = ['attributes', 'commands', 'castdock'];
+    const row3Ids = ['attributes', 'commands', 'alliance', 'castdock']; // alliance sits LEFT of CastDock (RaP 0892)
     const row3 = buildSectionRow(row3Ids, targetUserId, activeCategory, visibility, mode);
     if (row3.length) {
       container.components.push({

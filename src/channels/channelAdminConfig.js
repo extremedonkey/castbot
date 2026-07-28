@@ -92,8 +92,20 @@ export const ACTIONS = {
   CONFESSIONALS: 'confessionals',
   SUBS: 'subs',
   ONE_ON_ONES: 'one_on_ones',
-  BROADCAST: 'broadcast'
+  BROADCAST: 'broadcast',
+  ALLIANCES: 'alliances'
 };
+
+/**
+ * Alliances (RaP 0892). The channel name deliberately defaults to just 'alliance' — never
+ * member-name slugs — because the EXISTENCE of an alliance is season-deciding information.
+ */
+export const ALLIANCE_DEFAULTS = {
+  channelName: 'alliance',
+  categoryName: '🤐 Alliances'
+};
+/** Cooldown between player alliance requests (anti-spam; in-memory, resets on restart). */
+export const ALLIANCE_REQUEST_COOLDOWN_MS = 5 * 60 * 1000;
 
 /** Channel types the broadcast target select offers: text, category, announcement.
  *  A Mentionable Select (type 7) CANNOT list channels — only a Channel Select (type 8) can.

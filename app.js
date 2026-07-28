@@ -13816,7 +13816,7 @@ To fix this:
         id: 'channels_route',
         // Action buttons open a modal (a deferred ACK can't be followed by a MODAL); tab/cancel/exec
         // update the message and may run for minutes.
-        ...(/^channels_(roles|playerroles|confessionals|subs|1on1s|msg_edit)_/.test(custom_id)
+        ...(/^channels_(roles|playerroles|confessionals|subs|1on1s|msg_edit|alliance_new|alliance_edit|alliance_members|alliance_review)_/.test(custom_id)
           ? { requiresModal: true, ephemeral: true }
           : { deferred: true, updateMessage: true }),
         handler: async (context) => {
@@ -13824,6 +13824,18 @@ To fix this:
           const CH = await import('./src/channels/channelsRouter.js');
           if (context.userId !== '391415444084490240' && context.userId !== '1086246253819613274') return CH.channelsDenied();
           return await CH.routeChannelsButton({ context, req });
+        }
+      })(req, res, client);
+    } else if (custom_id === 'player_request_alliance') {
+      // 🤐 Alliance request (player /menu → Advanced). v1 whitelist enforced in the handler (RaP 0892).
+      return ButtonHandlerFactory.create({
+        id: 'player_request_alliance',
+        requiresModal: true,
+        ephemeral: true,
+        security: 'public', // player-facing entry point; the handler enforces the v1 whitelist
+        handler: async (context) => {
+          const A = await import('./src/channels/allianceHandlers.js');
+          return A.handleAllianceRequestButton({ guildId: context.guildId, userId: context.userId });
         }
       })(req, res, client);
     } else if (custom_id.startsWith('marooning_draft_tribes_')) {
@@ -13849,62 +13861,19 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'prod_setup_tycoons') {
-      // Execute same logic as setup_tycoons slash command
-      try {
-        const guildId = req.body.guild_id;
-        const guild = await client.guilds.fetch(guildId);
-        const userId = req.body.member.user.id;
-
-        // Check admin permissions
-        const member = await guild.members.fetch(userId);
-        if (!member.permissions.has(PermissionFlagsBits.ManageRoles) && 
-            !member.permissions.has(PermissionFlagsBits.ManageChannels) && 
-            !member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles, Manage Channels, or Manage Server permissions to use this feature.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
+      // Creates ~40 roles — deferred (the old inline version risked the 3s timeout). Body in roleUtils.
+      return ButtonHandlerFactory.create({
+        id: 'prod_setup_tycoons',
+        deferred: true,
+        ephemeral: true,
+        handler: async (context) => {
+          if (!hasAdminPermissions(context.member)) {
+            return { content: '❌ You need Manage Roles, Manage Channels, or Manage Server permissions to use this feature.', ephemeral: true };
+          }
+          const { runProdSetupTycoons } = await import('./utils/roleUtils.js');
+          return { content: await runProdSetupTycoons(context.guild), ephemeral: true };
         }
-
-        // Call the original handleSetupTycoons function to get the detailed role output
-        const result = await handleSetupTycoons(guild);
-        
-        // Create the full response with original detailed output + new summary
-        const responseMessage = `Tycoons roles have been created successfully. Here are the role IDs in the format you requested:
-
-${result.formattedOutput}
-
-## Tycoons Setup Complete!
-
-✅ **Created roles:**
-• Host
-• Juror
-• Spectator
-• Pre-Jury
-
-Your server is now ready for Tycoons gameplay!`;
-
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: responseMessage,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error handling prod_setup_tycoons button:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Error setting up Tycoons roles.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      })(req, res, client);
     } else if (custom_id === 'refresh_tips') {
       // Refresh Tips Gallery - Upload all tip images to Discord CDN
       return ButtonHandlerFactory.create({
@@ -39598,6 +39567,25 @@ Your server is now ready for Tycoons gameplay!`;
           const CH = await import('./src/channels/channelsRouter.js');
           if (context.userId !== '391415444084490240' && context.userId !== '1086246253819613274') return CH.channelsDenied();
           return await CH.routeChannelsModalSubmit({ context, components, data });
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('alliance_request_modal_')) {
+      // 🤐 Player alliance request submit — the PUBLIC deferred response IS the request card (RaP 0892).
+      // Deliberately NOT channels_-prefixed: the block above would whitelist-deny players. v1 whitelist
+      // is still enforced inside the handler.
+      return ButtonHandlerFactory.create({
+        id: 'alliance_request_modal',
+        deferred: true,
+        ephemeral: false,
+        security: 'public',
+        handler: async (context) => {
+          const A = await import('./src/channels/allianceHandlers.js');
+          return A.handleAllianceRequestSubmit({
+            customId: custom_id, guildId: context.guildId, userId: context.userId,
+            displayName: context.displayName, channelId: context.channelId,
+            client, components, resolved: data?.resolved || {}
+          });
         }
       })(req, res, client);
 

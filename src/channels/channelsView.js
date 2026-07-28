@@ -30,6 +30,7 @@ export async function buildChannelsView({ configId, guildId, playerData, seasonN
   const confessionals = Object.keys(season.confessionals || {}).length;
   const subs = Object.keys(season.subs || {}).length;
   const oneOnOnes = Object.keys(node.oneOnOnes || {}).length;
+  const alliances = Object.keys(node.alliances || {}).length;
 
   const specRoleId = playerData?.[guildId]?.permissions?.trustedSpectatorRoleId || null;
   const specLine = specRoleId ? `<@&${specRoleId}>` : '*not set*';
@@ -47,7 +48,7 @@ export async function buildChannelsView({ configId, guildId, playerData, seasonN
 
   const body = [
     `> **Accepted cast:** ${rosterCount}${missingRoles ? ` (${missingRoles} without a player role)` : ''}`,
-    `> **Confessionals:** ${confessionals} | **Subs:** ${subs} | **1on1s:** ${oneOnOnes}`,
+    `> **Confessionals:** ${confessionals} | **Subs:** ${subs} | **1on1s:** ${oneOnOnes} | **Alliances:** ${alliances}`,
     `> **Trusted Spectator:** ${specLine}`
   ].join('\n');
 
@@ -74,7 +75,8 @@ export async function buildChannelsView({ configId, guildId, playerData, seasonN
         { type: 2, custom_id: `channels_confessionals_${configId}`, label: 'Confessionals', style: 2, emoji: { name: '🎙️' } },
         { type: 2, custom_id: `channels_subs_${configId}`, label: 'Subs', style: 2, emoji: { name: '🗳️' } },
         { type: 2, custom_id: `channels_1on1s_${configId}`, label: '1 on 1s', style: 2, emoji: { name: '🤝' } },
-        { type: 2, custom_id: `channels_msg_${configId}`, label: 'Msg Category', style: 2, emoji: { name: '📨' } }
+        { type: 2, custom_id: `channels_msg_${configId}`, label: 'Msg Category', style: 2, emoji: { name: '📨' } },
+        { type: 2, custom_id: `channels_alliances_${configId}`, label: 'Alliances', style: 2, emoji: { name: '🤐' } }
       ]},
       { type: 14 },
       { type: 10, content: body + (lastRunLine ? `\n\n${lastRunLine}` : '') },
@@ -355,8 +357,10 @@ export function buildOneOnOnesModal({ configId, defaultTribeRoleIds = [], tribeN
  * @param {string} p.confirmLabel - states the count, e.g. "Create 190 channels"
  * @param {boolean} [p.destructive]
  * @param {boolean} [p.blocked] - a ceiling breach / nothing to do → no confirm button
+ * @param {number} [p.accent] - overrides the non-blocked accent (alliances use 0xf39c12 for tribe warnings)
+ * @param {string} [p.cancelId] - overrides where Cancel / the blocked Back button lands (default: Channels tab)
  */
-export function buildConfirmScreen({ token, title, lines, confirmLabel, destructive = false, blocked = false, configId }) {
+export function buildConfirmScreen({ token, title, lines, confirmLabel, destructive = false, blocked = false, configId, accent = null, cancelId = null }) {
   const components = [
     { type: 10, content: `## ${title}\n${lines.join('\n')}` },
     { type: 14 }
@@ -365,9 +369,9 @@ export function buildConfirmScreen({ token, title, lines, confirmLabel, destruct
   components.push({
     type: 1,
     components: blocked
-      ? [{ type: 2, custom_id: `season_channels_${configId}`, label: '← Back to Channels', style: 2 }]
+      ? [{ type: 2, custom_id: cancelId || `season_channels_${configId}`, label: cancelId ? '← Back' : '← Back to Channels', style: 2 }]
       : [
-        { type: 2, custom_id: `channels_cancel_${configId}`, label: 'Cancel', style: 2 },
+        { type: 2, custom_id: cancelId || `channels_cancel_${configId}`, label: 'Cancel', style: 2 },
         { type: 2, custom_id: `channels_exec_${token}`, label: confirmLabel, style: destructive ? 4 : 1 }
       ]
   });
@@ -375,7 +379,7 @@ export function buildConfirmScreen({ token, title, lines, confirmLabel, destruct
   return {
     components: [{
       type: 17,
-      accent_color: blocked ? 0xe74c3c : (destructive ? 0xe74c3c : 0x9B59B6),
+      accent_color: blocked ? 0xe74c3c : (destructive ? 0xe74c3c : (accent ?? 0x9B59B6)),
       components
     }]
   };

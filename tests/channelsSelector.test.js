@@ -328,6 +328,12 @@ describe('📨 Msg Category — routing (prefix overlap is the risk here)', () =
       if (id.startsWith('channels_msg_targets_')) return 'saveTargets';
       return 'composer';
     }
+    if (id.startsWith('channels_alliance')) {
+      if (id.startsWith('channels_alliances_')) return 'allianceManager';
+      if (id.startsWith('channels_alliance_select_')) return 'allianceManager';
+      if (id.startsWith('channels_alliance_delete_')) return 'allianceDeletePlan';
+      return 'allianceModal';
+    }
     return 'actionModal';
   };
 
@@ -346,12 +352,36 @@ describe('📨 Msg Category — routing (prefix overlap is the risk here)', () =
     assert.equal(dest(`channels_exec_tok`), 'exec');
   });
 
-  it('only msg_edit opens a modal — the rest defer and update', () => {
-    const MODAL_RE = /^channels_(roles|playerroles|confessionals|subs|1on1s|msg_edit)_/;
+  it('only modal-opening ids match the requiresModal regex — the rest defer and update', () => {
+    // Replica of the app.js:13819 ack-mode regex.
+    const MODAL_RE = /^channels_(roles|playerroles|confessionals|subs|1on1s|msg_edit|alliance_new|alliance_edit|alliance_members|alliance_review)_/;
     assert.ok(MODAL_RE.test(`channels_msg_edit_${CID}`), 'edit must open a modal');
     for (const id of [`channels_msg_${CID}`, `channels_msg_send_${CID}`, `channels_msg_targets_${CID}`]) {
       assert.ok(!MODAL_RE.test(id), `${id} must NOT be requiresModal`);
     }
+    // Alliance modal-openers ARE requiresModal…
+    for (const id of [`channels_alliance_new_${CID}`, `channels_alliance_edit_ab12_${CID}`, `channels_alliance_members_ab12_${CID}`, 'channels_alliance_review_ab12']) {
+      assert.ok(MODAL_RE.test(id), `${id} must be requiresModal`);
+    }
+    // …screen-rendering alliance ids are NOT (deferred + updateMessage).
+    for (const id of [`channels_alliances_${CID}`, `channels_alliance_select_${CID}`, `channels_alliance_delete_ab12_${CID}`]) {
+      assert.ok(!MODAL_RE.test(id), `${id} must NOT be requiresModal`);
+    }
+  });
+
+  it('the manager id never collides with the action prefix (alliances_ vs alliance_)', () => {
+    assert.ok(!`channels_alliances_${CID}`.startsWith('channels_alliance_'), 'trailing-s pin: manager must not parse as an action');
+    assert.equal(dest(`channels_alliances_${CID}`), 'allianceManager');
+    assert.equal(dest(`channels_alliance_new_${CID}`), 'allianceModal');
+    assert.equal(dest(`channels_alliance_select_${CID}`), 'allianceManager');
+    assert.equal(dest(`channels_alliance_delete_ab12_${CID}`), 'allianceDeletePlan');
+    assert.equal(dest('channels_alliance_review_ab12'), 'allianceModal');
+  });
+
+  it('alliance modal submits are routed BEFORE the legacy kind regex (silent-misroute guard)', () => {
+    // channels_alliance_modal_* must never fall into the legacy regex's confessionals default.
+    const legacy = 'channels_alliance_modal_new_config_1'.match(/^channels_(roles|playerroles|confessionals|subs|1on1s|msg)_modal_(.+)$/);
+    assert.equal(legacy, null, 'alliance submits must not match the legacy kind regex at all');
   });
 
   it('the modal submit id parses back to kind=msg', () => {

@@ -3591,6 +3591,77 @@ export const BUTTON_REGISTRY = {
     category: 'channel_admin',
     restrictedUser: true
   },
+  'channels_alliances_*': {
+    label: 'Alliances',
+    description: 'Alliance Manager — secret member channels, castlist_hub-style select + actions (RaP 0892)',
+    emoji: '🤐',
+    style: 'Secondary',
+    parent: 'season_channels',
+    category: 'channel_admin',
+    restrictedUser: true
+  },
+  'channels_alliance_select_*': {
+    label: 'Select Alliance',
+    description: 'String Select in the Alliance Manager — selection re-renders with actions enabled',
+    style: 'Secondary',
+    parent: 'channels_alliances',
+    category: 'channel_admin',
+    restrictedUser: true
+  },
+  'channels_alliance_new_*': {
+    label: 'New Alliance',
+    description: 'Opens the Create Alliance modal (members / category / name / notify)',
+    emoji: '🤐',
+    style: 'Primary',
+    parent: 'channels_alliances',
+    category: 'channel_admin',
+    restrictedUser: true
+  },
+  'channels_alliance_edit_*': {
+    label: 'Edit',
+    description: 'Opens the Edit Alliance modal, pre-populated; empty members field keeps current members',
+    emoji: '✏️',
+    style: 'Secondary',
+    parent: 'channels_alliances',
+    category: 'channel_admin',
+    restrictedUser: true
+  },
+  'channels_alliance_members_*': {
+    label: 'Remove Members',
+    description: 'Cut-down modal: String Select of current members to revoke from the alliance channel',
+    emoji: '➖',
+    style: 'Secondary',
+    parent: 'channels_alliances',
+    category: 'channel_admin',
+    restrictedUser: true
+  },
+  'channels_alliance_delete_*': {
+    label: 'Delete',
+    description: 'Delete an alliance (channel + registry entry) after a destructive confirm screen',
+    emoji: '🗑️',
+    style: 'Danger',
+    parent: 'channels_alliances',
+    category: 'channel_admin',
+    restrictedUser: true
+  },
+  'channels_alliance_review_*': {
+    label: 'Review Alliance',
+    description: 'On the PUBLIC alliance request card — opens the Create modal pre-populated from the request (whitelist-gated in handler)',
+    emoji: '🔍',
+    style: 'Primary',
+    parent: 'channels_alliances',
+    category: 'channel_admin',
+    restrictedUser: true
+  },
+  'player_request_alliance': {
+    label: 'Alliance',
+    description: 'Player /menu → Advanced: request an alliance from Production (posts a PUBLIC card in the invoking channel; v1 whitelist-gated)',
+    emoji: '🤐',
+    style: 'Secondary',
+    parent: 'player_menu',
+    category: 'player_menu',
+    restrictedUser: '391415444084490240'
+  },
   'cast_player_*': {
     label: 'Cast Player',
     description: 'Mark applicant as cast',

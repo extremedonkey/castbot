@@ -24,6 +24,7 @@ The tab clones the Marooning tab's chrome and is expected to absorb the Maroonin
 | 🎙️ **Confessionals** | Create / update / delete `#name-confessional` |
 | 🗳️ **Subs** | Create / update / delete `#name-subs`, or **convert application channels** into subs |
 | 🤝 **1 on 1s** | A private channel for every *pair* of players in a tribe |
+| 🤐 **Alliances** | Secret member channels via the Alliance Manager — see [RaP 0892](../01-RaP/0892_20260728_Alliances_Analysis.md). Members + hosts only (**no** Trusted Spectator), name defaults to plain `alliance`, same-tribe warn-only guard, player request flow via /menu → Advanced (whitelist v1). Code: [`alliancePlan.js`](../../src/channels/alliancePlan.js) / [`allianceView.js`](../../src/channels/allianceView.js) / [`allianceHandlers.js`](../../src/channels/allianceHandlers.js) |
 
 ## 🏛️ Two-phase: nothing happens until you confirm
 
@@ -137,7 +138,11 @@ playerData[guildId].channelAdmin = {
     lastRun:       { "<action>": { at, userId, created, skipped, failed } }
   },
   oneOnOnes:  { "<pairKey>": { channelId, name, a, b, tribeRoleId, createdAt } },  // GUILD-scoped
-  oneOnOneCategories: ["catId"]
+  oneOnOneCategories: ["catId"],
+  alliances: { "<allianceId>": { name, channelId, categoryId, members: [{userId, displayName, playerRoleId}],
+               createdBy, requestedBy?, notify, configId, createdAt, updatedAt } },   // GUILD-scoped (RaP 0892)
+  allianceCategories: ["catId"],
+  allianceRequests: { "<requestId>": { requesterId, members, channelId, configId, status, allianceId?, createdAt } }
 }
 ```
 
@@ -200,7 +205,7 @@ The nav row is now **exactly 5 buttons** — Discord's hard per-ActionRow limit.
 
 ## 🔮 Not built yet
 
-- **Alliances** — extremely sensitive; the primitives support it, but no alliance UI/data ships.
+- ~~**Alliances**~~ — **shipped (v1, whitelist-hidden)** — see the Alliances row above and [RaP 0892](../01-RaP/0892_20260728_Alliances_Analysis.md). Still open there: public player requests, notify-on-edit.
 - **Player role colour** — the `color` parameter is plumbed through `ensurePlayerRole` and defaults to `0` (uncoloured).
 - Merging 🔐 Roles into Settings → Roles & Security.
 - Season-scoped `playerRoleId` (currently guild-scoped, so a returning player reuses their old role).

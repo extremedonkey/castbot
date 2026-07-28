@@ -89,6 +89,29 @@ export async function routeChannelsButton({ context, req }) {
     return await H.handleMsgComposer({ configId: customId.replace('channels_msg_', ''), guildId, client });
   }
 
+  // 🤐 Alliances (RaP 0892). NOTE: 'channels_alliances_' (manager) does NOT start with
+  // 'channels_alliance_' (the actions) — both are caught by the bare prefix below.
+  if (customId.startsWith('channels_alliance')) {
+    const A = await import('./allianceHandlers.js');
+    if (customId.startsWith('channels_alliances_')) {
+      return await A.handleAllianceManager({ configId: customId.replace('channels_alliances_', ''), guildId });
+    }
+    if (customId.startsWith('channels_alliance_select_')) {
+      return await A.handleAllianceManager({
+        configId: customId.replace('channels_alliance_select_', ''),
+        guildId,
+        selectedId: req.body.data?.values?.[0] || null
+      });
+    }
+    if (customId.startsWith('channels_alliance_delete_')) {
+      const { parseAllianceCustomId } = await import('./alliancePlan.js');
+      const parsed = parseAllianceCustomId(customId);
+      return await A.planAllianceDelete({ allianceId: parsed?.allianceId, configId: parsed?.configId, guildId, userId });
+    }
+    // new / edit / members / review → their modal (requiresModal ack).
+    return await A.openAllianceModal({ customId, guildId });
+  }
+
   // One of the 5 action buttons → its modal.
   const { buildChannelsModal } = await import('./channelsModalRouter.js');
   return await buildChannelsModal({ customId, guildId, client });
@@ -113,6 +136,13 @@ export async function routeChannelsModalSubmit({ context, components, data }) {
       const f = row.component;
       fields[f.custom_id] = Array.isArray(f.values) ? f.values : (f.value != null ? [f.value] : []);
     }
+  }
+
+  // 🤐 Alliance modal submits — tested BEFORE the legacy regex below, which would otherwise
+  // silently misroute an unmatched id into planChannels as a confessionals plan.
+  if (customId.startsWith('channels_alliance_modal_')) {
+    const A = await import('./allianceHandlers.js');
+    return await A.planAlliance({ customId, guildId, userId, client, fields, resolved: data?.resolved || {} });
   }
 
   const m = customId.match(/^channels_(roles|playerroles|confessionals|subs|1on1s|msg)_modal_(.+)$/);

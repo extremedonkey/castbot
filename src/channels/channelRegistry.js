@@ -19,6 +19,10 @@
  *   { kind: 'appConvert', channelId, completedAt?, preConvertChannelName?, convertedToSubsAt? }
  *   { kind: 'remove', bucket: 'confessional'|'subs'|'oneonone', configId?, key }
  *   { kind: 'lastRun', configId, action, summary }
+ *   { kind: 'alliance', allianceId, patch }            // patch-merge; preserves createdAt (RaP 0892)
+ *   { kind: 'allianceCategory', categoryId }
+ *   { kind: 'allianceRemove', allianceId }
+ *   { kind: 'allianceRequest', requestId, patch }      // create + status transitions
  */
 import { loadPlayerData, savePlayerData, withStorageLock } from '../../storage.js';
 
@@ -28,6 +32,9 @@ function ensureNode(playerData, guildId) {
   const node = (g.channelAdmin ||= { version: 1 });
   node.oneOnOnes ||= {};
   node.oneOnOneCategories ||= [];
+  node.alliances ||= {};
+  node.allianceCategories ||= [];
+  node.allianceRequests ||= {};
   return node;
 }
 
@@ -162,6 +169,41 @@ export function applyDeltas(playerData, guildId, deltas) {
         break;
       }
 
+      case 'alliance': {
+        // Patch-merge (broadcast precedent) — createdAt survives re-records, updatedAt stamps.
+        // GUILD-scoped like oneOnOnes: an alliance outlives tribe swaps.
+        node.alliances[d.allianceId] = {
+          ...(node.alliances[d.allianceId] || {}),
+          ...d.patch,
+          createdAt: node.alliances[d.allianceId]?.createdAt || d.patch?.createdAt || d.at || new Date().toISOString(),
+          updatedAt: d.at || new Date().toISOString()
+        };
+        applied++;
+        break;
+      }
+
+      case 'allianceCategory': {
+        if (!node.allianceCategories.includes(d.categoryId)) node.allianceCategories.push(d.categoryId);
+        applied++;
+        break;
+      }
+
+      case 'allianceRemove': {
+        delete node.alliances[d.allianceId];
+        applied++;
+        break;
+      }
+
+      case 'allianceRequest': {
+        node.allianceRequests[d.requestId] = {
+          ...(node.allianceRequests[d.requestId] || {}),
+          ...d.patch,
+          createdAt: node.allianceRequests[d.requestId]?.createdAt || d.patch?.createdAt || d.at || new Date().toISOString()
+        };
+        applied++;
+        break;
+      }
+
       default:
         break;
     }
@@ -224,6 +266,9 @@ export async function readRegistry(guildId, configId) {
     broadcast: season.broadcast || {},
     oneOnOnes: node.oneOnOnes || {},
     oneOnOneCategories: node.oneOnOneCategories || [],
+    alliances: node.alliances || {},
+    allianceCategories: node.allianceCategories || [],
+    allianceRequests: node.allianceRequests || {},
     trustedSpectatorRoleId: playerData[guildId]?.permissions?.trustedSpectatorRoleId || null,
     players: playerData[guildId]?.players || {}
   };
