@@ -774,9 +774,15 @@ const OP_EMOJI = {
   update_map_cell: '🗺️', give_currency: '🪙', give_item: '🎁'
 };
 
-/** Render one normalized op as a stable preview line. `names` maps ids/$refs → display names. */
-export function describeOp(op, names = {}) {
+/**
+ * Render one normalized op as a stable preview line. `names` maps ids/$refs → display
+ * names; `coordChannels` maps coordinates → their Discord channel IDs, rendering
+ * "@ A1" as a clickable <#channel> mention when the cell has a channel.
+ */
+export function describeOp(op, names = {}, coordChannels = {}) {
   const nameOf = (key) => names[key] || (typeof key === 'string' && key.startsWith('$') ? key.slice(1) : key);
+  const coordLabel = (c) => coordChannels[c] ? `<#${coordChannels[c]}>` : c;
+  const coordList = (coords = []) => coords.map(coordLabel).join(', ');
   // Cap mention lists so a single line can't blow the message character budget
   // (25 players × ~23 chars of <@id> would be ~600 chars on one line).
   const mentions = (ids = []) => {
@@ -793,14 +799,14 @@ export function describeOp(op, names = {}) {
     case 'set_stock': return `${emoji} Set stock of **${nameOf(op.item)}** in **${nameOf(op.store)}** to ${op.stock === -1 ? 'unlimited' : op.stock}`;
     case 'update_config': return `${emoji} Update settings: ${Object.entries(op.set || {}).map(([k, v]) => `${k} → ${v}`).join(', ')}`;
     case 'create_action': {
-      const coords = op.coordinates?.length ? ` @ ${op.coordinates.join(', ')}` : '';
+      const coords = op.coordinates?.length ? ` @ ${coordList(op.coordinates)}` : '';
       const outs = (op.outcomes || []).map(o => o.type).join(' + ');
       return `${emoji} Create action **${op.fields?.name}** [${op.trigger?.type || 'button'}]${coords} → ${outs}`;
     }
     case 'update_action': return `${emoji} Update action **${nameOf(op.action)}** (${Object.keys(op.set || {}).join(', ')})`;
     case 'add_outcome': return `${emoji} Add ${(op.outcomes || []).map(o => o.type).join(' + ')} to **${nameOf(op.action)}**`;
-    case 'attach_action': return `${emoji} Attach **${nameOf(op.action)}** to ${op.coordinates?.join(', ')}`;
-    case 'update_map_cell': return `${emoji} Update cell **${op.coordinate}** (${Object.keys(op.set || {}).join(', ')})`;
+    case 'attach_action': return `${emoji} Attach **${nameOf(op.action)}** to ${coordList(op.coordinates)}`;
+    case 'update_map_cell': return `${emoji} Update cell **${coordLabel(op.coordinate)}** (${Object.keys(op.set || {}).join(', ')})`;
     case 'give_currency': return `${emoji} ${op.amount > 0 ? 'Give' : 'Take'} ${Math.abs(op.amount)} currency ${op.amount > 0 ? 'to' : 'from'} ${mentions(op.playerIds)}`;
     case 'give_item': return `${emoji} Give ${op.quantity}× **${nameOf(op.item)}** to ${mentions(op.playerIds)}`;
     default: return `${emoji} ${op.op}`;

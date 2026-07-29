@@ -365,8 +365,8 @@ const continuationContainers = (overflow, label) => overflow.map((chunk, idx) =>
  * Ephemeral, so only the requesting admin can click — the Apply handler re-gates anyway.
  * Returns { main, followUps } — every message stays under the combined char cap.
  */
-export function buildPreviewMessages({ reply, ops, names, warnings, planId, elapsed, model }) {
-  const opLines = ops.map((op, i) => neutralizeMentions(`${i + 1}. ${describeOp(op, names)}`));
+export function buildPreviewMessages({ reply, ops, names, warnings, planId, elapsed, model, coordChannels = {} }) {
+  const opLines = ops.map((op, i) => neutralizeMentions(`${i + 1}. ${describeOp(op, names, coordChannels)}`));
   const replyText = reply ? neutralizeMentions(truncate(reply, 800)) : '';
   const warningText = warnings.length
     ? `⚠️ **Check these:**\n${warnings.slice(0, 6).map(w => `- ${neutralizeMentions(truncate(w, 200))}`).join('\n')}`
@@ -507,6 +507,17 @@ export function buildPublicSummaryContainer({ userId, summary, query }) {
 // display names for the preview
 // ---------------------------------------------------------------------------
 
+/** Coordinate → channelId map from the active map, for clickable <#channel> mentions. */
+export function buildCoordChannelMap(guildSafari) {
+  const activeMapId = guildSafari?.maps?.active;
+  const coords = guildSafari?.maps?.[activeMapId]?.coordinates || {};
+  const out = {};
+  for (const [coord, cell] of Object.entries(coords)) {
+    if (cell?.channelId) out[coord] = cell.channelId;
+  }
+  return out;
+}
+
 /** Map every id/$ref appearing in normalized ops to a human name for describeOp. */
 export function buildNameMap(ops, guildSafari) {
   const names = {};
@@ -590,7 +601,8 @@ export async function processInlinePlan({ answer, guildId, userId, channelId, is
     rememberPlan(planId, { plan: planJson, guildId, userId, channelId, isPublicRoute, query, reply, model });
     const names = buildNameMap(validation.ops, safariData[guildId]);
     const { main, followUps } = buildPreviewMessages({
-      reply: '', ops: validation.ops, names, warnings: validation.warnings, planId, elapsed, model
+      reply: '', ops: validation.ops, names, warnings: validation.warnings, planId, elapsed, model,
+      coordChannels: buildCoordChannelMap(safariData[guildId])
     });
     await createFollowupMessage(token, { components: [main], ephemeral: true });
     for (const container of followUps) {
@@ -739,7 +751,8 @@ export async function handleEditModalSubmit(req, res) {
     console.log(`🛠️ Ask CastBot EDIT plan ready: ${validation.ops.length} ops (${elapsed}) — awaiting Apply`);
 
     const { main, followUps } = buildPreviewMessages({
-      reply, ops: validation.ops, names, warnings: validation.warnings, planId, elapsed, model
+      reply, ops: validation.ops, names, warnings: validation.warnings, planId, elapsed, model,
+      coordChannels: buildCoordChannelMap(safariData[guildId])
     });
     await beat({ components: [main] });
     if (followUps.length) {

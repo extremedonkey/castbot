@@ -110,6 +110,11 @@ function buildTrigger(spec, { name, emoji, style }) {
 export function applySafariOp(data, guildId, op, refMap, summary, { userId, now = Date.now() } = {}) {
   const g = data[guildId];
   const done = (line) => { summary.safariMutations++; summary.lines.push(line); return line; };
+  // Coordinates render as clickable channel mentions wherever the cell has a channel.
+  const coordLabel = (coord) => {
+    const channelId = g.maps?.[g.maps?.active]?.coordinates?.[coord]?.channelId;
+    return channelId ? `<#${channelId}>` : coord;
+  };
 
   switch (op.op) {
     case 'create_item': {
@@ -240,7 +245,7 @@ export function applySafariOp(data, guildId, op, refMap, summary, { userId, now 
       if (op.ref) refMap[op.ref] = actionId;
       attachToCoords(g, actionId, realCoords, summary);
       summary.created.actions++;
-      const at = op.coordinates?.length ? ` @ ${op.coordinates.join(', ')}` : '';
+      const at = realCoords.length ? ` @ ${realCoords.map(coordLabel).join(', ')}` : (op.coordinates?.includes('global') ? ' (global)' : '');
       return done(`⚡ Action **${f.name}** created${at}`);
     }
 
@@ -289,7 +294,7 @@ export function applySafariOp(data, guildId, op, refMap, summary, { userId, now 
       }
       attachToCoords(g, actionId, attachCoords, summary);
       action.metadata = { ...action.metadata, lastModified: now };
-      return done(`📍 **${action.name}** attached to ${attachCoords.join(', ') || 'nowhere new (global)'}`);
+      return done(`📍 **${action.name}** attached to ${attachCoords.map(coordLabel).join(', ') || 'nowhere new (global)'}`);
     }
 
     case 'update_map_cell': {
@@ -300,7 +305,7 @@ export function applySafariOp(data, guildId, op, refMap, summary, { userId, now 
       Object.assign(coordData.baseContent, op.set);
       coordData.metadata = { ...coordData.metadata, lastModified: now };
       summary.anchorCoords.add(op.coordinate);
-      return done(`🗺️ Cell **${op.coordinate}** updated (${Object.keys(op.set).join(', ')})`);
+      return done(`🗺️ Cell **${coordLabel(op.coordinate)}** updated (${Object.keys(op.set).join(', ')})`);
     }
   }
   return null;

@@ -311,4 +311,18 @@ describe('Plan schema — describeOp preview lines', () => {
     assert.equal(describeOp(v.ops[0], names), '🏪 Create store **Pokestore**');
     assert.equal(describeOp(v.ops[2], names), '📦 Stock **Bulbasaur** in **Pokestore** @ 15');
   });
+
+  it('renders coordinates as clickable channel mentions when the cell has a channel', () => {
+    const g = makeGuild({ coords: GRID25 });
+    const v = validatePlan(plan({
+      op: 'create_action', name: 'Stray Dog', trigger: { type: 'button' }, coordinates: ['A1', 'A2'],
+      outcomes: [{ type: 'display_text', config: { content: 'Woof' } }]
+    }), g);
+    assert.equal(v.ok, true, errText(v));
+    const withChannels = describeOp(v.ops[0], {}, { A1: '1528027201767739392' });
+    assert.ok(withChannels.includes('<#1528027201767739392>'), withChannels); // A1 has a channel
+    assert.ok(withChannels.includes('A2'), withChannels);                     // A2 falls back to the plain coord
+    const without = describeOp(v.ops[0], {});
+    assert.ok(without.includes('@ A1, A2'), without);
+  });
 });
