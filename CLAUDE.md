@@ -510,6 +510,7 @@ When a feature is **deployed to production and working**, move/rename its doc in
 - **🏷️ VANITY ROLE SORT/DISPLAY** → [docs/03-features/VanityRoleSortDisplay.md](docs/03-features/VanityRoleSortDisplay.md) - Vanity role tier sorting (Season→Alpha→Numeric→Emoji→Other) for member ordering + in-card display
 - **📅 SEASONS** → [docs/concepts/SurvivorContext.md](docs/concepts/SurvivorContext.md) - Season lifecycle and integration
 
+- **👾 ASK CASTBOT** → [docs/03-features/AskCastBot.md](docs/03-features/AskCastBot.md) - One button that answers questions, answers *player-data* questions for admins, and **makes Safari changes** in plain English (child-proposes/parent-applies plan pipeline, runtime 🎟️ Entitlements = the premium hook, JSONL event log). Design: [RaP 0890](docs/01-RaP/0890_20260730_AskCastBotEditMode_Analysis.md)
 - **❄️ SNOWFLAKE TIMER** → [docs/03-features/SnowflakeTimer.md](docs/03-features/SnowflakeTimer.md) - Snowflake timing, context menus, calculator. Core: [timerUtils.js](timerUtils.js). Design: [RaP 0925](docs/01-RaP/0925_20260403_SnowflakeTimer_Analysis.md)
 
 **Safari Subsystems:**
