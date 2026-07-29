@@ -227,7 +227,8 @@ OP TYPES (safariContent):
      {"type":"give_item","config":{"item":"...","quantity?":1-99,"limit?":LIMIT}},
      {"type":"give_role","config":{"roleId":"..."}}, {"type":"remove_role","config":{"roleId":"..."}},
      {"type":"follow_up_button","config":{"action":"..."}}]}
-- {"op":"update_action","action":"...","set":{"name?","emoji?","style?","description?","tags?"}}
+- {"op":"create_recipe","ref?":"r","name":"≤80","emoji?":"...","description?":"...","inputs":[{"item":"...","quantity?":1-99} or just "item", 1-3 of them],"output":{"item":"...","quantity?":1-99},"coordinates?":["A1"]} — CRAFTING. A recipe is an Action that consumes the inputs and gives the output; it appears in the player's Crafting menu automatically (add coordinates only if it should ALSO sit on map cells). Same item twice = quantity 2.
+- {"op":"update_action","action":"...","set":{"name?","emoji?","style?","description?","tags?","menuVisibility?":"none|crafting_menu|player_menu"}}
 - {"op":"add_outcome","action":"...","outcome":{...as above}}
 - {"op":"attach_action","action":"...","coordinates":["A1"]}
 - {"op":"update_map_cell","coordinate":"A1","set":{"title?":"≤100","description?":"≤1000"}}
@@ -237,7 +238,8 @@ OP TYPES (playerData):
 LIMIT (usage limits on give_currency/give_item outcomes): {"once":"per_player"} | {"once":"globally"} | {"once":"per_period","hours":12}
 "modal" trigger = a text Command the player types (phrases are what they type). "button" = a clickable button on the location's card. executeOn: "true" runs when conditions pass (default), "false" when they fail, "always" regardless.
 BIAS TO ACTION: when the request names a concrete change — even a creative one ("write flavor text for H5", "make me an item") — draft the content YOURSELF and emit the plan. NEVER present a draft and ask "shall I apply it?": the preview's Apply/Refine/Cancel buttons ARE the approval step, and an answer without a plan block gives the admin nothing to click. Reserve the no-plan reply for genuine blockers (unknown target, unsupported op, contradictory request).
-NOT SUPPORTED (do not emit; explain instead): deleting anything, enemies, attributes, schedules, map creation/resizing, moving players, "all players" bulk grants.`;
+NOT SUPPORTED (do not emit; explain instead): deleting anything, enemies, attributes, schedules, map creation/resizing, moving players, "all players" bulk grants.
+CRAFTING NOTE: recipes live in the Crafting menu, not on a coordinate — but you CAN pass coordinates to also place the craft button on map cells. If the user names an input item that doesn't exist, create it in the same plan (with a ref) rather than refusing.`;
 
 /**
  * Assemble the Edit-mode prompt.

@@ -30,9 +30,12 @@ export const MAX_OPS_PER_PLAN = 60;
 export const SAFARI_OPS = [
   'create_item', 'update_item', 'create_store', 'update_store',
   'stock_item', 'set_stock', 'update_config',
-  'create_action', 'update_action', 'add_outcome', 'attach_action',
+  'create_action', 'create_recipe', 'update_action', 'add_outcome', 'attach_action',
   'update_map_cell'
 ];
+
+/** Where an action shows up outside the map. Mirrors the Action Editor's select. */
+export const MENU_VISIBILITY = ['none', 'crafting_menu', 'player_menu'];
 
 /** Ops that mutate playerData.json (applied in a separate withStorageLock cycle). */
 export const PLAYER_OPS = ['give_currency', 'give_item'];
@@ -290,6 +293,42 @@ export function validatePlan(plan, guildSafari, guildPlayers = null) {
         break;
       }
 
+      case 'create_recipe': {
+        // Sugar for the real crafting shape (quickActionCreate.buildCraftingLogic): an
+        // Action with "has item" conditions and remove/remove/give outcomes, surfaced in
+        // the Crafting menu. Recipes are NOT a separate entity type in CastBot.
+        op.fields = validateActionShell(raw, i, err);
+        op.inputs = [];
+        const rawInputs = Array.isArray(raw.inputs) ? raw.inputs : [];
+        if (rawInputs.length < 1 || rawInputs.length > 3) {
+          err(i, 'create_recipe needs "inputs": 1–3 items consumed by the craft.');
+        }
+        for (const input of rawInputs) {
+          const isObject = input && typeof input === 'object';
+          const itemId = resolveRef(isObject ? input.item : input, 'item', i, 'recipe input');
+          if (!itemId) continue;
+          const quantity = intIn(isObject ? (input.quantity ?? 1) : 1, 1, 99);
+          if (quantity === null) { err(i, 'Recipe input "quantity" must be 1–99.'); continue; }
+          op.inputs.push({ itemId, quantity });
+        }
+        op.output = { itemId: resolveRef(raw.output?.item ?? raw.output, 'item', i, 'recipe output'), quantity: intIn(raw.output?.quantity ?? 1, 1, 99) ?? 1 };
+        if (!op.output.itemId) err(i, 'create_recipe needs "output": the item the craft produces.');
+        // Same input twice must merge, or the remove outcomes fight each other.
+        const seen = new Map();
+        for (const input of op.inputs) seen.set(input.itemId, (seen.get(input.itemId) || 0) + input.quantity);
+        op.inputs = [...seen].map(([itemId, quantity]) => ({ itemId, quantity }));
+        // conditions + 1 remove per input + 1 give must stay inside the outcome cap.
+        if (op.inputs.length + 1 > SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON) {
+          err(i, `A recipe with ${op.inputs.length} inputs needs ${op.inputs.length + 1} outcomes (max ${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON}).`);
+        }
+        op.coordinates = validateCoordinates(raw.coordinates, i, err, mapCoords, { allowEmpty: true });
+        counts.action++;
+        if (counts.action > SAFARI_LIMITS.MAX_BUTTONS_PER_GUILD) {
+          err(i, `Guild action limit reached (${SAFARI_LIMITS.MAX_BUTTONS_PER_GUILD}).`);
+        }
+        break;
+      }
+
       case 'create_action': {
         op.fields = validateActionShell(raw, i, err);
         if (op.fields?.name) plannedNames.action.add(op.fields.name.toLowerCase());
@@ -543,6 +582,10 @@ function validateActionShell(src, opIndex, err, { partial = false } = {}) {
     if (!Array.isArray(src.tags) || src.tags.some(t => !strIn(t, 1, SAFARI_LIMITS.MAX_TAG_LENGTH))) err(opIndex, 'Action "tags" invalid.');
     else out.tags = src.tags.map(t => t.trim());
   }
+  if (src.menuVisibility !== undefined) {
+    if (!MENU_VISIBILITY.includes(src.menuVisibility)) err(opIndex, `Action "menuVisibility" must be one of ${MENU_VISIBILITY.join('/')}.`);
+    else out.menuVisibility = src.menuVisibility;
+  }
   return out;
 }
 
@@ -770,8 +813,8 @@ function warnUnknownPlayers(playerIds, guildPlayers, warnings) {
 const OP_EMOJI = {
   create_item: '🆕', update_item: '✏️', create_store: '🏪', update_store: '✏️',
   stock_item: '📦', set_stock: '📊', update_config: '⚙️',
-  create_action: '⚡', update_action: '✏️', add_outcome: '➕', attach_action: '📍',
-  update_map_cell: '🗺️', give_currency: '🪙', give_item: '🎁'
+  create_action: '⚡', create_recipe: '🛠️', update_action: '✏️', add_outcome: '➕',
+  attach_action: '📍', update_map_cell: '🗺️', give_currency: '🪙', give_item: '🎁'
 };
 
 /**
@@ -802,6 +845,11 @@ export function describeOp(op, names = {}, coordChannels = {}) {
       const coords = op.coordinates?.length ? ` @ ${coordList(op.coordinates)}` : '';
       const outs = (op.outcomes || []).map(o => o.type).join(' + ');
       return `${emoji} Create action **${op.fields?.name}** [${op.trigger?.type || 'button'}]${coords} → ${outs}`;
+    }
+    case 'create_recipe': {
+      const inputs = (op.inputs || []).map(i => `${i.quantity > 1 ? `${i.quantity}× ` : ''}**${nameOf(i.itemId)}**`).join(' + ');
+      const where = op.coordinates?.filter(c => c !== 'global').length ? ` @ ${coordList(op.coordinates.filter(c => c !== 'global'))}` : ' (Crafting menu)';
+      return `${emoji} Recipe **${op.fields?.name}**: ${inputs} → ${op.output?.quantity > 1 ? `${op.output.quantity}× ` : ''}**${nameOf(op.output?.itemId)}**${where}`;
     }
     case 'update_action': return `${emoji} Update action **${nameOf(op.action)}** (${Object.keys(op.set || {}).join(', ')})`;
     case 'add_outcome': return `${emoji} Add ${(op.outcomes || []).map(o => o.type).join(' + ')} to **${nameOf(op.action)}**`;

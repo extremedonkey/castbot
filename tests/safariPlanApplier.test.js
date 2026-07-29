@@ -220,6 +220,55 @@ describe('Applier — create_action', () => {
   });
 });
 
+describe('Applier — create_recipe (crafting)', () => {
+  it('builds the quickActionCreate crafting shape: has-item conditions, remove/remove/give outcomes, crafting_menu', () => {
+    const data = freshData({ items: {
+      dog_1: { id: 'dog_1', name: 'Dog' }, cat_1: { id: 'cat_1', name: 'Cat' }, cd_1: { id: 'cd_1', name: 'Catdog' }
+    }});
+    const [op] = normalize([{
+      op: 'create_recipe', name: 'Fuse Catdog', inputs: ['dog_1', 'cat_1'], output: { item: 'cd_1' }
+    }], data.g1);
+    const refMap = {}, summary = newSummary();
+    applySafariOp(data, 'g1', op, refMap, summary, { userId: 'u1', now: NOW });
+
+    const action = Object.values(data.g1.buttons)[0];
+    assert.equal(action.menuVisibility, 'crafting_menu');
+    assert.equal(action.style, 'Secondary');
+    assert.deepEqual(action.conditions.map(c => [c.type, c.operator, c.itemId, c.quantity, c.logic]),
+      [['item', 'has', 'dog_1', 1, 'AND'], ['item', 'has', 'cat_1', 1, 'AND']]);
+    assert.deepEqual(action.actions.map(o => [o.config.itemId, o.config.quantity, o.config.operation, o.order]),
+      [['dog_1', 1, 'remove', 0], ['cat_1', 1, 'remove', 1], ['cd_1', 1, 'give', 2]]);
+    assert.deepEqual(action.coordinates, []); // crafting lives in the menu, not on the map
+  });
+
+  it('merges a duplicated input into quantity 2 (two dogs → one catdog)', () => {
+    const data = freshData({ items: { dog_1: { id: 'dog_1', name: 'Dog' }, cd_1: { id: 'cd_1', name: 'Catdog' } } });
+    const [op] = normalize([{
+      op: 'create_recipe', name: 'Double Dog', inputs: ['dog_1', 'dog_1'], output: 'cd_1'
+    }], data.g1);
+    applySafariOp(data, 'g1', op, {}, newSummary(), { userId: 'u1', now: NOW });
+    const action = Object.values(data.g1.buttons)[0];
+    assert.deepEqual(action.conditions.map(c => [c.itemId, c.quantity]), [['dog_1', 2]]);
+    assert.deepEqual(action.actions.map(o => [o.config.itemId, o.config.quantity, o.config.operation]),
+      [['dog_1', 2, 'remove'], ['cd_1', 1, 'give']]);
+  });
+
+  it('resolves $refs so items created in the same plan can be crafted', () => {
+    const data = freshData();
+    const ops = normalize([
+      { op: 'create_item', ref: 'dog', name: 'Dog' },
+      { op: 'create_item', ref: 'cat', name: 'Cat' },
+      { op: 'create_item', ref: 'catdog', name: 'Catdog' },
+      { op: 'create_recipe', name: 'Fuse', inputs: ['$dog', '$cat'], output: { item: '$catdog' } }
+    ], data.g1);
+    const refMap = {}, summary = newSummary();
+    for (const op of ops) applySafariOp(data, 'g1', op, refMap, summary, { userId: 'u1', now: NOW });
+    const action = Object.values(data.g1.buttons)[0];
+    assert.equal(action.actions.at(-1).config.itemId, refMap.catdog);
+    assert.equal(action.conditions[0].itemId, refMap.dog);
+  });
+});
+
 describe('Applier — player ops', () => {
   it('give_currency initializes safari, applies the delta, and floors at 0', () => {
     const playerData = { g1: { players: {} } };

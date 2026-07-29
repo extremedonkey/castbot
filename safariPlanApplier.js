@@ -240,6 +240,7 @@ export function applySafariOp(data, guildId, op, refMap, summary, { userId, now 
         conditions: (op.conditions || []).map(c => ({ ...c, itemId: c.itemId ? rid(c.itemId, refMap) : c.itemId })),
         actions: outcomes,
         coordinates: realCoords,
+        ...(f.menuVisibility ? { menuVisibility: f.menuVisibility } : {}),
         metadata: { createdBy: userId, createdAt: now, lastModified: now, usageCount: 0, tags: f.tags || [], createdVia: 'askcb_edit' }
       };
       if (op.ref) refMap[op.ref] = actionId;
@@ -247,6 +248,51 @@ export function applySafariOp(data, guildId, op, refMap, summary, { userId, now 
       summary.created.actions++;
       const at = realCoords.length ? ` @ ${realCoords.map(coordLabel).join(', ')}` : (op.coordinates?.includes('global') ? ' (global)' : '');
       return done(`⚡ Action **${f.name}** created${at}`);
+    }
+
+    case 'create_recipe': {
+      // A recipe IS an Action (CastBot has no recipe entity): "has item" conditions +
+      // remove-inputs / give-output outcomes + menuVisibility 'crafting_menu'.
+      // Shape mirrors quickActionCreate.buildCraftingLogic exactly.
+      const f = op.fields || {};
+      const actionId = makeEntityId(f.name, g.buttons, now);
+      const style = f.style || 'Secondary';
+      const inputs = (op.inputs || []).map(input => ({ ...input, itemId: rid(input.itemId, refMap) }));
+      const outputId = rid(op.output?.itemId, refMap);
+      const conditions = inputs.map((input, idx) => ({
+        id: `cond_${now}_${idx}`,
+        type: 'item', operator: 'has', itemId: input.itemId, quantity: input.quantity, logic: 'AND'
+      }));
+      const outcomes = inputs.map((input, idx) => ({
+        type: 'give_item', order: idx,
+        config: { itemId: input.itemId, quantity: input.quantity, operation: 'remove' },
+        executeOn: 'true'
+      }));
+      outcomes.push({
+        type: 'give_item', order: outcomes.length,
+        config: { itemId: outputId, quantity: op.output?.quantity || 1, operation: 'give' },
+        executeOn: 'true'
+      });
+      const realCoords = (op.coordinates || []).filter(c => c !== 'global');
+      g.buttons[actionId] = {
+        id: actionId,
+        name: f.name,
+        label: f.name,
+        description: f.description || '',
+        emoji: f.emoji || g.safariConfig?.craftingEmoji || '🛠️',
+        style,
+        trigger: buildTrigger({ type: 'button' }, { name: f.name, emoji: f.emoji, style }),
+        conditions,
+        actions: outcomes,
+        coordinates: realCoords,
+        menuVisibility: f.menuVisibility || 'crafting_menu', // auto-appears in the Crafting menu
+        metadata: { createdBy: userId, createdAt: now, lastModified: now, usageCount: 0, tags: f.tags || [], createdVia: 'askcb_edit_recipe' }
+      };
+      if (op.ref) refMap[op.ref] = actionId;
+      attachToCoords(g, actionId, realCoords, summary);
+      summary.created.actions++;
+      const recipeText = `${inputs.map(i => `${i.quantity > 1 ? `${i.quantity}× ` : ''}${g.items[i.itemId]?.name || i.itemId}`).join(' + ')} → ${g.items[outputId]?.name || outputId}`;
+      return done(`🛠️ Recipe **${f.name}** created: ${recipeText}${realCoords.length ? ` @ ${realCoords.map(coordLabel).join(', ')}` : ' (Crafting menu)'}`);
     }
 
     case 'update_action': {
