@@ -29,7 +29,7 @@ export const MAX_OPS_PER_PLAN = 60;
 /** Ops that mutate safariContent.json (applied in the withSafariLock cycle). */
 export const SAFARI_OPS = [
   'create_item', 'update_item', 'create_store', 'update_store',
-  'stock_item', 'set_stock', 'update_config',
+  'stock_item', 'set_stock', 'update_config', 'create_enemy',
   'create_action', 'create_recipe', 'update_action', 'add_outcome', 'attach_action',
   'update_map_cell'
 ];
@@ -40,7 +40,7 @@ export const MENU_VISIBILITY = ['none', 'crafting_menu', 'player_menu'];
 /** Ops that mutate playerData.json (applied in a separate withStorageLock cycle). */
 export const PLAYER_OPS = ['give_currency', 'give_item'];
 
-export const OUTCOME_TYPES = ['display_text', 'give_currency', 'give_item', 'give_role', 'remove_role', 'follow_up_button'];
+export const OUTCOME_TYPES = ['display_text', 'give_currency', 'give_item', 'give_role', 'remove_role', 'follow_up_button', 'fight_enemy'];
 export const TRIGGER_TYPES = ['button', 'modal', 'button_modal', 'button_input'];
 export const CONDITION_TYPES = ['currency', 'item', 'role'];
 export const BUTTON_STYLES = ['Primary', 'Secondary', 'Success', 'Danger'];
@@ -89,7 +89,8 @@ export function validatePlan(plan, guildSafari, guildPlayers = null) {
   const existing = {
     item: indexEntities(g.items, e => e?.name),
     store: indexEntities(g.stores, e => e?.name),
-    action: indexEntities(g.buttons, e => e?.name || e?.label)
+    action: indexEntities(g.buttons, e => e?.name || e?.label),
+    enemy: indexEntities(g.enemies, e => e?.name)
   };
   const activeMapId = g.maps?.active;
   const mapCoords = activeMapId ? new Set(Object.keys(g.maps?.[activeMapId]?.coordinates || {})) : null;
@@ -98,7 +99,8 @@ export function validatePlan(plan, guildSafari, guildPlayers = null) {
   const counts = {
     item: Object.keys(g.items || {}).length,
     store: Object.keys(g.stores || {}).length,
-    action: Object.keys(g.buttons || {}).length
+    action: Object.keys(g.buttons || {}).length,
+    enemy: Object.keys(g.enemies || {}).length
   };
   // per-store stocked-item projection: storeKey ('$ref' or id) → Set of item keys
   const storeStock = new Map();
@@ -120,7 +122,7 @@ export function validatePlan(plan, guildSafari, guildPlayers = null) {
     return outcomeCounts.get(actionKey);
   };
   // in-plan created names, for duplicate detection: kind → Set of lowercased names
-  const plannedNames = { item: new Set(), store: new Set(), action: new Set() };
+  const plannedNames = { item: new Set(), store: new Set(), action: new Set(), enemy: new Set() };
 
   // --- ref tracking ---
   const declaredRefs = new Map(); // ref → kind
@@ -182,7 +184,7 @@ export function validatePlan(plan, guildSafari, guildPlayers = null) {
 
     // ref declaration (creates only)
     if (raw.ref !== undefined) {
-      const kind = { create_item: 'item', create_store: 'store', create_action: 'action' }[opType];
+      const kind = { create_item: 'item', create_store: 'store', create_action: 'action', create_recipe: 'action', create_enemy: 'enemy' }[opType];
       if (!kind) {
         err(i, `"ref" may only be declared on create_item / create_store / create_action ops.`);
       } else if (typeof raw.ref !== 'string' || !REF_NAME_RE.test(raw.ref) || RESERVED_KEYS.has(raw.ref)) {
@@ -290,6 +292,37 @@ export function validatePlan(plan, guildSafari, guildPlayers = null) {
 
       case 'update_config': {
         op.set = validateConfigFields(raw.set, i, err, mapCoords);
+        break;
+      }
+
+      case 'create_enemy': {
+        op.fields = {};
+        const src = raw || {};
+        if (!strIn(src.name, 1, SAFARI_LIMITS.MAX_ENEMY_NAME_LENGTH)) err(i, `Enemy "name" must be 1–${SAFARI_LIMITS.MAX_ENEMY_NAME_LENGTH} chars.`);
+        else op.fields.name = src.name.trim();
+        if (src.description !== undefined) {
+          if (!strIn(src.description, 0, SAFARI_LIMITS.MAX_ENEMY_DESCRIPTION_LENGTH) && src.description !== '') err(i, `Enemy "description" max ${SAFARI_LIMITS.MAX_ENEMY_DESCRIPTION_LENGTH} chars.`);
+          else op.fields.description = String(src.description);
+        }
+        if (src.emoji !== undefined) {
+          if (!emojiOk(src.emoji)) err(i, 'Enemy "emoji" is too long.');
+          else op.fields.emoji = src.emoji;
+        }
+        const hp = intIn(src.hp ?? 10, 1, 9999);
+        if (hp === null) err(i, 'Enemy "hp" must be an integer 1–9999.'); else op.fields.hp = hp;
+        const attackValue = intIn(src.attackValue ?? 1, 1, 999);
+        if (attackValue === null) err(i, 'Enemy "attackValue" must be an integer 1–999.'); else op.fields.attackValue = attackValue;
+        if (src.turnOrder !== undefined) {
+          if (src.turnOrder !== 'player_first' && src.turnOrder !== 'enemy_first') err(i, 'Enemy "turnOrder" must be player_first or enemy_first.');
+          else op.fields.turnOrder = src.turnOrder;
+        }
+        if (op.fields.name) {
+          const lower = op.fields.name.toLowerCase();
+          if (existing.enemy.byName.has(lower) || plannedNames.enemy.has(lower)) err(i, `An enemy named "${op.fields.name}" already exists.`);
+          plannedNames.enemy.add(lower);
+        }
+        counts.enemy++;
+        if (counts.enemy > SAFARI_LIMITS.MAX_ENEMIES_PER_GUILD) err(i, `Guild enemy limit reached (${SAFARI_LIMITS.MAX_ENEMIES_PER_GUILD}).`);
         break;
       }
 
@@ -776,6 +809,12 @@ function validateOutcomes(src, opIndex, err, warnings, resolveRef, existingCount
       const buttonId = resolveRef(cfg.action ?? cfg.buttonId, 'action', opIndex, 'follow-up action');
       if (!buttonId) continue;
       outcome.config = { buttonId };
+    } else if (o.type === 'fight_enemy') {
+      const enemyId = resolveRef(cfg.enemy ?? cfg.enemyId, 'enemy', opIndex, 'enemy');
+      if (!enemyId) continue;
+      outcome.config = { enemyId };
+      // Quick Enemy's convention: the fight happens regardless of conditions.
+      if (o.executeOn === undefined) outcome.executeOn = 'always';
     }
 
     const limit = normalizeLimit(cfg.limit, opIndex, err);
@@ -813,8 +852,8 @@ function warnUnknownPlayers(playerIds, guildPlayers, warnings) {
 const OP_EMOJI = {
   create_item: '🆕', update_item: '✏️', create_store: '🏪', update_store: '✏️',
   stock_item: '📦', set_stock: '📊', update_config: '⚙️',
-  create_action: '⚡', create_recipe: '🛠️', update_action: '✏️', add_outcome: '➕',
-  attach_action: '📍', update_map_cell: '🗺️', give_currency: '🪙', give_item: '🎁'
+  create_action: '⚡', create_recipe: '🛠️', create_enemy: '🐙', update_action: '✏️',
+  add_outcome: '➕', attach_action: '📍', update_map_cell: '🗺️', give_currency: '🪙', give_item: '🎁'
 };
 
 /**
@@ -851,6 +890,7 @@ export function describeOp(op, names = {}, coordChannels = {}) {
       const outs = (op.outcomes || []).map(o => o.type).join(' + ');
       return `${emoji} Create action **${op.fields?.name}** [${op.trigger?.type || 'button'}]${coords} → ${outs}`;
     }
+    case 'create_enemy': return `${emoji} Create enemy **${op.fields?.name}**${op.fields?.emoji ? ` ${op.fields.emoji}` : ''} (❤️${op.fields?.hp} ⚔️${op.fields?.attackValue})`;
     case 'create_recipe': {
       const inputs = (op.inputs || []).map(i => `${i.quantity > 1 ? `${i.quantity}× ` : ''}**${nameOf(i.itemId)}**`).join(' + ');
       const where = op.coordinates?.filter(c => c !== 'global').length ? ` @ ${coordList(op.coordinates.filter(c => c !== 'global'))}` : ' (Crafting menu)';

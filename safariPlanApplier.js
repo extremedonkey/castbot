@@ -79,6 +79,7 @@ function resolveOutcome(outcome, refMap) {
   const config = { ...outcome.config };
   if (config.itemId) config.itemId = rid(config.itemId, refMap);
   if (config.buttonId) config.buttonId = rid(config.buttonId, refMap);
+  if (config.enemyId) config.enemyId = rid(config.enemyId, refMap);
   return { ...outcome, config };
 }
 
@@ -254,6 +255,25 @@ export function applySafariOp(data, guildId, op, refMap, summary, { userId, now 
       summary.created.actions++;
       const at = realCoords.length ? ` @ ${realCoords.map(coordLabel).join(', ')}` : (op.coordinates?.includes('global') ? ' (global)' : '');
       return done(`⚡ Action **${f.name}** created${at}`);
+    }
+
+    case 'create_enemy': {
+      const f = op.fields || {};
+      if (!g.enemies) g.enemies = {};
+      const enemyId = makeEntityId(f.name, g.enemies, now);
+      g.enemies[enemyId] = {
+        id: enemyId,
+        name: f.name,
+        emoji: f.emoji || '👹',
+        description: f.description || '',
+        hp: f.hp ?? 10,
+        attackValue: f.attackValue ?? 1,
+        turnOrder: f.turnOrder || 'player_first',
+        category: 'General',
+        metadata: { createdBy: userId, createdAt: now, lastModified: now, createdVia: 'askcb_edit' }
+      };
+      if (op.ref) refMap[op.ref] = enemyId;
+      return done(`🐙 Enemy **${f.name}** created (❤️${f.hp ?? 10} ⚔️${f.attackValue ?? 1})`);
     }
 
     case 'create_recipe': {

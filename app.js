@@ -10875,12 +10875,12 @@ To fix this:
         }
       })(req, res, client);
 
-    } else if (custom_id === 'askcb_edit' || custom_id.startsWith('askcb_edit_ctx_') || custom_id === 'askcb_edit_post' || custom_id === 'askcb_edit_public') {
-      // 🛠️ Ask CastBot EDIT (modal/refine/post/public). security: 'public' = anyone may CLICK; real gate = hasSafariEditAccess in handleEditEntry (entitlement + 4 admin bits, stricter than ManageRoles). Single-line comment: the Moai hook's factory window is 3 lines.
+    } else if (custom_id.startsWith('askcb_edit_ctx_')) {
+      // 🛠️ Refine — the follow-up button on an edit preview/result. Not a menu button: Ask CastBot (askcb_ask) is the single entry point; this reopens the private edit modal with the prior exchange. Real gate = hasSafariEditAccess (entitlement + 4 admin bits).
       return ButtonHandlerFactory.create({
-        id: custom_id === 'askcb_edit_post' || custom_id === 'askcb_edit_public' ? custom_id : 'askcb_edit',
+        id: 'askcb_edit_ctx',
         security: 'public',
-        requiresModal: custom_id !== 'askcb_edit_post',
+        requiresModal: true,
         handler: async (context) => (await import('./askCastBotWrite.js')).handleEditEntry(context, custom_id)
       })(req, res, client);
 

@@ -5,7 +5,6 @@
 import { InteractionResponseFlags } from 'discord-interactions';
 import { getBotEmoji } from './botEmojis.js';
 import { hasAskCastBotAccess } from './askCastBot.js';
-import { hasFeatureSync, FEATURES } from './entitlements.js';
 
 /**
  * Menu Registry - Central source of truth for all menus
@@ -115,19 +114,15 @@ export class MenuBuilder {
       { type: 2, custom_id: 'safari_manage_enemies', label: 'Enemies', style: 2, emoji: { name: '🐙' } },
       { type: 2, custom_id: 'tycoons_legacy', label: 'Tycoons', style: 2, emoji: { name: '💼' } }
     ];
+    // 👾 Ask CastBot — one button for the whole feature: it answers questions AND makes
+    // changes (admins in entitled guilds get a private preview + Apply). Post Ask sits
+    // beside it — same feature, "put a button in a channel" instead of "use it now".
     if (hasAskCastBotAccess({ userId: context?.userId, guildId: context?.guildId })) {
-      specialFeatures.push({ type: 2, custom_id: 'askcb_ask', label: 'Ask CastBot', style: 1, emoji: { name: '👾' } });
+      specialFeatures.push(
+        { type: 2, custom_id: 'askcb_ask', label: 'Ask CastBot', style: 1, emoji: { name: '👾' } },
+        { type: 2, custom_id: 'askcb_post', label: 'Post Ask CastBot', style: 2, emoji: { name: '👾' } }
+      );
     }
-
-    // 🛠️ Edit Safari — entitled guilds only (entitlements.json, display gate; handlers
-    // re-check with the async gate + admin bits). Own row: specialFeatures can be 5/5.
-    // ⚠️ Worst case (Reece on test, whitelisted+entitled guild) this menu hits 40/40.
-    const editRow = hasFeatureSync(context?.guildId, FEATURES.SAFARI_EDIT)
-      ? [{ type: 1, components: [
-          { type: 2, custom_id: 'askcb_edit', label: 'Edit Safari', style: 1, emoji: { name: '🛠️' } },
-          { type: 2, custom_id: 'askcb_edit_post', label: 'Post Edit Card', style: 2, emoji: { name: '🛠️' } }
-        ]}]
-      : [];
 
     // Cleanup section — admin maintenance tools. Archive Channels is TEST-only for now.
     const cleanupButtons = [];
@@ -143,7 +138,6 @@ export class MenuBuilder {
       { type: 14 },
       { type: 10, content: `### \`\`\`🐙 Special Features\`\`\`` },
       { type: 1, components: specialFeatures },
-      ...editRow,
       { type: 10, content: `### \`\`\`🧹 Cleanup\`\`\`` },
       { type: 1, components: cleanupButtons },
       { type: 10, content: `### \`\`\`❄️ Timers (Snowflake)\`\`\`` },
@@ -216,16 +210,11 @@ export class MenuBuilder {
       { type: 2, custom_id: 'safari_manage_enemies', label: 'Enemies', style: 2, emoji: { name: '🐙' } }
     ];
     if (hasAskCastBotAccess({ userId: context?.userId, guildId: context?.guildId })) {
-      specialFeatures.unshift({ type: 2, custom_id: 'askcb_ask', label: 'Ask CastBot', style: 1, emoji: { name: '👾' } });
+      specialFeatures.unshift(
+        { type: 2, custom_id: 'askcb_ask', label: 'Ask CastBot', style: 1, emoji: { name: '👾' } },
+        { type: 2, custom_id: 'askcb_post', label: 'Post Ask CastBot', style: 2, emoji: { name: '👾' } }
+      );
     }
-
-    // 🛠️ Edit Safari — entitled guilds only (see buildSetupMenu; same display gate).
-    const editRow = hasFeatureSync(context?.guildId, FEATURES.SAFARI_EDIT)
-      ? [{ type: 1, components: [
-          { type: 2, custom_id: 'askcb_edit', label: 'Edit Safari', style: 1, emoji: { name: '🛠️' } },
-          { type: 2, custom_id: 'askcb_edit_post', label: 'Post Edit Card', style: 2, emoji: { name: '🛠️' } }
-        ]}]
-      : [];
 
     // Cleanup section — admin maintenance tools. Archive Channels is TEST-only for now.
     const cleanupButtons = [];
@@ -241,7 +230,6 @@ export class MenuBuilder {
       { type: 14 },
       { type: 10, content: `### \`\`\`🐙 Special Features\`\`\`` },
       { type: 1, components: specialFeatures },
-      ...editRow,
       { type: 10, content: `### \`\`\`🧹 Cleanup\`\`\`` },
       { type: 1, components: cleanupButtons },
       { type: 10, content: `### \`\`\`❄️ Timers (Snowflake)\`\`\`` },
@@ -287,15 +275,14 @@ export class MenuBuilder {
     const components = [
       { type: 10, content: `## ${menuConfig.title}` },
       { type: 10, content: `### \`\`\`🦠 Experimental\`\`\`` },
-      // Two rows: Discord caps an ActionRow at 5 buttons, and Post Ask/Post Moai sit next
-      // to Moai because they're the same family (both drive Claude). Msg Test overflows —
-      // it's the least related of the five.
+      // Two rows: Discord caps an ActionRow at 5 buttons. Post Moai sits next to Moai
+      // (same family — both drive Claude). Post Ask CastBot moved to Tools → Special
+      // Features beside Ask CastBot itself when Edit Safari merged into it (2026-07-29).
       {
         type: 1,
         components: [
           { type: 2, custom_id: 'poc_menu_button', label: 'Menu', style: 1, emoji: getBotEmoji('cb_transparent') },
           { type: 2, custom_id: 'moai_ask', label: 'Moai', style: 2, emoji: { name: '🗿' } },
-          { type: 2, custom_id: 'askcb_post', label: 'Post Ask', style: 1, emoji: { name: '👾' } },
           { type: 2, custom_id: 'pcard_open', label: 'Player Card', style: 2, emoji: { name: '🪪' } }
         ]
       },

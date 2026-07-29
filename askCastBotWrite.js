@@ -168,6 +168,12 @@ export function formatGuildDigest(guildSafari, guildPlayers = {}) {
     return `  ${id} — ${a.name || a.label || 'unnamed'} · ${a.trigger?.type || 'button'} · ${coords} · ${outs}`;
   }) : ['  (none)']));
 
+  const enemies = Object.values(g.enemies || {});
+  if (enemies.length) {
+    lines.push('', `ENEMIES (id — name · hp/attack):`);
+    lines.push(...capList(enemies, 40, e => `  ${e.id} — ${e.name} ${e.emoji || ''} · ❤️${e.hp} ⚔️${e.attackValue}`));
+  }
+
   const activeMapId = g.maps?.active;
   if (activeMapId && g.maps?.[activeMapId]) {
     const map = g.maps[activeMapId];
@@ -226,7 +232,9 @@ OP TYPES (safariContent):
      {"type":"give_currency","config":{"amount":int,"limit?":LIMIT}},
      {"type":"give_item","config":{"item":"...","quantity?":1-99,"limit?":LIMIT}},
      {"type":"give_role","config":{"roleId":"..."}}, {"type":"remove_role","config":{"roleId":"..."}},
-     {"type":"follow_up_button","config":{"action":"..."}}]}
+     {"type":"follow_up_button","config":{"action":"..."}},
+     {"type":"fight_enemy","config":{"enemy":"...","limit?":LIMIT}} — starts a combat encounter; defaults to executeOn "always"]}
+- {"op":"create_enemy","ref?":"r","name":"≤80","emoji?":"👹","description?":"≤500","hp?":int(1-9999,default 10),"attackValue?":int(1-999,default 1),"turnOrder?":"player_first|enemy_first"}
 - {"op":"create_recipe","ref?":"r","name":"≤80","emoji?":"...","description?":"...","inputs":[{"item":"...","quantity?":1-99} or just "item", 1-3 of them],"output":{"item":"...","quantity?":1-99},"coordinates?":["A1"]} — CRAFTING. A recipe is an Action that consumes the inputs and gives the output; it appears in the player's Crafting menu automatically (add coordinates only if it should ALSO sit on map cells). Same item twice = quantity 2.
 - {"op":"update_action","action":"...","set":{"name?","emoji?","style?","description?","tags?","menuVisibility?":"none|crafting_menu|player_menu"}}
 - {"op":"add_outcome","action":"...","outcome":{...as above}}
@@ -238,7 +246,7 @@ OP TYPES (playerData):
 LIMIT (usage limits on give_currency/give_item outcomes): {"once":"per_player"} | {"once":"globally"} | {"once":"per_period","hours":12}
 "modal" trigger = a text Command the player types (phrases are what they type). "button" = a clickable button on the location's card. executeOn: "true" runs when conditions pass (default), "false" when they fail, "always" regardless.
 BIAS TO ACTION: when the request names a concrete change — even a creative one ("write flavor text for H5", "make me an item") — draft the content YOURSELF and emit the plan. NEVER present a draft and ask "shall I apply it?": the preview's Apply/Refine/Cancel buttons ARE the approval step, and an answer without a plan block gives the admin nothing to click. Reserve the no-plan reply for genuine blockers (unknown target, unsupported op, contradictory request).
-NOT SUPPORTED (do not emit; explain instead): deleting anything, enemies, attributes, schedules, map creation/resizing, moving players, "all players" bulk grants.
+NOT SUPPORTED (do not emit; explain instead): deleting anything, attributes, scheduled actions, map creation/resizing, moving players, "all players" bulk grants.
 CRAFTING NOTE: recipes live in the Crafting menu, not on a coordinate — but you CAN pass coordinates to also place the craft button on map cells. If the user names an input item that doesn't exist, create it in the same plan (with a ref) rather than refusing.`;
 
 /**
@@ -412,7 +420,7 @@ export function buildNoPlanContainer({ reply, errors, planWasAttempted, isPublic
     { type: 14 },
     { type: 10, content: `-# ${elapsed} · ${modelLabel(model)}` },
     { type: 1, components: [
-      { type: 2, custom_id: isPublic ? 'askcb_edit_public' : 'askcb_edit', label: 'Try Again', style: 1, emoji: { name: '🛠️' } }
+      { type: 2, custom_id: isPublic ? 'askcb_public_ask' : 'askcb_ask', label: 'Try Again', style: 1, emoji: { name: '👾' } }
     ]}
   );
   return { type: 17, accent_color: ACCENT, components };
@@ -467,27 +475,12 @@ export function buildWriteErrorContainer(message, { stale = false, committed = n
         ? `-# Everything else in the plan was NOT applied.${committed?.snapshot ? ` A pre-apply snapshot (${committed.snapshot}) exists if you need a rollback.` : ''}`
         : `-# No changes from this plan were recorded as applied.` },
     { type: 1, components: [
-      { type: 2, custom_id: 'askcb_edit', label: 'Start Over', style: 1, emoji: { name: '🛠️' } }
+      { type: 2, custom_id: 'askcb_ask', label: 'Start Over', style: 1, emoji: { name: '👾' } }
     ]}
   );
   return { type: 17, accent_color: 0xe74c3c, components };
 }
 
-/** The standing public card (askcb_edit_post). The button is admin-gated per click. */
-export function buildPostedEditContainer(note) {
-  return {
-    type: 17,
-    accent_color: ACCENT,
-    components: [
-      { type: 10, content: `## 🛠️ Edit Safari with Ask CastBot` },
-      { type: 10, content: note || `Admins: describe a change in plain English — "create a store", "add a Get Money button to A1–A8", "rename our currency" — review the preview, and apply it. No menus required.` },
-      { type: 14 },
-      { type: 1, components: [
-        { type: 2, custom_id: 'askcb_edit_public', label: 'Edit Safari', style: 1, emoji: { name: '🛠️' } }
-      ]}
-    ]
-  };
-}
 
 /** Public post-apply summary for the posted-card route (audit-by-visibility). One message, budgeted. */
 export function buildPublicSummaryContainer({ userId, summary, query }) {
@@ -624,36 +617,17 @@ export async function processInlinePlan({ answer, guildId, userId, channelId, is
 // ---------------------------------------------------------------------------
 
 /**
- * Handle every Edit-mode entry button: open the modal (askcb_edit / askcb_edit_ctx_* /
- * askcb_edit_public) or post the standing card (askcb_edit_post). Factory context.
+ * The Refine button on an edit preview/result (askcb_edit_ctx_<planId>) — reopens the
+ * private edit modal carrying the prior exchange. Ask CastBot (askcb_ask) is the single
+ * menu entry point; this is a follow-up affordance, not a second feature.
  */
 export async function handleEditEntry(context, customId) {
   if (!(await hasSafariEditAccess(context))) {
-    return {
-      content: customId === 'askcb_edit_public'
-        ? '🛠️ Edit Safari is for server admins only.'
-        : '🛠️ Edit Safari isn\'t enabled for this server.',
-      ephemeral: true
-    };
+    return { content: '🛠️ Safari editing isn\'t available for you here.', ephemeral: true };
   }
-  if (customId === 'askcb_edit_post') {
-    const { DiscordRequest } = await import('./utils.js');
-    await DiscordRequest(`channels/${context.channelId}/messages`, {
-      method: 'POST',
-      body: { components: [buildPostedEditContainer()], flags: (1 << 15) }
-    });
-    return {
-      components: [{ type: 17, accent_color: 0x2ecc71, components: [
-        { type: 10, content: `✅ Edit Safari card posted to <#${context.channelId}>` },
-        { type: 10, content: `-# The button is admin-gated per click — players who press it get turned away.` }
-      ]}],
-      ephemeral: true
-    };
-  }
-  const prevId = customId.startsWith('askcb_edit_ctx_') ? customId.replace('askcb_edit_ctx_', '') : null;
+  const prevId = customId.replace('askcb_edit_ctx_', '');
   const prev = recallWriteExchange(prevId);
-  const isPublic = customId === 'askcb_edit_public' || !!prev?.isPublicRoute;
-  return { type: InteractionResponseType.MODAL, data: buildEditModal(prev, prevId, isPublic) };
+  return { type: InteractionResponseType.MODAL, data: buildEditModal(prev, prevId, !!prev?.isPublicRoute) };
 }
 
 /** Apply/Cancel dispatcher for the askcb_plan_* buttons. */

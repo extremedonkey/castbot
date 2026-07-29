@@ -269,6 +269,40 @@ describe('Applier — create_recipe (crafting)', () => {
   });
 });
 
+describe('Applier — create_enemy + fight_enemy (Quick Enemy parity)', () => {
+  it('creates the enemy shape and wires fight_enemy by $ref, defaulting executeOn to always', () => {
+    const data = freshData({ maps: { active: 'm1', m1: { coordinates: { A1: {} } } } });
+    const ops = normalize([
+      { op: 'create_enemy', ref: 'bear', name: 'Grizzly', emoji: '🐻', hp: 30, attackValue: 5 },
+      {
+        op: 'create_action', name: 'Fight the bear', trigger: { type: 'button' }, coordinates: ['A1'],
+        outcomes: [{ type: 'fight_enemy', config: { enemy: '$bear' } }]
+      }
+    ], data.g1);
+    const refMap = {}, summary = newSummary();
+    for (const op of ops) applySafariOp(data, 'g1', op, refMap, summary, { userId: 'u1', now: NOW });
+
+    const enemy = data.g1.enemies[refMap.bear];
+    assert.equal(enemy.name, 'Grizzly');
+    assert.equal(enemy.hp, 30);
+    assert.equal(enemy.attackValue, 5);
+    assert.equal(enemy.turnOrder, 'player_first');
+    const outcome = Object.values(data.g1.buttons)[0].actions[0];
+    assert.equal(outcome.config.enemyId, refMap.bear); // resolved, not "$bear"
+    assert.equal(outcome.executeOn, 'always');         // Quick Enemy convention
+  });
+
+  it('resolves an existing enemy by name', () => {
+    const data = freshData({ enemies: { orc_1: { id: 'orc_1', name: 'Orc', hp: 5, attackValue: 2 } } });
+    const [op] = normalize([{
+      op: 'create_action', name: 'Ambush', trigger: { type: 'button' },
+      outcomes: [{ type: 'fight_enemy', config: { enemy: 'Orc' } }]
+    }], data.g1);
+    applySafariOp(data, 'g1', op, {}, newSummary(), { userId: 'u1', now: NOW });
+    assert.equal(Object.values(data.g1.buttons)[0].actions[0].config.enemyId, 'orc_1');
+  });
+});
+
 describe('Applier — player ops', () => {
   it('give_currency initializes safari, applies the delta, and floors at 0', () => {
     const playerData = { g1: { players: {} } };

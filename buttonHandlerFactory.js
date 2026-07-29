@@ -5145,41 +5145,17 @@ export const BUTTON_REGISTRY = {
     parent: 'askcb_public_ask'
   },
 
-  // === ASK CASTBOT EDIT MODE (natural-language Safari changes — entitled guilds, admins only) ===
-  'askcb_edit': {
-    label: 'Edit Safari',
-    description: 'Describe a Safari change in plain English — Ask CastBot plans it, you review and apply (entitled guilds, admins only)',
-    emoji: '🛠️',
-    style: 'Primary',
-    requiresModal: true,
-    category: 'askcastbot',
-    parent: 'castbot_tools'
-  },
+  // === ASK CASTBOT EDIT CAPABILITY (natural-language Safari changes — entitled guilds, admins only) ===
+  // No separate menu button: askcb_ask IS the entry point (it answers questions AND, for
+  // admins in entitled guilds, proposes changes with a private Apply preview).
   'askcb_edit_ctx_*': {
     label: 'Refine',
-    description: 'Refine or follow up on a previous Edit Safari exchange, with prior context prefilled',
+    description: 'Refine or follow up on a previous Safari edit, with prior context prefilled (follow-up button on a preview/result card)',
     emoji: '✏️',
     style: 'Secondary',
     requiresModal: true,
     category: 'askcastbot',
-    parent: 'askcb_edit'
-  },
-  'askcb_edit_public': {
-    label: 'Edit Safari',
-    description: 'Edit Safari from a posted card — clickable by anyone, gated per click to entitled-guild admins',
-    emoji: '🛠️',
-    style: 'Primary',
-    requiresModal: true,
-    category: 'askcastbot',
-    parent: 'askcb_edit_post'
-  },
-  'askcb_edit_post': {
-    label: 'Post Edit Safari',
-    description: 'Post a standing Edit Safari card into this channel (button stays admin-gated per click)',
-    emoji: '🛠️',
-    style: 'Primary',
-    category: 'askcastbot',
-    parent: 'reeces_stuff'
+    parent: 'askcb_ask'
   },
   'askcb_plan_apply_*': {
     label: 'Apply Changes',
@@ -5187,14 +5163,14 @@ export const BUTTON_REGISTRY = {
     emoji: '🛠️',
     style: 'Danger',
     category: 'askcastbot',
-    parent: 'askcb_edit'
+    parent: 'askcb_ask'
   },
   'askcb_plan_cancel_*': {
     label: 'Cancel',
     description: 'Discard a previewed Ask CastBot edit plan without applying anything',
     style: 'Secondary',
     category: 'askcastbot',
-    parent: 'askcb_edit'
+    parent: 'askcb_ask'
   },
 
   // === ENTITLEMENTS (runtime feature grants — Reece only) ===
