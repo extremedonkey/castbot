@@ -355,10 +355,18 @@ export function buildAskModal(prevContext = null, prevResponseId = null, isPubli
  * @param {string} [prevContextText]
  * @param {boolean} [superRead] - true when playerData.json/safariContent.json are readable
  * @param {string} [complexity] - one of COMPLEXITY_LEVELS' values
+ * @param {boolean} [editAvailable] - true when this guild holds the safari_edit entitlement
  * @returns {string}
  */
-export function buildPrompt(query, prevContextText = '', superRead = false, complexity = DEFAULT_COMPLEXITY) {
+export function buildPrompt(query, prevContextText = '', superRead = false, complexity = DEFAULT_COMPLEXITY, editAvailable = false) {
   const essence = fs.readFileSync('./docs/askcastbot.md', 'utf8');
+  // Inlined rather than "go Read it": the model demonstrably skips the file read and
+  // invents menu paths (2026-07-29: answered "Safari menu → Manage Items", a screen
+  // removed in 2025). ~2.5KB of prompt buys unconditional grounding.
+  let uiPaths = '';
+  try {
+    uiPaths = fs.readFileSync('./docs/askcastbot-kb/ui-paths.md', 'utf8');
+  } catch { /* KB missing — the prompt rule below degrades to "say you are unsure" */ }
   const prevSection = prevContextText?.trim()
     ? `\n\nPREVIOUS CONVERSATION (context from the last exchange — use it to inform your answer):\n${prevContextText}\n\n---\n`
     : '';
@@ -382,11 +390,15 @@ OPERATING CONTEXT:
 - Your answer is posted PUBLICLY in the channel where the question was asked. Other people will read it. Write for that audience.
 - You have exactly three tools: Read, Glob, Grep. They are read-only. You cannot edit files, run commands, or deploy. Never offer to.
 - Ground yourself in the project's documentation before answering anything you are not certain of. Prefer the Safari feature docs and the Safari design guide. Read them silently.
-- When giving click-by-click navigation, use ONLY menu paths found in docs/askcastbot-kb/ui-paths.md (read it first). If the screen you need isn't listed there, describe the goal and say you're not sure of the exact menu location — NEVER invent menu, screen, or tab names. Most internal docs describe code, not what admins actually see.
+- When giving click-by-click navigation, use ONLY menu paths from the UI NAVIGATION REFERENCE below. If the screen you need isn't listed there, describe the goal and say you're not sure of the exact menu location — NEVER invent menu, screen, or tab names. Internal docs describe code, not what admins actually see.${editAvailable ? `
+- THIS SERVER HAS EDIT SAFARI 🛠️: when the asker is REQUESTING a change (create/rename/delete an item, store, action, setting, etc.) rather than asking how something works, lead with this: an admin can click 🛠️ Edit Safari (in /menu → Tools, or on a posted Edit Safari card), describe the change in plain English, review the preview, and hit Apply — CastBot makes the change itself. Offer the manual menu route only as the alternative afterwards. You still cannot make the change from THIS conversation; Edit Safari is its own button.` : ''}
 - NEVER reveal internals in your answer: no file paths, no line numbers, no function/handler/custom_id names, no schema or JSON key names, no environment variables, no tokens${superRead ? '' : ', no other players\' or servers\' data'}. Answer in terms of menus, buttons, and game behaviour only.
 - NEVER invent a mechanic CastBot does not have. If the request does not map onto a real building block, say so in your first sentence and propose the closest real substitute.${superReadSection}
 - You are a one-shot assistant with no memory between questions${prevSection ? ', BUT you have the previous exchange below' : ''}.${prevSection}
-
+${uiPaths ? `
+UI NAVIGATION REFERENCE (the ONLY source for click-by-click paths):
+${uiPaths}
+` : ''}
 ${complexityGuidance(complexity)}
 
 The question:
@@ -611,8 +623,14 @@ export async function handleAskModalSubmit(req, res) {
 
     const guildId = req.body.guild_id;
     const superRead = !isPublicRoute && SUPER_READ_GUILD_IDS.includes(guildId);
+    // Dynamic import: entitlements.js statically imports this module (for the seed
+    // list), so a static import here would be a cycle. Best-effort — an entitlements
+    // hiccup must not take down read-mode answers.
+    const editAvailable = await import('./entitlements.js')
+      .then(({ hasFeature, FEATURES }) => hasFeature(guildId, FEATURES.SAFARI_EDIT))
+      .catch(() => false);
     const { text: answer, durationMs, denials } = await runAskCastBot(
-      buildPrompt(query, fields.askcb_prev_context, superRead, complexity),
+      buildPrompt(query, fields.askcb_prev_context, superRead, complexity, editAvailable),
       resolveDenyRules(guildId, isPublicRoute),
       (progress) => beat({ components: [buildProgressContainer(query, progress)] }),
       model
