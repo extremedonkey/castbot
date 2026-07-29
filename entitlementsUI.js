@@ -19,20 +19,49 @@ import { FEATURES, grantFeature, revokeFeature, listEntitledGuilds } from './ent
 const ACCENT = 0x9b59b6;
 const OWNER_ID = '391415444084490240';
 
+/**
+ * Resolve display names from the bot's own guild cache and persist any it learns.
+ *
+ * Seeded/ID-only entries would otherwise read as a wall of snowflakes with no way to
+ * fix them by hand. The bot is a member of every entitled guild, so it already knows
+ * the names — self-healing beats making the admin type them. Names are written back
+ * once (only when the stored name is still the raw ID), so a guild the bot later
+ * leaves keeps its last known name.
+ */
+async function resolveGuildNames(guilds, client) {
+  const learned = [];
+  for (const g of guilds) {
+    const cached = client?.guilds?.cache?.get(g.guildId)?.name;
+    g.displayName = cached || g.name;
+    g.inGuild = !!cached;
+    if (cached && g.name === g.guildId) learned.push(g);
+  }
+  for (const g of learned) {
+    try {
+      await grantFeature(g.guildId, [], { name: g.displayName });
+      g.name = g.displayName;
+    } catch { /* naming is cosmetic — never fail the panel over it */ }
+  }
+  if (learned.length) console.log(`🎟️ Entitlements: learned ${learned.length} guild name(s) from the bot cache`);
+  return guilds;
+}
+
 /** The management container: entitled-guild list + Add button + per-guild toggle select. */
-export async function buildEntitlementsManageUI() {
-  const guilds = await listEntitledGuilds();
+export async function buildEntitlementsManageUI(client = null) {
+  const guilds = await resolveGuildNames(await listEntitledGuilds(), client);
   const lines = guilds.length
     ? guilds.map(g => {
         const ask = g.features.includes(FEATURES.ASK_CASTBOT) ? '👾' : '➖';
         const edit = g.features.includes(FEATURES.SAFARI_EDIT) ? '🛠️' : '➖';
-        return `${ask}${edit} **${g.name}** \`${g.guildId}\``;
+        const unknown = g.displayName === g.guildId ? ' *(bot not in this server)*' : '';
+        return `${ask}${edit} **${g.displayName}**${unknown} · \`${g.guildId}\``;
       })
     : ['*No guilds entitled yet.*'];
 
   const components = [
     { type: 10, content: `## 🎟️ Entitlements\n${guilds.length} guild${guilds.length === 1 ? '' : 's'} · 👾 = Ask CastBot · 🛠️ = Safari editing` },
     { type: 10, content: lines.slice(0, 30).join('\n') },
+    { type: 10, content: `-# Names come from the bot's server list automatically. To set one by hand (or fix a server the bot has left), use Add Guild with that same guild ID and type the name.` },
     { type: 14 },
     { type: 1, components: [
       { type: 2, custom_id: 'entitlements_add', label: 'Add Guild', style: 3, emoji: { name: '➕' } }
@@ -52,13 +81,13 @@ export async function buildEntitlementsManageUI() {
           const hasEdit = g.features.includes(FEATURES.SAFARI_EDIT);
           return [
             {
-              label: `Remove all access — ${g.name}`.substring(0, 100),
+              label: `Remove all access — ${g.displayName}`.substring(0, 100),
               value: `remove:${g.guildId}`,
               description: g.guildId,
               emoji: { name: '🗑️' }
             },
             {
-              label: `${hasEdit ? 'Disable' : 'Enable'} Safari editing — ${g.name}`.substring(0, 100),
+              label: `${hasEdit ? 'Disable' : 'Enable'} Safari editing — ${g.displayName}`.substring(0, 100),
               value: `${hasEdit ? 'noedit' : 'edit'}:${g.guildId}`,
               description: hasEdit ? 'Keeps Q&A, removes change-making' : 'Adds change-making on top of Q&A',
               emoji: { name: '🛠️' }
@@ -105,7 +134,7 @@ export async function handleEntitlementsButton(context) {
   if (context.customId === 'entitlements_revoke') {
     return handleEntitlementsRevoke(context);
   }
-  return { components: [await buildEntitlementsManageUI()], ephemeral: true };
+  return { components: [await buildEntitlementsManageUI(context.client)], ephemeral: true };
 }
 
 /** Modal-submit handler (dispatched from app.js MODAL_SUBMIT; owner gate lives HERE). */
@@ -134,7 +163,7 @@ export async function handleEntitlementsAddModal(req, res, client) {
   await grantFeature(guildId, [FEATURES.ASK_CASTBOT, FEATURES.SAFARI_EDIT], { name, addedBy: req.body.member?.user?.id });
   return res.send({
     type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-    data: { components: [await buildEntitlementsManageUI()], flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL }
+    data: { components: [await buildEntitlementsManageUI(client)], flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL }
   });
 }
 
@@ -146,5 +175,5 @@ export async function handleEntitlementsRevoke(context) {
     else if (action === 'noedit') await revokeFeature(guildId, FEATURES.SAFARI_EDIT);
     else if (action === 'edit') await grantFeature(guildId, FEATURES.SAFARI_EDIT, { addedBy: context.userId });
   }
-  return { components: [await buildEntitlementsManageUI()] };
+  return { components: [await buildEntitlementsManageUI(context.client)] };
 }
