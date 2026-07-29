@@ -529,6 +529,82 @@ export function buildNameMap(ops, guildSafari) {
 }
 
 // ---------------------------------------------------------------------------
+// inline edit capability for the READ route (👾 Ask CastBot)
+// ---------------------------------------------------------------------------
+// Reece's actual requirement: the Ask CastBot button ITSELF makes changes when the
+// asker is an admin in an entitled guild — not a redirect to the 🛠️ button. The read
+// prompt gets this capability section; the answer's plan block is stripped from the
+// public reply and the asker receives a private (ephemeral) preview with Apply.
+
+/** The prompt section that arms read-mode with the plan format + this guild's state. */
+export async function buildEditCapabilitySection(guildId) {
+  const digest = await buildGuildDigest(guildId);
+  return `
+
+EDIT CAPABILITY — ACTIVE (this server has Edit Safari and the asker is an admin):
+When the request is a CHANGE (create/update/stock/rename/give — not a question), DO IT: emit exactly one \`\`\`castbot-plan block at the very END of your answer, per the format below. Do NOT tell the asker to click Edit Safari or walk them through menus — the plan IS the action. Your visible answer (before the block) should say in 1-3 sentences what the plan will do; the block is stripped from the public reply, and the asker privately receives an itemized preview with an Apply button.
+If the request is a question, or doesn't map onto the supported ops, answer normally and emit no block.
+
+${OPS_REFERENCE}
+
+CURRENT STATE of this server's Safari (authoritative for entity ids and names):
+${digest}
+
+PLAN RULES: create missing dependencies explicitly with refs BEFORE using them; respect the limits shown in CURRENT STATE; content you invent (descriptions, dialogue, flavour) should be genuinely good.`;
+}
+
+/**
+ * Handle a read-route answer that may carry an inline plan: extract, validate, cache,
+ * and send the asker a private preview (ephemeral follow-ups). Returns the public
+ * answer text with the plan block stripped. Never throws — a plan hiccup must not
+ * lose a delivered answer.
+ */
+export async function processInlinePlan({ answer, guildId, userId, channelId, isPublicRoute, model, token, query, elapsed }) {
+  try {
+    const { reply, planJson, parseError } = extractPlan(answer);
+    if (!planJson && !parseError) return { publicAnswer: answer };
+    const publicAnswer = reply || 'I prepared a change plan — see your private preview.';
+    const { createFollowupMessage } = await import('./buttonHandlerFactory.js');
+
+    if (!planJson) {
+      await createFollowupMessage(token, {
+        components: [buildNoPlanContainer({ reply: 'I tried to prepare the change, but the plan came back malformed. Ask again.', errors: [{ opIndex: -1, message: parseError }], planWasAttempted: true, isPublic: isPublicRoute, elapsed, model })],
+        ephemeral: true
+      });
+      return { publicAnswer };
+    }
+
+    const { loadSafariContent } = await import('./safariManager.js');
+    const safariData = await loadSafariContent();
+    const validation = validatePlan(planJson, safariData[guildId] || null, null);
+    if (!validation.ok) {
+      console.log(`🛠️ Inline edit plan rejected (${validation.errors.length} errors)`);
+      await createFollowupMessage(token, {
+        components: [buildNoPlanContainer({ reply, errors: validation.errors, planWasAttempted: true, isPublic: isPublicRoute, elapsed, model })],
+        ephemeral: true
+      });
+      return { publicAnswer };
+    }
+
+    const planId = Date.now().toString(36);
+    rememberPlan(planId, { plan: planJson, guildId, userId, channelId, isPublicRoute, query, reply, model });
+    const names = buildNameMap(validation.ops, safariData[guildId]);
+    const { main, followUps } = buildPreviewMessages({
+      reply: '', ops: validation.ops, names, warnings: validation.warnings, planId, elapsed, model
+    });
+    await createFollowupMessage(token, { components: [main], ephemeral: true });
+    for (const container of followUps) {
+      await createFollowupMessage(token, { components: [container], ephemeral: true });
+    }
+    console.log(`🛠️ Inline edit plan ready from 👾 route: ${validation.ops.length} ops — awaiting Apply`);
+    return { publicAnswer };
+  } catch (error) {
+    console.error('🛠️ Inline plan processing failed:', error.message);
+    return { publicAnswer: answer };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // entry-button dispatcher (thin app.js branches delegate here)
 // ---------------------------------------------------------------------------
 

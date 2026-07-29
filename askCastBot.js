@@ -356,9 +356,12 @@ export function buildAskModal(prevContext = null, prevResponseId = null, isPubli
  * @param {boolean} [superRead] - true when playerData.json/safariContent.json are readable
  * @param {string} [complexity] - one of COMPLEXITY_LEVELS' values
  * @param {boolean} [editAvailable] - true when this guild holds the safari_edit entitlement
+ * @param {string} [editSection] - the armed edit-capability section (admin askers in
+ *   entitled guilds — from askCastBotWrite.buildEditCapabilitySection). When present it
+ *   REPLACES the "go click Edit Safari" steering: the model proposes the plan itself.
  * @returns {string}
  */
-export function buildPrompt(query, prevContextText = '', superRead = false, complexity = DEFAULT_COMPLEXITY, editAvailable = false) {
+export function buildPrompt(query, prevContextText = '', superRead = false, complexity = DEFAULT_COMPLEXITY, editAvailable = false, editSection = '') {
   const essence = fs.readFileSync('./docs/askcastbot.md', 'utf8');
   // Inlined rather than "go Read it": the model demonstrably skips the file read and
   // invents menu paths (2026-07-29: answered "Safari menu → Manage Items", a screen
@@ -390,7 +393,7 @@ OPERATING CONTEXT:
 - Your answer is posted PUBLICLY in the channel where the question was asked. Other people will read it. Write for that audience.
 - You have exactly three tools: Read, Glob, Grep. They are read-only. You cannot edit files, run commands, or deploy. Never offer to.
 - Ground yourself in the project's documentation before answering anything you are not certain of. Prefer the Safari feature docs and the Safari design guide. Read them silently.
-- When giving click-by-click navigation, use ONLY menu paths from the UI NAVIGATION REFERENCE below. If the screen you need isn't listed there, describe the goal and say you're not sure of the exact menu location — NEVER invent menu, screen, or tab names. Internal docs describe code, not what admins actually see.${editAvailable ? `
+- When giving click-by-click navigation, use ONLY menu paths from the UI NAVIGATION REFERENCE below. If the screen you need isn't listed there, describe the goal and say you're not sure of the exact menu location — NEVER invent menu, screen, or tab names. Internal docs describe code, not what admins actually see.${editAvailable && !editSection ? `
 - THIS SERVER HAS EDIT SAFARI 🛠️: when the asker is REQUESTING a change (create/rename/delete an item, store, action, setting, etc.) rather than asking how something works, lead with this: an admin can click 🛠️ Edit Safari (in /menu → Tools, or on a posted Edit Safari card), describe the change in plain English, review the preview, and hit Apply — CastBot makes the change itself. Offer the manual menu route only as the alternative afterwards. You still cannot make the change from THIS conversation; Edit Safari is its own button.` : ''}
 - NEVER reveal internals in your answer: no file paths, no line numbers, no function/handler/custom_id names, no schema or JSON key names, no environment variables, no tokens${superRead ? '' : ', no other players\' or servers\' data'}. Answer in terms of menus, buttons, and game behaviour only.
 - NEVER invent a mechanic CastBot does not have. If the request does not map onto a real building block, say so in your first sentence and propose the closest real substitute.${superReadSection}
@@ -398,7 +401,7 @@ OPERATING CONTEXT:
 ${uiPaths ? `
 UI NAVIGATION REFERENCE (the ONLY source for click-by-click paths):
 ${uiPaths}
-` : ''}
+` : ''}${editSection}
 ${complexityGuidance(complexity)}
 
 The question:
@@ -623,15 +626,24 @@ export async function handleAskModalSubmit(req, res) {
 
     const guildId = req.body.guild_id;
     const superRead = !isPublicRoute && SUPER_READ_GUILD_IDS.includes(guildId);
-    // Dynamic import: entitlements.js statically imports this module (for the seed
-    // list), so a static import here would be a cycle. Best-effort — an entitlements
+    // Dynamic imports: entitlements.js and askCastBotWrite.js statically import this
+    // module, so static imports here would be cycles. Best-effort — an edit-side
     // hiccup must not take down read-mode answers.
     const editAvailable = await import('./entitlements.js')
       .then(({ hasFeature, FEATURES }) => hasFeature(guildId, FEATURES.SAFARI_EDIT))
       .catch(() => false);
+    // Admin asker in an entitled guild → the 👾 button itself carries edit capability:
+    // the model emits a plan, the asker gets a private preview + Apply (the original
+    // requirement — Ask CastBot MAKES the change, it doesn't point at another button).
+    const writeMod = editAvailable ? await import('./askCastBotWrite.js').catch(() => null) : null;
+    const canEdit = !!(writeMod?.isAdminMember(req.body.member));
+    const editSection = canEdit
+      ? await writeMod.buildEditCapabilitySection(guildId).catch(() => '')
+      : '';
+
     const { text: answer, durationMs, denials } = await runAskCastBot(
-      buildPrompt(query, fields.askcb_prev_context, superRead, complexity, editAvailable),
-      resolveDenyRules(guildId, isPublicRoute),
+      buildPrompt(query, fields.askcb_prev_context, superRead, complexity, editAvailable, editSection),
+      editSection ? resolveWriteDenyRules(guildId) : resolveDenyRules(guildId, isPublicRoute),
       (progress) => beat({ components: [buildProgressContainer(query, progress)] }),
       model
     );
@@ -640,10 +652,20 @@ export async function handleAskModalSubmit(req, res) {
     console.log(`👾 Ask CastBot answered (${answer.length} chars, ${elapsed})`);
     if (denials?.length) console.warn(`👾 Ask CastBot deny rules fired ${denials.length}x — someone probed a blocked path`);
 
-    const responseId = Date.now().toString(36);
-    rememberResponse(responseId, { response: answer, query, elapsed, complexity, model });
+    // Strip any inline plan out of the public answer; the asker gets the ephemeral
+    // preview with Apply/Cancel as follow-ups (requester-bound, one-shot, re-gated).
+    let publicAnswer = answer;
+    if (editSection) {
+      const result = await writeMod.processInlinePlan({
+        answer, guildId, userId, channelId, isPublicRoute, model, token, query, elapsed
+      });
+      publicAnswer = result.publicAnswer;
+    }
 
-    const chunks = chunkResponse(answer);
+    const responseId = Date.now().toString(36);
+    rememberResponse(responseId, { response: publicAnswer, query, elapsed, complexity, model });
+
+    const chunks = chunkResponse(publicAnswer);
     await deliver({
       components: [buildFirstContainer({ query, chunk: chunks[0], elapsed, chunkCount: chunks.length, responseId, isPublic: isPublicRoute, model })]
     });
