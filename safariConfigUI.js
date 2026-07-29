@@ -7,7 +7,6 @@
 import { EDIT_CONFIGS, EDIT_TYPES } from './editFramework.js';
 import { loadPlayerData } from './storage.js';
 import { getBotEmoji } from './botEmojis.js';
-import { getImageUploadMode, IMAGE_UPLOAD_MODES } from './src/settings/generalSettings.js';
 
 /**
  * Create Roles & Security configuration UI
@@ -103,9 +102,6 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
         emoji: { name: '⚡' }
     });
 
-    // Get current settings display
-    const currentSettingsDisplay = await createCurrentSettingsDisplay(guildId, currentConfig);
-
     // Separate legacy buttons (events, rounds) from main field-group buttons.
     // Legacy buttons are rendered in the bottom 📼 Legacy section.
     const legacyKeys = ['events', 'rounds'];
@@ -117,10 +113,12 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
         .filter(Boolean);
 
     // Create Components V2 Container — LEAN design
+    // NOTE: this screen used to dump every setting's current value as ~30 lines of text
+    // above the buttons. Removed 2026-07-29 — every section duplicated the button that
+    // edits it (each editor shows its own current values), so it was a wall of text
+    // pushing the actual controls off-screen.
     const containerComponents = [
         { type: 10, content: `## ⚙️ CastBot Settings` },
-        { type: 10, content: currentSettingsDisplay },
-        { type: 14 },
         { type: 10, content: `### \`\`\`🎛️ CastBot-Wide Settings\`\`\`` },
         { type: 1, components: [
             { type: 2, custom_id: 'castbot_general', label: 'General', style: 2, emoji: getBotEmoji('castbot_logo') || { name: '⚙️' } },
@@ -326,123 +324,6 @@ export function processFieldGroupSubmission(groupKey, modalData) {
     });
 
     return updates;
-}
-
-/**
- * Create current settings display for the main interface
- * @param {string} guildId - Discord guild ID
- * @param {Object} config - Current safari configuration
- * @returns {string} Formatted settings display
- */
-async function createCurrentSettingsDisplay(guildId, config) {
-    const currencyEmoji = config.currencyEmoji || '🪙';
-    const currencyName = config.currencyName || 'Dollars';
-    const inventoryName = config.inventoryName || 'Inventory';
-    const inventoryEmoji = config.inventoryEmoji || '🧰';
-
-    // --- General (guild-wide, stored in playerData) ---
-    const imageUploadMode = await getImageUploadMode(guildId);
-    let display = `**⚙️ General**\n`;
-    display += `• Image Uploads: ${imageUploadMode === IMAGE_UPLOAD_MODES.UPLOAD_COMPONENT ? '🖼️ Upload Component' : '🔗 Paste URL'}\n\n`;
-
-    // --- Currency & Inventory ---
-    display += `**🪙 Currency & Inventory**\n`;
-    display += `• Currency Name: ${currencyName}\n`;
-    display += `• Currency Emoji: ${currencyEmoji}\n`;
-    display += `• Inventory Name: ${inventoryName}\n`;
-    display += `• Inventory Emoji: ${inventoryEmoji}\n`;
-    display += `• Default Starting Currency: ${config.defaultStartingCurrencyValue ?? 100}\n\n`;
-
-    // --- Crafting ---
-    const craftingName = config.craftingName || 'Crafting';
-    const craftingEmoji = config.craftingEmoji || '🛠️';
-    display += `**🛠️ Crafting**\n`;
-    display += `• Crafting Name: ${craftingName}\n`;
-    display += `• Crafting Emoji: ${craftingEmoji}\n\n`;
-
-    // --- Stamina Settings ---
-    const { getStaminaConfig } = await import('./safariManager.js');
-    const staminaConfig = await getStaminaConfig(guildId);
-
-    const regenMinutes = staminaConfig.regenerationMinutes;
-    let regenTimeDisplay = `${regenMinutes} minutes`;
-    if (regenMinutes >= 60) {
-        const hours = Math.floor(regenMinutes / 60);
-        const mins = regenMinutes % 60;
-        regenTimeDisplay = mins > 0
-            ? `${regenMinutes} minutes (${hours}h ${mins}m)`
-            : `${regenMinutes} minutes (${hours} hours)`;
-    }
-
-    const regenStyleDisplay = staminaConfig.regenerationAmount != null
-        ? `Drip (+${staminaConfig.regenerationAmount} per cooldown)`
-        : 'Full refill';
-    display += `**⚡ Stamina Settings**\n`;
-    display += `• Starting Stamina: ${staminaConfig.startingStamina}\n`;
-    if (staminaConfig.maxStamina === 0) {
-        // Max 0 = scavenger mode: regen only fires while current < max, so at 0 capacity
-        // it never fires (unless a permanent item raises the max) — regen settings are moot.
-        display += `• Max Stamina: 0 (scavenger mode — no natural regeneration)\n`;
-        display += `• ♻️ Regeneration: none — stamina comes from action outcomes and items\n\n`;
-    } else {
-        display += `• Max Stamina: ${staminaConfig.maxStamina}\n`;
-        display += `• ♻️ Regeneration Time: ${regenTimeDisplay}\n`;
-        display += `• Regeneration Style: ${regenStyleDisplay}\n\n`;
-    }
-
-    // --- Events ---
-    if (config.goodEventName || config.badEventName || config.goodEventEmoji || config.badEventEmoji) {
-        display += `**☄️ Events**\n`;
-        if (config.goodEventName) display += `• Good Event Name: ${config.goodEventName}\n`;
-        if (config.goodEventEmoji) display += `• Good Event Emoji: ${config.goodEventEmoji}\n`;
-        if (config.badEventName) display += `• Bad Event Name: ${config.badEventName}\n`;
-        if (config.badEventEmoji) display += `• Bad Event Emoji: ${config.badEventEmoji}\n`;
-        display += `\n`;
-    }
-
-    // --- Rounds (legacy Tycoons) ---
-    const totalRounds = config.totalRounds || 3;
-    const r1 = config.round1GoodProbability ?? 75;
-    const r2 = config.round2GoodProbability ?? 50;
-    const r3 = config.round3GoodProbability ?? 25;
-    display += `**🎲 Rounds** (${totalRounds} total)\n`;
-    display += `• Round 1: Good ${r1}% | Bad ${100 - r1}%\n`;
-    display += `• Round 2: Good ${r2}% | Bad ${100 - r2}%\n`;
-    display += `• Round 3: Good ${r3}% | Bad ${100 - r3}%\n\n`;
-
-    // --- Location ---
-    display += `**📍 Location**\n`;
-    display += `• Starting Coordinate: ${config.defaultStartingCoordinate || 'A1'}\n`;
-    display += `• Key Items on Shared Cells: ${config.reverseBlacklistRequireAll === true ? '🔑 Require ALL (multi-key doors)' : '🗝️ Any One Unlocks'}\n\n`;
-
-    // --- Player Menu ---
-    const enableGlobalCommands = config.enableGlobalCommands !== false;
-    const visibilityModeLabels = {
-        'always': 'Always Show',
-        'initialized_only': 'After Initialization Only',
-        'standard': 'After 1st Initialize + 1st Round',
-        'never': 'Never Show'
-    };
-    display += `**🕹️ Player Menu**\n`;
-    display += `• Global Commands Button: ${enableGlobalCommands ? '✅ Enabled' : '❌ Disabled'}\n`;
-    display += `• Inventory Button: ${visibilityModeLabels[config.inventoryVisibilityMode || 'always']}\n`;
-    display += `• Global Stores Button: ${visibilityModeLabels[config.globalStoresVisibilityMode || 'always']}\n`;
-    display += `• Custom Castlists: ${config.showCustomCastlists !== false ? '✅ Show All' : '📋 Default Only'}\n\n`;
-
-    // --- Commands ---
-    const prefixCount = Array.isArray(config.commandPrefixes) ? config.commandPrefixes.length : 0;
-    display += `**❗ Commands**\n`;
-    display += `• Prefixes: ${prefixCount} configured\n\n`;
-
-    // --- Safari Log ---
-    const { loadSafariContent } = await import('./safariManager.js');
-    const safariData = await loadSafariContent();
-    const logSettings = safariData[guildId]?.safariLogSettings || { enabled: false };
-
-    display += `**📊 Safari Log**\n`;
-    display += `• Status: ${logSettings.enabled ? '🟢 Enabled' : '🔴 Disabled'}\n`;
-
-    return display;
 }
 
 /**

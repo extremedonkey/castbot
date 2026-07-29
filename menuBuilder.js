@@ -117,12 +117,13 @@ export class MenuBuilder {
     // 👾 Ask CastBot — one button for the whole feature: it answers questions AND makes
     // changes (admins in entitled guilds get a private preview + Apply). Post Ask sits
     // beside it — same feature, "put a button in a channel" instead of "use it now".
-    if (hasAskCastBotAccess({ userId: context?.userId, guildId: context?.guildId })) {
-      specialFeatures.push(
-        { type: 2, custom_id: 'askcb_ask', label: 'Ask CastBot', style: 1, emoji: { name: '👾' } },
-        { type: 2, custom_id: 'askcb_post', label: 'Post Ask CastBot', style: 2, emoji: { name: '👾' } }
-      );
-    }
+    // OWN ROW: specialFeatures is already 4 and Discord caps an ActionRow at 5 buttons.
+    const askRow = hasAskCastBotAccess({ userId: context?.userId, guildId: context?.guildId })
+      ? [{ type: 1, components: [
+          { type: 2, custom_id: 'askcb_ask', label: 'Ask CastBot', style: 1, emoji: { name: '👾' } },
+          { type: 2, custom_id: 'askcb_post', label: 'Post Ask CastBot', style: 2, emoji: { name: '👾' } }
+        ]}]
+      : [];
 
     // Cleanup section — admin maintenance tools. Archive Channels is TEST-only for now.
     const cleanupButtons = [];
@@ -138,6 +139,7 @@ export class MenuBuilder {
       { type: 14 },
       { type: 10, content: `### \`\`\`🐙 Special Features\`\`\`` },
       { type: 1, components: specialFeatures },
+      ...askRow,
       { type: 10, content: `### \`\`\`🧹 Cleanup\`\`\`` },
       { type: 1, components: cleanupButtons },
       { type: 10, content: `### \`\`\`❄️ Timers (Snowflake)\`\`\`` },
