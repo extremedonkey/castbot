@@ -5,6 +5,7 @@
 import { InteractionResponseFlags } from 'discord-interactions';
 import { getBotEmoji } from './botEmojis.js';
 import { hasAskCastBotAccess } from './askCastBot.js';
+import { hasFeatureSync, FEATURES } from './entitlements.js';
 
 /**
  * Menu Registry - Central source of truth for all menus
@@ -118,6 +119,16 @@ export class MenuBuilder {
       specialFeatures.push({ type: 2, custom_id: 'askcb_ask', label: 'Ask CastBot', style: 1, emoji: { name: '👾' } });
     }
 
+    // 🛠️ Edit Safari — entitled guilds only (entitlements.json, display gate; handlers
+    // re-check with the async gate + admin bits). Own row: specialFeatures can be 5/5.
+    // ⚠️ Worst case (Reece on test, whitelisted+entitled guild) this menu hits 40/40.
+    const editRow = hasFeatureSync(context?.guildId, FEATURES.SAFARI_EDIT)
+      ? [{ type: 1, components: [
+          { type: 2, custom_id: 'askcb_edit', label: 'Edit Safari', style: 1, emoji: { name: '🛠️' } },
+          { type: 2, custom_id: 'askcb_edit_post', label: 'Post Edit Card', style: 2, emoji: { name: '🛠️' } }
+        ]}]
+      : [];
+
     // Cleanup section — admin maintenance tools. Archive Channels is TEST-only for now.
     const cleanupButtons = [];
     if (isTest) cleanupButtons.push({ type: 2, custom_id: 'archive_channel', label: 'Archive Channels', style: 2, emoji: { name: '🧹' } });
@@ -132,6 +143,7 @@ export class MenuBuilder {
       { type: 14 },
       { type: 10, content: `### \`\`\`🐙 Special Features\`\`\`` },
       { type: 1, components: specialFeatures },
+      ...editRow,
       { type: 10, content: `### \`\`\`🧹 Cleanup\`\`\`` },
       { type: 1, components: cleanupButtons },
       { type: 10, content: `### \`\`\`❄️ Timers (Snowflake)\`\`\`` },
@@ -207,6 +219,14 @@ export class MenuBuilder {
       specialFeatures.unshift({ type: 2, custom_id: 'askcb_ask', label: 'Ask CastBot', style: 1, emoji: { name: '👾' } });
     }
 
+    // 🛠️ Edit Safari — entitled guilds only (see buildSetupMenu; same display gate).
+    const editRow = hasFeatureSync(context?.guildId, FEATURES.SAFARI_EDIT)
+      ? [{ type: 1, components: [
+          { type: 2, custom_id: 'askcb_edit', label: 'Edit Safari', style: 1, emoji: { name: '🛠️' } },
+          { type: 2, custom_id: 'askcb_edit_post', label: 'Post Edit Card', style: 2, emoji: { name: '🛠️' } }
+        ]}]
+      : [];
+
     // Cleanup section — admin maintenance tools. Archive Channels is TEST-only for now.
     const cleanupButtons = [];
     if (isTest) cleanupButtons.push({ type: 2, custom_id: 'archive_channel', label: 'Archive Channels', style: 2, emoji: { name: '🧹' } });
@@ -221,6 +241,7 @@ export class MenuBuilder {
       { type: 14 },
       { type: 10, content: `### \`\`\`🐙 Special Features\`\`\`` },
       { type: 1, components: specialFeatures },
+      ...editRow,
       { type: 10, content: `### \`\`\`🧹 Cleanup\`\`\`` },
       { type: 1, components: cleanupButtons },
       { type: 10, content: `### \`\`\`❄️ Timers (Snowflake)\`\`\`` },
@@ -260,9 +281,9 @@ export class MenuBuilder {
    */
   static buildReecesStuffMenu(menuConfig, context) {
     const envLabel = process.env.INSTANCE_ROLE === 'test' ? 'Test' : process.env.NODE_ENV === 'production' ? 'Prod' : 'Dev';
-    // ⚠️ THIS MENU RUNS NEAR DISCORD'S 40-COMPONENT CEILING (39 as of 2026-07-21 — the
-    // Rich Card demo graduated into Tools → Special Features → 🖼️ Category Post, freeing
-    // one seat). Verify with countComponents([menu]) before adding anything here.
+    // ⚠️ THIS MENU IS AT DISCORD'S 40-COMPONENT CEILING (40/40 as of 2026-07-29 —
+    // Entitlements took the last seat). Adding ANYTHING here now requires removing
+    // something first. Verify with countComponents([menu]).
     const components = [
       { type: 10, content: `## ${menuConfig.title}` },
       { type: 10, content: `### \`\`\`🦠 Experimental\`\`\`` },
@@ -282,7 +303,8 @@ export class MenuBuilder {
         type: 1,
         components: [
           { type: 2, custom_id: 'msg_test', label: 'Msg Test', style: 2, emoji: { name: '💬' } },
-          { type: 2, custom_id: 'moai_post', label: 'Post Moai', style: 1, emoji: { name: '🗿' } }
+          { type: 2, custom_id: 'moai_post', label: 'Post Moai', style: 1, emoji: { name: '🗿' } },
+          { type: 2, custom_id: 'entitlements_manage', label: 'Entitlements', style: 2, emoji: { name: '🎟️' } }
         ]
       },
       { type: 10, content: `### \`\`\`🔧 Admin Tools\`\`\`` },

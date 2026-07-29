@@ -21,6 +21,7 @@ const BACKUP_FILES = [
   { name: 'scheduledJobs.json', emoji: '⏰', critical: false },
   { name: 'dstState.json', emoji: '🕐', critical: false },
   { name: 'data_whispers.json', emoji: '💬', critical: false },  // unread Safari whispers (Tier 2)
+  { name: 'entitlements.json', emoji: '🎟️', critical: false },   // per-guild feature grants (Tier 2)
 ];
 
 // Default config

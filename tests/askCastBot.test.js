@@ -119,6 +119,24 @@ describe('Ask CastBot — super-read gate (playerData/safariContent access)', ()
       for (const rule of BASE_DENY) assert.ok(deny.includes(rule), rule);
     }
   });
+
+  it('resolveWriteDenyRules (REAL module) keeps every secrets deny and lifts player data ONLY for super-read guilds', async () => {
+    // Imports the real module here (side-effect-free) rather than replicating: this
+    // invariant must track the actual CLI_DENY list, not a copy of it. The data files
+    // are multi-tenant, so a general lift would be a cross-guild read grant.
+    const { resolveWriteDenyRules } = await import('../askCastBot.js');
+    for (const guildId of [SUPER_READ_GUILD_IDS[0], RANDOM_GUILD]) {
+      const deny = resolveWriteDenyRules(guildId);
+      for (const rule of ['Read(./.env)', 'Read(**/.env)', 'Read(**/*.pem)', 'Read(./.git/**)', 'Read(./backups/**)', 'Read(/home/bitnami/**)', 'Read(/home/ubuntu/**)']) {
+        assert.ok(deny.includes(rule), `missing secrets deny for ${guildId}: ${rule}`);
+      }
+    }
+    const superReadDeny = resolveWriteDenyRules(SUPER_READ_GUILD_IDS[0]);
+    assert.ok(!superReadDeny.includes('Read(./playerData.json)'), 'super-read guild should read player data in Edit mode');
+    const normalDeny = resolveWriteDenyRules(RANDOM_GUILD);
+    assert.ok(normalDeny.includes('Read(./playerData.json)'), 'ordinary entitled guilds must NOT read the multi-tenant player data');
+    assert.ok(normalDeny.includes('Read(./safariContent.json)'), 'ordinary entitled guilds must NOT read the multi-tenant safari data');
+  });
 });
 
 // --- mention guard ---

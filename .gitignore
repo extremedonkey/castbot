@@ -22,6 +22,7 @@ scheduledJobs.json
 dstState.json
 restartHistory.json
 messageHistory.json
+entitlements.json
 
 # Other data
 img/tips/tips.json

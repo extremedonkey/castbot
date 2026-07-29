@@ -108,6 +108,21 @@ export function resolveDenyRules(guildId, isPublicRoute) {
   return superRead ? CLI_DENY : [...CLI_DENY, ...PLAYER_DATA_DENY];
 }
 
+/**
+ * Deny rules for Edit mode (askCastBotWrite.js). The data files hold EVERY guild's data
+ * in one JSON, so lifting the player-data deny is a cross-guild read grant — it stays
+ * restricted to SUPER_READ_GUILD_IDS exactly like the read route. Every other entitled
+ * guild's model plans from the injected guild digest, which already carries that guild's
+ * full state (items, stores, actions, map, players). The secrets denies are never
+ * lifted, for anything, ever.
+ * @param {string} guildId
+ * @returns {string[]}
+ */
+export function resolveWriteDenyRules(guildId) {
+  const superRead = SUPER_READ_GUILD_IDS.includes(guildId);
+  return superRead ? [...CLI_DENY] : [...CLI_DENY, ...PLAYER_DATA_DENY];
+}
+
 const MAX_CHUNK = 3500;      // leave room for the action row in the last chunk
 export const ACCENT = 0x3498db;
 
@@ -367,6 +382,7 @@ OPERATING CONTEXT:
 - Your answer is posted PUBLICLY in the channel where the question was asked. Other people will read it. Write for that audience.
 - You have exactly three tools: Read, Glob, Grep. They are read-only. You cannot edit files, run commands, or deploy. Never offer to.
 - Ground yourself in the project's documentation before answering anything you are not certain of. Prefer the Safari feature docs and the Safari design guide. Read them silently.
+- When giving click-by-click navigation, use ONLY menu paths found in docs/askcastbot-kb/ui-paths.md (read it first). If the screen you need isn't listed there, describe the goal and say you're not sure of the exact menu location — NEVER invent menu, screen, or tab names. Most internal docs describe code, not what admins actually see.
 - NEVER reveal internals in your answer: no file paths, no line numbers, no function/handler/custom_id names, no schema or JSON key names, no environment variables, no tokens${superRead ? '' : ', no other players\' or servers\' data'}. Answer in terms of menus, buttons, and game behaviour only.
 - NEVER invent a mechanic CastBot does not have. If the request does not map onto a real building block, say so in your first sentence and propose the closest real substitute.${superReadSection}
 - You are a one-shot assistant with no memory between questions${prevSection ? ', BUT you have the previous exchange below' : ''}.${prevSection}

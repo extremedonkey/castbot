@@ -5145,6 +5145,88 @@ export const BUTTON_REGISTRY = {
     parent: 'askcb_public_ask'
   },
 
+  // === ASK CASTBOT EDIT MODE (natural-language Safari changes — entitled guilds, admins only) ===
+  'askcb_edit': {
+    label: 'Edit Safari',
+    description: 'Describe a Safari change in plain English — Ask CastBot plans it, you review and apply (entitled guilds, admins only)',
+    emoji: '🛠️',
+    style: 'Primary',
+    requiresModal: true,
+    category: 'askcastbot',
+    parent: 'castbot_tools'
+  },
+  'askcb_edit_ctx_*': {
+    label: 'Refine',
+    description: 'Refine or follow up on a previous Edit Safari exchange, with prior context prefilled',
+    emoji: '✏️',
+    style: 'Secondary',
+    requiresModal: true,
+    category: 'askcastbot',
+    parent: 'askcb_edit'
+  },
+  'askcb_edit_public': {
+    label: 'Edit Safari',
+    description: 'Edit Safari from a posted card — clickable by anyone, gated per click to entitled-guild admins',
+    emoji: '🛠️',
+    style: 'Primary',
+    requiresModal: true,
+    category: 'askcastbot',
+    parent: 'askcb_edit_post'
+  },
+  'askcb_edit_post': {
+    label: 'Post Edit Safari',
+    description: 'Post a standing Edit Safari card into this channel (button stays admin-gated per click)',
+    emoji: '🛠️',
+    style: 'Primary',
+    category: 'askcastbot',
+    parent: 'reeces_stuff'
+  },
+  'askcb_plan_apply_*': {
+    label: 'Apply Changes',
+    description: 'Apply a previewed Ask CastBot edit plan to live Safari data (requester-bound, re-gated on click)',
+    emoji: '🛠️',
+    style: 'Danger',
+    category: 'askcastbot',
+    parent: 'askcb_edit'
+  },
+  'askcb_plan_cancel_*': {
+    label: 'Cancel',
+    description: 'Discard a previewed Ask CastBot edit plan without applying anything',
+    style: 'Secondary',
+    category: 'askcastbot',
+    parent: 'askcb_edit'
+  },
+
+  // === ENTITLEMENTS (runtime feature grants — Reece only) ===
+  'entitlements_manage': {
+    label: 'Entitlements',
+    description: 'View and manage per-guild feature grants (safari_edit etc.) — the premium hook',
+    emoji: '🎟️',
+    style: 'Secondary',
+    restrictedUser: '391415444084490240',
+    category: 'admin',
+    parent: 'reeces_stuff'
+  },
+  'entitlements_add': {
+    label: 'Add Guild',
+    description: 'Grant safari_edit to a guild by ID (name auto-fills from the bot cache when blank)',
+    emoji: '➕',
+    style: 'Success',
+    requiresModal: true,
+    restrictedUser: '391415444084490240',
+    category: 'admin',
+    parent: 'entitlements_manage'
+  },
+  'entitlements_revoke': {
+    label: 'Revoke Guild',
+    description: 'Revoke safari_edit from a guild via the select on the Entitlements panel',
+    emoji: '🎟️',
+    style: 'Secondary',
+    restrictedUser: '391415444084490240',
+    category: 'admin',
+    parent: 'entitlements_manage'
+  },
+
   // === MOAI (Claude Code Integration) ===
   'moai_post': {
     label: 'Post Moai',

@@ -10875,6 +10875,39 @@ To fix this:
         }
       })(req, res, client);
 
+    } else if (custom_id === 'askcb_edit' || custom_id.startsWith('askcb_edit_ctx_') || custom_id === 'askcb_edit_post' || custom_id === 'askcb_edit_public') {
+      // 🛠️ Ask CastBot EDIT (modal/refine/post/public). security: 'public' = anyone may CLICK; real gate = hasSafariEditAccess in handleEditEntry (entitlement + 4 admin bits, stricter than ManageRoles). Single-line comment: the Moai hook's factory window is 3 lines.
+      return ButtonHandlerFactory.create({
+        id: custom_id === 'askcb_edit_post' || custom_id === 'askcb_edit_public' ? custom_id : 'askcb_edit',
+        security: 'public',
+        requiresModal: custom_id !== 'askcb_edit_post',
+        handler: async (context) => (await import('./askCastBotWrite.js')).handleEditEntry(context, custom_id)
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('askcb_plan_apply_') || custom_id.startsWith('askcb_plan_cancel_')) {
+      // 🛠️ Apply/Cancel a previewed edit plan. security: 'public' — real gate inside handlePlanButton (entitlement + admin + requester binding + one-shot).
+      return ButtonHandlerFactory.create({
+        id: custom_id.startsWith('askcb_plan_apply_') ? 'askcb_plan_apply' : 'askcb_plan_cancel',
+        security: 'public',
+        deferred: true,
+        updateMessage: true,
+        handler: async (context) => (await import('./askCastBotWrite.js')).handlePlanButton(context)
+      })(req, res, client);
+
+    } else if (custom_id === 'entitlements_manage' || custom_id === 'entitlements_add' || custom_id === 'entitlements_revoke') {
+      // 🎟️ Entitlements — runtime feature grants (Reece's Stuff). Logic: entitlementsUI.js
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        requiresModal: custom_id === 'entitlements_add',
+        updateMessage: custom_id === 'entitlements_revoke',
+        handler: async (context) => {
+          if (context.userId !== '391415444084490240') {
+            return { components: [{ type: 17, components: [{ type: 10, content: '🎟️ Reece only.' }] }], ephemeral: true };
+          }
+          return (await import('./entitlementsUI.js')).handleEntitlementsButton(context);
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'moai_post') {
       // 🗿 Post Moai — drop a standing Ask The Moai button into this channel (Reece's Stuff).
       // Posting it does NOT widen access — the button it posts still routes through the
@@ -39377,6 +39410,16 @@ To fix this:
       // 👾 Ask CastBot — gate, defer, run, reply. All logic lives in askCastBot.js.
       const { handleAskModalSubmit } = await import('./askCastBot.js');
       return handleAskModalSubmit(req, res);
+
+    } else if (custom_id.startsWith('askcb_edit_modal') || custom_id.startsWith('askcb_editpub_modal')) {
+      // 🛠️ Ask CastBot EDIT — gate, plan, preview. All logic lives in askCastBotWrite.js.
+      const { handleEditModalSubmit } = await import('./askCastBotWrite.js');
+      return handleEditModalSubmit(req, res);
+
+    } else if (custom_id === 'entitlements_add_modal') {
+      // 🎟️ Entitlements Add Guild (Reece-only gate lives inside the handler)
+      const { handleEntitlementsAddModal } = await import('./entitlementsUI.js');
+      return handleEntitlementsAddModal(req, res, client);
 
     } else if (custom_id === 'moai_ask_modal' || custom_id.startsWith('moai_ask_modal_')) {
       // 🗿 The Moai — defer, run, reply. All logic lives in moai.js.
