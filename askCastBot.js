@@ -360,9 +360,12 @@ export function buildAskModal(prevContext = null, prevResponseId = null, isPubli
  * @param {string} [editSection] - the armed edit-capability section (admin askers in
  *   entitled guilds — from askCastBotWrite.buildEditCapabilitySection). When present it
  *   REPLACES the "go click Edit Safari" steering: the model proposes the plan itself.
+ * @param {string} [playerDigest] - THIS guild's player roster (admin askers only). The
+ *   CLI never reads playerData.json — the parent extracts and injects, so a cross-guild
+ *   leak is impossible by construction.
  * @returns {string}
  */
-export function buildPrompt(query, prevContextText = '', superRead = false, complexity = DEFAULT_COMPLEXITY, editAvailable = false, editSection = '') {
+export function buildPrompt(query, prevContextText = '', superRead = false, complexity = DEFAULT_COMPLEXITY, editAvailable = false, editSection = '', playerDigest = '') {
   const essence = fs.readFileSync('./docs/askcastbot.md', 'utf8');
   // Inlined rather than "go Read it": the model demonstrably skips the file read and
   // invents menu paths (2026-07-29: answered "Safari menu → Manage Items", a screen
@@ -396,12 +399,19 @@ OPERATING CONTEXT:
 - Ground yourself in the project's documentation before answering anything you are not certain of. Prefer the Safari feature docs and the Safari design guide. Read them silently.
 - When giving click-by-click navigation, use ONLY menu paths from the UI NAVIGATION REFERENCE below. If the screen you need isn't listed there, describe the goal and say you're not sure of the exact menu location — NEVER invent menu, screen, or tab names. Internal docs describe code, not what admins actually see.${editAvailable && !editSection ? `
 - THIS SERVER HAS EDIT SAFARI 🛠️: when the asker is REQUESTING a change (create/rename/delete an item, store, action, setting, etc.) rather than asking how something works, lead with this: an admin can click 🛠️ Edit Safari (in /menu → Tools, or on a posted Edit Safari card), describe the change in plain English, review the preview, and hit Apply — CastBot makes the change itself. Offer the manual menu route only as the alternative afterwards. You still cannot make the change from THIS conversation; Edit Safari is its own button.` : ''}
-- NEVER reveal internals in your answer: no file paths, no line numbers, no function/handler/custom_id names, no schema or JSON key names, no environment variables, no tokens${superRead ? '' : ', no other players\' or servers\' data'}. Answer in terms of menus, buttons, and game behaviour only.
+- NEVER reveal internals in your answer: no file paths, no line numbers, no function/handler/custom_id names, no schema or JSON key names, no environment variables, no tokens${superRead || playerDigest ? '' : ', no other players\' or servers\' data'}. Answer in terms of menus, buttons, and game behaviour only.
 - NEVER invent a mechanic CastBot does not have. If the request does not map onto a real building block, say so in your first sentence and propose the closest real substitute.${superReadSection}
 - You are a one-shot assistant with no memory between questions${prevSection ? ', BUT you have the previous exchange below' : ''}.${prevSection}
 ${uiPaths ? `
 UI NAVIGATION REFERENCE (the ONLY source for click-by-click paths):
 ${uiPaths}
+` : ''}${playerDigest ? `
+THIS SERVER'S PLAYERS — read carefully, this SUPERSEDES the persona essence:
+The essence tells you never to reveal "player data belonging to anyone" and never to speculate about "what a specific player has in their inventory". For THIS request both rules are lifted, for THIS SERVER ONLY. The asker is an admin of this server asking about their own game, and the roster below is the authoritative, complete answer — you are not guessing. Answer questions like "who has the most items", "how much does X have", "where is everyone" directly and by name, using this data. Do NOT refuse, do NOT tell them to click through Player Admin, and do NOT claim you can't look it up — you can, and that is the point.
+Still refuse anything about OTHER servers, and anything outside this roster (application answers, casting scores or notes, private messages) — you genuinely don't have those.
+Your answer is PUBLIC in the channel, so lead with what was asked rather than dumping the whole roster.
+
+${playerDigest}
 ` : ''}${editSection}
 ${complexityGuidance(complexity)}
 
@@ -562,7 +572,7 @@ function denyModal(res, message) {
  * @param {Object} req - Express request (Discord interaction)
  * @param {Object} res - Express response
  */
-export async function handleAskModalSubmit(req, res) {
+export async function handleAskModalSubmit(req, res, client = null) {
   const fields = {};
   for (const comp of (req.body.data.components || [])) {
     const inner = comp?.component || comp?.components?.[0];
@@ -671,12 +681,17 @@ export async function handleAskModalSubmit(req, res) {
     const writeMod = editAvailable ? await import('./askCastBotWrite.js').catch(() => null) : null;
     const canEdit = !!(writeMod?.isAdminMember(req.body.member));
     const editSection = canEdit
-      ? await writeMod.buildEditCapabilitySection(guildId).catch(() => '')
+      ? await writeMod.buildEditCapabilitySection(guildId, client).catch(() => '')
+      : '';
+    // Admin askers get this server's player roster injected (never file access — the
+    // data files are multi-tenant). Skipped when editSection already carries the digest.
+    const playerDigest = (canEdit && !editSection)
+      ? await writeMod.buildPlayerDigestSection(guildId, client).catch(() => '')
       : '';
 
     const { text: answer, durationMs, denials, numTurns, costUsd, usage, sessionId,
             apiDurationMs, toolTrace, modelUsed, fellBack } = await runAskCastBot(
-      buildPrompt(query, fields.askcb_prev_context, superRead, complexity, editAvailable, editSection),
+      buildPrompt(query, fields.askcb_prev_context, superRead, complexity, editAvailable, editSection, playerDigest),
       editSection ? resolveWriteDenyRules(guildId) : resolveDenyRules(guildId, isPublicRoute),
       (progress) => beat({ components: [buildProgressContainer(query, progress)] }),
       model

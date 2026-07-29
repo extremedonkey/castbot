@@ -39410,12 +39410,12 @@ To fix this:
     } else if (custom_id.startsWith('askcb_ask_modal') || custom_id.startsWith('askcb_pub_modal')) {
       // 👾 Ask CastBot — gate, defer, run, reply. All logic lives in askCastBot.js.
       const { handleAskModalSubmit } = await import('./askCastBot.js');
-      return handleAskModalSubmit(req, res);
+      return handleAskModalSubmit(req, res, client);
 
     } else if (custom_id.startsWith('askcb_edit_modal') || custom_id.startsWith('askcb_editpub_modal')) {
       // 🛠️ Ask CastBot EDIT — gate, plan, preview. All logic lives in askCastBotWrite.js.
       const { handleEditModalSubmit } = await import('./askCastBotWrite.js');
-      return handleEditModalSubmit(req, res);
+      return handleEditModalSubmit(req, res, client);
 
     } else if (custom_id === 'entitlements_add_modal') {
       // 🎟️ Entitlements Add Guild (Reece-only gate lives inside the handler)

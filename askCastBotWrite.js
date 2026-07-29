@@ -135,7 +135,7 @@ export function consumePlan(planId) {
  * prompt so the model doesn't burn its time budget spelunking a multi-MB JSON.
  * Pure formatter — I/O lives in buildGuildDigest.
  */
-export function formatGuildDigest(guildSafari, guildPlayers = {}) {
+export function formatGuildDigest(guildSafari, guildPlayers = {}, names = {}) {
   const g = guildSafari || {};
   const cfg = g.safariConfig || {};
   const lines = [];
@@ -184,25 +184,143 @@ export function formatGuildDigest(guildSafari, guildPlayers = {}) {
     lines.push('', 'ACTIVE MAP: none — coordinate-based ops are unavailable (use "global").');
   }
 
-  const players = Object.entries(guildPlayers || {}).filter(([, p]) => p?.safari);
-  if (players.length) {
-    lines.push('', `PLAYERS (id — name · currency):`);
-    // Names are player-controlled strings going into an LLM prompt — flatten and cap
-    // them so a crafted nickname can't smuggle instructions or break the digest format.
-    lines.push(...capList(players, 50, ([id, p]) =>
-      `  ${id} — ${String(p.displayName || p.username || 'unknown').replace(/[\r\n`]+/g, ' ').substring(0, 30)} · ${p.safari?.currency ?? 0}`));
+  const playerLines = formatPlayerLines(guildPlayers, guildSafari, names);
+  if (playerLines.length) {
+    lines.push('', `PLAYERS (id — name · currency · items · location):`, ...playerLines);
   }
 
   return lines.join('\n');
 }
 
-/** I/O wrapper: read both files (plain reads, no lock needed) and format. */
-export async function buildGuildDigest(guildId) {
+/**
+ * Total items a player holds, across BOTH inventory formats.
+ *
+ * ~68% of live inventory entries are still bare numbers (the legacy shape) rather than
+ * `{quantity}` objects, so a naive `.quantity` read reports 0 for two thirds of real
+ * data. Same reduce as playerManagement.js's buildPlayerStatsLine — keep them in step.
+ */
+export function countItems(inventory) {
+  return Object.values(inventory || {})
+    .reduce((sum, v) => sum + (typeof v === 'object' ? (v?.quantity || 0) : (v || 0)), 0);
+}
+
+/** Player-controlled text entering a prompt: flatten newlines/backticks and cap. */
+const safeName = (name) => String(name ?? 'unknown').replace(/[\r\n`]+/g, ' ').substring(0, 30);
+
+/**
+ * One digest line per safari player. Deliberately EXCLUDES history, movementHistory and
+ * storeHistory — that's a behavioural trail (and where the kilobytes are); counts answer
+ * every question a host actually asks.
+ *
+ * @param {Object} guildPlayers - playerData[guildId].players
+ * @param {Object} guildSafari - safariData[guildId] (for the active map id)
+ * @param {Object} [names] - userId → display name, resolved from Discord by the caller.
+ *   Names are NOT persisted on player records (app.js deletes them before save), so
+ *   without this every line would read "unknown".
+ */
+export function formatPlayerLines(guildPlayers, guildSafari, names = {}) {
+  const players = Object.entries(guildPlayers || {})
+    .filter(([id, p]) => /^\d{17,20}$/.test(id) && p?.safari); // skip non-snowflake keys like "admin"
+  if (!players.length) return [];
+
+  const activeMapId = guildSafari?.maps?.active;
+  const shown = players.slice(0, 50).map(([id, p]) => {
+    const safari = p.safari || {};
+    const location = activeMapId ? safari.mapProgress?.[activeMapId]?.currentLocation : null;
+    const stamina = safari.points?.stamina?.current;
+    return `  ${id} — ${safeName(names[id])} · ${safari.currency ?? 0} · ${countItems(safari.inventory)} items`
+      + (location ? ` · 📍${location}` : '')
+      + (Number.isFinite(stamina) ? ` · ⚡${stamina}` : '')
+      + (safari.isPaused === true ? ' · ⏸️paused' : '');
+  });
+  if (players.length > 50) shown.push(`  … +${players.length - 50} more`);
+  return shown;
+}
+
+/**
+ * I/O wrapper: read both files (plain reads, no lock needed), resolve player names from
+ * Discord, and format.
+ * @param {string} guildId
+ * @param {Object} [client] - Discord client; without it names fall back to "unknown"
+ */
+export async function buildGuildDigest(guildId, client = null) {
   const { loadSafariContent } = await import('./safariManager.js');
   const { loadPlayerData } = await import('./storage.js');
   const safariData = await loadSafariContent();
   const playerData = await loadPlayerData();
-  return formatGuildDigest(safariData[guildId] || {}, playerData[guildId]?.players || {});
+  const guildPlayers = playerData[guildId]?.players || {};
+  return formatGuildDigest(safariData[guildId] || {}, guildPlayers,
+    await resolvePlayerNames(guildId, guildPlayers, client));
+}
+
+/**
+ * READ-MODE player roster — the answer to "who has the most items", "where is everyone",
+ * "what does X have". Includes each player's actual inventory (item NAMES, not the raw
+ * ids that are stored) because otherwise the model can only report counts.
+ *
+ * Scoped to one guild by construction: the CLI never opens the multi-tenant data files.
+ * Deliberately excludes history / movementHistory / storeHistory.
+ * @returns {Promise<string>} '' when the guild has no safari players
+ */
+export async function buildPlayerDigestSection(guildId, client = null) {
+  const { loadSafariContent } = await import('./safariManager.js');
+  const { loadPlayerData } = await import('./storage.js');
+  const safariData = await loadSafariContent();
+  const playerData = await loadPlayerData();
+  const guildSafari = safariData[guildId] || {};
+  const guildPlayers = playerData[guildId]?.players || {};
+  const names = await resolvePlayerNames(guildId, guildPlayers, client);
+  return formatPlayerDigest(guildPlayers, guildSafari, names);
+}
+
+/** Pure formatter for the read-mode roster. */
+export function formatPlayerDigest(guildPlayers, guildSafari, names = {}) {
+  const players = Object.entries(guildPlayers || {})
+    .filter(([id, p]) => /^\d{17,20}$/.test(id) && p?.safari);
+  if (!players.length) return '';
+
+  const items = guildSafari?.items || {};
+  const cfg = guildSafari?.safariConfig || {};
+  const activeMapId = guildSafari?.maps?.active;
+  const itemName = (id) => items[id]?.name || id;
+
+  const lines = [`CURRENCY: "${cfg.currencyName || 'Dollars'}" ${cfg.currencyEmoji || '🪙'}`, ''];
+  lines.push(`PLAYERS (${players.length}) — name · currency · total items · location · inventory:`);
+
+  for (const [id, p] of players.slice(0, 50)) {
+    const safari = p.safari || {};
+    const location = activeMapId ? safari.mapProgress?.[activeMapId]?.currentLocation : null;
+    const inventory = Object.entries(safari.inventory || {})
+      .map(([itemId, v]) => [itemName(itemId), typeof v === 'object' ? (v?.quantity || 0) : (v || 0)])
+      .filter(([, qty]) => qty > 0)
+      .map(([name, qty]) => `${name}×${qty}`);
+    lines.push(`  ${safeName(names[id])} (${id}) · ${safari.currency ?? 0} · ${countItems(safari.inventory)} items`
+      + (location ? ` · 📍${location}` : '')
+      + (safari.isPaused === true ? ' · ⏸️paused' : '')
+      + ` · [${inventory.join(', ') || 'empty'}]`);
+  }
+  if (players.length > 50) lines.push(`  … +${players.length - 50} more players`);
+  return lines.join('\n');
+}
+
+/**
+ * userId → display name from Discord's cache/API. Best-effort: a failed lookup just
+ * leaves that player as "unknown" rather than failing the whole digest.
+ */
+export async function resolvePlayerNames(guildId, guildPlayers, client) {
+  const names = {};
+  const guild = client?.guilds?.cache?.get(guildId);
+  if (!guild) return names;
+  const ids = Object.keys(guildPlayers || {}).filter(id => /^\d{17,20}$/.test(id)).slice(0, 50);
+  for (const id of ids) {
+    const cached = guild.members.cache.get(id);
+    if (cached) { names[id] = cached.displayName || cached.user?.username; continue; }
+    try {
+      const member = await guild.members.fetch(id);
+      names[id] = member.displayName || member.user?.username;
+    } catch { /* left unknown */ }
+  }
+  return names;
 }
 
 // ---------------------------------------------------------------------------
@@ -551,8 +669,8 @@ export function buildNameMap(ops, guildSafari) {
 // public reply and the asker receives a private (ephemeral) preview with Apply.
 
 /** The prompt section that arms read-mode with the plan format + this guild's state. */
-export async function buildEditCapabilitySection(guildId) {
-  const digest = await buildGuildDigest(guildId);
+export async function buildEditCapabilitySection(guildId, client = null) {
+  const digest = await buildGuildDigest(guildId, client);
   return `
 
 EDIT CAPABILITY — ACTIVE (this server has Edit Safari and the asker is an admin):
@@ -674,7 +792,7 @@ function denyModal(res, message) {
  * extract + validate the plan, preview with Apply/Cancel. Mirrors handleAskModalSubmit;
  * everything here is EPHEMERAL (only the requesting admin sees the flow).
  */
-export async function handleEditModalSubmit(req, res) {
+export async function handleEditModalSubmit(req, res, client = null) {
   const fields = {};
   for (const comp of (req.body.data.components || [])) {
     const inner = comp?.component || comp?.components?.[0];
@@ -730,7 +848,7 @@ export async function handleEditModalSubmit(req, res) {
   try {
     console.log(`🛠️ Ask CastBot EDIT from ${req.body.member?.user?.username} in ${guildId} (${model}): "${truncate(query, 80)}"`);
 
-    const digest = await buildGuildDigest(guildId);
+    const digest = await buildGuildDigest(guildId, client);
     const prompt = buildWritePrompt({ query, digest, prevContextText: fields.askcb_prev_context });
     // The digest's COUNTS line is the guild's feature vector (how much content exists);
     // the full digest is not stored — see askLog's schema notes.
