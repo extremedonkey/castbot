@@ -826,6 +826,11 @@ export function describeOp(op, names = {}, coordChannels = {}) {
   const nameOf = (key) => names[key] || (typeof key === 'string' && key.startsWith('$') ? key.slice(1) : key);
   const coordLabel = (c) => coordChannels[c] ? `<#${coordChannels[c]}>` : c;
   const coordList = (coords = []) => coords.map(coordLabel).join(', ');
+  // Updates must show the NEW VALUES, not just field names — "Update item Catdog (name)"
+  // told the admin nothing about what they were approving.
+  const changes = (set = {}) => Object.entries(set)
+    .map(([k, v]) => `${k} → ${typeof v === 'string' ? `**${v.length > 60 ? `${v.slice(0, 60)}…` : v}**` : v}`)
+    .join(', ');
   // Cap mention lists so a single line can't blow the message character budget
   // (25 players × ~23 chars of <@id> would be ~600 chars on one line).
   const mentions = (ids = []) => {
@@ -835,12 +840,12 @@ export function describeOp(op, names = {}, coordChannels = {}) {
   const emoji = OP_EMOJI[op.op] || '🔧';
   switch (op.op) {
     case 'create_item': return `${emoji} Create item **${op.fields?.name}**${op.fields?.emoji ? ` ${op.fields.emoji}` : ''}`;
-    case 'update_item': return `${emoji} Update item **${nameOf(op.item)}** (${Object.keys(op.set || {}).join(', ')})`;
+    case 'update_item': return `${emoji} Update item **${nameOf(op.item)}**: ${changes(op.set)}`;
     case 'create_store': return `${emoji} Create store **${op.fields?.name}**${op.fields?.emoji ? ` ${op.fields.emoji}` : ''}`;
-    case 'update_store': return `${emoji} Update store **${nameOf(op.store)}** (${Object.keys(op.set || {}).join(', ')})`;
+    case 'update_store': return `${emoji} Update store **${nameOf(op.store)}**: ${changes(op.set)}`;
     case 'stock_item': return `${emoji} Stock **${nameOf(op.item)}** in **${nameOf(op.store)}**${op.price !== undefined ? ` @ ${op.price}` : ''}${op.stock !== undefined && op.stock >= 0 ? ` (stock ${op.stock})` : ''}`;
     case 'set_stock': return `${emoji} Set stock of **${nameOf(op.item)}** in **${nameOf(op.store)}** to ${op.stock === -1 ? 'unlimited' : op.stock}`;
-    case 'update_config': return `${emoji} Update settings: ${Object.entries(op.set || {}).map(([k, v]) => `${k} → ${v}`).join(', ')}`;
+    case 'update_config': return `${emoji} Update settings: ${changes(op.set)}`;
     case 'create_action': {
       const coords = op.coordinates?.length ? ` @ ${coordList(op.coordinates)}` : '';
       const outs = (op.outcomes || []).map(o => o.type).join(' + ');
@@ -851,10 +856,10 @@ export function describeOp(op, names = {}, coordChannels = {}) {
       const where = op.coordinates?.filter(c => c !== 'global').length ? ` @ ${coordList(op.coordinates.filter(c => c !== 'global'))}` : ' (Crafting menu)';
       return `${emoji} Recipe **${op.fields?.name}**: ${inputs} → ${op.output?.quantity > 1 ? `${op.output.quantity}× ` : ''}**${nameOf(op.output?.itemId)}**${where}`;
     }
-    case 'update_action': return `${emoji} Update action **${nameOf(op.action)}** (${Object.keys(op.set || {}).join(', ')})`;
+    case 'update_action': return `${emoji} Update action **${nameOf(op.action)}**: ${changes(op.set)}`;
     case 'add_outcome': return `${emoji} Add ${(op.outcomes || []).map(o => o.type).join(' + ')} to **${nameOf(op.action)}**`;
     case 'attach_action': return `${emoji} Attach **${nameOf(op.action)}** to ${coordList(op.coordinates)}`;
-    case 'update_map_cell': return `${emoji} Update cell **${coordLabel(op.coordinate)}** (${Object.keys(op.set || {}).join(', ')})`;
+    case 'update_map_cell': return `${emoji} Update cell **${coordLabel(op.coordinate)}**: ${changes(op.set)}`;
     case 'give_currency': return `${emoji} ${op.amount > 0 ? 'Give' : 'Take'} ${Math.abs(op.amount)} currency ${op.amount > 0 ? 'to' : 'from'} ${mentions(op.playerIds)}`;
     case 'give_item': return `${emoji} Give ${op.quantity}× **${nameOf(op.item)}** to ${mentions(op.playerIds)}`;
     default: return `${emoji} ${op.op}`;

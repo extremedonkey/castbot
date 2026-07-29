@@ -312,6 +312,14 @@ describe('Plan schema — describeOp preview lines', () => {
     assert.equal(describeOp(v.ops[2], names), '📦 Stock **Bulbasaur** in **Pokestore** @ 15');
   });
 
+  it('shows the NEW VALUES on update ops, not just the field names', () => {
+    const g = makeGuild({ items: { cd_1: { id: 'cd_1', name: 'Catdog' } } });
+    const v = validatePlan(plan({ op: 'update_item', item: 'cd_1', set: { name: 'bigSmallCatDog' } }), g);
+    assert.equal(v.ok, true, errText(v));
+    // "Update item Catdog (name)" told the admin nothing about what they were approving.
+    assert.equal(describeOp(v.ops[0], { cd_1: 'Catdog' }), '✏️ Update item **Catdog**: name → **bigSmallCatDog**');
+  });
+
   it('renders coordinates as clickable channel mentions when the cell has a channel', () => {
     const g = makeGuild({ coords: GRID25 });
     const v = validatePlan(plan({

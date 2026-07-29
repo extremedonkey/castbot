@@ -115,6 +115,10 @@ export function applySafariOp(data, guildId, op, refMap, summary, { userId, now 
     const channelId = g.maps?.[g.maps?.active]?.coordinates?.[coord]?.channelId;
     return channelId ? `<#${channelId}>` : coord;
   };
+  // Show the new VALUES on updates, not just which fields moved.
+  const changes = (set = {}) => Object.entries(set)
+    .map(([k, v]) => `${k} → ${typeof v === 'string' ? `**${v.length > 60 ? `${v.slice(0, 60)}…` : v}**` : v}`)
+    .join(', ');
 
   switch (op.op) {
     case 'create_item': {
@@ -147,9 +151,10 @@ export function applySafariOp(data, guildId, op, refMap, summary, { userId, now 
       const itemId = rid(op.item, refMap);
       const item = g.items[itemId];
       if (!item) return done(`⚠️ Item ${itemId} vanished — skipped`);
+      const wasNamed = item.name;
       Object.assign(item, op.set);
       item.metadata = { ...item.metadata, lastModified: now };
-      return done(`✏️ Item **${item.name}** updated (${Object.keys(op.set).join(', ')})`);
+      return done(`✏️ Item **${wasNamed}** updated: ${changes(op.set)}`);
     }
 
     case 'create_store': {
@@ -177,13 +182,14 @@ export function applySafariOp(data, guildId, op, refMap, summary, { userId, now 
       const storeId = rid(op.store, refMap);
       const store = g.stores[storeId];
       if (!store) return done(`⚠️ Store ${storeId} vanished — skipped`);
+      const wasNamed = store.name;
       const { storeownerText, accentColor, ...top } = op.set;
       Object.assign(store, top);
       if (!store.settings) store.settings = {};
       if (storeownerText !== undefined) store.settings.storeownerText = storeownerText;
       if (accentColor !== undefined) store.settings.accentColor = accentColor;
       store.metadata = { ...store.metadata, lastModified: now };
-      return done(`✏️ Store **${store.name}** updated (${Object.keys(op.set).join(', ')})`);
+      return done(`✏️ Store **${wasNamed}** updated: ${changes(op.set)}`);
     }
 
     case 'stock_item': {
@@ -351,7 +357,7 @@ export function applySafariOp(data, guildId, op, refMap, summary, { userId, now 
       Object.assign(coordData.baseContent, op.set);
       coordData.metadata = { ...coordData.metadata, lastModified: now };
       summary.anchorCoords.add(op.coordinate);
-      return done(`🗺️ Cell **${coordLabel(op.coordinate)}** updated (${Object.keys(op.set).join(', ')})`);
+      return done(`🗺️ Cell **${coordLabel(op.coordinate)}** updated: ${changes(op.set)}`);
     }
   }
   return null;
