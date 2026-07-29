@@ -759,6 +759,8 @@ AWS CLI v2 is installed on the Windows machine (`C:\Program Files\Amazon\AWSCLIV
 
 **Instance inventory:** prod = `castbot-prod-2` (small_3_2, 2GB/2vCPU/60GB, static IP `13.238.148.170` via resource `lightsailstaticIP` — migrated from Node-js-1 on 2026-07-28, see [ProdBoxMigration.md](docs/03-features/ProdBoxMigration.md)); test = `castbot-blue` (small_3_2, 2GB, static IP `13.210.218.153`). `Node-js-1` = stopped warm-rollback (ephemeral IP, bot stopped) until post-soak deletion — **do not start/modify it**.
 
+**S3 (planned, not yet provisioned):** the Ask CastBot event log (`logs/ask-castbot.jsonl`) is designed to sync to an S3 bucket for durability + Athena querying. Nothing exists in AWS yet and the sync code is unwritten — the log is **local-only** today. When it lands it gets its OWN least-privilege IAM user (`s3:PutObject` on one prefix, no List/Get/Delete) with `ASK_LOG_S3_*` env vars — never widen `castbot-claude`, and never reuse the generic `AWS_*` names (the Claude CLI subprocess inherits `process.env`). See [Analytics.md](docs/infrastructure-security/Analytics.md#-ask-castbot-event-log-jsonl).
+
 ## 📐 app.js Organization
 
 ### Key Imports

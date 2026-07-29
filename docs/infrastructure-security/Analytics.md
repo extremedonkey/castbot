@@ -4,6 +4,28 @@
 
 CastBot includes a comprehensive analytics and logging system that tracks user interactions, server usage, and provides detailed insights into how the bot is being used across Discord servers. The system has evolved into a sophisticated multi-component architecture with real-time monitoring, advanced server analytics, and intelligent feature usage detection.
 
+> **Two sinks, different jobs.** `logs/user-analytics.log` is the long-running **prose** log (pipe-delimited, human-first, regex-parsed). `logs/ask-castbot.jsonl` is the newer **structured** log, for machines only — see the Ask CastBot section below. Don't add structured data to the prose log or prose to the JSONL.
+
+## 👾 Ask CastBot Event Log (JSONL)
+
+**Module**: `src/analytics/askLog.js` · **File**: `logs/ask-castbot.jsonl` (gitignored) · **Since**: 2026-07-29
+
+A permanent, append-only corpus of what people ask Ask CastBot, what it answers, and — the signal that exists nowhere else — whether the admin **accepted or rejected** what it proposed. Purpose: ad-hoc analysis of which inputs are well served and where the feature needs extending.
+
+**One JSON object per line**, envelope `{v, ts, ev, env, eid, cid, gid, uid, chan, route}`. Join keys: `eid` (one turn) · `cid` (a whole conversation) · `parent_rid` (follow-up → its parent answer) · `pid` (`plan.proposed` → `applied`/`cancelled`).
+
+**Events**: `ask.denied` · `ask.request` · `ask.answer` · `ask.error` · `plan.noplan` · `plan.rejected` (carries the validator's per-op `errors[]`) · `plan.proposed` · `plan.apply_denied` · `plan.applied` · `plan.apply_failed` · `plan.cancelled`. *Abandonment is derived* — a `plan.proposed` with no terminal row.
+
+**Four hard rules** (each earned, don't relax them):
+1. `logAskEvent` **never throws and is never awaited** — a logging fault must not slow or break an answer.
+2. Writes chain through one module promise. `O_APPEND` doesn't save you: Node's `appendFile` loops on partial writes, and two interleaved 8KB appends corrupt a JSONL segment permanently.
+3. Async `appendFile`, never `appendFileSync` (the prose logger blocks the event loop on every interaction — don't copy it).
+4. **Readers MUST stream or tail** (`utils/fileTail.js` + `utils/memoryGuard.js`). Parsing the whole file is exactly the OOM of [incident 06](../incidents/06-HeapDriftGCDeathSpiral.md).
+
+Text fields are truncated (surrogate-safe) and redacted for token/`sk-ant-`/`AKIA` shapes before write. The prompt and guild digest are **not** stored — only their sizes/hashes and the digest's COUNTS line.
+
+**Storage**: local-only today. An S3 sync (byte-range segments, idempotent keys, PutObject-only credentials) is designed but **not built or provisioned** — see CLAUDE.md's AWS section. Retention and the purge-by-user path are likewise still to come, as is the privacy-policy amendment that discloses this collection.
+
 ## System Architecture
 
 ### 1. Analytics Logger (`src/analytics/analyticsLogger.js`)
