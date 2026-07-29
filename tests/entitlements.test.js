@@ -53,8 +53,9 @@ describe('Entitlements — normalize (shape guard)', () => {
 
 describe('Entitlements — feature checks', () => {
   const data = normalize({ guilds: {
-    '1331657596087566398': { name: 'A', features: ['safari_edit'] },
-    '1524773737973682267': { name: 'B', features: [] }
+    '1331657596087566398': { name: 'A', features: ['ask_castbot', 'safari_edit'] },
+    '1524773737973682267': { name: 'B', features: ['ask_castbot'] },
+    '1385679393237635122': { name: 'C', features: [] }
   }});
 
   it('grants only the guilds holding the feature', () => {
@@ -63,7 +64,37 @@ describe('Entitlements — feature checks', () => {
     assert.equal(hasFeatureIn(data, '999999999999999999', 'safari_edit'), false);
   });
 
+  it('separates Q&A access from edit access — a guild can hold ask_castbot without safari_edit', () => {
+    assert.equal(hasFeatureIn(data, '1524773737973682267', 'ask_castbot'), true);
+    assert.equal(hasFeatureIn(data, '1524773737973682267', 'safari_edit'), false);
+    assert.equal(hasFeatureIn(data, '1385679393237635122', 'ask_castbot'), false);
+  });
+
   it('an unknown feature name never matches', () => {
     assert.equal(hasFeatureIn(data, '1331657596087566398', 'safari_edit_v2'), false);
+  });
+});
+
+// Replicated from entitlements.js loadEntitlementsSync — keep in sync.
+function backfill(data) {
+  for (const entry of Object.values(data.guilds)) {
+    if (entry.features.includes('safari_edit') && !entry.features.includes('ask_castbot')) {
+      entry.features.unshift('ask_castbot');
+    }
+  }
+  return data;
+}
+
+describe('Entitlements — ask_castbot backfill (registries written before the key existed)', () => {
+  it('adds ask_castbot to every guild already holding safari_edit', () => {
+    const data = backfill(normalize({ guilds: {
+      '1331657596087566398': { name: 'A', features: ['safari_edit'] }
+    }}));
+    assert.deepEqual(data.guilds['1331657596087566398'].features, ['ask_castbot', 'safari_edit']);
+  });
+
+  it('leaves a guild with neither feature alone (revoked stays revoked)', () => {
+    const data = backfill(normalize({ guilds: { '1331657596087566398': { name: 'A', features: [] } } }));
+    assert.deepEqual(data.guilds['1331657596087566398'].features, []);
   });
 });

@@ -30,17 +30,15 @@
 import fs from 'fs';
 import { InteractionResponseType, InteractionResponseFlags } from 'discord-interactions';
 import { runClaudeJob, safeDeliver, formatElapsed, HARD_KILL_MS, buildModelSelectField, resolveModelChoice, modelLabel, DEFAULT_MODEL } from './claudeRunner.js';
+import { hasFeatureSync, FEATURES, SEED_GUILD_IDS } from './entitlements.js';
 
-/** Guilds where any CastBot admin may use Ask CastBot. */
-export const ALLOWED_GUILD_IDS = [
-  '1331657596087566398',
-  '1527107915637588059',
-  '1385679393237635122',
-  '1524773737973682267',
-  '1512093418602364998',
-  '974318870057848842',
-  '1308581797915005029'
-];
+/**
+ * Guilds where any CastBot admin may use Ask CastBot.
+ * @deprecated Runtime access now comes from the entitlements registry (🎟️ Entitlements
+ * in Reece's Stuff → add/revoke by guild ID, no deploy needed). This array only SEEDS
+ * that registry on first run. Kept exported for back-compat.
+ */
+export const ALLOWED_GUILD_IDS = SEED_GUILD_IDS;
 
 /** Users who may use Ask CastBot in any guild (still admin-gated by the Tools menu). */
 export const ALLOWED_USER_IDS = [
@@ -217,7 +215,9 @@ export function isAskCastBotEnvironment() {
 export function hasAskCastBotAccess({ userId, guildId } = {}) {
   if (!isAskCastBotEnvironment()) return false;
   if (userId && ALLOWED_USER_IDS.includes(userId)) return true;
-  return !!guildId && ALLOWED_GUILD_IDS.includes(guildId);
+  // Runtime-configurable: 🎟️ Entitlements (Reece's Stuff) grants/revokes guilds without
+  // a deploy. SEED_GUILD_IDS only populates the registry the first time it's read.
+  return hasFeatureSync(guildId, FEATURES.ASK_CASTBOT);
 }
 
 /**

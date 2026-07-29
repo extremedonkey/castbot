@@ -15,14 +15,17 @@ const ALLOWED_GUILD_IDS = [
 ];
 const ALLOWED_USER_IDS = ['1398896688646590494', '909852958525636660', '691850627189309492'];
 
-// Replicated from askCastBot.js — keep in sync.
+// Replicated from askCastBot.js — keep in sync. NOTE: the real gate's guild check now
+// reads the runtime entitlements registry (hasFeatureSync(guildId, 'ask_castbot')) rather
+// than a hardcoded array; ALLOWED_GUILD_IDS only SEEDS that registry on first run, so
+// this replica models "the guild holds ask_castbot" as "is in the seeded set".
 function isAskCastBotEnvironment(env) {
   return env.PRODUCTION !== 'TRUE' || env.CLAUDE_PROD_FEATURES === 'TRUE';
 }
-function hasAskCastBotAccess({ userId, guildId } = {}, env = {}) {
+function hasAskCastBotAccess({ userId, guildId } = {}, env = {}, entitledGuilds = ALLOWED_GUILD_IDS) {
   if (!isAskCastBotEnvironment(env)) return false;
   if (userId && ALLOWED_USER_IDS.includes(userId)) return true;
-  return !!guildId && ALLOWED_GUILD_IDS.includes(guildId);
+  return !!guildId && entitledGuilds.includes(guildId);
 }
 
 const DEV = {};
@@ -78,6 +81,12 @@ describe('Ask CastBot — access gate', () => {
 
   it('does not grant access in DMs (no guild) to non-whitelisted users', () => {
     assert.equal(hasAskCastBotAccess({ userId: STRANGER }, DEV), false);
+  });
+
+  it('follows the runtime registry — a guild granted at runtime gains access, a revoked one loses it', () => {
+    // The whole point of 🎟️ Entitlements: no deploy needed to add/remove a server.
+    assert.equal(hasAskCastBotAccess({ userId: STRANGER, guildId: RANDOM_GUILD }, DEV, [RANDOM_GUILD]), true);
+    assert.equal(hasAskCastBotAccess({ userId: STRANGER, guildId: ALLOWED_GUILD_IDS[0] }, DEV, []), false);
   });
 });
 
