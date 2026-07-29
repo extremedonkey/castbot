@@ -24,7 +24,7 @@ import fs from 'fs';
 import { InteractionResponseType, InteractionResponseFlags } from 'discord-interactions';
 import {
   runClaudeJob, safeDeliver, formatElapsed, HARD_KILL_MS,
-  buildModelSelectField, resolveModelChoice, modelLabel
+  buildModelSelectField, resolveModelChoice, modelLabel, canUseModel
 } from './claudeRunner.js';
 import {
   isAskCastBotEnvironment, resolveWriteDenyRules, neutralizeMentions, truncate
@@ -826,6 +826,9 @@ export async function handleEditModalSubmit(req, res, client = null) {
     return deny('access', '🛠️ Edit Safari isn\'t available here (needs the feature enabled for this server, and admin permissions).');
   }
   if (!query?.trim()) return deny('empty_query', '🛠️ Describe the change you want.');
+  if (!canUseModel(model, userId)) {
+    return deny('restricted_model', `⛔ ${modelLabel(model)} isn't available for general usage at this time — pick Sonnet, Haiku or Opus and try again. Contact Reece if you're interested in the details.`);
+  }
   if (writeInFlight >= WRITE_MAX_CONCURRENT) {
     return deny('busy', '🛠️ An edit is already being planned — give it a minute and try again.');
   }

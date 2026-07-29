@@ -39,11 +39,24 @@ export const MODEL_OPTIONS = [
   { value: 'haiku', label: 'Haiku', description: 'Fastest, cheapest — quick lookups', emoji: { name: '🍃' } },
   { value: 'sonnet', label: 'Sonnet', description: 'Balanced speed and intelligence', emoji: { name: '⚖️' }, default: true },
   { value: 'opus', label: 'Opus', description: 'Most capable — hard problems', emoji: { name: '🧠' } },
-  { value: 'fable', label: 'Fable', description: "Anthropic's most capable model", emoji: { name: '📖' } }
+  { value: 'fable', label: 'Fable', description: 'Unavailable for general usage.', emoji: { name: '⛔' } }
 ];
 
 export const DEFAULT_MODEL = 'sonnet';
 const MODEL_VALUES = new Set(MODEL_OPTIONS.map(m => m.value));
+
+/**
+ * Models nobody but these users may run. The option stays VISIBLE in the picker (it's
+ * labelled unavailable) rather than being hidden — hiding it invites "why does Reece
+ * have a model I don't", while a visible ⛔ answers that up front.
+ */
+export const RESTRICTED_MODELS = { fable: ['391415444084490240'] };
+
+/** May this user actually run this model? Everything unlisted is open to everyone. */
+export function canUseModel(model, userId) {
+  const allowed = RESTRICTED_MODELS[model];
+  return !allowed || allowed.includes(userId);
+}
 
 /** Guard a modal-supplied model value against forgery or a stale option — fall back to sonnet. */
 export function resolveModelChoice(value) {

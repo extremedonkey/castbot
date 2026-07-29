@@ -161,10 +161,48 @@ const MODEL_OPTIONS = [
   { value: 'haiku', label: 'Haiku', description: 'Fastest, cheapest — quick lookups', emoji: { name: '🍃' } },
   { value: 'sonnet', label: 'Sonnet', description: 'Balanced speed and intelligence', emoji: { name: '⚖️' }, default: true },
   { value: 'opus', label: 'Opus', description: 'Most capable — hard problems', emoji: { name: '🧠' } },
-  { value: 'fable', label: 'Fable', description: "Anthropic's most capable model", emoji: { name: '📖' } }
+  { value: 'fable', label: 'Fable', description: 'Unavailable for general usage.', emoji: { name: '⛔' } }
 ];
 const DEFAULT_MODEL = 'sonnet';
 const MODEL_VALUES = new Set(MODEL_OPTIONS.map(m => m.value));
+
+// Replicated from claudeRunner.js — keep in sync.
+const RESTRICTED_MODELS = { fable: ['391415444084490240'] };
+const canUseModel = (model, userId) => {
+  const allowed = RESTRICTED_MODELS[model];
+  return !allowed || allowed.includes(userId);
+};
+
+describe('claudeRunner — restricted models', () => {
+  const REECE = '391415444084490240';
+  const OTHER = '111111111111111111';
+
+  it('lets the cleared user run the restricted model', () => {
+    assert.equal(canUseModel('fable', REECE), true);
+  });
+
+  it('blocks everyone else from it', () => {
+    assert.equal(canUseModel('fable', OTHER), false);
+    assert.equal(canUseModel('fable', undefined), false);
+    assert.equal(canUseModel('fable', null), false);
+  });
+
+  it('leaves every unrestricted model open to everyone', () => {
+    for (const model of ['haiku', 'sonnet', 'opus', undefined]) {
+      assert.equal(canUseModel(model, OTHER), true, `${model} should be open`);
+    }
+  });
+
+  it('the restricted option stays VISIBLE in the picker, labelled unavailable', () => {
+    // Hiding it invites "why does Reece have a model I don't"; a visible ⛔ answers that.
+    const fable = MODEL_OPTIONS.find(m => m.value === 'fable');
+    assert.ok(fable, 'fable must remain a selectable option');
+    assert.equal(fable.emoji.name, '⛔');
+    assert.equal(fable.description, 'Unavailable for general usage.');
+    assert.ok(!fable.default, 'a restricted model must never be the default');
+  });
+});
+
 
 function resolveModelChoice(value) {
   return MODEL_VALUES.has(value) ? value : DEFAULT_MODEL;

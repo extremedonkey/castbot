@@ -29,7 +29,7 @@
 
 import fs from 'fs';
 import { InteractionResponseType, InteractionResponseFlags } from 'discord-interactions';
-import { runClaudeJob, safeDeliver, formatElapsed, HARD_KILL_MS, buildModelSelectField, resolveModelChoice, modelLabel, DEFAULT_MODEL } from './claudeRunner.js';
+import { runClaudeJob, safeDeliver, formatElapsed, HARD_KILL_MS, buildModelSelectField, resolveModelChoice, modelLabel, canUseModel, DEFAULT_MODEL } from './claudeRunner.js';
 import { hasFeatureSync, FEATURES, SEED_GUILD_IDS } from './entitlements.js';
 import { logAskEvent } from './src/analytics/askLog.js';
 
@@ -505,6 +505,25 @@ export function buildProgressContainer(query, progress = null) {
   return { type: 17, accent_color: ACCENT, components: lines };
 }
 
+/**
+ * Shown when someone picks a model they're not cleared for. Public, like every other
+ * read-mode reply — the question card is already in the channel, so a silent or
+ * ephemeral refusal would leave it hanging unanswered.
+ */
+export function buildModelUnavailableContainer(model, isPublic = false) {
+  return {
+    type: 17,
+    accent_color: 0xe74c3c,
+    components: [
+      { type: 10, content: `## ⛔ ${modelLabel(model)} is unavailable` },
+      { type: 10, content: `${modelLabel(model)} isn't available for general usage at this time — so this question wasn't answered.\n\nPick **Sonnet**, **Haiku** or **Opus** and ask again. If you're interested in the details, contact Reece.` },
+      { type: 1, components: [
+        { type: 2, custom_id: isPublic ? 'askcb_public_ask' : 'askcb_ask', label: 'Ask Again', style: 1, emoji: { name: '👾' } }
+      ]}
+    ]
+  };
+}
+
 /** Container shown when the CLI fails or times out. */
 export function buildErrorContainer(message, isPublic = false) {
   return {
@@ -643,6 +662,14 @@ export async function handleAskModalSubmit(req, res, client = null) {
   const token = req.body.token;
   const channelId = req.body.channel_id;
   const { createFollowupMessage } = await import('./buttonHandlerFactory.js');
+
+  // Restricted model: the question card above still posts (the ask is legitimate and the
+  // channel should see it), but we don't spend a run — the asker gets a plain refusal.
+  if (!canUseModel(model, userId)) {
+    logAskEvent('ask.denied', { ...ctx, reason: 'restricted_model' });
+    await createFollowupMessage(token, { components: [buildModelUnavailableContainer(model, isPublicRoute)] });
+    return;
+  }
 
   inFlight++;
   let progressMsgId = null;
