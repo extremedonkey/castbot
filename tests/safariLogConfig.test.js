@@ -14,10 +14,12 @@ import { DEFAULT_LOG_TYPES, mergeLogTypes, getSafariLogTargets } from '../safari
 import { buildSafariLogConfigUI, buildWhisperLogConfigUI } from '../safariConfigUI.js';
 
 describe('mergeLogTypes — defaults', () => {
-  it('undefined/null stored → all 10 keys true', () => {
+  it('undefined/null stored → every known type true', () => {
+    // Count-agnostic on purpose: a new log type (askCastBotEdits, 2026-07-29) shouldn't
+    // require editing this assertion — what matters is that nothing defaults to OFF.
     for (const stored of [undefined, null, {}]) {
       const merged = mergeLogTypes(stored);
-      assert.equal(Object.keys(merged).length, 10);
+      assert.ok(Object.keys(merged).length >= 10);
       assert.ok(Object.values(merged).every(v => v === true));
     }
   });

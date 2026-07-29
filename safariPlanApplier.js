@@ -375,9 +375,15 @@ export function applySafariOp(data, guildId, op, refMap, summary, { userId, now 
       if (!coordData) return done(`⚠️ Cell ${op.coordinate} vanished — skipped`);
       if (!coordData.baseContent) coordData.baseContent = {};
       Object.assign(coordData.baseContent, op.set);
+      // emoji lives on the cell, not in baseContent — it feeds the channel name.
+      if (op.emoji !== undefined) coordData.emoji = op.emoji;
       coordData.metadata = { ...coordData.metadata, lastModified: now };
       summary.anchorCoords.add(op.coordinate);
-      return done(`🗺️ Cell **${coordLabel(op.coordinate)}** updated: ${changes(op.set)}`);
+      // A changed emoji or title changes deriveChannelName's output, so the channel
+      // needs renaming too — queued for the paced post-lock pass.
+      if (op.emoji !== undefined || op.set.title !== undefined) summary.renameCoords.add(op.coordinate);
+      const bits = [changes(op.set), op.emoji !== undefined ? `emoji → ${op.emoji}` : ''].filter(Boolean).join(', ');
+      return done(`🗺️ Cell **${coordLabel(op.coordinate)}** updated: ${bits}`);
     }
   }
   return null;
@@ -514,6 +520,8 @@ function newSummary() {
     warnings: [],
     anchorCoords: new Set(),
     anchorsRefreshed: 0,
+    renameCoords: new Set(),
+    channelsRenamed: 0,
     snapshot: null
   };
 }
@@ -564,27 +572,69 @@ async function refreshAnchors(guildId, coords, client, summary) {
   }
 }
 
-/** Audit: archive the raw plan to the guild's storage channel + analytics log. Best-effort. */
-async function auditPlanApply(guildId, plan, summary, { userId, client }) {
+/**
+ * Post-lock channel renames for cells whose emoji/title changed.
+ *
+ * Discord rate-limits channel renames HARD (2 per 10 minutes per channel), so this
+ * copies the bulk-rename tool's 5.5s pacing and backs off on a 429. Never throws — a
+ * rename problem after data committed must not read as a failed apply.
+ */
+async function renameLocationChannels(guildId, coords, client, summary) {
+  if (!coords.length || !client) return;
+  let deriveChannelName, loadSafariContent;
+  try {
+    ({ deriveChannelName, loadSafariContent } = await import('./mapExplorer.js'));
+  } catch (error) {
+    summary.warnings.push(`Channel renames skipped (${error.message}) — use Map Explorer → Rename Channels.`);
+    return;
+  }
+  const data = await loadSafariContent().catch(() => null);
+  const activeMapId = data?.[guildId]?.maps?.active;
+  const coordinates = data?.[guildId]?.maps?.[activeMapId]?.coordinates || {};
+
+  for (const coord of coords) {
+    const cell = coordinates[coord];
+    if (!cell?.channelId) continue;
+    try {
+      const newName = deriveChannelName(coord, cell.baseContent?.title, cell.emoji);
+      const channel = await client.channels.fetch(cell.channelId);
+      if (!channel || channel.name === newName) continue;
+      await channel.setName(newName);
+      summary.channelsRenamed++;
+      console.log(`📍 Ask CastBot rename: ${coord} → ${newName}`);
+    } catch (error) {
+      summary.warnings.push(`Channel for ${coord} couldn't be renamed (${error.message}).`);
+      if (error.status === 429 || error.httpStatus === 429) {
+        await new Promise(r => setTimeout(r, (error.retryAfter || 30) * 1000));
+      }
+    }
+    await new Promise(r => setTimeout(r, 5500)); // Discord: 2 renames / 10 min / channel
+  }
+}
+
+/**
+ * Audit: the guild's own Safari Log + the analytics log. Best-effort, never fatal.
+ *
+ * This used to dump raw plan JSON as a file attachment into the IMAGE storage channel —
+ * wrong home (that channel is for images) and unreadable to a human. It now goes to the
+ * Safari Log like every other admin-visible event, under the `askCastBotEdits` type
+ * (default ON). The machine-readable record lives in logs/ask-castbot.jsonl.
+ */
+async function auditPlanApply(guildId, plan, summary, { userId, client, query }) {
   try {
     const { logInteraction } = await import('./src/analytics/analyticsLogger.js');
     logInteraction(userId, guildId, 'ASKCB_EDIT_APPLY',
       `${summary.safariMutations + summary.playerMutations} ops applied`, null, null, null, null, null, null);
   } catch { /* analytics is never fatal */ }
-  if (!client) return;
   try {
-    const guild = await client.guilds.fetch(guildId);
-    const { findImageStorageChannel } = await import('./src/images/imageStorageChannel.js');
-    const channel = findImageStorageChannel(guild, { extraNames: ['safari-storage'] });
-    if (!channel) return;
-    const buffer = Buffer.from(JSON.stringify(plan, null, 2), 'utf-8');
-    await channel.send({
-      content: `🛠️ **Ask CastBot edit applied** by <@${userId}> — ${summary.safariMutations + summary.playerMutations} changes (plan archived below)`,
-      files: [{ attachment: buffer, name: `askcb-edit-${guildId}-${Date.now()}.json` }],
-      allowedMentions: { parse: [] }
+    const { logAskCastBotEdit } = await import('./safariLogger.js');
+    await logAskCastBotEdit({
+      guildId, userId, query: query || plan?.summary || '',
+      lines: summary.lines, safariMutations: summary.safariMutations,
+      playerMutations: summary.playerMutations, created: summary.created
     });
   } catch (error) {
-    console.log(`ℹ️ Ask CastBot plan archive skipped: ${error.message}`);
+    console.log(`ℹ️ Ask CastBot Safari Log entry skipped: ${error.message}`);
   }
 }
 
@@ -597,7 +647,7 @@ async function auditPlanApply(guildId, plan, summary, { userId, client }) {
  * @param {{userId: string, client: Object}} context
  * @returns {Promise<{ok: true, summary: Object, refMap: Object}>}
  */
-export async function applyPlan(guildId, plan, { userId, client }) {
+export async function applyPlan(guildId, plan, { userId, client, query }) {
   const summary = newSummary();
 
   // 1. Emoji sanitation (CPU-only, but async → outside the lock).
@@ -669,15 +719,16 @@ export async function applyPlan(guildId, plan, { userId, client }) {
       });
     }
 
-    // 5. Post-lock Discord side effects (refreshAnchors never throws).
+    // 5. Post-lock Discord side effects (neither of these throws).
     await refreshAnchors(guildId, [...summary.anchorCoords], client, summary);
+    await renameLocationChannels(guildId, [...summary.renameCoords], client, summary);
 
     // 6. Audit trail.
-    await auditPlanApply(guildId, cleanPlan, summary, { userId, client });
+    await auditPlanApply(guildId, cleanPlan, summary, { userId, client, query });
   } catch (error) {
     error.summary = summary;
     // Live data changed — the audit trail must exist even though the apply failed.
-    try { await auditPlanApply(guildId, cleanPlan, summary, { userId, client }); } catch { /* best effort */ }
+    try { await auditPlanApply(guildId, cleanPlan, summary, { userId, client, query }); } catch { /* best effort */ }
     throw error;
   }
 

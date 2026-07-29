@@ -16899,7 +16899,8 @@ To fix this:
             { label: 'Map Movement', value: 'mapMovement', emoji: '🗺️', description: 'Log player movement on the map' },
             { label: 'Attack Queue', value: 'attacks', emoji: '⚔️', description: 'Log attack queue activities' },
             { label: 'Custom Actions', value: 'customActions', emoji: '⌨️', description: 'Log custom buttons and player commands' },
-            { label: 'Stamina Changes', value: 'staminaChanges', emoji: '⚡', description: 'Log stamina usage, regen, and boosts' }
+            { label: 'Stamina Changes', value: 'staminaChanges', emoji: '⚡', description: 'Log stamina usage, regen, and boosts' },
+            { label: 'Ask CastBot Edits', value: 'askCastBotEdits', emoji: '👾', description: 'Log Safari changes applied via Ask CastBot' }
           ];
           
           // Set which options are currently selected

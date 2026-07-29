@@ -46,7 +46,7 @@ Emit AT MOST ONE fenced block, at the very END of the reply:
 | `update_action` | `action`, `set` | name/emoji/style/description/tags |
 | `add_outcome` | `action`, `outcome` | total outcomes per action ≤6 |
 | `attach_action` | `action`, `coordinates` | — |
-| `update_map_cell` | `coordinate`, `set` (`title` ≤100 and/or `description` ≤1000) | — |
+| `update_map_cell` | `coordinate`, `set` (≥1 of `title` ≤100, `description` ≤1000, `emoji`) | **`emoji` + `title` form the location's Discord channel name** — changing either renames that channel automatically after Apply (paced for Discord's 2-renames-per-10-min limit). "Change the channel emoji" is supported through this op |
 
 ### Triggers
 

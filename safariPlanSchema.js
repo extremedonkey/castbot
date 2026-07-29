@@ -429,7 +429,16 @@ export function validatePlan(plan, guildSafari, guildPlayers = null) {
           if (!strIn(set.description, 1, 1000)) err(i, 'Cell description must be 1–1000 chars.');
           else op.set.description = set.description.trim();
         }
-        if (Object.keys(op.set).length === 0) err(i, 'update_map_cell needs "set" with title and/or description.');
+        // The cell emoji is a SIBLING of baseContent, not part of it — it feeds
+        // deriveChannelName(coord, title, emoji), so changing it renames the location's
+        // Discord channel (paced post-apply, same as the bulk rename tool).
+        if (set.emoji !== undefined) {
+          if (!emojiOk(set.emoji)) err(i, 'Cell "emoji" is too long.');
+          else op.emoji = set.emoji;
+        }
+        if (Object.keys(op.set).length === 0 && op.emoji === undefined) {
+          err(i, 'update_map_cell needs "set" with title, description and/or emoji.');
+        }
         break;
       }
 
@@ -899,7 +908,11 @@ export function describeOp(op, names = {}, coordChannels = {}) {
     case 'update_action': return `${emoji} Update action **${nameOf(op.action)}**: ${changes(op.set)}`;
     case 'add_outcome': return `${emoji} Add ${(op.outcomes || []).map(o => o.type).join(' + ')} to **${nameOf(op.action)}**`;
     case 'attach_action': return `${emoji} Attach **${nameOf(op.action)}** to ${coordList(op.coordinates)}`;
-    case 'update_map_cell': return `${emoji} Update cell **${coordLabel(op.coordinate)}**: ${changes(op.set)}`;
+    case 'update_map_cell': {
+      const bits = [changes(op.set), op.emoji !== undefined ? `emoji → ${op.emoji} *(renames the channel)*` : '']
+        .filter(Boolean).join(', ');
+      return `${emoji} Update cell **${coordLabel(op.coordinate)}**: ${bits}`;
+    }
     case 'give_currency': return `${emoji} ${op.amount > 0 ? 'Give' : 'Take'} ${Math.abs(op.amount)} currency ${op.amount > 0 ? 'to' : 'from'} ${mentions(op.playerIds)}`;
     case 'give_item': return `${emoji} Give ${op.quantity}× **${nameOf(op.item)}** to ${mentions(op.playerIds)}`;
     default: return `${emoji} ${op.op}`;

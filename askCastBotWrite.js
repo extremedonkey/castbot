@@ -240,7 +240,7 @@ OP TYPES (safariContent):
 - {"op":"update_action","action":"...","set":{"name?","emoji?","style?","description?","tags?","menuVisibility?":"none|crafting_menu|player_menu"}}
 - {"op":"add_outcome","action":"...","outcome":{...as above}}
 - {"op":"attach_action","action":"...","coordinates":["A1"]}
-- {"op":"update_map_cell","coordinate":"A1","set":{"title?":"≤100","description?":"≤1000"}}
+- {"op":"update_map_cell","coordinate":"A1","set":{"title?":"≤100","description?":"≤1000","emoji?":"🌴"}} — the cell emoji and title together form the location's Discord CHANNEL NAME, so setting them renames that channel (done automatically after Apply, paced for Discord's limits). "Change the channel emoji/name for a location" IS supported — do it this way.
 OP TYPES (playerData):
 - {"op":"give_currency","playerId":"id or [ids, ≤25]","amount":±int}
 - {"op":"give_item","playerId":"...","item":"...","quantity?":1-99}
@@ -404,8 +404,13 @@ export function buildPreviewMessages({ reply, ops, names, warnings, planId, elap
   return { main: { type: 17, accent_color: ACCENT, components }, followUps: continuationContainers(overflow, 'Proposed changes') };
 }
 
-/** Shown when the CLI answered without a valid plan (conversational or errors). */
-export function buildNoPlanContainer({ reply, errors, planWasAttempted, isPublic, elapsed, model }) {
+/**
+ * Shown when the CLI answered without a valid plan (conversational or errors).
+ * Carries the SAME follow-up affordances as a normal answer — a declined request is
+ * usually the start of a conversation ("no, I meant…"), and offering only "Try Again"
+ * forced the admin to retype from scratch.
+ */
+export function buildNoPlanContainer({ reply, errors, planWasAttempted, isPublic, elapsed, model, exchangeId }) {
   const components = [
     { type: 10, content: `## 🛠️ Ask CastBot — Edit Safari` },
     { type: 10, content: neutralizeMentions(truncate(reply || "I couldn't turn that into a change plan.", 2000)) }
@@ -421,7 +426,8 @@ export function buildNoPlanContainer({ reply, errors, planWasAttempted, isPublic
     { type: 14 },
     { type: 10, content: `-# ${elapsed} · ${modelLabel(model)}` },
     { type: 1, components: [
-      { type: 2, custom_id: isPublic ? 'askcb_public_ask' : 'askcb_ask', label: 'Try Again', style: 1, emoji: { name: '👾' } }
+      ...(exchangeId ? [{ type: 2, custom_id: `askcb_edit_ctx_${exchangeId}`, label: 'Follow Up', style: 1, emoji: { name: '👾' } }] : []),
+      { type: 2, custom_id: isPublic ? 'askcb_public_ask' : 'askcb_ask', label: 'New Question', style: exchangeId ? 2 : 1, emoji: { name: '💭' } }
     ]}
   );
   return { type: 17, accent_color: ACCENT, components };
@@ -441,7 +447,7 @@ export function buildResultMessages({ summary, planId }) {
     { type: 10, content: first.join('\n') || '(no mutations recorded)' },
     ...(overflow.length ? [{ type: 10, content: `-# …the remaining ${lines.length - first.length} changes continue in the messages below.` }] : []),
     { type: 14 },
-    { type: 10, content: `-# ${created ? `Created ${created} · ` : ''}${summary.anchorsRefreshed ? `${summary.anchorsRefreshed} location card${summary.anchorsRefreshed === 1 ? '' : 's'} refreshed · ` : ''}snapshot ${summary.snapshot ? `taken (${summary.snapshot})` : 'unavailable'}` },
+    { type: 10, content: `-# ${created ? `Created ${created} · ` : ''}${summary.anchorsRefreshed ? `${summary.anchorsRefreshed} location card${summary.anchorsRefreshed === 1 ? '' : 's'} refreshed · ` : ''}${summary.channelsRenamed ? `${summary.channelsRenamed} channel${summary.channelsRenamed === 1 ? '' : 's'} renamed · ` : ''}snapshot ${summary.snapshot ? `taken (${summary.snapshot})` : 'unavailable'}` },
     ...(warningText ? [{ type: 10, content: warningText }] : []),
     { type: 1, components: [
       { type: 2, custom_id: `askcb_edit_ctx_${planId}`, label: 'Keep Editing', style: 1, emoji: { name: '🛠️' } }
@@ -757,7 +763,10 @@ export async function handleEditModalSubmit(req, res) {
       logAskEvent(parseError ? 'plan.rejected' : 'plan.noplan',
         { ...ctx, ...runMeta, reply, ...(parseError ? { reason: 'malformed_json', errors } : {}) });
       terminalLogged = true;
-      await beat({ components: [buildNoPlanContainer({ reply, errors, planWasAttempted: !!parseError, isPublic: isPublicRoute, elapsed, model })] });
+      // Remember the exchange (no plan attached) so Follow Up can carry it forward.
+      const exchangeId = Date.now().toString(36);
+      rememberPlan(exchangeId, { plan: null, guildId, userId, channelId, isPublicRoute, query, reply, model, cid: ctx.cid, eid: ctx.eid });
+      await beat({ components: [buildNoPlanContainer({ reply, errors, planWasAttempted: !!parseError, isPublic: isPublicRoute, elapsed, model, exchangeId })] });
       return;
     }
 
@@ -775,7 +784,9 @@ export async function handleEditModalSubmit(req, res) {
         errors: validation.errors, plan: JSON.stringify(planJson)
       });
       terminalLogged = true;
-      await beat({ components: [buildNoPlanContainer({ reply, errors: validation.errors, planWasAttempted: true, isPublic: isPublicRoute, elapsed, model })] });
+      const exchangeId = Date.now().toString(36);
+      rememberPlan(exchangeId, { plan: null, guildId, userId, channelId, isPublicRoute, query, reply, model, cid: ctx.cid, eid: ctx.eid });
+      await beat({ components: [buildNoPlanContainer({ reply, errors: validation.errors, planWasAttempted: true, isPublic: isPublicRoute, elapsed, model, exchangeId })] });
       return;
     }
 
@@ -855,7 +866,7 @@ export async function handlePlanApply(context) {
 
   const { applyPlan, PlanStaleError } = await import('./safariPlanApplier.js');
   try {
-    const { summary } = await applyPlan(entry.guildId, entry.plan, { userId: context.userId, client: context.client });
+    const { summary } = await applyPlan(entry.guildId, entry.plan, { userId: context.userId, client: context.client, query: entry.query });
 
     // ✅ THE ACCEPT LABEL — the admin looked at the proposal and took it.
     logAskEvent('plan.applied', {

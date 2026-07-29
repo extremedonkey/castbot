@@ -578,6 +578,44 @@ export async function logAttack({ guildId, attackerId, attackerName, attackerDis
 }
 
 /**
+ * Log a Safari edit applied through Ask CastBot (👾 natural-language editing).
+ *
+ * Replaces the raw plan-JSON dump that used to go to the image storage channel — wrong
+ * home, and unreadable. This lands in the guild's own Safari Log alongside every other
+ * admin-visible event, gated by the `askCastBotEdits` log type (default ON).
+ *
+ * @param {Object} params
+ * @param {string} params.guildId
+ * @param {string} params.userId - the admin who clicked Apply
+ * @param {string} [params.username] @param {string} [params.displayName] @param {string} [params.channelName]
+ * @param {string} params.query - what they asked for, in their own words
+ * @param {string[]} params.lines - the per-change summary lines from the applier
+ * @param {number} params.safariMutations @param {number} params.playerMutations
+ * @param {Object} [params.created] - {items, stores, actions} counts
+ */
+export async function logAskCastBotEdit({ guildId, userId, username = null, displayName = null, channelName = null, query, lines = [], safariMutations = 0, playerMutations = 0, created = null }) {
+  const logSettings = await getSafariLogSettings(guildId);
+  if (!logSettings?.enabled) return;
+  if (logSettings.logTypes?.askCastBotEdits === false) return;
+
+  const total = safariMutations + playerMutations;
+  const summary = `Ask CastBot edit: ${total} change${total === 1 ? '' : 's'} — "${String(query || '').substring(0, 120)}"`;
+
+  await logInteraction(
+    userId,
+    guildId,
+    'SAFARI_ASKCB_EDIT',
+    summary,
+    username,
+    null,
+    null,
+    channelName,
+    displayName,
+    { query: String(query || '').substring(0, 500), changes: lines.slice(0, 25), safariMutations, playerMutations, created }
+  );
+}
+
+/**
  * Log a custom action (Safari button or player command)
  * @param {Object} params - Custom action parameters
  * @param {string} params.guildId - Guild ID
@@ -797,7 +835,8 @@ export const DEFAULT_LOG_TYPES = {
   attacks: true,
   customActions: true,
   staminaChanges: true,
-  testMessages: true
+  testMessages: true,
+  askCastBotEdits: true   // 👾 Ask CastBot applied a natural-language edit to this guild
 };
 
 /**

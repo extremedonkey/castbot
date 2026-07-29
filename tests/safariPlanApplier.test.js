@@ -17,7 +17,7 @@ import { validatePlan } from '../safariPlanSchema.js';
 const NOW = 1753776000000;
 
 function newSummary() {
-  return { lines: [], created: { items: 0, stores: 0, actions: 0 }, safariMutations: 0, playerMutations: 0, warnings: [], anchorCoords: new Set(), anchorsRefreshed: 0, snapshot: null };
+  return { lines: [], created: { items: 0, stores: 0, actions: 0 }, safariMutations: 0, playerMutations: 0, warnings: [], anchorCoords: new Set(), anchorsRefreshed: 0, renameCoords: new Set(), channelsRenamed: 0, snapshot: null };
 }
 
 /** Validate a raw plan against a guild and return normalized ops (throws on invalid). */
@@ -266,6 +266,37 @@ describe('Applier — create_recipe (crafting)', () => {
     const action = Object.values(data.g1.buttons)[0];
     assert.equal(action.actions.at(-1).config.itemId, refMap.catdog);
     assert.equal(action.conditions[0].itemId, refMap.dog);
+  });
+});
+
+describe('Applier — update_map_cell emoji (renames the location channel)', () => {
+  it('writes emoji on the CELL, title/description into baseContent, and queues a rename', () => {
+    const data = freshData({
+      maps: { active: 'm1', m1: { coordinates: { A1: { channelId: '123', baseContent: { title: 'Old' } } } } }
+    });
+    const [op] = normalize([{
+      op: 'update_map_cell', coordinate: 'A1', set: { title: 'Golden Savanna', emoji: '🌾' }
+    }], data.g1);
+    const summary = newSummary();
+    applySafariOp(data, 'g1', op, {}, summary, { now: NOW });
+
+    const cell = data.g1.maps.m1.coordinates.A1;
+    assert.equal(cell.emoji, '🌾');                       // sibling of baseContent, not inside it
+    assert.equal(cell.baseContent.title, 'Golden Savanna');
+    assert.equal(cell.baseContent.emoji, undefined);
+    assert.ok(summary.renameCoords.has('A1'), 'a changed emoji/title must queue a channel rename');
+    assert.ok(summary.anchorCoords.has('A1'));
+  });
+
+  it('does not queue a rename when only the description changes', () => {
+    const data = freshData({
+      maps: { active: 'm1', m1: { coordinates: { A1: { channelId: '123', baseContent: {} } } } }
+    });
+    const [op] = normalize([{ op: 'update_map_cell', coordinate: 'A1', set: { description: 'Just flavour.' } }], data.g1);
+    const summary = newSummary();
+    applySafariOp(data, 'g1', op, {}, summary, { now: NOW });
+    assert.equal(summary.renameCoords.size, 0);
+    assert.ok(summary.anchorCoords.has('A1'));
   });
 });
 

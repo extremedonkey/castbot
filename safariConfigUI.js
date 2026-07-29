@@ -424,7 +424,8 @@ export function buildSafariLogConfigUI(logSettings, { whispersEnabled = true } =
             mapMovement: '🗺️ Map Movement',
             attacks: '⚔️ Attack Queue',
             customActions: '⌨️ Custom Actions',
-            staminaChanges: '⚡ Stamina Changes'
+            staminaChanges: '⚡ Stamina Changes',
+            askCastBotEdits: '👾 Ask CastBot Edits'
         };
         // Missing keys default to enabled (mergeLogTypes semantics, inlined to keep this pure/sync)
         const logTypes = settings.logTypes || {};
