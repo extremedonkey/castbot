@@ -96,31 +96,51 @@ describe('Setup Wizard — Run Setup (Task 1) action button', () => {
   });
 });
 
-describe('Tools menu — Re-Run Setup (same setup_castbot handler, always enabled)', () => {
-  // Old-timezone-regime servers need a way to re-run setup after the wizard's own
-  // button has gone green/disabled — Tools → Utilities carries an always-enabled copy.
-  it('Utilities row carries a blue 🪛 Re-Run Setup button wired to setup_castbot', async () => {
-    const { MenuBuilder } = await import('../menuBuilder.js');
-    const menu = MenuBuilder.buildSetupMenu({ title: 'x' }, { userId: '1', guildId: '2' });
-    const rows = menu.components.filter(c => c.type === 1);
+describe('CastBot Settings — ⚙️ Setup (same setup_castbot handler, always enabled)', () => {
+  // Old-timezone-regime servers need a way to re-run setup after the wizard's own button
+  // has gone green/disabled. That always-enabled copy lived in Tools → Utilities until
+  // 2026-07-29; it now sits in CastBot Settings → CastBot-Wide Settings, right of
+  // Reaction Roles (with Scheduled Jobs beside it).
+  it('CastBot-Wide Settings row carries a grey ⚙️ Setup button wired to setup_castbot', async () => {
+    const { createSafariCustomizationUI } = await import('../safariConfigUI.js');
+    const ui = await createSafariCustomizationUI('2', {});
+    const rows = ui.components[0].components.filter(c => c.type === 1);
     const btn = rows.flatMap(r => r.components).find(b => b.custom_id === 'setup_castbot');
-    assert.ok(btn, 'Re-Run Setup missing from the Tools menu');
-    assert.equal(btn.label, 'Re-Run Setup');
-    assert.equal(btn.style, 1);              // Primary / blue — matches the wizard's Run Setup
-    assert.equal(btn.emoji.name, '🪛');
+    assert.ok(btn, 'Setup missing from CastBot Settings');
+    assert.equal(btn.label, 'Setup');
+    assert.equal(btn.style, 2);              // Secondary / grey
+    assert.equal(btn.emoji.name, '⚙️');
     assert.ok(!btn.disabled);                // always enabled, unlike the wizard's copy
+    // Scheduled Jobs sits immediately to its right, in the same row.
+    const row = rows.find(r => r.components.some(b => b.custom_id === 'setup_castbot'));
+    const idx = row.components.findIndex(b => b.custom_id === 'setup_castbot');
+    assert.equal(row.components[idx + 1]?.custom_id, 'scheduled_jobs_dashboard');
+  });
+
+  it('no ActionRow in CastBot Settings exceeds the 5-button Discord cap', async () => {
+    const { createSafariCustomizationUI } = await import('../safariConfigUI.js');
+    const ui = await createSafariCustomizationUI('2', {});
+    for (const row of ui.components[0].components.filter(c => c.type === 1)) {
+      assert.ok(row.components.length <= 5,
+        `row has ${row.components.length} buttons: ${row.components.map(b => b.label).join(', ')}`);
+    }
   });
 
   it('no ActionRow in the Tools menu exceeds the 5-button Discord cap (worst-case flags)', async () => {
     const { MenuBuilder } = await import('../menuBuilder.js');
-    // Reece + test-instance is the widest render (extra Ask CastBot / Archive / Data buttons)
+    const { ALLOWED_GUILD_IDS } = await import('../askCastBot.js');
+    // Reece + test-instance + an Ask-CastBot-WHITELISTED guild is the widest render.
+    // The guildId matters: this test used '2' (not whitelisted) and therefore never
+    // rendered the Ask CastBot buttons — it missed a live 6-button row on 2026-07-29.
     const prevRole = process.env.INSTANCE_ROLE;
     process.env.INSTANCE_ROLE = 'test';
     try {
-      const menu = MenuBuilder.buildSetupMenu({ title: 'x' }, { userId: '391415444084490240', guildId: '2' });
-      for (const row of menu.components.filter(c => c.type === 1)) {
-        assert.ok(row.components.length <= 5,
-          `ActionRow with ${row.components.length} buttons (max 5): ${row.components.map(b => b.custom_id).join(', ')}`);
+      for (const builder of ['buildSetupMenu', 'buildPremiumMenu']) {
+        const menu = MenuBuilder[builder]({ title: 'x' }, { userId: '391415444084490240', guildId: ALLOWED_GUILD_IDS[0] });
+        for (const row of menu.components.filter(c => c.type === 1)) {
+          assert.ok(row.components.length <= 5,
+            `${builder}: ActionRow with ${row.components.length} buttons (max 5): ${row.components.map(b => b.custom_id).join(', ')}`);
+        }
       }
     } finally {
       if (prevRole === undefined) delete process.env.INSTANCE_ROLE;

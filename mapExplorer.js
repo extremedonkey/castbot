@@ -2470,7 +2470,7 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
   // Row 3: Map views & data
   const safariProgressButton = new ButtonBuilder()
     .setCustomId('safari_progress')
-    .setLabel('Safari Progress')
+    .setLabel('Progress')
     .setStyle(ButtonStyle.Secondary)
     .setEmoji('🚀')
     .setDisabled(!hasActiveMap);
@@ -2489,7 +2489,16 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     .setStyle(ButtonStyle.Secondary)
     .setEmoji('🤫');
 
-  const mapButtonRow3 = new ActionRowBuilder().addComponents([sharedMapButton, safariProgressButton, whispersButton]);
+  // Anchors (moved from Tools 2026-07-29): rebuilds every location card. Lives here
+  // because that's where the map content it re-renders is edited.
+  const anchorsButton = new ButtonBuilder()
+    .setCustomId('map_admin_refresh_anchors')
+    .setLabel('Anchors')
+    .setStyle(ButtonStyle.Secondary)
+    .setEmoji('⚓')
+    .setDisabled(!hasActiveMap);
+
+  const mapButtonRow3 = new ActionRowBuilder().addComponents([sharedMapButton, safariProgressButton, whispersButton, anchorsButton]);
 
   // Create back button (only for ephemeral messages)
   if (isEphemeral) {

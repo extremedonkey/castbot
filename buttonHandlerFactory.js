@@ -1220,11 +1220,11 @@ export const BUTTON_REGISTRY = {
   },
   'setup_castbot': {
     label: 'Run Setup',
-    description: 'Execute CastBot setup - creates pronoun and timezone roles. Appears in the Setup Wizard (Run Setup, disabled once complete) and Tools → Utilities (Re-Run Setup, always enabled for refreshing old role regimes)',
+    description: 'Execute CastBot setup - creates pronoun and timezone roles. Appears in the Setup Wizard (Run Setup, disabled once complete) and CastBot Settings → CastBot-Wide Settings (⚙️ Setup, always enabled for refreshing old role regimes)',
     emoji: '🪛',
     style: 'Primary',
     category: 'admin',
-    parent: 'castbot_tools'
+    parent: 'castbot_settings'
   },
   'prod_terms_of_service': {
     label: 'Terms of Service',
@@ -2986,11 +2986,12 @@ export const BUTTON_REGISTRY = {
     requiresPermission: 'ManageRoles'
   },
   'map_admin_refresh_anchors': {
-    label: 'Refresh Anchors',
-    description: 'Manually refresh anchor messages for specific coordinates',
-    emoji: '🔄',
+    label: 'Anchors',
+    description: 'Manually refresh anchor (location card) messages for specific coordinates. Lives in Map Explorer, right of Whispers',
+    emoji: '⚓',
     style: 'Secondary',
     category: 'safari_map_admin',
+    parent: 'safari_map_explorer',
     requiresPermission: 'ManageRoles'
   },
   'safari_paused_players': {
@@ -4008,11 +4009,11 @@ export const BUTTON_REGISTRY = {
   },
   'scheduled_jobs_dashboard': {
     label: 'Scheduled Jobs',
-    description: 'Guild-wide dashboard of all scheduler jobs (round results, custom actions, archive relocks)',
+    description: 'Guild-wide dashboard of all scheduler jobs (round results, custom actions, archive relocks). Lives in CastBot Settings, right of Setup',
     emoji: '⏰',
     style: 'Secondary',
     category: 'admin_tools',
-    parent: 'castbot_tools'
+    parent: 'castbot_settings'
   },
   'sched_dash_cancel_sel': {
     label: 'Cancel Scheduled Jobs',
