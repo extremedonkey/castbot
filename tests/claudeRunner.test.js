@@ -48,6 +48,39 @@ function describeActivity(event) {
   return null;
 }
 
+// Replicated from claudeRunner.js — keep in sync. Unlike describeActivity (whose string
+// is overwritten every heartbeat), these accumulate into a trace of what the model
+// actually read, which is the "why did it answer that" feature in the event log.
+function toolCallLabel(block) {
+  if (!block || typeof block !== 'object') return 'Use:?';
+  const input = block.input || {};
+  switch (block.name) {
+    case 'Read': return `Read:${baseName(input.file_path) || '?'}`;
+    case 'Grep': return `Grep:${String(input.pattern ?? '').substring(0, 40)}`;
+    case 'Glob': return `Glob:${String(input.pattern ?? '').substring(0, 40)}`;
+    default: return `Use:${block.name || '?'}`;
+  }
+}
+
+describe('claudeRunner — toolCallLabel (log trace, not display)', () => {
+  it('labels the three read-only tools compactly, with no emoji', () => {
+    assert.equal(toolCallLabel({ name: 'Read', input: { file_path: '/a/b/Safari.md' } }), 'Read:Safari.md');
+    assert.equal(toolCallLabel({ name: 'Grep', input: { pattern: 'currency' } }), 'Grep:currency');
+    assert.equal(toolCallLabel({ name: 'Glob', input: { pattern: '**/*.md' } }), 'Glob:**/*.md');
+  });
+
+  it('falls back to the tool name for anything else, and never throws on junk', () => {
+    assert.equal(toolCallLabel({ name: 'Bash' }), 'Use:Bash');
+    assert.equal(toolCallLabel(null), 'Use:?');
+    assert.equal(toolCallLabel({}), 'Use:?');
+    assert.equal(toolCallLabel({ name: 'Read' }), 'Read:?');
+  });
+
+  it('bounds long patterns so one line cannot blow the log budget', () => {
+    assert.ok(toolCallLabel({ name: 'Grep', input: { pattern: 'x'.repeat(200) } }).length <= 45);
+  });
+});
+
 describe('claudeRunner — timing budget', () => {
   it('kills the job before the Discord interaction token expires', () => {
     assert.ok(HARD_KILL_MS < TOKEN_LIFETIME_MS,

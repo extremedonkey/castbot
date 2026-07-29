@@ -236,6 +236,31 @@ describe('Ask CastBot — modal field extraction', () => {
   });
 });
 
+// --- conversation threading ---
+// Replicated from askCastBot.js handleAskModalSubmit — keep in sync. A Follow Up
+// carries the parent answer's id in the modal custom_id; extracting it is what lets a
+// multi-turn exchange be reconstructed from the event log.
+const parentRidOf = (modalId) => /^askcb_(?:ask|pub)_modal_(.+)$/.exec(String(modalId || ''))?.[1] || null;
+
+describe('Ask CastBot — conversation threading (parent response id)', () => {
+  it('is null for a fresh question on either route', () => {
+    assert.equal(parentRidOf('askcb_ask_modal'), null);
+    assert.equal(parentRidOf('askcb_pub_modal'), null);
+  });
+
+  it('extracts the parent id from a Follow Up on either route', () => {
+    assert.equal(parentRidOf('askcb_ask_modal_lz4k9'), 'lz4k9');
+    assert.equal(parentRidOf('askcb_pub_modal_lz4k9'), 'lz4k9');
+  });
+
+  it('survives junk and unrelated custom_ids', () => {
+    assert.equal(parentRidOf(''), null);
+    assert.equal(parentRidOf(null), null);
+    assert.equal(parentRidOf('askcb_edit_modal_abc'), null);
+    assert.equal(parentRidOf('something_else'), null);
+  });
+});
+
 // --- chunking ---
 const MAX_CHUNK = 3500;
 function chunkResponse(response) {

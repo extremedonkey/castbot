@@ -31,6 +31,7 @@ import fs from 'fs';
 import { InteractionResponseType, InteractionResponseFlags } from 'discord-interactions';
 import { runClaudeJob, safeDeliver, formatElapsed, HARD_KILL_MS, buildModelSelectField, resolveModelChoice, modelLabel, DEFAULT_MODEL } from './claudeRunner.js';
 import { hasFeatureSync, FEATURES, SEED_GUILD_IDS } from './entitlements.js';
+import { logAskEvent } from './src/analytics/askLog.js';
 
 /**
  * Guilds where any CastBot admin may use Ask CastBot.
@@ -575,19 +576,42 @@ export async function handleAskModalSubmit(req, res) {
   // A modal opened from a POSTED Ask button is deliberately open to anyone who can see
   // that channel (Reece places them in limited areas). The whitelist only guards the
   // Tools-menu route. The env gate applies to both — see isAskCastBotEnvironment.
-  const isPublicRoute = String(req.body.data.custom_id || '').startsWith('askcb_pub_modal');
+  const modalId = String(req.body.data.custom_id || '');
+  const isPublicRoute = modalId.startsWith('askcb_pub_modal');
+  // A Follow Up carries the parent answer's id in the modal custom_id — the conversation
+  // tree is already in the payload and was being thrown away. Recovering it here is what
+  // lets multi-turn exchanges be reconstructed offline.
+  const parentRid = /^askcb_(?:ask|pub)_modal_(.+)$/.exec(modalId)?.[1] || null;
+
+  // Built from req.body BEFORE anything can throw and before res.send fires — every
+  // event in this handler carries it, so a failure can never be an orphan row.
+  const ctx = {
+    eid: req.body.id,
+    cid: recallResponse(parentRid)?.cid || req.body.id,
+    gid: req.body.guild_id,
+    uid: userId,
+    chan: req.body.channel_id,
+    route: isPublicRoute ? 'ask_public' : 'ask',
+    model,
+    complexity,
+    parent_rid: parentRid
+  };
+  const deny = (reason, message) => {
+    logAskEvent('ask.denied', { ...ctx, reason, in_flight: inFlight });
+    return denyModal(res, message);
+  };
 
   if (!isAskCastBotEnvironment()) {
-    return denyModal(res, '👾 Ask CastBot is not available here.');
+    return deny('env', '👾 Ask CastBot is not available here.');
   }
   if (!isPublicRoute && !hasAskCastBotAccess({ userId, guildId: req.body.guild_id })) {
-    return denyModal(res, '👾 Ask CastBot is not available here.');
+    return deny('access', '👾 Ask CastBot is not available here.');
   }
   if (!query?.trim()) {
-    return denyModal(res, '👾 Ask CastBot needs a question.');
+    return deny('empty_query', '👾 Ask CastBot needs a question.');
   }
   if (inFlight >= MAX_CONCURRENT) {
-    return denyModal(res, `👾 Ask CastBot is busy with ${inFlight} question${inFlight === 1 ? '' : 's'} right now. Give it a minute and ask again.`);
+    return deny('busy', `👾 Ask CastBot is busy with ${inFlight} question${inFlight === 1 ? '' : 's'} right now. Give it a minute and ask again.`);
   }
 
   // TWO MESSAGES, NOT ONE:
@@ -617,8 +641,17 @@ export async function handleAskModalSubmit(req, res) {
   const beat = (data) => safeDeliver({ token, channelId, data, messageId: progressMsgId, userId, fallback: false });
   const deliver = (data) => safeDeliver({ token, channelId, data, messageId: progressMsgId, userId });
 
+  // Hoisted so the finally block can tell a logged outcome from a silent escape.
+  let terminalLogged = false;
+  let answerText = null;
+
   try {
     console.log(`👾 Ask CastBot query from ${req.body.member?.user?.username} (${inFlight}/${MAX_CONCURRENT} in flight, ${complexity}, ${model}): "${truncate(query, 80)}"`);
+    logAskEvent('ask.request', {
+      ...ctx, query,
+      prev_ctx_len: (fields.askcb_prev_context || '').length,
+      locale: req.body.locale
+    });
 
     // Message 2 starts as "starting up" so there's never a silent gap.
     const progressMsg = await createFollowupMessage(token, { components: [buildProgressContainer(query)] });
@@ -641,7 +674,8 @@ export async function handleAskModalSubmit(req, res) {
       ? await writeMod.buildEditCapabilitySection(guildId).catch(() => '')
       : '';
 
-    const { text: answer, durationMs, denials } = await runAskCastBot(
+    const { text: answer, durationMs, denials, numTurns, costUsd, usage, sessionId,
+            apiDurationMs, toolTrace, modelUsed, fellBack } = await runAskCastBot(
       buildPrompt(query, fields.askcb_prev_context, superRead, complexity, editAvailable, editSection),
       editSection ? resolveWriteDenyRules(guildId) : resolveDenyRules(guildId, isPublicRoute),
       (progress) => beat({ components: [buildProgressContainer(query, progress)] }),
@@ -663,10 +697,14 @@ export async function handleAskModalSubmit(req, res) {
     }
 
     const responseId = Date.now().toString(36);
-    rememberResponse(responseId, { response: publicAnswer, query, elapsed, complexity, model });
+    // cid rides along so a Follow Up inherits the conversation id (see ctx above).
+    rememberResponse(responseId, { response: publicAnswer, query, elapsed, complexity, model, cid: ctx.cid });
 
+    answerText = publicAnswer;
     const chunks = chunkResponse(publicAnswer);
-    await deliver({
+    // safeDeliver's 'token'|'channel'|'failed' was discarded at every call site — it's
+    // the difference between "the answer was bad" and "the user never saw it".
+    const deliveryOutcome = await deliver({
       components: [buildFirstContainer({ query, chunk: chunks[0], elapsed, chunkCount: chunks.length, responseId, isPublic: isPublicRoute, model })]
     });
     for (let i = 1; i < chunks.length; i++) {
@@ -674,10 +712,26 @@ export async function handleAskModalSubmit(req, res) {
         components: [buildChunkContainer({ chunk: chunks[i], isLast: i === chunks.length - 1, responseId, isPublic: isPublicRoute })]
       });
     }
+
+    logAskEvent('ask.answer', {
+      ...ctx, rid: responseId, response: publicAnswer,
+      duration_ms: durationMs, api_duration_ms: apiDurationMs,
+      usage, session_id: sessionId, num_turns: numTurns, cost_usd: costUsd,
+      model_used: modelUsed, fell_back: fellBack,
+      denials_n: denials?.length || 0, tool_trace: toolTrace,
+      chunks: chunks.length, delivery: deliveryOutcome,
+      had_plan: publicAnswer !== answer,
+      edit_armed: !!editSection, super_read: superRead
+    });
+    terminalLogged = true;
   } catch (error) {
     console.error('👾 Ask CastBot error:', error.message);
+    logAskEvent('ask.error', { ...ctx, phase: answerText ? 'deliver' : 'run', message: error.message });
+    terminalLogged = true;
     await deliver({ components: [buildErrorContainer(error.message, isPublicRoute)] });
   } finally {
+    // A request row with no terminal row would silently corrupt every rate metric.
+    if (!terminalLogged) logAskEvent('ask.error', { ...ctx, phase: 'unknown', message: 'no terminal event' });
     inFlight--;
   }
 }

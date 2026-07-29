@@ -144,6 +144,25 @@ export function describeActivity(event) {
 }
 
 /**
+ * Compact, non-display label for one tool_use block — the sibling of describeActivity
+ * with no emoji and no UI concerns. describeActivity's string is OVERWRITTEN on every
+ * heartbeat; these accumulate into a trace of what the model actually read, which is a
+ * high-value feature for "why did it answer that" analysis.
+ * @param {Object} block - a stream-json tool_use content block
+ * @returns {string}
+ */
+export function toolCallLabel(block) {
+  if (!block || typeof block !== 'object') return 'Use:?';
+  const input = block.input || {};
+  switch (block.name) {
+    case 'Read': return `Read:${baseName(input.file_path) || '?'}`;
+    case 'Grep': return `Grep:${String(input.pattern ?? '').substring(0, 40)}`;
+    case 'Glob': return `Glob:${String(input.pattern ?? '').substring(0, 40)}`;
+    default: return `Use:${block.name || '?'}`;
+  }
+}
+
+/**
  * Run a Claude CLI job, reporting real progress as it goes.
  *
  * @param {Object} opts
@@ -155,18 +174,23 @@ export function describeActivity(event) {
  * @param {Function} [opts.onHeartbeat]        - ({elapsedMs, activity, toolCount}) => void|Promise
  * @param {number} [opts.heartbeatMs]
  * @param {number} [opts.hardKillMs]
- * @returns {Promise<{text: string, durationMs: number, numTurns: number, denials: Array, costUsd: number|null}>}
+ * @returns {Promise<{text, durationMs, numTurns, denials, costUsd, usage, sessionId,
+ *   apiDurationMs, toolTrace, modelUsed, fellBack}>}
  */
 export async function runClaudeJob(opts) {
   const { model } = opts || {};
   try {
-    return await spawnClaudeJob(opts);
+    const result = await spawnClaudeJob(opts);
+    return { ...result, modelUsed: model ?? null, fellBack: false };
   } catch (error) {
     // A picked model that's misspelled, retired, or not yet recognized by this CLI install
     // shouldn't kill the whole request — retry once on the safe default before giving up.
     if (model && model !== DEFAULT_MODEL) {
       console.warn(`⚠️ Claude CLI failed with model "${model}" (${error.message}) — retrying with ${DEFAULT_MODEL}`);
-      return spawnClaudeJob({ ...opts, model: DEFAULT_MODEL });
+      const result = await spawnClaudeJob({ ...opts, model: DEFAULT_MODEL });
+      // Record the downgrade: without this a fallback answer is indistinguishable from
+      // one the requested model actually produced.
+      return { ...result, modelUsed: DEFAULT_MODEL, modelRequested: model, fellBack: true };
     }
     throw error;
   }
@@ -202,6 +226,7 @@ function spawnClaudeJob({
     let toolCount = 0;
     let result = null;
     const assistantText = [];  // fallback if the result event never lands
+    const toolTrace = [];      // accumulated tool calls (activity above is overwritten)
 
     // --- live progress from the JSONL stream ---
     child.stdout.on('data', chunk => {
@@ -219,7 +244,10 @@ function spawnClaudeJob({
         const content = event.message?.content;
         if (Array.isArray(content)) {
           for (const b of content) {
-            if (b?.type === 'tool_use') toolCount++;
+            if (b?.type === 'tool_use') {
+              toolCount++;
+              if (toolTrace.length < 60) toolTrace.push(toolCallLabel(b));
+            }
             if (b?.type === 'text' && typeof b.text === 'string') assistantText.push(b.text);
           }
         }
@@ -268,12 +296,20 @@ function spawnClaudeJob({
       const text = String(result?.result ?? assistantText.join('\n')).trim();
       if (!text) return reject(new Error('Claude returned an empty response'));
 
+      // The CLI computes usage/session_id/duration_api_ms on every run and they were
+      // being dropped on the floor here — token counts are the single most useful
+      // signal for cost and prompt-size analysis, and session_id lets you pull the
+      // full CLI transcript for a run while it still exists.
       resolve({
         text,
         durationMs,
         numTurns: result?.num_turns ?? 0,
         denials: result?.permission_denials ?? [],
-        costUsd: result?.total_cost_usd ?? null
+        costUsd: result?.total_cost_usd ?? null,
+        usage: result?.usage ?? null,
+        sessionId: result?.session_id ?? null,
+        apiDurationMs: result?.duration_api_ms ?? null,
+        toolTrace
       });
     });
 
