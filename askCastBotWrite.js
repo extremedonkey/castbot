@@ -236,6 +236,7 @@ OP TYPES (playerData):
 - {"op":"give_item","playerId":"...","item":"...","quantity?":1-99}
 LIMIT (usage limits on give_currency/give_item outcomes): {"once":"per_player"} | {"once":"globally"} | {"once":"per_period","hours":12}
 "modal" trigger = a text Command the player types (phrases are what they type). "button" = a clickable button on the location's card. executeOn: "true" runs when conditions pass (default), "false" when they fail, "always" regardless.
+BIAS TO ACTION: when the request names a concrete change — even a creative one ("write flavor text for H5", "make me an item") — draft the content YOURSELF and emit the plan. NEVER present a draft and ask "shall I apply it?": the preview's Apply/Refine/Cancel buttons ARE the approval step, and an answer without a plan block gives the admin nothing to click. Reserve the no-plan reply for genuine blockers (unknown target, unsupported op, contradictory request).
 NOT SUPPORTED (do not emit; explain instead): deleting anything, enemies, attributes, schedules, map creation/resizing, moving players, "all players" bulk grants.`;
 
 /**
