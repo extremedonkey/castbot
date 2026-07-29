@@ -84,7 +84,7 @@ function validateNestedComponent(component) {
  * @param {Object} client - Discord client
  * @returns {boolean} Success status
  */
-export async function updateAnchorMessage(guildId, coordinate, client) {
+export async function updateAnchorMessage(guildId, coordinate, client, { verifyImage = true } = {}) {
   const safariData = await loadSafariContent();
   const activeMapId = safariData[guildId]?.maps?.active;
   const coordData = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[coordinate];
@@ -197,11 +197,82 @@ export async function updateAnchorMessage(guildId, coordinate, client) {
     }
     
     console.log(`✅ Updated anchor message for ${coordinate}`);
+    if (verifyImage) await verifyAnchorImage(guildId, coordinate, coordData, validatedComponents);
     return true;
   } catch (error) {
     console.error(`Failed to update anchor message for ${coordinate}:`, error);
     return false;
   }
+}
+
+/**
+ * Confirm Discord actually RESOLVED the anchor's image, and re-PATCH once if it didn't.
+ *
+ * Discord unfurls a Media Gallery URL exactly once, at edit time, to learn its
+ * dimensions. If that resolution fails — including for reasons entirely outside our
+ * control (observed 2026-07-29: a ~33-minute window where 3 of ~25 anchor edits failed
+ * while every edit before and after succeeded, against images Discord had been serving
+ * for two days) — the item is stuck at loading_state 1 FOREVER. Discord never retries;
+ * only another edit re-triggers it. The host sees a permanently broken map image and has
+ * no reason to know that a hidden "Refresh Anchors" button would fix it.
+ *
+ * loading_state: 1 = LOADING (unresolved), 2 = LOADED_SUCCESS.
+ * One retry only — a genuine Discord outage must not become a loop.
+ *
+ * Never throws: this is best-effort repair on an already-successful update.
+ * @returns {Promise<boolean>} true if the image is resolved (or there was none to check)
+ */
+export async function verifyAnchorImage(guildId, coordinate, coordData, components, { delayMs = 2000 } = {}) {
+  try {
+    // The unfurl is async on Discord's side — checking immediately always reads LOADING.
+    await new Promise(resolve => setTimeout(resolve, delayMs));
+    if (await isAnchorImageResolved(coordData)) return true;
+
+    console.log(`🔁 Anchor ${coordinate}: image still unresolved — re-sending once`);
+    const { DiscordRequest } = await import('./utils.js');
+    await DiscordRequest(`channels/${coordData.channelId}/messages/${coordData.anchorMessageId}`, {
+      method: 'PATCH',
+      body: { flags: (1 << 15), components }
+    });
+    return false;
+  } catch (error) {
+    console.log(`ℹ️ Anchor ${coordinate}: image verification skipped (${error.message})`);
+    return true; // never let verification failure look like an update failure
+  }
+}
+
+/** Fetch the anchor and ask whether Discord resolved its image. Never throws. */
+async function isAnchorImageResolved(coordData) {
+  try {
+    const { DiscordRequest } = await import('./utils.js');
+    const message = await DiscordRequest(
+      `channels/${coordData.channelId}/messages/${coordData.anchorMessageId}`, { method: 'GET' });
+    return isImageResolved(message);
+  } catch {
+    return true; // can't tell → don't churn
+  }
+}
+
+/**
+ * Does this message's Media Gallery report a resolved image?
+ * Pure — exported for tests. No gallery at all counts as resolved (nothing to fix).
+ */
+export function isImageResolved(message) {
+  let sawImage = false;
+  const walk = (components) => {
+    for (const component of components || []) {
+      if (component.type === 12) {
+        for (const item of component.items || []) {
+          sawImage = true;
+          if (item.media?.loading_state === 1) return false; // LOADING = unresolved
+        }
+      }
+      if (component.components && !walk(component.components)) return false;
+    }
+    return true;
+  };
+  const ok = walk(message?.components);
+  return sawImage ? ok : true;
 }
 
 /**
@@ -243,18 +314,35 @@ export async function updateAllAnchorMessages(guildId, client) {
     errors: []
   };
   
+  const updated = [];
   for (const [coord, coordData] of Object.entries(coordinates)) {
     if (coordData.anchorMessageId) {
-      const success = await updateAnchorMessage(guildId, coord, client);
+      // Skip per-cell verification here — a 2s wait × 40 cells would add minutes. One
+      // sweep at the end catches the same stragglers for the cost of a single delay.
+      const success = await updateAnchorMessage(guildId, coord, client, { verifyImage: false });
       if (success) {
         results.successful++;
+        updated.push([coord, coordData]);
       } else {
         results.failed++;
         results.errors.push(coord);
       }
     }
   }
-  
+
+  // Verification sweep — ONE delay for the whole batch, then re-send only the stragglers.
+  results.repaired = 0;
+  if (updated.length) {
+    await new Promise(resolve => setTimeout(resolve, 3000)); // let Discord finish unfurling
+    for (const [coord, coordData] of updated) {
+      if (await isAnchorImageResolved(coordData)) continue;
+      console.log(`🔁 Anchor ${coord}: image unresolved after bulk refresh — re-sending`);
+      await updateAnchorMessage(guildId, coord, client, { verifyImage: false });
+      results.repaired++;
+    }
+    if (results.repaired) console.log(`🔁 Repaired ${results.repaired} anchor image(s) Discord left unresolved`);
+  }
+
   return results;
 }
 
