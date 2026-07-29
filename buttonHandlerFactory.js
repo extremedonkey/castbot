@@ -5166,6 +5166,14 @@ export const BUTTON_REGISTRY = {
     category: 'askcastbot',
     parent: 'askcb_ask'
   },
+  'askcb_plan_review_*': {
+    label: 'Review Changes',
+    description: 'Reopen the private preview of changes Ask CastBot proposed alongside a public answer (requester-bound)',
+    emoji: '🛠️',
+    style: 'Danger',
+    category: 'askcastbot',
+    parent: 'askcb_ask'
+  },
   'askcb_plan_cancel_*': {
     label: 'Cancel',
     description: 'Discard a previewed Ask CastBot edit plan without applying anything',

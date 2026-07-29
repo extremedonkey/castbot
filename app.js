@@ -10884,13 +10884,16 @@ To fix this:
         handler: async (context) => (await import('./askCastBotWrite.js')).handleEditEntry(context, custom_id)
       })(req, res, client);
 
-    } else if (custom_id.startsWith('askcb_plan_apply_') || custom_id.startsWith('askcb_plan_cancel_')) {
+    } else if (custom_id.startsWith('askcb_plan_apply_') || custom_id.startsWith('askcb_plan_cancel_') || custom_id.startsWith('askcb_plan_review_')) {
       // 🛠️ Apply/Cancel a previewed edit plan. security: 'public' — real gate inside handlePlanButton (entitlement + admin + requester binding + one-shot).
       return ButtonHandlerFactory.create({
-        id: custom_id.startsWith('askcb_plan_apply_') ? 'askcb_plan_apply' : 'askcb_plan_cancel',
+        id: custom_id.startsWith('askcb_plan_apply_') ? 'askcb_plan_apply'
+          : custom_id.startsWith('askcb_plan_review_') ? 'askcb_plan_review' : 'askcb_plan_cancel',
         security: 'public',
         deferred: true,
-        updateMessage: true,
+        // Review posts a NEW ephemeral preview; Apply/Cancel replace the existing one.
+        updateMessage: !custom_id.startsWith('askcb_plan_review_'),
+        ephemeral: true,
         handler: async (context) => (await import('./askCastBotWrite.js')).handlePlanButton(context)
       })(req, res, client);
 

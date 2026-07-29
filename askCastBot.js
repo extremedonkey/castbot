@@ -436,7 +436,7 @@ export function runAskCastBot(prompt, deny, onHeartbeat, model) {
  * came from a posted button must offer a follow-up the same audience can actually use,
  * or a non-whitelisted asker gets denied on their own follow-up.
  */
-export function buildActionRow(responseId, isPublic = false) {
+export function buildActionRow(responseId, isPublic = false, plan = null) {
   const stem = isPublic ? 'askcb_pub_ctx' : 'askcb_ask_ctx';
   // "New Question" needs no new handler: askcb_ask / askcb_public_ask already open a
   // blank modal when there's no context id to recall. Same gate, same route, zero plumbing.
@@ -444,6 +444,12 @@ export function buildActionRow(responseId, isPublic = false) {
   return {
     type: 1,
     components: [
+      // When the answer came with a change plan, the PUBLIC card must carry a way back to
+      // it. The preview itself is ephemeral, and an ephemeral is trivially lost — missed
+      // on mobile, dismissed, gone on a client restart — which stranded a 9-op plan with
+      // no route to Apply (2026-07-29). Clicking re-opens the preview for the asker only.
+      ...(plan ? [{ type: 2, custom_id: `askcb_plan_review_${plan.planId}`,
+        label: `Review ${plan.opCount} Change${plan.opCount === 1 ? '' : 's'}`, style: 4, emoji: { name: '🛠️' } }] : []),
       { type: 2, custom_id: `${stem}_${responseId}`, label: 'Follow Up', style: 1, emoji: { name: '👾' } },
       { type: 2, custom_id: blankStem, label: 'New Question', style: 1, emoji: { name: '💭' } }
     ]
@@ -451,7 +457,7 @@ export function buildActionRow(responseId, isPublic = false) {
 }
 
 /** Container for the first (deferred) chunk. */
-export function buildFirstContainer({ query, chunk, elapsed, chunkCount, responseId, isPublic = false, model }) {
+export function buildFirstContainer({ query, chunk, elapsed, chunkCount, responseId, isPublic = false, model, plan = null }) {
   return {
     type: 17,
     accent_color: ACCENT,
@@ -460,15 +466,16 @@ export function buildFirstContainer({ query, chunk, elapsed, chunkCount, respons
       { type: 10, content: `-# "${neutralizeMentions(truncate(query, 120))}"` },
       { type: 14 },
       { type: 10, content: neutralizeMentions(chunk) },
+      ...(plan ? [{ type: 10, content: `-# 🛠️ ${plan.opCount} change${plan.opCount === 1 ? '' : 's'} ready to apply — only the asker can review them.` }] : []),
       { type: 14 },
       { type: 10, content: `-# 👾 ${elapsed}${chunkCount > 1 ? ` · ${chunkCount} parts` : ''} · ${modelLabel(model)}` },
-      ...(chunkCount === 1 ? [buildActionRow(responseId, isPublic)] : [])
+      ...(chunkCount === 1 ? [buildActionRow(responseId, isPublic, plan)] : [])
     ]
   };
 }
 
 /** Container for a follow-up chunk. */
-export function buildChunkContainer({ chunk, isLast, responseId, isPublic = false }) {
+export function buildChunkContainer({ chunk, isLast, responseId, isPublic = false, plan = null }) {
   return {
     type: 17,
     accent_color: ACCENT,
@@ -477,7 +484,7 @@ export function buildChunkContainer({ chunk, isLast, responseId, isPublic = fals
       ...(isLast ? [
         { type: 14 },
         { type: 10, content: `-# continued` },
-        buildActionRow(responseId, isPublic)
+        buildActionRow(responseId, isPublic, plan)
       ] : [])
     ]
   };
@@ -731,12 +738,14 @@ export async function handleAskModalSubmit(req, res, client = null) {
     // Strip any inline plan out of the public answer; the asker gets the ephemeral
     // preview with Apply/Cancel as follow-ups (requester-bound, one-shot, re-gated).
     let publicAnswer = answer;
+    let plan = null;
     if (editSection) {
       const result = await writeMod.processInlinePlan({
         answer, guildId, userId, channelId, isPublicRoute, model, token, query, elapsed,
         logCtx: { eid: ctx.eid, cid: ctx.cid, route: ctx.route, query }
       });
       publicAnswer = result.publicAnswer;
+      plan = result.plan || null;
     }
 
     const responseId = Date.now().toString(36);
@@ -748,11 +757,11 @@ export async function handleAskModalSubmit(req, res, client = null) {
     // safeDeliver's 'token'|'channel'|'failed' was discarded at every call site — it's
     // the difference between "the answer was bad" and "the user never saw it".
     const deliveryOutcome = await deliver({
-      components: [buildFirstContainer({ query, chunk: chunks[0], elapsed, chunkCount: chunks.length, responseId, isPublic: isPublicRoute, model })]
+      components: [buildFirstContainer({ query, chunk: chunks[0], elapsed, chunkCount: chunks.length, responseId, isPublic: isPublicRoute, model, plan })]
     });
     for (let i = 1; i < chunks.length; i++) {
       await createFollowupMessage(token, {
-        components: [buildChunkContainer({ chunk: chunks[i], isLast: i === chunks.length - 1, responseId, isPublic: isPublicRoute })]
+        components: [buildChunkContainer({ chunk: chunks[i], isLast: i === chunks.length - 1, responseId, isPublic: isPublicRoute, plan })]
       });
     }
 

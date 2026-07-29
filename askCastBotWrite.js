@@ -743,7 +743,9 @@ export async function processInlinePlan({ answer, guildId, userId, channelId, is
       await createFollowupMessage(token, { components: [container], ephemeral: true });
     }
     console.log(`🛠️ Inline edit plan ready from 👾 route: ${validation.ops.length} ops — awaiting Apply`);
-    return { publicAnswer };
+    // Handed back so the PUBLIC answer card can carry a Review button — the ephemeral
+    // preview above is easily lost, and without this the plan becomes unreachable.
+    return { publicAnswer, plan: { planId, opCount: validation.ops.length } };
   } catch (error) {
     console.error('🛠️ Inline plan processing failed:', error.message);
     logAskEvent('ask.error', { ...ctx, phase: 'inline_plan', message: error.message });
@@ -769,11 +771,49 @@ export async function handleEditEntry(context, customId) {
   return { type: InteractionResponseType.MODAL, data: buildEditModal(prev, prevId, !!prev?.isPublicRoute) };
 }
 
-/** Apply/Cancel dispatcher for the askcb_plan_* buttons. */
+/** Apply / Cancel / Review dispatcher for the askcb_plan_* buttons. */
 export async function handlePlanButton(context) {
+  if (context.customId.startsWith('askcb_plan_review_')) return handlePlanReview(context);
   return context.customId.startsWith('askcb_plan_apply_')
     ? handlePlanApply(context)
     : handlePlanCancel(context);
+}
+
+/**
+ * Re-open the ephemeral preview for a plan proposed alongside a public answer.
+ *
+ * The preview is ephemeral by design (only the asker should see their pending changes),
+ * but an ephemeral is easily lost — missed on mobile, dismissed, gone after a client
+ * restart — which stranded a 9-op plan with no route to Apply (2026-07-29). The public
+ * card's Review button lands here. Requester-bound and re-gated, like Apply itself.
+ */
+export async function handlePlanReview(context) {
+  const planId = context.customId.replace('askcb_plan_review_', '');
+  const entry = recallPlan(planId);
+  if (!entry || !entry.plan) {
+    return { components: [buildWriteErrorContainer('That set of changes has expired or was already applied. Ask again for a fresh one.', { stale: true })], ephemeral: true };
+  }
+  if (entry.userId !== context.userId || entry.guildId !== context.guildId
+    || !(await hasSafariEditAccess({ guildId: context.guildId, member: context.member }))) {
+    return { components: [buildWriteErrorContainer('Only the admin who asked for these changes can review them.')], ephemeral: true };
+  }
+
+  const { loadSafariContent } = await import('./safariManager.js');
+  const safariData = await loadSafariContent();
+  // Re-validate against CURRENT data — the guild may have moved on since the preview.
+  const validation = validatePlan(entry.plan, safariData[context.guildId] || null, null);
+  if (!validation.ok) {
+    return {
+      components: [buildNoPlanContainer({ reply: entry.reply, errors: validation.errors, planWasAttempted: true, isPublic: entry.isPublicRoute, elapsed: '', model: entry.model })],
+      ephemeral: true
+    };
+  }
+  const { main } = buildPreviewMessages({
+    reply: '', ops: validation.ops, names: buildNameMap(validation.ops, safariData[context.guildId]),
+    warnings: validation.warnings, planId, elapsed: 'reopened', model: entry.model,
+    coordChannels: buildCoordChannelMap(safariData[context.guildId])
+  });
+  return { components: [main], ephemeral: true };
 }
 
 // ---------------------------------------------------------------------------

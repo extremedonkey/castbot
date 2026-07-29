@@ -235,6 +235,31 @@ describe('Edit mode — preview plumbing', () => {
     assert.deepEqual(followUps, []);
   });
 
+  it('the PUBLIC answer card carries a Review button when a plan was proposed', async () => {
+    // The preview itself is ephemeral and easily lost (missed on mobile, dismissed, gone
+    // on a client restart) — without this the plan is unreachable (2026-07-29).
+    const { buildActionRow, buildFirstContainer } = await import('../askCastBot.js');
+    const withPlan = buildActionRow('r1', true, { planId: 'p9', opCount: 9 });
+    assert.deepEqual(withPlan.components.map(b => b.custom_id),
+      ['askcb_plan_review_p9', 'askcb_pub_ctx_r1', 'askcb_public_ask']);
+    assert.equal(withPlan.components[0].label, 'Review 9 Changes');
+    assert.equal(withPlan.components[0].style, 4); // Danger — it leads to a live change
+
+    // ...and stays exactly as it was when there's no plan.
+    assert.deepEqual(buildActionRow('r1', true).components.map(b => b.custom_id),
+      ['askcb_pub_ctx_r1', 'askcb_public_ask']);
+
+    // The card also says so in words, so it's not just an unexplained red button.
+    const card = buildFirstContainer({ query: 'q', chunk: 'a', elapsed: '1s', chunkCount: 1,
+      responseId: 'r1', isPublic: true, model: 'sonnet', plan: { planId: 'p9', opCount: 9 } });
+    assert.match(JSON.stringify(card), /9 changes ready to apply/);
+  });
+
+  it('singularises the Review label for a one-op plan', async () => {
+    const { buildActionRow } = await import('../askCastBot.js');
+    assert.equal(buildActionRow('r1', false, { planId: 'p1', opCount: 1 }).components[0].label, 'Review 1 Change');
+  });
+
   it('buildPreviewMessages keeps every message under the combined 4000-char cap, spilling to follow-ups', () => {
     // 60 ops with long names — the exact shape Discord rejected in review finding "4000-char combined".
     const ops = Array.from({ length: 60 }, (_, i) => ({ op: 'create_item', fields: { name: `A very long pokemon item name number ${i} with extra padding text` } }));
