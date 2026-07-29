@@ -691,7 +691,8 @@ export async function handleAskModalSubmit(req, res) {
     let publicAnswer = answer;
     if (editSection) {
       const result = await writeMod.processInlinePlan({
-        answer, guildId, userId, channelId, isPublicRoute, model, token, query, elapsed
+        answer, guildId, userId, channelId, isPublicRoute, model, token, query, elapsed,
+        logCtx: { eid: ctx.eid, cid: ctx.cid, route: ctx.route, query }
       });
       publicAnswer = result.publicAnswer;
     }

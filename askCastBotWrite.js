@@ -30,6 +30,7 @@ import {
   isAskCastBotEnvironment, resolveWriteDenyRules, neutralizeMentions, truncate
 } from './askCastBot.js';
 import { validatePlan, describeOp, MAX_OPS_PER_PLAN, PLAN_VERSION } from './safariPlanSchema.js';
+import { logAskEvent } from './src/analytics/askLog.js';
 import { hasFeature, FEATURES } from './entitlements.js';
 
 export const ACCENT = 0xe67e22; // orange — visually distinct from read-mode blue
@@ -566,7 +567,10 @@ PLAN RULES: create missing dependencies explicitly with refs BEFORE using them; 
  * answer text with the plan block stripped. Never throws — a plan hiccup must not
  * lose a delivered answer.
  */
-export async function processInlinePlan({ answer, guildId, userId, channelId, isPublicRoute, model, token, query, elapsed }) {
+export async function processInlinePlan({ answer, guildId, userId, channelId, isPublicRoute, model, token, query, elapsed, logCtx = {} }) {
+  // Inline events carry the READ turn's eid/cid, so a plan proposed from the 👾 button
+  // joins back to the question that produced it.
+  const ctx = { ...logCtx, gid: guildId, uid: userId, chan: channelId, model, inline: true };
   try {
     const { reply, planJson, parseError } = extractPlan(answer);
     if (!planJson && !parseError) return { publicAnswer: answer };
@@ -574,6 +578,7 @@ export async function processInlinePlan({ answer, guildId, userId, channelId, is
     const { createFollowupMessage } = await import('./buttonHandlerFactory.js');
 
     if (!planJson) {
+      logAskEvent('plan.rejected', { ...ctx, reason: 'malformed_json', reply, errors: [{ opIndex: -1, message: parseError }] });
       await createFollowupMessage(token, {
         components: [buildNoPlanContainer({ reply: 'I tried to prepare the change, but the plan came back malformed. Ask again.', errors: [{ opIndex: -1, message: parseError }], planWasAttempted: true, isPublic: isPublicRoute, elapsed, model })],
         ephemeral: true
@@ -586,6 +591,10 @@ export async function processInlinePlan({ answer, guildId, userId, channelId, is
     const validation = validatePlan(planJson, safariData[guildId] || null, null);
     if (!validation.ok) {
       console.log(`🛠️ Inline edit plan rejected (${validation.errors.length} errors)`);
+      logAskEvent('plan.rejected', {
+        ...ctx, reason: 'validation', reply,
+        errors: validation.errors, plan: JSON.stringify(planJson)
+      });
       await createFollowupMessage(token, {
         components: [buildNoPlanContainer({ reply, errors: validation.errors, planWasAttempted: true, isPublic: isPublicRoute, elapsed, model })],
         ephemeral: true
@@ -594,7 +603,12 @@ export async function processInlinePlan({ answer, guildId, userId, channelId, is
     }
 
     const planId = Date.now().toString(36);
-    rememberPlan(planId, { plan: planJson, guildId, userId, channelId, isPublicRoute, query, reply, model });
+    rememberPlan(planId, { plan: planJson, guildId, userId, channelId, isPublicRoute, query, reply, model, cid: ctx.cid, eid: ctx.eid, proposedAt: Date.now() });
+    logAskEvent('plan.proposed', {
+      ...ctx, pid: planId, reply, plan: JSON.stringify(planJson),
+      op_count: validation.ops.length, op_types: validation.ops.map(o => o.op),
+      warnings: validation.warnings
+    });
     const names = buildNameMap(validation.ops, safariData[guildId]);
     const { main, followUps } = buildPreviewMessages({
       reply: '', ops: validation.ops, names, warnings: validation.warnings, planId, elapsed, model,
@@ -608,6 +622,7 @@ export async function processInlinePlan({ answer, guildId, userId, channelId, is
     return { publicAnswer };
   } catch (error) {
     console.error('🛠️ Inline plan processing failed:', error.message);
+    logAskEvent('ask.error', { ...ctx, phase: 'inline_plan', message: error.message });
     return { publicAnswer: answer };
   }
 }
@@ -665,13 +680,30 @@ export async function handleEditModalSubmit(req, res) {
   const userId = req.body.member?.user?.id || req.body.user?.id;
   const customId = String(req.body.data.custom_id || '');
   const isPublicRoute = customId.startsWith('askcb_editpub_modal');
+  const parentPid = /_modal_(.+)$/.exec(customId)?.[1] || null;
+
+  // Built before res.send so every event carries it (see the read route for why).
+  const ctx = {
+    eid: req.body.id,
+    cid: recallPlan(parentPid)?.cid || req.body.id,
+    gid: guildId,
+    uid: userId,
+    chan: req.body.channel_id,
+    route: isPublicRoute ? 'edit_public' : 'edit',
+    model,
+    parent_pid: parentPid
+  };
+  const deny = (reason, message) => {
+    logAskEvent('ask.denied', { ...ctx, reason, in_flight: writeInFlight });
+    return denyModal(res, message);
+  };
 
   if (!(await hasSafariEditAccess({ guildId, member: req.body.member }))) {
-    return denyModal(res, '🛠️ Edit Safari isn\'t available here (needs the feature enabled for this server, and admin permissions).');
+    return deny('access', '🛠️ Edit Safari isn\'t available here (needs the feature enabled for this server, and admin permissions).');
   }
-  if (!query?.trim()) return denyModal(res, '🛠️ Describe the change you want.');
+  if (!query?.trim()) return deny('empty_query', '🛠️ Describe the change you want.');
   if (writeInFlight >= WRITE_MAX_CONCURRENT) {
-    return denyModal(res, '🛠️ An edit is already being planned — give it a minute and try again.');
+    return deny('busy', '🛠️ An edit is already being planned — give it a minute and try again.');
   }
 
   // Ephemeral progress card as the initial response; heartbeats edit it in place.
@@ -688,13 +720,21 @@ export async function handleEditModalSubmit(req, res) {
   const beat = (data) => safeDeliver({ token, channelId, data, userId, fallback: false });
 
   writeInFlight++;
+  let terminalLogged = false;
   try {
     console.log(`🛠️ Ask CastBot EDIT from ${req.body.member?.user?.username} in ${guildId} (${model}): "${truncate(query, 80)}"`);
 
     const digest = await buildGuildDigest(guildId);
     const prompt = buildWritePrompt({ query, digest, prevContextText: fields.askcb_prev_context });
+    // The digest's COUNTS line is the guild's feature vector (how much content exists);
+    // the full digest is not stored — see askLog's schema notes.
+    ctx.digest_counts = /^COUNTS:.*$/m.exec(digest)?.[0] || null;
+    ctx.digest_bytes = digest.length;
+    ctx.prompt_bytes = prompt.length;
+    logAskEvent('ask.request', { ...ctx, query, prev_ctx_len: (fields.askcb_prev_context || '').length });
 
-    const { text, durationMs } = await runClaudeJob({
+    const { text, durationMs, usage, sessionId, apiDurationMs, toolTrace,
+            costUsd, numTurns, modelUsed, fellBack } = await runClaudeJob({
       prompt,
       tools: 'Read,Glob,Grep',
       deny: resolveWriteDenyRules(guildId),
@@ -704,9 +744,19 @@ export async function handleEditModalSubmit(req, res) {
 
     const elapsed = formatElapsed(durationMs);
     const { reply, planJson, parseError } = extractPlan(text);
+    // Every terminal branch below carries the run metrics, so cost/latency is joinable
+    // to the outcome regardless of which way the request went.
+    const runMeta = {
+      duration_ms: durationMs, api_duration_ms: apiDurationMs, usage, session_id: sessionId,
+      cost_usd: costUsd, num_turns: numTurns, tool_trace: toolTrace,
+      model_used: modelUsed, fell_back: fellBack
+    };
 
     if (!planJson) {
       const errors = parseError ? [{ opIndex: -1, message: parseError }] : [];
+      logAskEvent(parseError ? 'plan.rejected' : 'plan.noplan',
+        { ...ctx, ...runMeta, reply, ...(parseError ? { reason: 'malformed_json', errors } : {}) });
+      terminalLogged = true;
       await beat({ components: [buildNoPlanContainer({ reply, errors, planWasAttempted: !!parseError, isPublic: isPublicRoute, elapsed, model })] });
       return;
     }
@@ -718,12 +768,25 @@ export async function handleEditModalSubmit(req, res) {
 
     if (!validation.ok) {
       console.log(`🛠️ Ask CastBot EDIT plan rejected (${validation.errors.length} errors)`);
+      // errors[] is the highest-value signal in the corpus: it says exactly where the op
+      // schema fell short of what someone asked for.
+      logAskEvent('plan.rejected', {
+        ...ctx, ...runMeta, reason: 'validation', reply,
+        errors: validation.errors, plan: JSON.stringify(planJson)
+      });
+      terminalLogged = true;
       await beat({ components: [buildNoPlanContainer({ reply, errors: validation.errors, planWasAttempted: true, isPublic: isPublicRoute, elapsed, model })] });
       return;
     }
 
     const planId = Date.now().toString(36);
-    rememberPlan(planId, { plan: planJson, guildId, userId, channelId, isPublicRoute, query, reply, model });
+    rememberPlan(planId, { plan: planJson, guildId, userId, channelId, isPublicRoute, query, reply, model, cid: ctx.cid, eid: ctx.eid, proposedAt: Date.now() });
+    logAskEvent('plan.proposed', {
+      ...ctx, ...runMeta, pid: planId, reply,
+      plan: JSON.stringify(planJson), op_count: validation.ops.length,
+      op_types: validation.ops.map(o => o.op), warnings: validation.warnings
+    });
+    terminalLogged = true;
     const names = buildNameMap(validation.ops, safariData[guildId]);
     console.log(`🛠️ Ask CastBot EDIT plan ready: ${validation.ops.length} ops (${elapsed}) — awaiting Apply`);
 
@@ -740,8 +803,11 @@ export async function handleEditModalSubmit(req, res) {
     }
   } catch (error) {
     console.error('🛠️ Ask CastBot EDIT error:', error.message);
+    logAskEvent('ask.error', { ...ctx, phase: 'plan', message: error.message });
+    terminalLogged = true;
     await beat({ components: [buildWriteErrorContainer(`Planning failed: ${error.message}. Nothing was changed.`)] });
   } finally {
+    if (!terminalLogged) logAskEvent('ask.error', { ...ctx, phase: 'unknown', message: 'no terminal event' });
     writeInFlight--;
   }
 }
@@ -758,23 +824,46 @@ export async function handleEditModalSubmit(req, res) {
 export async function handlePlanApply(context) {
   const planId = context.customId.replace('askcb_plan_apply_', '');
   const entry = recallPlan(planId);
+  // Denials are logged against whatever we know: an expired plan has no entry, so the
+  // clicker's own ids are the only context available.
+  const denyCtx = (e) => ({
+    eid: context.customId, pid: planId,
+    cid: e?.cid, gid: context.guildId, uid: context.userId, route: 'apply'
+  });
   if (!entry) {
+    logAskEvent('plan.apply_denied', { ...denyCtx(), reason: 'expired' });
     return { components: [buildWriteErrorContainer('This plan expired or was already applied. Ask again for a fresh one.', { stale: true })] };
   }
   if (entry.guildId !== context.guildId || entry.userId !== context.userId
     || !(await hasSafariEditAccess({ guildId: context.guildId, member: context.member }))) {
+    logAskEvent('plan.apply_denied', { ...denyCtx(entry), reason: 'wrong_requester' });
     return { components: [buildWriteErrorContainer('Only the admin who requested this plan can apply it, in the server it was made for.')] };
   }
   if (!entry.plan) {
     // The applied entry is re-remembered with plan:null for Keep Editing — a stray
     // Apply click on a stale preview must not crash into applyPlan(null).
+    logAskEvent('plan.apply_denied', { ...denyCtx(entry), reason: 'already_applied' });
     return { components: [buildWriteErrorContainer('This plan was already applied. Use Keep Editing to make further changes.', { stale: true })] };
   }
   consumePlan(planId); // one-shot from here — a double-click gets "expired"
+  const applyCtx = {
+    eid: entry.eid || context.customId, cid: entry.cid, pid: planId,
+    gid: entry.guildId, uid: context.userId, route: entry.isPublicRoute ? 'edit_public' : 'edit',
+    model: entry.model, query: entry.query,
+    latency_from_propose_ms: entry.proposedAt ? Date.now() - entry.proposedAt : null
+  };
 
   const { applyPlan, PlanStaleError } = await import('./safariPlanApplier.js');
   try {
     const { summary } = await applyPlan(entry.guildId, entry.plan, { userId: context.userId, client: context.client });
+
+    // ✅ THE ACCEPT LABEL — the admin looked at the proposal and took it.
+    logAskEvent('plan.applied', {
+      ...applyCtx,
+      safari_mutations: summary.safariMutations, player_mutations: summary.playerMutations,
+      created: summary.created, lines: summary.lines, warnings: summary.warnings,
+      anchors_refreshed: summary.anchorsRefreshed, snapshot: summary.snapshot
+    });
 
     // Keep the exchange available for "Keep Editing" (the plan itself is gone).
     rememberPlan(planId, { ...entry, plan: null, applied: true });
@@ -808,9 +897,14 @@ export async function handlePlanApply(context) {
     return { components: [main] };
   } catch (error) {
     if (error instanceof PlanStaleError) {
+      logAskEvent('plan.apply_failed', { ...applyCtx, reason: 'stale', errors: error.validation?.errors });
       const details = error.validation.errors.slice(0, 6).map(e => e.message).join('\n');
       return { components: [buildWriteErrorContainer(details || error.message, { stale: true })] };
     }
+    logAskEvent('plan.apply_failed', {
+      ...applyCtx, reason: 'partial_commit', message: error.message,
+      committed_n: error.summary?.lines?.length || 0
+    });
     console.error('🛠️ Ask CastBot APPLY error:', error);
     // error.summary (attached by applyPlan) records exactly what committed before the
     // failure — render it so the admin is never told less than the truth.
@@ -822,7 +916,16 @@ export function handlePlanCancel(context) {
   const planId = context.customId.replace('askcb_plan_cancel_', '');
   // Bind to the requester — a forged custom_id must not cancel someone else's pending plan.
   const entry = recallPlan(planId);
-  if (entry && entry.userId === context.userId) consumePlan(planId);
+  const matched = !!(entry && entry.userId === context.userId);
+  if (matched) consumePlan(planId);
+  // ❌ THE REJECT LABEL — the admin read the proposal and turned it down. Paired with
+  // plan.applied on the same pid, this is the accept rate the corpus exists to measure.
+  logAskEvent('plan.cancelled', {
+    eid: entry?.eid || context.customId, cid: entry?.cid, pid: planId,
+    gid: context.guildId, uid: context.userId, route: 'cancel',
+    query: entry?.query, model: entry?.model, matched,
+    latency_from_propose_ms: entry?.proposedAt ? Date.now() - entry.proposedAt : null
+  });
   return {
     components: [{
       type: 17,
@@ -830,7 +933,7 @@ export function handlePlanCancel(context) {
       components: [
         { type: 10, content: `## 🗑️ Plan discarded\nNothing was changed.` },
         { type: 1, components: [
-          { type: 2, custom_id: 'askcb_edit', label: 'New Edit', style: 1, emoji: { name: '🛠️' } }
+          { type: 2, custom_id: 'askcb_ask', label: 'New Question', style: 1, emoji: { name: '👾' } }
         ]}
       ]
     }]
