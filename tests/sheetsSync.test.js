@@ -13,7 +13,7 @@ import assert from 'node:assert/strict';
 import {
   matchHeader, resolveHeaders, rowKeyFor, answerPairs, chunkAnswers,
   buildAnswerMessages, verifySignature, generateSecret, looksSensitive, diagnoseSignature,
-  buildSheetsScreen,
+  buildSheetsScreen, generateAppsScript,
   MAPPED, ALWAYS_SKIPPED
 } from '../src/sheets/sheetsSync.js';
 import { NO_CATEGORY } from '../src/sheets/sheetsIngest.js';
@@ -360,6 +360,24 @@ describe('Sheets — missing application category (regression: silent "Failed: 1
   it('defaults to no warning when the flag is omitted (never scare a configured season)', () => {
     const out = JSON.stringify(buildSheetsScreen({ configId: 'c1', seasonName: 'S', sync: null }, navRow, bottomRow));
     assert.ok(!out.includes('Set up the Apply button first'));
+  });
+
+  it('the how-to lists the Apply button as step 1, ticked or flagged', () => {
+    assert.match(render(false), /1\. \*\*Set up the Apply button\*\*.*Not done/);
+    assert.match(render(true), /1\. \*\*Set up the Apply button\*\*.*✅/);
+  });
+
+  it('the generated script warns in its own header when the season is not ready', () => {
+    const args = { baseUrl: 'https://x/api/sheets-sync', guildId: 'g', configId: 'c', secret: 's', seasonName: 'S' };
+    assert.match(generateAppsScript({ ...args, hasCategory: false }), /BEFORE YOU START\s+<-- NOT DONE YET/);
+    assert.match(generateAppsScript({ ...args, hasCategory: true }), /BEFORE YOU START\n/);
+    assert.ok(!generateAppsScript({ ...args, hasCategory: true }).includes('NOT DONE YET'));
+  });
+
+  it('the script header explains the prerequisite even when it is already satisfied', () => {
+    // A host who tears the season down later still needs to know the ordering.
+    const s = generateAppsScript({ baseUrl: 'u', guildId: 'g', configId: 'c', secret: 's', seasonName: 'S', hasCategory: true });
+    assert.match(s, /Season Manager -> Apps/);
   });
 
   it('the refusal text tells the host exactly where to go', () => {

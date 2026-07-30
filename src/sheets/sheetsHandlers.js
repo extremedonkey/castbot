@@ -80,7 +80,7 @@ export async function getScript(context, configId, interaction) {
     return sheetsError('This CastBot instance has no public URL configured, so a working script can\'t be generated here. Try on the test or production bot.');
   }
 
-  let secret, seasonName;
+  let secret, seasonName, hasCategory;
   await withStorageLock(async () => {
     const playerData = await loadPlayerData();
     const config = playerData?.[context.guildId]?.applicationConfigs?.[configId];
@@ -91,16 +91,23 @@ export async function getScript(context, configId, interaction) {
     }
     secret = config.sheetsSync.secret;
     seasonName = config.seasonName || 'Season';
+    hasCategory = !!config.categoryId;
   });
   if (!secret) return sheetsError('Season not found');
 
-  const script = generateAppsScript({ baseUrl: `${base}/api/sheets-sync`, guildId: context.guildId, configId, secret, seasonName });
+  const script = generateAppsScript({ baseUrl: `${base}/api/sheets-sync`, guildId: context.guildId, configId, secret, seasonName, hasCategory });
   await sendScriptFile(interaction, script);
+
+  // The Apply-button prerequisite is stated here as step 1 whether or not it's currently satisfied —
+  // a host who sets the season up later still needs to know the ordering. When it's genuinely
+  // missing right now it also gets a loud red banner, because a sync would refuse outright.
+  const blocker = hasCategory ? '' :
+    `\n\n> ⚠️ **This season isn't ready yet — do step 1 first.**\n> It has no application category, so CastBot has nowhere to put applicant channels and the sync will refuse.`;
 
   return {
     components: [{
-      type: 17, accent_color: 0x34a853,
-      components: [{ type: 10, content: `## 📜 Script ready\n\nThe \`castbot-sync.gs\` file is attached below.\n\n**1.** In your Google Sheet: **Extensions → Apps Script**\n**2.** Delete anything already in the editor, paste the file's contents in, press **Save**\n**3.** Reload the spreadsheet — a **CastBot** menu appears in the toolbar\n**4.** **CastBot → Sync applications**\n\n-# This file contains a private key for this season. Don't post it anywhere public.` }]
+      type: 17, accent_color: hasCategory ? 0x34a853 : 0xf39c12,
+      components: [{ type: 10, content: `## 📜 Script ready\n\nThe \`castbot-sync.gs\` file is attached below.${blocker}\n\n**1. Set up the Apply button first** — go to the **📝 Apps** tab, create the Apply button and pick a category. ${hasCategory ? '✅ Already done.' : '**Not done yet.**'}\n-# Applicants imported from your sheet each get a private channel inside that category, exactly like a Discord applicant would.\n\n**2.** In your Google Sheet: **Extensions → Apps Script**\n**3.** Delete anything already in the editor, paste the file's contents in, press **Save**\n**4.** Reload the spreadsheet — a **CastBot** menu appears in the toolbar\n**5.** **CastBot → Sync applications** — you'll get a preview before anything is created\n\n-# This file contains a private key for this season. Don't post it anywhere public.` }]
     }]
   };
 }
