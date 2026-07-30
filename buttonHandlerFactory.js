@@ -585,6 +585,49 @@ export const BUTTON_REGISTRY = {
     requiresModal: true,
     category: 'seasons'
   },
+  // === GOOGLE SHEETS SYNC (external, non-Discord applicants) ===
+  'sheets_open_*': {
+    label: 'Google Sheets',
+    description: 'Open the Google Sheets Sync screen for a season (import applicants from a Google Form)',
+    emoji: '📜',
+    style: 'Secondary',
+    category: 'seasons'
+  },
+  'sheets_script_*': {
+    label: 'Get Script',
+    description: 'Generate and download the Apps Script that pushes a Google Form sheet into this season',
+    emoji: '📜',
+    style: 'Primary',
+    category: 'seasons'
+  },
+  'sheets_privacy_*': {
+    label: 'Hide Columns',
+    description: 'Choose which spreadsheet columns are never posted into Discord',
+    emoji: '🔒',
+    style: 'Secondary',
+    category: 'seasons'
+  },
+  'sheets_exclude_select_*': {
+    label: 'Hidden Columns',
+    description: 'Multi-select of spreadsheet columns to keep out of Discord',
+    emoji: '🔒',
+    style: 'Secondary',
+    category: 'seasons'
+  },
+  'sheets_rotate_*': {
+    label: 'Reset Link',
+    description: 'Invalidate the current Google Sheets sync key (host must install a fresh script)',
+    emoji: '🔑',
+    style: 'Danger',
+    category: 'seasons'
+  },
+  'sheets_rotate_confirm_*': {
+    label: 'Confirm Reset Link',
+    description: 'Second step of resetting the Google Sheets sync key',
+    emoji: '🔑',
+    style: 'Danger',
+    category: 'seasons'
+  },
   'question_special_player_setup_*': {
     label: 'Player Setup',
     description: 'Special question component: Pronouns, Timezone, Age (no-op placeholder)',

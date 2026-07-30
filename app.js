@@ -67,6 +67,7 @@ import {
   createApplicationButton,
   createApplicationSetupContainer,
   buildQuestionModal,
+  showApplicationQuestion,
   BUTTON_STYLES
 } from './applicationManager.js';
 import { logInteraction, setDiscordClient } from './src/analytics/analyticsLogger.js';
@@ -405,6 +406,9 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0, user
       { type: 2, custom_id: `season_post_button_${configId}_${currentPage}`, label: 'Post to Channel', style: 2, emoji: { name: '#️⃣' } },
       { type: 2, custom_id: `season_export_questions_${configId}`, label: ' ', style: 2, emoji: { name: '📤' } },
       { type: 2, custom_id: `season_import_questions_${configId}`, label: ' ', style: 2, emoji: { name: '📥' } },
+      // 📜 Google Sheets Sync — deliberately label-less and far-right: a niche path for hosts who
+      // recruit off-Discord. It is NOT a nav tab (that row is at Discord's 5-button ceiling).
+      { type: 2, custom_id: `sheets_open_${configId}`, label: ' ', style: 2, emoji: { name: '📜' } },
     ]
   });
 
@@ -507,27 +511,6 @@ async function buildDncPreview(questionIndex, totalQuestions) {
   return _buildPreview(questionIndex);
 }
 
-// Show DNC question during the player application flow
-async function showDncQuestion(config, channelId, questionIndex) {
-  const guildId = config.guildId || Object.keys(config).find(k => k.match(/^\d+$/)) || null;
-  const { buildDncQuestionUI } = await import('./dncManager.js');
-
-  // Load application data for existing DNC entries
-  const playerData = await loadPlayerData();
-  // Find guildId from application data by looking up the channelId
-  let resolvedGuildId = guildId;
-  if (!resolvedGuildId) {
-    for (const [gid, gdata] of Object.entries(playerData)) {
-      if (gdata?.applications?.[channelId]) { resolvedGuildId = gid; break; }
-    }
-  }
-  const application = playerData[resolvedGuildId]?.applications?.[channelId] || {};
-
-  const container = buildDncQuestionUI(config, channelId, questionIndex, application);
-
-  return { flags: (1 << 15), components: [container] };
-}
-
 async function refreshQuestionManagementUI(res, config, configId, currentPage = 0, userId = null) {
   const responseData = await buildQuestionManagementUI(config, configId, currentPage, userId);
 
@@ -538,74 +521,6 @@ async function refreshQuestionManagementUI(res, config, configId, currentPage = 
       ...responseData
     }
   });
-}
-
-// Helper function to show application questions.
-//
-// 🔭 FORWARD-LOOKING DESIGN HOOK (RaP 0905): today EVERY question renders as a NEW message
-// (CHANNEL_MESSAGE_WITH_SOURCE) — free-text, DNC, completion screen alike — and the "Next" button must
-// NEVER update its own/parent message (if we wanted that we'd use a separate, purpose-built button).
-// When we add structured question types that want to edit IN PLACE (a stepper, an inline builder), make the
-// response type a PROPERTY OF THE QUESTION TYPE here, rather than branching response types inside the
-// handler (that's RaP 0933 Gap 4 — "response type redirect"). i.e. `question.renderMode: 'new' | 'update'`.
-async function showApplicationQuestion(config, channelId, questionIndex) {
-  const question = config.questions[questionIndex];
-  if (!question) {
-    return { content: '❌ Question not found.', ephemeral: true };
-  }
-
-  // DNC question — uses its own renderer (also returns response data)
-  if (question.questionType === 'dnc') {
-    return showDncQuestion(config, channelId, questionIndex);
-  }
-  
-  const isLastQuestion = questionIndex === config.questions.length - 1;
-  const isSecondToLast = questionIndex === config.questions.length - 2;
-  
-  const questionComponents = [
-    {
-      type: 10, // Text Display
-      content: `## ${isLastQuestion ? '' : `Q${questionIndex + 1}. `}${question.questionTitle}\n\n${question.questionText}`
-    }
-  ];
-  
-  // Add Media Gallery if question has an image URL
-  if (question.imageURL && question.imageURL.trim()) {
-    questionComponents.push({
-      type: 12, // Media Gallery
-      items: [
-        {
-          media: {
-            url: question.imageURL.trim()
-          }
-        }
-      ]
-    });
-  }
-  
-  // Add navigation section - but not for the last question
-  if (!isLastQuestion) {
-    questionComponents.push({ type: 14 });
-    questionComponents.push({
-      type: 9, // Section
-      components: [{ type: 10, content: isSecondToLast ? '-# ✅ Ready? Submit your application' : '> 👇 Type answer below and click next' }],
-      accessory: {
-        type: 2,
-        custom_id: `app_next_question_${channelId}_${questionIndex}`,
-        label: isSecondToLast ? 'Complete' : 'Next',
-        style: isSecondToLast ? 3 : 1 // Complete = green, Next = blue (was grey — players kept missing it)
-      }
-    });
-  }
-  
-  
-  const questionContainer = {
-    type: 17, // Container
-    accent_color: isLastQuestion ? 0x2ecc71 : 0x3498db, // Green for last question, blue for others
-    components: questionComponents
-  };
-
-  return { flags: (1 << 15), components: [questionContainer] };
 }
 
 import { 
@@ -1793,6 +1708,18 @@ app.use('/img', express.static('./img'));
  *   type 0 = PING (verification handshake) → must reply 204
  *   type 1 = Event  → ACK 204 within 3s, then do work async
  */
+// 📜 Google Sheets Sync ingest — signed push from a host's Apps Script. Logic in sheetsHandlers.js.
+app.post('/api/sheets-sync', express.raw({ type: 'application/json', limit: '2mb' }), async (req, res) => {
+  try {
+    const { handleSyncRequest } = await import('./src/sheets/sheetsHandlers.js');
+    const { status, body } = await handleSyncRequest(client, req.body, req.get('X-CastBot-Signature'));
+    return res.status(status).json(body);
+  } catch (error) {
+    console.error('❌ [SHEETS] Sync endpoint error:', error);
+    return res.status(500).json({ ok: false, error: 'CastBot hit an unexpected error. Try again, or contact your host.' });
+  }
+});
+
 app.post('/webhooks', express.raw({ type: 'application/json' }), async (req, res) => {
   const signature = req.get('X-Signature-Ed25519');
   const timestamp = req.get('X-Signature-Timestamp');
@@ -8767,6 +8694,18 @@ To fix this:
           if (!config) return { content: '❌ Season not found' };
           return await buildQuestionManagementUI(config, configId, 0, context.userId);
         }
+      })(req, res, client);
+    // 📜 Google Sheets Sync — external (non-Discord) applicants. Bodies in src/sheets/sheetsHandlers.js.
+    } else if (custom_id.startsWith('sheets_')) {
+      const r = (await import('./src/sheets/sheetsHandlers.js')).routeSheets(custom_id, req.body);
+      return ButtonHandlerFactory.create({
+        id: r.id,
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: r.updateMessage,
+        ephemeral: r.ephemeral,
+        deferred: true,
+        handler: async (context) => r.run(context, r.configId)
       })(req, res, client);
     } else if (custom_id.startsWith('apps_planner_')) {
       // Season Apps → Planner: navigate to the Season Planner view for this season

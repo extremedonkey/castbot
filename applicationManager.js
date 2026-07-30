@@ -101,6 +101,100 @@ export function buildQuestionModal({ customId, title, question = null, imageUplo
     };
 }
 
+// ── Applicant-facing question rendering ──────────────────────────
+// Moved out of app.js (router, not processor — CLAUDE.md golden rule). Both are UI builders
+// returning Components V2 response data; the app_continue_/app_next_question_ handlers in app.js
+// just call them.
+
+// Show DNC question during the player application flow
+export async function showDncQuestion(config, channelId, questionIndex) {
+  const guildId = config.guildId || Object.keys(config).find(k => k.match(/^\d+$/)) || null;
+  const { buildDncQuestionUI } = await import('./dncManager.js');
+
+  // Load application data for existing DNC entries
+  const playerData = await loadPlayerData();
+  // Find guildId from application data by looking up the channelId
+  let resolvedGuildId = guildId;
+  if (!resolvedGuildId) {
+    for (const [gid, gdata] of Object.entries(playerData)) {
+      if (gdata?.applications?.[channelId]) { resolvedGuildId = gid; break; }
+    }
+  }
+  const application = playerData[resolvedGuildId]?.applications?.[channelId] || {};
+
+  const container = buildDncQuestionUI(config, channelId, questionIndex, application);
+
+  return { flags: (1 << 15), components: [container] };
+}
+
+// Helper function to show application questions.
+//
+// 🔭 FORWARD-LOOKING DESIGN HOOK (RaP 0905): today EVERY question renders as a NEW message
+// (CHANNEL_MESSAGE_WITH_SOURCE) — free-text, DNC, completion screen alike — and the "Next" button must
+// NEVER update its own/parent message (if we wanted that we'd use a separate, purpose-built button).
+// When we add structured question types that want to edit IN PLACE (a stepper, an inline builder), make the
+// response type a PROPERTY OF THE QUESTION TYPE here, rather than branching response types inside the
+// handler (that's RaP 0933 Gap 4 — "response type redirect"). i.e. `question.renderMode: 'new' | 'update'`.
+export async function showApplicationQuestion(config, channelId, questionIndex) {
+  const question = config.questions[questionIndex];
+  if (!question) {
+    return { content: '❌ Question not found.', ephemeral: true };
+  }
+
+  // DNC question — uses its own renderer (also returns response data)
+  if (question.questionType === 'dnc') {
+    return showDncQuestion(config, channelId, questionIndex);
+  }
+  
+  const isLastQuestion = questionIndex === config.questions.length - 1;
+  const isSecondToLast = questionIndex === config.questions.length - 2;
+  
+  const questionComponents = [
+    {
+      type: 10, // Text Display
+      content: `## ${isLastQuestion ? '' : `Q${questionIndex + 1}. `}${question.questionTitle}\n\n${question.questionText}`
+    }
+  ];
+  
+  // Add Media Gallery if question has an image URL
+  if (question.imageURL && question.imageURL.trim()) {
+    questionComponents.push({
+      type: 12, // Media Gallery
+      items: [
+        {
+          media: {
+            url: question.imageURL.trim()
+          }
+        }
+      ]
+    });
+  }
+  
+  // Add navigation section - but not for the last question
+  if (!isLastQuestion) {
+    questionComponents.push({ type: 14 });
+    questionComponents.push({
+      type: 9, // Section
+      components: [{ type: 10, content: isSecondToLast ? '-# ✅ Ready? Submit your application' : '> 👇 Type answer below and click next' }],
+      accessory: {
+        type: 2,
+        custom_id: `app_next_question_${channelId}_${questionIndex}`,
+        label: isSecondToLast ? 'Complete' : 'Next',
+        style: isSecondToLast ? 3 : 1 // Complete = green, Next = blue (was grey — players kept missing it)
+      }
+    });
+  }
+  
+  
+  const questionContainer = {
+    type: 17, // Container
+    accent_color: isLastQuestion ? 0x2ecc71 : 0x3498db, // Green for last question, blue for others
+    components: questionComponents
+  };
+
+  return { flags: (1 << 15), components: [questionContainer] };
+}
+
 // Button style mapping for Discord API
 const BUTTON_STYLES = {
     'Primary': ButtonStyle.Primary,

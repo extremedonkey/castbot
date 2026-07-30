@@ -158,7 +158,17 @@ export function deriveApplicationStatus(app = {}, liveChannelName = '') {
  * @param {import('discord.js').Guild} [guild]
  * @returns {{age: (number|undefined), pronounName: (string|null), timezoneName: (string|null)}}
  */
-function resolvePlayerDemographics(playerData, guildId, userId, member, guild) {
+function resolvePlayerDemographics(playerData, guildId, userId, member, guild, app = null) {
+  // External (Google Sheets) applicants have no Discord member, so there are no pronoun/timezone
+  // ROLES to read — those values live as plain strings on the application record. The card renders
+  // role NAMES as plain text anyway (see below), so an external renders byte-identically to a native.
+  if (app?.source === 'googleSheets') {
+    return {
+      age: app.external?.age,
+      pronounName: app.external?.pronounName || null,
+      timezoneName: app.external?.timezoneName || null
+    };
+  }
   const age = playerData[guildId]?.players?.[userId]?.age;
   let pronounRoleId = null, timezoneRoleId = null;
   if (member?.roles) {
@@ -432,7 +442,7 @@ export async function generateSeasonAppRankingUI({
 
   // ---- Applicant demographics (age + pronoun/timezone role NAMES) — shared with Marooning's rows. ----
   const { age: applicantAge, pronounName: _pronounName, timezoneName: _timezoneName } =
-    resolvePlayerDemographics(playerData, guildId, currentApp.userId, applicantMember, guild);
+    resolvePlayerDemographics(playerData, guildId, currentApp.userId, applicantMember, guild, currentApp);
 
   // ▶ Casting Status block — the Casting Lifecycle Chevron (RaP 0902) under a Rate-styled "Casting Status"
   // header. The old info block (Name / Average Score / App) was DELETED as redundant: Name/age/pronoun/tz now
@@ -1281,9 +1291,9 @@ export async function buildMarooningView({ configId, guildId, playerData, season
   // as plain small text instead). Same age/pronoun/timezone order as the Casting card's 👤 Overview
   // line, but "yo"-suffixed and subtext-styled — Marooning's rows are denser, so this reads as a
   // de-emphasized detail line rather than a highlighted code block.
-  const demographicsSuffix = (playerUserId) => {
+  const demographicsSuffix = (playerUserId, app = null) => {
     const member = guild?.members?.cache?.get(playerUserId);
-    const { age, pronounName, timezoneName } = resolvePlayerDemographics(playerData, guildId, playerUserId, member, guild);
+    const { age, pronounName, timezoneName } = resolvePlayerDemographics(playerData, guildId, playerUserId, member, guild, app);
     const bits = [age ? `${age}yo` : null, pronounName ? `@${pronounName}` : null, timezoneName ? `@${timezoneName}` : null].filter(Boolean);
     return bits.length ? `-# ${bits.join(' | ')}` : '';
   };
@@ -1301,7 +1311,7 @@ export async function buildMarooningView({ configId, guildId, playerData, season
       : p.placementResponse === 'declined' ? ' · 🚫 Declined' : '';
     counter.n += 1;
     const line1 = `${counter.n}. ${p.name} - ${scoreDisplay}/5.0 (${p.voteCount} vote${p.voteCount !== 1 ? 's' : ''})${resp}`;
-    const demo = demographicsSuffix(p.userId);
+    const demo = demographicsSuffix(p.userId, p.app);
     return demo ? `${line1}\n${demo}` : line1;
   };
 
