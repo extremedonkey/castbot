@@ -72,3 +72,7 @@ temp/safari-import-*.json
 
 # RaP numbering is derived from filenames, not a tracked counter (it collided across two working trees — RaP 0913)
 docs/01-RaP/.counter
+
+# Host-supplied spreadsheets — real applicant PII (emails, phones, emergency contacts, medical)
+temp/*.xlsx
+temp/*.csv
