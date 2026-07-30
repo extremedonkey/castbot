@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 
 import {
   matchHeader, resolveHeaders, rowKeyFor, answerPairs, chunkAnswers,
-  buildAnswerMessages, verifySignature, generateSecret, looksSensitive,
+  buildAnswerMessages, verifySignature, generateSecret, looksSensitive, diagnoseSignature,
   MAPPED, ALWAYS_SKIPPED
 } from '../src/sheets/sheetsSync.js';
 import crypto from 'crypto';
@@ -292,6 +292,47 @@ describe('Sheets — raw body requirement (regression: "Malformed request body")
     const sig = crypto.createHmac('sha256', secret).update(raw).digest('hex');
     const reserialized = Buffer.from(JSON.stringify({ b: 2, a: 1 }), 'utf8');
     assert.equal(verifySignature(reserialized, sig, secret), false);
+  });
+});
+
+describe('Sheets — signature diagnosis (regression: Apps Script charset)', () => {
+  // Apps Script's computeHmacSha256Signature(String, String) does not encode non-ASCII as UTF-8, so
+  // every real application (emoji, curly apostrophes from Forms autocorrect) signed bytes the server
+  // could never reproduce. The generated script now hashes newBlob().getBytes(). diagnoseSignature
+  // exists to tell that failure apart from a genuinely stale key in the logs.
+  const secret = generateSecret();
+  const body = Buffer.from(JSON.stringify({ rows: [{ cells: { Name: 'Chloe', Job: 'Nurse🎀 — “hi”' } }] }), 'utf8');
+  const hmac = (buf) => crypto.createHmac('sha256', secret).update(buf).digest('hex');
+
+  it('identifies a charset bug when the client hashed non-UTF-8 bytes', () => {
+    const wrong = hmac(Buffer.from(body.toString('utf8'), 'latin1'));
+    const d = diagnoseSignature(body, wrong, secret);
+    assert.equal(d.matchesLatin1, true);
+    assert.match(d.verdict, /CLIENT CHARSET BUG/);
+  });
+
+  it('identifies a stale key when the signature matches neither encoding', () => {
+    const d = diagnoseSignature(body, hmac.call(null, body).replace(/^./, 'f'), secret);
+    assert.equal(d.matchesLatin1, false);
+    assert.match(d.verdict, /KEY MISMATCH/);
+  });
+
+  it('flags that the payload contained non-ASCII, and that bytes exceed chars', () => {
+    const d = diagnoseSignature(body, 'x', secret);
+    assert.equal(d.nonAscii, true);
+    assert.ok(d.bytes > d.chars, 'multi-byte characters must make the byte length exceed the char length');
+  });
+
+  it('never leaks the secret or a full signature into the log', () => {
+    const d = diagnoseSignature(body, hmac(body), secret);
+    const dump = JSON.stringify(d);
+    assert.ok(!dump.includes(secret), 'secret must not appear');
+    assert.equal(d.received.length, 12);
+    assert.equal(d.expectedUtf8.length, 12);
+  });
+
+  it('a correctly UTF-8-signed body still verifies', () => {
+    assert.equal(verifySignature(body, hmac(body), secret), true);
   });
 });
 

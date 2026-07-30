@@ -217,8 +217,13 @@ export async function handleSyncRequest(client, rawBody, signature) {
     return { status: 404, body: { ok: false, error: 'This season is not connected to Google Sheets (or the link was reset). Generate a fresh script in CastBot.' } };
   }
   if (!verifySignature(rawBody, signature, sync.secret)) {
-    console.warn(`🚫 [SHEETS] Bad signature for ${guildId}/${configId}`);
-    return { status: 401, body: { ok: false, error: 'This script is no longer valid. Ask your host for a fresh one from CastBot (Reset Link was used).' } };
+    // Diagnostics: the two realistic causes are (a) a stale script signed with a rotated secret, and
+    // (b) a charset mismatch — Apps Script's String overload of computeHmacSha256Signature does not
+    // reliably encode non-ASCII as UTF-8, and these sheets are full of emoji and curly quotes. The
+    // latin1 probe distinguishes them: a match there proves it's encoding, not a stale key.
+    const { diagnoseSignature } = await import('./sheetsSync.js');
+    console.warn(`🚫 [SHEETS] Bad signature for ${guildId}/${configId}`, diagnoseSignature(rawBody, signature, sync.secret));
+    return { status: 401, body: { ok: false, error: 'CastBot could not verify this script. Press "Get Script" in CastBot again and paste in the fresh copy — the signing method changed.' } };
   }
 
   if (dryRun) {
