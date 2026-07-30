@@ -23,6 +23,13 @@ import { getRoleAccessOverwrites, APPLICATION_CHANNEL_ACCESS } from '../../utils
 import { sanitizeChannelName } from '../../applicationManager.js';
 import { resolveHeaders, rowKeyFor, answerPairs, buildAnswerMessages } from './sheetsSync.js';
 
+/**
+ * A season only gets a `categoryId` once its Apply button has been configured and posted. Without
+ * one there is nowhere to put applicant channels, so both the preview and the import refuse with
+ * this — the preview being the important one, since it fires BEFORE the host commits.
+ */
+export const NO_CATEGORY = 'This season has no application category yet. In CastBot open Season Manager -> Apps, create the Apply button and choose a category, then run this sync again.';
+
 /** Discord's default avatar set — externals have no CDN avatar of their own. */
 const DEFAULT_AVATAR = 'https://cdn.discordapp.com/embed/avatars/0.png';
 
@@ -53,6 +60,10 @@ export async function planSync(guildId, configId, rows) {
   const playerData = await loadPlayerData();
   const sync = getSyncConfig(playerData, guildId, configId);
   if (!sync) return { ok: false, error: 'This season is no longer connected to Google Sheets. Generate a fresh script in CastBot.' };
+
+  // Check the category HERE, not just at import time — the preview is the whole point of the dry
+  // run, so anything that would abort the import must surface before the host confirms.
+  if (!playerData[guildId]?.applicationConfigs?.[configId]?.categoryId) return { ok: false, error: NO_CATEGORY };
 
   const headers = Object.keys(rows?.[0]?.cells || {});
   const resolved = resolveHeaders(headers);
@@ -95,18 +106,24 @@ export async function planSync(guildId, configId, rows) {
  * @returns {{ok: boolean, created: number, skipped: number, failed: number, errors: string[]}}
  */
 export async function ingestRows(client, guildId, configId, rows) {
+  // Every refusal below logs AND returns a human-readable `error`. The first version did neither —
+  // a missing categoryId returned a bare ok:false, the script rendered it as "Failed: 1", and the
+  // actual reason existed nowhere. A silent failure is worse than a loud one.
+  const refuse = (error) => {
+    console.warn(`⚠️ [SHEETS] Import refused for ${guildId}/${configId}: ${error}`);
+    return { ok: false, error, created: 0, skipped: 0, failed: 0, errors: [error] };
+  };
+
   const snapshot = await loadPlayerData();
   const sync = getSyncConfig(snapshot, guildId, configId);
-  if (!sync) return { ok: false, created: 0, skipped: 0, failed: 0, errors: ['Season not connected'] };
+  if (!sync) return refuse('This season is no longer connected to Google Sheets. Generate a fresh script in CastBot.');
 
   const config = snapshot[guildId]?.applicationConfigs?.[configId];
-  if (!config?.categoryId) {
-    return { ok: false, created: 0, skipped: 0, failed: 0, errors: ['This season has no application category configured yet — set up the Apply button first.'] };
-  }
+  if (!config?.categoryId) return refuse(NO_CATEGORY);
 
   const headers = Object.keys(rows?.[0]?.cells || {});
   const resolved = resolveHeaders(headers);
-  if (resolved.fatal) return { ok: false, created: 0, skipped: 0, failed: 0, errors: [resolved.fatal] };
+  if (resolved.fatal) return refuse(resolved.fatal.replace(/\*\*/g, '"').replace(/`/g, ''));
 
   const guild = await client.guilds.fetch(guildId);
   const excluded = sync.excludeHeaders || [];

@@ -13,8 +13,10 @@ import assert from 'node:assert/strict';
 import {
   matchHeader, resolveHeaders, rowKeyFor, answerPairs, chunkAnswers,
   buildAnswerMessages, verifySignature, generateSecret, looksSensitive, diagnoseSignature,
+  buildSheetsScreen,
   MAPPED, ALWAYS_SKIPPED
 } from '../src/sheets/sheetsSync.js';
+import { NO_CATEGORY } from '../src/sheets/sheetsIngest.js';
 import crypto from 'crypto';
 
 // The real sheet's headers, post-cleanup (Gender dropped, Pronouns added) plus its junk columns.
@@ -333,6 +335,39 @@ describe('Sheets — signature diagnosis (regression: Apps Script charset)', () 
 
   it('a correctly UTF-8-signed body still verifies', () => {
     assert.equal(verifySignature(body, hmac(body), secret), true);
+  });
+});
+
+describe('Sheets — missing application category (regression: silent "Failed: 1")', () => {
+  // A season with no Apply button has categoryId null, so there's nowhere to create applicant
+  // channels. The first version refused with a bare ok:false, logged nothing, and the Apps Script
+  // rendered it as "Failed: 1" — the reason existed nowhere. The warning must be reachable from
+  // the screen itself, before a script is ever generated.
+  const navRow = { type: 1, components: [] };
+  const bottomRow = { type: 1, components: [] };
+  const render = (hasCategory) => JSON.stringify(
+    buildSheetsScreen({ configId: 'c1', seasonName: 'Melbourne Survivor', sync: null, hasCategory }, navRow, bottomRow)
+  );
+
+  it('warns on the screen when the season has no category', () => {
+    assert.match(render(false), /Set up the Apply button first/);
+  });
+
+  it('shows no warning once a category exists', () => {
+    assert.ok(!render(true).includes('Set up the Apply button first'));
+  });
+
+  it('defaults to no warning when the flag is omitted (never scare a configured season)', () => {
+    const out = JSON.stringify(buildSheetsScreen({ configId: 'c1', seasonName: 'S', sync: null }, navRow, bottomRow));
+    assert.ok(!out.includes('Set up the Apply button first'));
+  });
+
+  it('the refusal text tells the host exactly where to go', () => {
+    assert.match(NO_CATEGORY, /Season Manager/);
+    assert.match(NO_CATEGORY, /Apps/);
+    // Rendered inside a Google Sheets ui.alert, which is plain text — markdown would show as noise.
+    assert.ok(!NO_CATEGORY.includes('**'), 'must not contain markdown');
+    assert.ok(!NO_CATEGORY.includes('`'), 'must not contain backticks');
   });
 });
 

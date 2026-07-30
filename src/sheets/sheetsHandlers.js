@@ -57,7 +57,7 @@ async function screenFor(context, configId) {
   const config = await loadConfig(context.guildId, configId);
   if (!config) return sheetsError('Season not found');
   const container = buildSheetsScreen(
-    { configId, seasonName: config.seasonName || 'Season', sync: config.sheetsSync },
+    { configId, seasonName: config.seasonName || 'Season', sync: config.sheetsSync, hasCategory: !!config.categoryId },
     buildSeasonNavRow(configId, 'apps', context.userId),
     buildSeasonBottomRow(configId, 'apps')
   );
