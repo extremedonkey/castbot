@@ -389,6 +389,43 @@ describe('Sheets — missing application category (regression: silent "Failed: 1
   });
 });
 
+describe('Sheets — sync semantics documented on-screen', () => {
+  // The two surprising behaviours (an edit after import never reaching Discord, a rename creating a
+  // duplicate) both fall out of rowKeyFor keying on Name+Timestamp. If that key ever changes, these
+  // assertions should fail and force the screen copy to be rewritten with it.
+  const screen = JSON.stringify(buildSheetsScreen(
+    { configId: 'c1', seasonName: 'S', sync: { secret: 'x', rowKeys: {} }, hasCategory: true },
+    { type: 1, components: [] }, { type: 1, components: [] }
+  ));
+
+  it('states the matching key', () => assert.match(screen, /Name \+ Timestamp/));
+  it('warns that post-import edits do not propagate', () => assert.match(screen, /does \*\*not\*\* reach Discord/));
+  it('warns that renaming creates a duplicate', () => assert.match(screen, /second channel/));
+  it('states that deleting a row removes nothing', () => assert.match(screen, /nothing is removed from Discord/));
+  it('sits above the Privacy section', () => {
+    assert.ok(screen.indexOf('How records sync') < screen.indexOf('🔒 Privacy'));
+  });
+
+  it('the described behaviour matches rowKeyFor: same row re-reads to the same key', () => {
+    const row = { Timestamp: '26/01/2026 14:08:09', Name: 'Hoppo', Why: 'original answer' };
+    const edited = { ...row, Why: 'edited answer' };
+    assert.equal(rowKeyFor(row, 'Name'), rowKeyFor(edited, 'Name'), 'editing an answer must NOT change the key (→ skipped)');
+  });
+
+  it('the described behaviour matches rowKeyFor: a rename yields a new key', () => {
+    const row = { Timestamp: '26/01/2026 14:08:09', Name: 'Hoppo' };
+    assert.notEqual(rowKeyFor(row, 'Name'), rowKeyFor({ ...row, Name: 'Brendan' }, 'Name'), 'a rename must produce a new key (→ duplicate)');
+  });
+
+  it('screen stays within the component budget', () => {
+    const c = buildSheetsScreen(
+      { configId: 'c1', seasonName: 'S', sync: { secret: 'x', rowKeys: {}, excludeHeaders: ['Email'] }, hasCategory: false },
+      { type: 1, components: [] }, { type: 1, components: [] }
+    );
+    assert.ok(1 + c.components.length <= 40, `screen had ${1 + c.components.length} top-level components`);
+  });
+});
+
 describe('Sheets — sensitive column hinting', () => {
   it('flags the sensitive columns from the real sheet', () => {
     for (const h of [
