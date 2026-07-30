@@ -194,6 +194,14 @@ async function sendScriptFile(interaction, script) {
  * @returns {{status: number, body: Object}}
  */
 export async function handleSyncRequest(client, rawBody, signature) {
+  // Must be the RAW bytes. If express.json() got here first, req.body is an object and the HMAC is
+  // unverifiable — fail with a diagnosable message rather than a generic parse error. (The global
+  // body-parser in app.js explicitly skips this path; this guard is the tripwire if that regresses.)
+  if (!Buffer.isBuffer(rawBody)) {
+    console.error('❌ [SHEETS] Body was pre-parsed — /api/sheets-sync must skip express.json()');
+    return { status: 500, body: { ok: false, error: 'CastBot is misconfigured (request body was pre-parsed). Tell Reece.' } };
+  }
+
   let payload;
   try { payload = JSON.parse(rawBody.toString('utf8')); }
   catch { return { status: 400, body: { ok: false, error: 'Malformed request body.' } }; }

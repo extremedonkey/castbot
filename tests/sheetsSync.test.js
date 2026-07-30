@@ -266,6 +266,35 @@ describe('Sheets — signature verification', () => {
   });
 });
 
+describe('Sheets — raw body requirement (regression: "Malformed request body")', () => {
+  // The global body-parser in app.js runs express.json() on every path except an explicit skip
+  // list. /api/sheets-sync was missing from it, so req.body arrived as a parsed OBJECT; the route's
+  // `body.toString('utf8')` then produced "[object Object]" and every sync died at JSON.parse.
+  // Signature verification needs the raw bytes anyway — re-serializing can reorder keys.
+  const secret = generateSecret();
+  const payload = { guildId: '1', configId: 'c', rows: [] };
+
+  it('a signature over raw bytes verifies', () => {
+    const raw = Buffer.from(JSON.stringify(payload), 'utf8');
+    const sig = crypto.createHmac('sha256', secret).update(raw).digest('hex');
+    assert.equal(verifySignature(raw, sig, secret), true);
+  });
+
+  it('a pre-parsed body stringifies to garbage — proving it must never reach JSON.parse', () => {
+    // This is precisely what the endpoint received before the fix.
+    assert.equal(Object.prototype.toString.call(payload), '[object Object]');
+    assert.equal(String(payload), '[object Object]');
+    assert.throws(() => JSON.parse(String(payload)), SyntaxError);
+  });
+
+  it('re-serializing with reordered keys breaks the signature (why raw bytes matter)', () => {
+    const raw = Buffer.from(JSON.stringify({ a: 1, b: 2 }), 'utf8');
+    const sig = crypto.createHmac('sha256', secret).update(raw).digest('hex');
+    const reserialized = Buffer.from(JSON.stringify({ b: 2, a: 1 }), 'utf8');
+    assert.equal(verifySignature(reserialized, sig, secret), false);
+  });
+});
+
 describe('Sheets — sensitive column hinting', () => {
   it('flags the sensitive columns from the real sheet', () => {
     for (const h of [

@@ -1686,8 +1686,10 @@ app.get("/interactions", (req, res) => {
  * The /interactions endpoint needs raw buffer access for discord-interactions package
  */
 app.use((req, res, next) => {
-  if (req.path === '/interactions' || req.path === '/webhooks') {
-    // Skip JSON parsing — these endpoints need the raw body for Ed25519 signature verification
+  if (req.path === '/interactions' || req.path === '/webhooks' || req.path === '/api/sheets-sync') {
+    // Skip JSON parsing — these endpoints verify a signature over the RAW bytes, and re-serializing
+    // a parsed object can reorder keys and invalidate an otherwise-good HMAC.
+    // (/interactions + /webhooks = Discord Ed25519; /api/sheets-sync = per-season HMAC.)
     next();
   } else {
     // Apply JSON parsing for other routes
