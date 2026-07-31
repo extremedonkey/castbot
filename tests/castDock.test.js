@@ -21,7 +21,10 @@ import {
     buildCastDockButtonSelectRow,
     stripButtonLabels,
     COMPACT_DIRECT_ACTION_REMAP,
-    remapCompactButtonIds
+    remapCompactButtonIds,
+    CASTDOCK_CONFIG_GATE_REASONS,
+    applyCastDockSelection,
+    castDockBlockedSelections
 } from '../castDock.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -177,6 +180,139 @@ describe('CastDock — buildCastDockButtonSelectRow', () => {
         const select = buildCastDockButtonSelectRow('x', null).components[0];
         assert.ok(select.max_values <= select.options.length,
             `max_values (${select.max_values}) must be <= options.length (${select.options.length})`);
+    });
+});
+
+describe('CastDock — applyCastDockSelection (an explicit tick beats a per-player gate)', () => {
+    // Live report 2026-08-01: host ticked all six buttons, the dock rendered two. calculateVisibility
+    // had hidden Inventory (player owns nothing) and Map (player not placed yet) — heuristics meant
+    // to keep a fresh player's own /menu tidy, silently overriding a deliberate per-channel choice.
+    const vis = () => ({
+        commands: { show: true, gatedBy: null, label: 'Commands', emoji: '🕹️' },
+        inventory: { show: false, gatedBy: 'player', label: 'Inventory', emoji: '🧰' },
+        actions: { show: true, gatedBy: null, label: 'Actions', emoji: '⚡' },
+        challenges: { show: false, gatedBy: 'config', label: 'Challenges', emoji: '🏃' },
+        crafting: { show: false, gatedBy: 'config', label: 'Crafting', emoji: '🛠️' },
+        map: { show: false, gatedBy: 'player', label: 'Map', emoji: '🗺️' }
+    });
+    const ALL = ['commands', 'inventory', 'actions', 'challenges', 'crafting', 'map'];
+
+    it('force-shows a selected button hidden only by THIS player\'s state', () => {
+        const out = applyCastDockSelection(vis(), ALL);
+        assert.equal(out.inventory.show, true, 'a broke player must still get the Inventory button when it was ticked');
+        assert.equal(out.map.show, true, 'a player not yet on the map must still get the Map button when it was ticked');
+        assert.equal(out.inventory.forcedBySelection, true);
+    });
+
+    it('never force-shows a button the GUILD has switched off or never configured', () => {
+        const out = applyCastDockSelection(vis(), ALL);
+        assert.equal(out.challenges.show, false, 'no challenge actions exist — the button would be dead weight');
+        assert.equal(out.crafting.show, false);
+    });
+
+    it('leaves buttons that were never selected untouched', () => {
+        const out = applyCastDockSelection(vis(), ['commands']);
+        assert.equal(out.inventory.show, false);
+        assert.equal(out.map.show, false);
+    });
+
+    it('does not mutate the caller\'s visibility map (the player menu shares it)', () => {
+        const original = vis();
+        applyCastDockSelection(original, ALL);
+        assert.equal(original.inventory.show, false, 'calculateVisibility output must survive unchanged');
+        assert.equal(original.inventory.forcedBySelection, undefined);
+    });
+
+    it('is a no-op for already-visible buttons and for ids with no visibility entry', () => {
+        const out = applyCastDockSelection(vis(), [...ALL, 'nonsense']);
+        assert.equal(out.commands.show, true);
+        assert.equal(out.nonsense, undefined);
+    });
+
+    it('tolerates null/garbage input rather than throwing mid-render', () => {
+        assert.deepEqual(applyCastDockSelection(null, null), {});
+        assert.deepEqual(applyCastDockSelection(undefined, ['map']), {});
+    });
+});
+
+describe('CastDock — castDockBlockedSelections (the setup screen tells the truth)', () => {
+    const vis = {
+        commands: { show: true, gatedBy: null },
+        inventory: { show: false, gatedBy: 'player' },
+        actions: { show: true, gatedBy: null },
+        challenges: { show: false, gatedBy: 'config' },
+        crafting: { show: false, gatedBy: 'config' },
+        map: { show: false, gatedBy: 'player' }
+    };
+
+    it('reports only what a selection genuinely cannot overrule', () => {
+        const blocked = castDockBlockedSelections(vis, ['commands', 'inventory', 'actions', 'challenges', 'crafting', 'map']);
+        assert.deepEqual(blocked.map(b => b.id), ['challenges', 'crafting']);
+    });
+
+    it('carries a label, emoji and reason for each — rendered verbatim on the setup screen', () => {
+        const [first] = castDockBlockedSelections(vis, ['challenges']);
+        assert.equal(first.label, 'Challenges');
+        assert.equal(first.emoji, '🏃');
+        assert.equal(first.reason, CASTDOCK_CONFIG_GATE_REASONS.challenges);
+    });
+
+    it('treats an id with no visibility entry at all as blocked, with a generic reason', () => {
+        const [only] = castDockBlockedSelections({}, ['challenges']);
+        assert.ok(only, 'a missing visibility entry must not be silently treated as visible');
+        assert.ok(only.reason.length > 0);
+    });
+
+    it('every selectable button has a reason string (no blank ⚠️ on the screen)', () => {
+        for (const b of CASTDOCK_SELECTABLE_BUTTONS) {
+            const reason = CASTDOCK_CONFIG_GATE_REASONS[b.id];
+            assert.ok(reason, `${b.id} needs an entry in CASTDOCK_CONFIG_GATE_REASONS`);
+            assert.ok(reason.length <= 90, `${b.id} reason must fit a select description (got ${reason.length})`);
+        }
+    });
+});
+
+describe('CastDock — buildCastDockButtonSelectRow surfaces blocked reasons', () => {
+    const options = (row) => row.components[0].options;
+
+    it('swaps a blocked option\'s description for its ⚠️ reason, leaving the rest alone', () => {
+        const blocked = [{ id: 'crafting', reason: CASTDOCK_CONFIG_GATE_REASONS.crafting }];
+        const opts = options(buildCastDockButtonSelectRow('x', null, blocked));
+        assert.equal(opts.find(o => o.value === 'crafting').description, `⚠️ ${CASTDOCK_CONFIG_GATE_REASONS.crafting}`);
+        assert.equal(opts.find(o => o.value === 'commands').description,
+            CASTDOCK_SELECTABLE_BUTTONS.find(b => b.id === 'commands').description);
+    });
+
+    it('keeps every description within Discord\'s 100-char select limit', () => {
+        const blocked = CASTDOCK_SELECTABLE_BUTTONS.map(b => ({ id: b.id, reason: CASTDOCK_CONFIG_GATE_REASONS[b.id] }));
+        for (const o of options(buildCastDockButtonSelectRow('x', null, blocked))) {
+            assert.ok(o.description.length <= 100, `${o.value} description too long: ${o.description.length}`);
+        }
+    });
+
+    it('still works with no blocked list at all (default arg)', () => {
+        assert.equal(options(buildCastDockButtonSelectRow('x', null)).length, CASTDOCK_SELECTABLE_BUTTONS.length);
+    });
+});
+
+describe('CastDock — calculateVisibility keeps tagging gatedBy (static guard)', () => {
+    // applyCastDockSelection is coupled to calculateVisibility by ONE field name. If a future
+    // refactor drops these tags, every gate silently becomes un-overridable again and the dock
+    // quietly renders fewer buttons than were ticked — exactly the reported bug, with no error.
+    const src = readFileSync(path.join(__dirname, '..', 'playerManagement.js'), 'utf8');
+
+    for (const id of ['inventory', 'map', 'challenges', 'crafting', 'actions', 'commands']) {
+        it(`vis.${id} carries a gatedBy tag`, () => {
+            assert.ok(new RegExp(`vis\\.${id}[.\\s]*(=\\s*\\{[^}]*gatedBy|\\.gatedBy\\s*=)`).test(src),
+                `vis.${id} must set gatedBy — castDock.js applyCastDockSelection reads it`);
+        });
+    }
+
+    it('inventory and map distinguish a player-state gate from a config gate', () => {
+        assert.ok(src.includes("vis.inventory.gatedBy = !showInventory ? 'config'"),
+            'Inventory must stay overridable when only the player is broke, but not when the host turned it off');
+        assert.ok(src.includes("vis.map.gatedBy = !activeMapId ? 'config'"),
+            'Map must stay overridable when the player just is not placed yet, but not when no map exists');
     });
 });
 

@@ -8230,6 +8230,33 @@ To fix this:
           return { components: [container] };
         }
       })(req, res, client);
+    } else if (custom_id === 'carlbot_test') {
+      // 🐢 Carlbot Test (PoC) — modal in, plain bot message out. Reece-only.
+      return ButtonHandlerFactory.create({
+        id: 'carlbot_test',
+        requiresModal: true,
+        ephemeral: true,
+        handler: async (context) => {
+          // Gate lives INSIDE the block so the security-declaration scanner can see it. Safe to
+          // return a non-modal here: the factory only short-circuits to res.send for modal results.
+          if (!['391415444084490240', '1086246253819613274'].includes(context.userId)) {
+            return { content: '❌ Access denied.', ephemeral: true };
+          }
+          return {
+          type: InteractionResponseType.MODAL,
+          data: {
+            custom_id: 'carlbot_test_modal',
+            title: 'Carlbot Test',
+            components: [{
+              type: 18, // Label
+              label: 'Message',
+              description: 'CastBot will post this into the current channel',
+              component: { type: 4, custom_id: 'message_text', style: 2, min_length: 1, max_length: 2000, required: true, placeholder: 'Type what CastBot should say...' }
+            }]
+          }
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'reece_uptime') {
       // Reece's Stuff → Uptime — ephemeral process stats (uptime, memory, Node, PID)
       return ButtonHandlerFactory.create({
@@ -39299,7 +39326,27 @@ To fix this:
     const { custom_id, components } = data;
     console.log(`🔍 DEBUG: MODAL_SUBMIT received - custom_id: ${custom_id}`);
 
-    if (custom_id.startsWith('casting_messages_save:')) {
+    if (custom_id === 'carlbot_test_modal') {
+      // 🐢 Carlbot Test (PoC) — post the typed text into the channel as a plain CastBot message.
+      // Deliberately NOT an interaction reply: this proves the bot can speak in its own voice,
+      // which is the whole point of the PoC. The interaction gets a separate ephemeral ack.
+      return ButtonHandlerFactory.create({
+        id: 'carlbot_test_modal',
+        ephemeral: true,
+        handler: async (context) => {
+          if (!['391415444084490240', '1086246253819613274'].includes(context.userId)) {
+            return { content: '❌ Access denied.' };
+          }
+          const text = (components || []).find(r => r?.type === 18)?.component?.value?.trim();
+          if (!text) return { content: '❌ No message text provided.' };
+
+          const channel = await context.client.channels.fetch(context.channelId);
+          const sent = await channel.send({ content: text, allowedMentions: { parse: [] } });
+          console.log(`🐢 [CARLBOT PoC] ${context.userId} posted ${text.length} chars as CastBot in ${context.channelId}`);
+          return { content: `✅ Posted as CastBot — ${sent.url}` };
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('casting_messages_save:')) {
       // Casting Invites modal submit. custom_id: casting_messages_save:{appIndex}:{configId}
       return ButtonHandlerFactory.create({
         id: 'casting_messages_save',

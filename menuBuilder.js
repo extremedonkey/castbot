@@ -290,7 +290,8 @@ export class MenuBuilder {
         components: [
           { type: 2, custom_id: 'msg_test', label: 'Msg Test', style: 2, emoji: { name: '💬' } },
           { type: 2, custom_id: 'moai_post', label: 'Post Moai', style: 1, emoji: { name: '🗿' } },
-          { type: 2, custom_id: 'entitlements_manage', label: 'Entitlements', style: 2, emoji: { name: '🎟️' } }
+          { type: 2, custom_id: 'entitlements_manage', label: 'Entitlements', style: 2, emoji: { name: '🎟️' } },
+          { type: 2, custom_id: 'carlbot_test', label: 'Carlbot Test', style: 2, emoji: { name: '🐢' } }
         ]
       },
       { type: 10, content: `### \`\`\`🔧 Admin Tools\`\`\`` },

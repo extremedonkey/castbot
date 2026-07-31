@@ -604,9 +604,25 @@ async function calculateVisibility(guildId, targetUserId, playerData, safariData
   vis.actions = { show: isAdmin ? hasActionsConfigured : hasActionsConfigured, disabled: isAdmin && !hasTarget, label: 'Actions', emoji: '⚡' };
   vis.stores = { show: isAdmin ? (showStores && hasStoresExist) : (showStores && hasStoresExist), disabled: isAdmin && !hasTarget, label: 'Stores', emoji: '🏪' };
 
+  // WHY a feature is hidden, for consumers that may legitimately overrule a gate:
+  //   'config' — the GUILD has it switched off or has nothing configured (no recipes, no map,
+  //              no player-menu actions). There is literally nothing behind the button.
+  //   'player' — only THIS player's own state hides it (broke, not on the map yet). A tidiness
+  //              heuristic, not a policy — it flips on its own as the player plays.
+  //   null     — shown.
+  // CastDock's compact row overrules a 'player' gate when the host explicitly ticked that
+  // button on the setup screen, and never a 'config' one (castDock.js applyCastDockSelection).
+  // Nothing here changes `show` — this is metadata only; the player menu itself is unaffected.
+  vis.currency.gatedBy = !showInventory ? 'config' : (vis.currency.show ? null : 'player');
+  vis.inventory.gatedBy = !showInventory ? 'config' : (vis.inventory.show ? null : 'player');
+  vis.map.gatedBy = !activeMapId ? 'config' : (vis.map.show ? null : 'player');
+  vis.challenges.gatedBy = vis.challenges.show ? null : 'config';
+  vis.crafting.gatedBy = vis.crafting.show ? null : 'config';
+  vis.actions.gatedBy = vis.actions.show ? null : 'config';
+
   // === Row 3: Advanced ===
   vis.attributes = { show: isAdmin ? hasAttributesConfigured : hasAttributesConfigured, disabled: isAdmin && !hasTarget, label: 'Stats', emoji: '📊' };
-  vis.commands = { show: enableGlobalCommands, disabled: isAdmin && !hasTarget, label: 'Commands', emoji: '🕹️', immediate: true };
+  vis.commands = { show: enableGlobalCommands, disabled: isAdmin && !hasTarget, label: 'Commands', emoji: '🕹️', immediate: true, gatedBy: enableGlobalCommands ? null : 'config' };
   // Alliance requests (RaP 0892) — whitelist-only while the feature is a hidden mockup; the
   // handler re-checks. Player mode only: targetUserId IS the viewer there.
   vis.alliance = { show: !isAdmin && CHANNEL_ADMIN_USER_IDS.includes(String(targetUserId)), disabled: false, label: 'Alliance', emoji: '🤐', immediate: true };

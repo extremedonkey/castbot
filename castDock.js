@@ -154,13 +154,76 @@ export function resolveCompactRowIds(selectedButtons) {
   return CASTDOCK_SELECTABLE_BUTTONS.filter(b => chosen.has(b.id)).map(b => b.id);
 }
 
+// Why a selected button can STILL be missing from the dock: the guild has that feature switched
+// off or has nothing configured behind it (calculateVisibility's gatedBy === 'config'). Keyed by
+// button id; shown verbatim on the setup screen so a host is never left guessing. Kept under
+// ~90 chars — Discord truncates a select option description at 100.
+export const CASTDOCK_CONFIG_GATE_REASONS = {
+  commands: 'Global commands are switched off in Safari settings',
+  inventory: "Hidden by this server's inventory visibility setting",
+  actions: 'No actions are set to show on the player menu yet',
+  challenges: 'No challenge actions are configured yet',
+  crafting: 'No crafting recipes are configured yet',
+  map: 'No active Safari map in this server yet',
+};
+
+/**
+ * Pure — the compact row's own visibility, derived from the player menu's.
+ *
+ * Ticking a button on the setup screen is an explicit, deliberate, per-channel decision by the
+ * host, so it OUTRANKS the player menu's per-player tidiness heuristics ('player' gates —
+ * Inventory hiding while the player is broke, Map hiding until they're placed on the map). Those
+ * buttons have real empty states (an empty bag; "hasn't started exploring yet"), and the dock
+ * re-renders on every message, so they light up on their own the moment the player has something.
+ *
+ * A 'config' gate is never overruled: the guild has the feature off or has nothing configured,
+ * so the button would be permanent dead weight on a public sticky message. buildCastDockSetupScreen
+ * surfaces those explicitly instead (see castDockBlockedSelections).
+ *
+ * @param {Object} visibility - from calculateVisibility (PLAYER mode)
+ * @param {string[]} rowIds - from resolveCompactRowIds
+ * @returns {Object} a shallow copy — never mutates the caller's visibility map
+ */
+export function applyCastDockSelection(visibility, rowIds) {
+  const out = { ...(visibility || {}) };
+  for (const id of rowIds || []) {
+    const vis = out[id];
+    if (!vis || vis.show) continue;
+    if (vis.gatedBy === 'player') out[id] = { ...vis, show: true, forcedBySelection: true };
+  }
+  return out;
+}
+
+/**
+ * Pure — of the given ids, the ones that will NOT render even though they're selected, each with
+ * a human reason. Anything a selection can overrule is already excluded (applyCastDockSelection),
+ * so everything returned here is a genuine guild-config gap the host needs to know about.
+ * @returns {Array<{id: string, label: string, emoji: string, reason: string}>}
+ */
+export function castDockBlockedSelections(visibility, rowIds) {
+  const applied = applyCastDockSelection(visibility, rowIds);
+  const meta = new Map(CASTDOCK_SELECTABLE_BUTTONS.map(b => [b.id, b]));
+  return (rowIds || [])
+    .filter(id => !applied[id]?.show)
+    .map(id => ({
+      id,
+      label: meta.get(id)?.label || id,
+      emoji: meta.get(id)?.emoji || '•',
+      reason: CASTDOCK_CONFIG_GATE_REASONS[id] || 'Not available in this server yet'
+    }));
+}
+
 /**
  * Pure — the "Select CastDock buttons" multi-select shown on the setup screen. Options are
  * always in CASTDOCK_SELECTABLE_BUTTONS order; `default:` reflects the current selection
  * (or the default five — Map off — if selectedButtons is null/undefined, never configured).
+ * @param {Array<{id: string, reason: string}>} [blocked] - from castDockBlockedSelections; those
+ *   options swap their description for the reason they won't render, so the screen never shows a
+ *   ticked box that silently does nothing (the whole point of the 2026-08-01 fix).
  */
-export function buildCastDockButtonSelectRow(customId, selectedButtons) {
+export function buildCastDockButtonSelectRow(customId, selectedButtons, blocked = []) {
   const chosen = Array.isArray(selectedButtons) ? new Set(selectedButtons) : new Set(defaultCastDockButtonIds());
+  const reasons = new Map((blocked || []).map(b => [b.id, b.reason]));
   return {
     type: 1, // ActionRow
     components: [{
@@ -174,7 +237,7 @@ export function buildCastDockButtonSelectRow(customId, selectedButtons) {
       options: CASTDOCK_SELECTABLE_BUTTONS.map(b => ({
         label: b.label,
         value: b.id,
-        description: b.description,
+        description: (reasons.has(b.id) ? `⚠️ ${reasons.get(b.id)}` : b.description).slice(0, 100),
         emoji: { name: b.emoji },
         default: chosen.has(b.id)
       }))
@@ -190,6 +253,10 @@ export function buildCastDockButtonSelectRow(customId, selectedButtons) {
  * destructive or gated, just informational, so it uses the same purple "info tier" accent
  * as the Safari import prep screen (app.js's safari_import_data handler) rather than
  * orange/red.
+ *
+ * It also DRY-RUNS the compact row's visibility (same calculateVisibility call the dock itself
+ * makes) so a ticked button that this server can't render yet is flagged here rather than just
+ * silently missing from the dock — see castDockBlockedSelections.
  * @param {string} guildId
  * @param {string} channelId
  * @param {boolean} isAdminMode
@@ -198,9 +265,28 @@ export function buildCastDockButtonSelectRow(customId, selectedButtons) {
 export async function buildCastDockSetupScreen(guildId, channelId, isAdminMode, targetUserId = null) {
   const { countComponents } = await import('./utils.js');
   const { getBotEmoji } = await import('./botEmojis.js');
-  const config = await getCastDockConfig(guildId, channelId);
+  const { loadPlayerData } = await import('./storage.js');
+  const playerData = await loadPlayerData();
+  const config = await getCastDockConfig(guildId, channelId, playerData);
   const activateId = isAdminMode ? `castdock_activate_${targetUserId}` : 'castdock_activate';
   const selectButtonsId = isAdminMode ? `castdock_select_buttons_${targetUserId}` : 'castdock_select_buttons';
+
+  // Predict exactly what the dock will render — same inputs, same PLAYER-mode visibility the
+  // compact view uses — so a ticked box that can't currently show says so on this screen instead
+  // of quietly rendering nothing (the "I selected six, I got two" report, 2026-08-01).
+  let blocked = [];
+  try {
+    const { calculateVisibility, PlayerManagementMode } = await import('./playerManagement.js');
+    const { loadSafariContent } = await import('./safariManager.js');
+    const visibility = await calculateVisibility(guildId, targetUserId, playerData, await loadSafariContent(), PlayerManagementMode.PLAYER, null, channelId);
+    blocked = castDockBlockedSelections(visibility, CASTDOCK_SELECTABLE_BUTTONS.map(b => b.id));
+  } catch (e) {
+    // Advisory only — never block setup on it. Worst case the screen reads as it did before.
+    console.warn(`CastDock: could not evaluate button availability for ${guildId}/${targetUserId}: ${e.message}`);
+  }
+  const selectedIds = new Set(resolveCompactRowIds(config.selectedButtons));
+  const blockedAndSelected = blocked.filter(b => selectedIds.has(b.id));
+
   const container = {
     type: 17, // Container
     accent_color: 0x9b59b6, // Purple — info/prep tier, not a warning/danger color
@@ -214,14 +300,24 @@ export async function buildCastDockSetupScreen(guildId, channelId, isAdminMode, 
       { type: 10, content: '-# Since it\'s public now, whatever shows on it — currency, item counts, safari stats — is visible to everyone in this channel. Best kept to a private submission/subs channel, not anywhere spectators or other players can see it.' },
       { type: 14 },
       { type: 10, content: '### ```🔘 Select CastDock buttons```' },
-      { type: 10, content: '-# Choose which buttons appear on CastDock (shown in this order: Commands, Inventory, Actions, Challenges, Crafting, Map). The default five fit neatly on one row — Map is off by default, as a sixth button wraps onto a second row. A selected button still only shows if its own requirements are met — e.g. Inventory stays hidden for a player carrying nothing.' },
-      buildCastDockButtonSelectRow(selectButtonsId, config.selectedButtons),
+      { type: 10, content: '-# Choose which buttons appear on CastDock (shown in this order: Commands, Inventory, Actions, Challenges, Crafting, Map). The default five fit neatly on one row — Map is off by default, as a sixth button wraps onto a second row. Anything you tick shows even if the player has nothing yet — the only exception is a feature this server hasn\'t set up at all, which is flagged with a ⚠️ below.' },
+      buildCastDockButtonSelectRow(selectButtonsId, config.selectedButtons, blocked),
       { type: 14 },
       { type: 1, components: [
         { type: 2, custom_id: activateId, label: 'Activate CastDock', style: 1, emoji: getBotEmoji('castbot_logo') }
       ]}
     ]
   };
+
+  if (blockedAndSelected.length) {
+    const list = blockedAndSelected.map(b => `${b.emoji} **${b.label}** — ${b.reason.toLowerCase()}`).join('\n');
+    // Sits directly under the select, above the Activate row's separator.
+    container.components.splice(container.components.length - 2, 0, {
+      type: 10,
+      content: `-# ⚠️ **Selected, but won't appear yet:**\n${list}\n-# These light up on the dock automatically once configured — no need to come back here.`
+    });
+  }
+
   countComponents([container], { enableLogging: true, verbosity: 'summary', label: 'CastDock Setup Screen' });
   return { flags: (1 << 15), components: [container] };
 }
@@ -358,7 +454,9 @@ export async function buildCompactCastDockMenu(client, guildId, targetMember, pl
 
   const config = await getCastDockConfig(guildId, channelId, playerData);
   const rowIds = resolveCompactRowIds(config.selectedButtons);
-  const row2 = buildSectionRow(rowIds, targetUserId, null, visibility, PlayerManagementMode.PLAYER);
+  // The host's explicit tick beats the player menu's per-player tidiness gates (but not a
+  // guild-wide config gate) — see applyCastDockSelection.
+  const row2 = buildSectionRow(rowIds, targetUserId, null, applyCastDockSelection(visibility, rowIds), PlayerManagementMode.PLAYER);
   stripButtonLabels(row2);
   remapCompactButtonIds(row2);
   row2.forEach(r => container.components.push(r));

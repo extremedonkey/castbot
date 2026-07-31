@@ -55,9 +55,12 @@ flowchart TD
   "targetUserId": "<discord user id — the player whose menu stays pinned, fixed at Enable time>",
   "enabledBy": "<user id who clicked Enable — self in PLAYER mode, admin in ADMIN mode>",
   "enabledAt": 1753432100000,
-  "disabledAt": null
+  "disabledAt": null,
+  "selectedButtons": ["commands", "inventory", "actions"]  // see "Button Selection" below
 }
 ```
+
+**`selectedButtons` tri-state**: `null`/absent = never configured → the default five (`defaultCastDockButtonIds()`, Map off). An **array** = a real, respected choice — including `[]`, which means "show no buttons" and is deliberately *not* treated as a fallback to defaults. Written by `setCastDockButtonSelection` (a config-only write that never touches `enabled`), and `setCastDockConfig`'s enable branch **spreads the existing entry** so activation can't wipe a selection made moments earlier on the setup screen (live bug 2026-07-25 — there's a static guard test for it).
 
 **Deliberately NOT persisted**: `lastMessageId` and `lastRepostAt`. These live only in the in-memory cache (below). Persisting them would mean a `withStorageLock`-guarded playerData write on *every single chat message* in an active channel — exactly the hot-path write-amplification `storage.js`'s own docs warn against. Consequence: a bot restart between messages can rarely leave one orphaned stale message behind (cosmetic, self-limiting — see boot reconciliation below).
 
@@ -89,13 +92,37 @@ Every repost (triggered by chat activity) always renders compact — this is int
 Built by `buildCompactCastDockMenu(client, guildId, targetMember, playerData, channelId, activeSelectCategory?)`:
 - Header is a **Section** (type 9) with the `^` toggle as its `accessory` — not a plain Text Display. (A round of live mobile testing found the button sometimes wraps to its own line on narrow screens regardless — confirmed as normal Discord client behavior for Section+Button accessories, not a markup defect; Section+Thumbnail accessories stay inline on both platforms, Section+Button doesn't always on mobile.)
 - Player info is **just the stats line** (`buildPlayerStatsLine()`, extracted out of `createPlayerDisplaySection` in `playerManagement.js` specifically so compact mode could render it standalone) — no name/mention, no pronouns/age/timezone, no "Local time" line, no thumbnail. All were explicitly requested removed across several iterations to keep the sticky message minimal.
-- Row 2 buttons (`COMPACT_ROW2_IDS = ['commands', 'inventory', 'map', 'stamina', 'challenges', 'crafting', 'actions', 'stores']`) — no Currency (removed), no section heading text above them, all emoji-only (`stripButtonLabels()` deletes every button's `label`, keeping only `emoji`). `'commands'` is listed **first** deliberately: `buildSectionRow` chunks visible buttons into ActionRows of 5 in array order, so putting `commands` first guarantees it lands in the same row as whatever else is visible, satisfying an explicit "put Commands in the same row as Currency" request from before Currency was later removed.
+- Row 2 buttons come from `resolveCompactRowIds(config.selectedButtons)` — the host's own choice out of `CASTDOCK_SELECTABLE_BUTTONS` (see Button Selection below), **not** a hardcoded list. No Currency, no Stamina, no Stores (all dropped from compact mode entirely; the full menu still has them), no section heading text above the row, all emoji-only (`stripButtonLabels()` deletes every button's `label`, keeping only `emoji`). `'commands'` is first in the reference order deliberately: `buildSectionRow` chunks visible buttons into ActionRows of 5 in array order, so putting `commands` first guarantees it lands in the same row as whatever else is visible, satisfying an explicit "put Commands in the same row as Currency" request from before Currency was later removed.
 - No Row 1 (Castlists & Profile) and no Advanced section (Stats/CastDock-config buttons) at all in compact mode — reconfiguring CastDock itself only happens from the expanded full view.
 - `activeSelectCategory` (optional 6th param): when set to `'crafting'` or `'challenges'`, appends that category's existing hot-swap select (`buildSuperSelect(...)`, from `playerManagement.js`) inline below the button row — see "Direct-action buttons" below for why only these two categories work this way.
 
 ### Full (the expanded view — the pre-existing player menu, unmodified)
 
 Reached via the `^` toggle, or automatically when clicking certain compact buttons. This is literally `createPlayerManagementUI()` — the same shared builder every other menu in the codebase uses — with one addition: `createPlayerManagementUI` checks `client.castDockChannels?.has(channelId)` and, if true, appends a `⌄` collapse-toggle button as the **last item in the bottom footer ActionRow** (alongside Guide/← Menu/Logs, wherever those apply). This check is **channel-scoped, not mode-scoped** — it fires for *any* menu rendered in a CastDock-enabled channel, including a normal `/menu` someone runs there, not just CastDock's own renders. That's intentional: seeing "this channel has a pinned sticky menu, click to collapse it" is useful context regardless of how you got there.
+
+## Button Selection — and Why a Ticked Button Can Still Be Missing
+
+Choosing **Enable** does not activate anything. It opens `buildCastDockSetupScreen`, which explains CastDock, states the privacy caveat, and offers a multi-select of `CASTDOCK_SELECTABLE_BUTTONS` (Commands · Inventory · Actions · Challenges · Crafting · Map — Map `defaultOn: false`, so the default five fit one 5-button ActionRow and a sixth doesn't wrap). Only **Activate CastDock** persists `enabled` and posts the first message. Picking options writes through `setCastDockButtonSelection` immediately (pre-activation), so the choice survives a bailout and is there when Activate runs.
+
+Render order is always `CASTDOCK_SELECTABLE_BUTTONS` order, never the order the host clicked them.
+
+### The selection is not the only gate — this is the part that surprises people
+
+The compact row is `buildSectionRow(rowIds, …, visibility, …)`, and `buildSectionRow` drops any id whose `visibility[id].show` is false. So the dock renders **selection ∩ visibility**, and `calculateVisibility` (playerManagement.js — the single source of truth for the whole player menu) hides plenty by default. Reported 2026-08-01: a host ticked all six and got two buttons, because that server had no crafting recipes, no challenge actions, no active map, and the player owned nothing. Every gate was behaving correctly; nothing anywhere said so.
+
+`calculateVisibility` therefore tags each of these entries with **`gatedBy`** — metadata only, it never changes `show`:
+
+| `gatedBy` | Meaning | CastDock's treatment |
+|---|---|---|
+| `null` | Visible | renders |
+| `'player'` | Only *this player's* state hides it — they own nothing (`hasEconomyActivity`), or aren't placed on the map yet | **Overruled** by an explicit tick — `applyCastDockSelection` force-shows it |
+| `'config'` | The **guild** has the feature off or has nothing configured — no recipes, no challenge actions, no active map, `enableGlobalCommands: false`, `inventoryVisibilityMode: 'never'` | Never overruled — flagged on the setup screen instead |
+
+**Why `'player'` loses.** Those gates exist to keep a fresh player's own `/menu` tidy (Jason feedback 2026-06-18). A host ticking a box on a per-channel setup screen is a deliberate configuration decision and outranks a tidiness heuristic — especially since both forced buttons have real empty states (`createPlayerInventoryDisplay` renders "your inventory is empty"; `castdock_view_navigate` replies "hasn't started exploring the map yet") and the dock re-renders on every message, so they'd light up on their own anyway.
+
+**Why `'config'` wins.** There is genuinely nothing behind the button, and this is a permanent public message — a dead button is worse than an absent one. Instead, the setup screen tells the truth: blocked options swap their description for `⚠️ <reason>` (`CASTDOCK_CONFIG_GATE_REASONS`), and any blocked option that is *also* selected gets listed under the select ("Selected, but won't appear yet… these light up automatically once configured"). The screen runs the same `calculateVisibility` call the dock does, so it's a real dry run, not a guess — wrapped in try/catch, because a broken prediction must never block setup.
+
+`applyCastDockSelection` returns a **shallow copy** — the player menu shares that visibility object and must not see CastDock's overrides.
 
 ## Direct-Action Button Wiring (compact mode only)
 
@@ -118,9 +145,10 @@ Once a crafting/challenges select is showing and the user picks a real option, t
 |---|---|---|
 | `player_set_castdock` | Row 3 (Advanced), full menu only | Opens the Enable/Disable select (player self-service, `security: 'public'`) |
 | `admin_set_castdock_*` | Row 3 (Advanced), full menu, admin mode | Same, admin managing another player (`requiresPermission: ManageRoles`) |
-| `player_menu_sel_castdock` | The select itself, player mode | Toggles via `applyCastDockToggle`; on Enable shows the privacy notice, on Disable re-renders the menu |
+| `player_menu_sel_castdock` | The select itself, player mode | **Enable → opens the setup screen only** (nothing persists/posts); Disable → `applyCastDockToggle` + re-renders the menu |
 | `player_menu_sel_castdock_*` | The select itself, admin mode | Same, admin-gated |
-| `castdock_ack_notice` / `castdock_ack_notice_*` | "Got it" button on the privacy notice | Dismisses the notice, returns to the normal menu with CastDock category active |
+| `castdock_select_buttons` / `castdock_select_buttons_*` | Setup screen multi-select | Persists the button choice via `setCastDockButtonSelection`, re-renders the setup screen (so ⚠️ flags update live) |
+| `castdock_activate` / `castdock_activate_*` | "Activate CastDock" on the setup screen | The **only** thing that actually enables + first-posts (`applyCastDockToggle`) |
 | `castdock_expand` | Compact view header accessory | Switches to the full menu (`createPlayerManagementUI`) |
 | `castdock_collapse` | Full view footer (any CastDock channel) | Switches back to compact (`buildCompactCastDockMenu`) |
 | `castdock_view_inventory` | Compact row (remapped) | Ephemeral inventory view for the fixed target, bypassing the select |
@@ -129,13 +157,17 @@ Once a crafting/challenges select is showing and the user picks a real option, t
 
 All registered in `BUTTON_REGISTRY` (`buttonHandlerFactory.js`) — search `castdock` there for the full metadata block.
 
-## The Privacy Notice
+## The Setup Screen (and the privacy caveat it carries)
 
-Shown once, immediately after choosing **Enable** (not gated behind a confirm/cancel step — the toggle already happens; this is purely informational, shown right after). Built by `buildCastDockEnabledNotice(isAdminMode, targetUserId?)`:
-1. Explains what CastDock is, first.
-2. Then the caveat: since the menu is now public, currency/item counts/safari stats are visible to everyone in the channel — recommend a private subs/submission channel, not anywhere spectators can see it.
+`buildCastDockSetupScreen(guildId, channelId, isAdminMode, targetUserId?)` — shown on **Enable**, before anything is persisted or posted. Reading order is deliberate:
+1. What CastDock is.
+2. The privacy caveat: the menu is now public, so currency/item counts/safari stats are visible to everyone in the channel — keep it to a private subs/submission channel, not anywhere spectators can see it.
+3. The button multi-select, plus any ⚠️ "selected, but won't appear yet" flags.
+4. **Activate CastDock** — the only control that actually enables and posts.
 
-Deliberately styled as the same **purple "info tier"** accent (`0x9b59b6`) used by the pre-existing Safari-import prep screen (`safari_import_data` handler in `app.js`) — **not** the red `0xed4245` Critical Deletion pattern from [LeanUserInterfaceDesign.md](../ui/LeanUserInterfaceDesign.md), and not the orange `0xf39c12` warning tier either. This was an explicit design request: informational "told you so" tone, not a scary gate, because the goal is for people to actually use the feature. No "don't show again" tracking — it shows every time Enable is chosen, by design (simplicity over a feature nobody had asked for yet).
+> ⚠️ This replaced an older `buildCastDockEnabledNotice` + `castdock_ack_notice` "Got it" flow, where Enable toggled *immediately* and the notice was purely after-the-fact. Both are **gone** — don't go looking for them.
+
+Deliberately styled as the same **purple "info tier"** accent (`0x9b59b6`) used by the pre-existing Safari-import prep screen (`safari_import_data` handler in `app.js`) — **not** the red `0xed4245` Critical Deletion pattern from [LeanUserInterfaceDesign.md](../ui/LeanUserInterfaceDesign.md), and not the orange `0xf39c12` warning tier either. This was an explicit design request: informational tone, not a scary gate, because the goal is for people to actually use the feature. No "don't show again" tracking — it shows every time Enable is chosen, by design.
 
 ## Gateway Listeners (app.js)
 
@@ -151,7 +183,7 @@ Neither required a new intent: `GuildMessages` (messageCreate) and `Guilds` (cha
 ## Files
 
 - **`castDock.js`** (repo root) — all CastDock-specific logic. Imports `playerManagement.js` and `storage.js` **dynamically** inside functions (never statically) — `playerManagement.js` imports two of this module's pure builders (`getCastDockConfig`, `buildCastDockSelectRow`) **statically**, so a static import back would be a require cycle.
-- **`playerManagement.js`** — the shared player-menu builder. CastDock touches: `row3Ids` (adds `'castdock'`), `calculateVisibility` (adds `vis.castdock`, always `show: true`), the `buildSuperSelect` switch (`case 'castdock':`), the footer-button block (appends the `⌄` collapse toggle when channel-scoped check passes), and `buildPlayerStatsLine` (extracted as its own exported function specifically so `castDock.js` could reuse it without pulling in the rest of `createPlayerDisplaySection`'s combined card). `calculateVisibility`, `buildSectionRow`, and `buildSuperSelect` are all exported from this file (they weren't, before CastDock needed to reuse them).
+- **`playerManagement.js`** — the shared player-menu builder. CastDock touches: `row3Ids` (adds `'castdock'`), `calculateVisibility` (adds `vis.castdock`, always `show: true`, plus the `gatedBy` tags described above — metadata only, the player menu's own behaviour is unchanged), the `buildSuperSelect` switch (`case 'castdock':`), the footer-button block (appends the `⌄` collapse toggle when channel-scoped check passes), and `buildPlayerStatsLine` (extracted as its own exported function specifically so `castDock.js` could reuse it without pulling in the rest of `createPlayerDisplaySection`'s combined card). `calculateVisibility`, `buildSectionRow`, and `buildSuperSelect` are all exported from this file (they weren't, before CastDock needed to reuse them).
 - **`app.js`** — routes all `castdock_*` and `player_menu_sel_castdock*` custom_ids (search `castdock` case-insensitively to find every touch point); boots the cache in the `ready` handler; wires the two gateway listeners.
 - **`buttonHandlerFactory.js`** — `BUTTON_REGISTRY` entries for every CastDock custom_id.
 - **`tests/castDock.test.js`** — unit tests for every pure function (see Testing below).
@@ -166,6 +198,8 @@ Documented honestly because they were found and deliberately *not* fixed during 
 4. **No persisted expand/collapse state.** Confirmed design choice (see "Compact" above) — resets to compact on every repost.
 5. **Mobile Section+Button accessory wrapping.** The `^`/`⌄` toggle sometimes renders on its own line below the header text on narrow phone screens. Verified as Discord client responsive behavior for Section+Button accessories (not present for Section+Thumbnail), not a markup defect — confirmed by testing with drastically shortened header text, which did not change the behavior.
 6. **Restart data loss (accepted).** `lastMessageId`/`lastRepostAt` aren't persisted (see Data Model) — a bot restart between messages can rarely leave one orphaned stray message in a channel until the next repost cycle. Boot reconciliation (`initCastDockCache`) mitigates the common case.
+7. **A selection change doesn't repaint a live dock.** `setCastDockButtonSelection` persists immediately, but the currently-posted sticky message keeps its old buttons until the next repost (any message in the channel, or re-running Activate). Harmless and self-correcting within one message; not worth a forced repost on every select interaction.
+8. **A dock can legitimately render zero buttons.** Deselect everything, or select only features this server hasn't configured, and the compact view is just the header + stats line. The setup screen flags the second case up front; nothing is broken.
 
 ## Testing
 
@@ -173,7 +207,9 @@ Documented honestly because they were found and deliberately *not* fixed during 
 - `normalizeCastDockConfig`, `parseCastDockAction`, `buildCastDockSelectRow` — config parsing/UI shape.
 - `evaluateCastDockTrigger` — the full anti-loop/cooldown truth table (bot-author always wins even with cooldown expired; cooldown window; first-ever trigger).
 - `stripButtonLabels`, `remapCompactButtonIds`, `COMPACT_DIRECT_ACTION_REMAP` — compact-view button transforms.
-- `buildCastDockEnabledNotice` — notice ordering (explanation before caveat), accent color (asserts it's *not* red/orange), single-button structure, admin vs player ack custom_id.
+- `CASTDOCK_SELECTABLE_BUTTONS`, `defaultCastDockButtonIds`, `resolveCompactRowIds`, `buildCastDockButtonSelectRow` — the selection model: fixed render order regardless of pick order, `[]` respected as a real choice, unknown ids dropped, and `max_values <= options.length` (exceeding it made Discord reject the whole message — live TEST failure 2026-07-25).
+- `applyCastDockSelection`, `castDockBlockedSelections`, `CASTDOCK_CONFIG_GATE_REASONS` — a tick overrules a `'player'` gate but never a `'config'` one, the caller's visibility map is never mutated, and every selectable button has a reason string short enough for a 100-char select description.
+- **Static guards** (source-text assertions, same convention as `playerManagementApplicationContext.test.js`): `setCastDockConfig`'s enable branch still spreads the existing channel entry (or activation wipes the selection), and `calculateVisibility` still tags `gatedBy` on all six ids — that field name is the *only* coupling between the two files, and dropping it would silently restore the "ticked six, got two" bug with no error anywhere.
 
 Run in isolation: `node --test tests/castDock.test.js`.
 

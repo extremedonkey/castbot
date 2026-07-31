@@ -585,6 +585,16 @@ export const BUTTON_REGISTRY = {
     requiresModal: true,
     category: 'seasons'
   },
+  'carlbot_test': {
+    label: 'Carlbot Test',
+    description: 'PoC — type a message in a modal and CastBot posts it into the channel in its own voice',
+    emoji: '🐢',
+    style: 'Secondary',
+    parent: 'reeces_stuff',
+    restrictedUser: '391415444084490240',
+    category: 'admin'
+  },
+
   // === GOOGLE SHEETS SYNC (external, non-Discord applicants) ===
   'sheets_open_*': {
     label: 'Google Sheets',
