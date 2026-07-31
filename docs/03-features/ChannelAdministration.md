@@ -123,6 +123,40 @@ The registry is flushed **every 5 items** (between Discord batches, never during
 
 ⚠️ **`mergeOverwrites` is mandatory.** A duplicate overwrite ID makes Discord reject the *entire* `channels.create()` with a 400 — and the Trusted Spectator role is very likely *also* in `globalRoleAccess`. `roleAccessUtils` only dedupes `@everyone` (`roleAccessUtils.js:51`).
 
+## 🎭 Player Roles — the data lifecycle
+
+`playerData[guildId].players[userId].playerRoleId` is a single role-ID string, **guild-scoped** (not season-scoped), and **this feature is its only writer in the entire codebase** — grep `playerRoleId` and every write lands in `src/channels/`. Everything else only reads it.
+
+```mermaid
+flowchart TD
+    P["🎭 Player Roles action<br/>(accepted cast OR specific users)"] --> F{"needing = no playerRoleId<br/>OR stored ID not live"}
+    F -->|nothing needed| Z[Plan refuses: all roles exist]
+    F -->|needed| E["ensurePlayerRole()<br/>resolve by STORED ID only"]
+    E -->|ID resolves| R[reused]
+    E -->|"ID dead / absent"| C["guild.roles.create()<br/>name=displayName, color 0,<br/>mentionable false, permissions []"]
+    C --> W["delta {kind:'playerRole', userId, roleId}<br/>→ flushed every 5 items"]
+    R --> W
+    W --> S[("players[userId].playerRoleId")]
+
+    S -.->|"read on every channel op"| RP["resolvePrincipal()"]
+    RP -->|role is live| G1[grant channel to the ROLE]
+    RP -->|"role deleted in Discord"| G2["grant to the USER +<br/>delta roleId:null → DELETES the field"]
+    G2 -.-> S
+
+    style G2 fill:#fff3cd,stroke:#856404
+    style C fill:#d4edda,stroke:#155724
+```
+
+**The three data-level behaviours that matter:**
+
+1. **Creation is resolve-by-stored-ID-only** (`channelOps.js` `ensurePlayerRole`) — deliberately *never* by role name, because duplicate role names are legal in Discord and a name match could adopt a tribe or vanity role that happens to equal the player's display name. If the stored ID points at a role that no longer exists, it recreates rather than adopting.
+2. **Self-healing clear.** `resolvePrincipal` (`channelOps.js:314`) is called on *every* channel operation that touches a player. If the stored `playerRoleId` isn't in the live role set, it falls back to granting the user directly **and emits `{kind:'playerRole', userId, roleId: null}`**, which makes `applyDeltas` `delete` the field (`channelRegistry.js:118`). So a host deleting a role in Discord silently repairs the data on the next run — no reconciliation job.
+3. **Re-running only fills gaps.** The plan filter is `!m.playerRoleId || !snapshot.hasRole(m.playerRoleId)` (`channelsHandlers.js:395`), so a second run creates nothing and reports "already correct".
+
+Roles are created with **no permissions and `mentionable: false`** — they are pure access handles, not permission grants. The feature **never deletes** a player role: removal is the host un-assigning it (that's the kill switch), which strips the player from every channel granted to that role at once.
+
+> ⚠️ **Known gap — nothing assigns the role to the member.** There is no `member.roles.add()` anywhere in `src/channels/`. The action provisions the role and records the ID; the host must assign it manually. Until that lands, `resolvePrincipal` will happily permission a channel to a role **nobody holds** — the player then cannot see their own confessional. Either add assignment to `execPlayerRoles` or make the summary screen say "now assign these roles". This is the highest-value unfinished edge in the feature.
+
 ## 💾 Data model
 
 ```jsonc
@@ -145,6 +179,35 @@ playerData[guildId].channelAdmin = {
   allianceRequests: { "<requestId>": { requesterId, members, channelId, configId, status, allianceId?, createdAt } }
 }
 ```
+
+### 📅 Season coupling — what `configId` actually buys (design discussion, 2026-07-29)
+
+The tab is reached as `season_channels_{configId}` and lives inside Season Manager, which *implies* channels belong to a season. They mostly don't. An audit of every action:
+
+| Action | Needs the season? | Why |
+|---|---|---|
+| 🎙️ Confessionals (`accepted` mode) | **Yes** | roster **is** `getAcceptedCast(guildId, configId, guild)` — the season's applications filtered to cast/accepted/accepted_alt |
+| 🗳️ Subs (`accepted`) | **Yes** | same roster |
+| 🗳️ Subs (`convert`) | **Hard yes** | renames *that season's application channels* into subs channels |
+| 🎭 Player Roles (`accepted`) | **Yes** | same roster |
+| 🎙️/🗳️ either, `specific` mode | No | `expandMentionables` — the picker, not the season |
+| 🤝 1 on 1s | No | roster from `getTribesForCastlist(guildId, 'default')` — tribes, never the season |
+| 🤐 Alliances | No | guild-scoped registry; members from the Mentionable Select |
+| 🔐 Roles (Trusted Spectator) | No | `playerData[guildId].permissions` |
+| 📨 Msg Category | No | draft is stored under the season by *choice*; targets are channels |
+
+So `configId` buys exactly one thing: **"create these channels for everyone accepted into this season" as a one-click op** — which is the flagship value of the tab, not a triviality. Everywhere else it is ceremony inherited from the Casting/Applications ID convention.
+
+Two facts that make the coupling weaker than it looks:
+- **Storage is already half guild-scoped.** Season-scoped: `confessionals`, `subs`, `categories`, `lastRun`, `broadcast`. Guild-scoped: `oneOnOnes`, `oneOnOneCategories`, and all three alliance buckets.
+- **Many ORGs make a new server every season** ([SurvivorContext](../concepts/SurvivorContext.md)), which makes guild-scope and season-scope the *same thing* for those hosts. The season key only earns its keep when one server is reused across seasons — and even there, delete already lists every affected channel by name on the confirm screen, so the blast-radius safety net doesn't depend on it.
+- **The archive feature does not use it.** `channelArchiver.js` has zero `configId`/`seasonId` references; runs are stored at `players[userId].archives` (user-scoped, capped 50). Any "archive needs the season" concern is speculative, not current.
+
+**If the tab moves** (e.g. into the ⭐ Premium menu / action bar, per [RaP 0891](../01-RaP/0891_20260728_PremiumSubscriptions_Analysis.md)), the recommended shape is **guild-scoped entry, season resolved lazily inside the three roster actions**: no `configId` in the tab's custom_id, and the roster-dependent *modals* gain a season picker defaulting to the most-recent config, stating which season they'll use ("Accepted cast of **Season 14** — 16 players"). Consequences to price in first:
+- Registry migration `channelAdmin[configId].{confessionals,subs,categories,lastRun}` → guild level, with a dual-read shim (27 of 190 guilds hold application data).
+- Servers with no seasons: **hide** the roster modes rather than error; the manual/mentionable path is the universal one.
+- Use the most-recent-config sort (`castlistHandlers.js:98-110`) as the default, **not** `activeSeason` — only 1 of 190 guilds has `activeSeason` set.
+- Side benefit: dropping `configId` frees ~44 chars of the 100-char `custom_id` budget.
 
 Two deliberate choices:
 - **`oneOnOnes` is keyed globally by `pairKey`, not nested under `tribeRoleId`.** After a tribe swap the same pair reappears in a new tribe; global keying makes that adopt the existing channel instead of creating a second one.
