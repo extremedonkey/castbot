@@ -8243,17 +8243,17 @@ To fix this:
             return { content: '❌ Access denied.', ephemeral: true };
           }
           return {
-          type: InteractionResponseType.MODAL,
-          data: {
-            custom_id: 'carlbot_test_modal',
-            title: 'Carlbot Test',
-            components: [{
-              type: 18, // Label
-              label: 'Message',
-              description: 'CastBot will post this into the current channel',
-              component: { type: 4, custom_id: 'message_text', style: 2, min_length: 1, max_length: 2000, required: true, placeholder: 'Type what CastBot should say...' }
-            }]
-          }
+            type: InteractionResponseType.MODAL,
+            data: {
+              custom_id: 'carlbot_test_modal',
+              title: 'Carlbot Test',
+              components: [{
+                type: 18, // Label
+                label: 'Message',
+                description: 'CastBot will post this into the current channel',
+                component: { type: 4, custom_id: 'message_text', style: 2, min_length: 1, max_length: 2000, required: true, placeholder: 'Type what CastBot should say...' }
+              }]
+            }
           };
         }
       })(req, res, client);
