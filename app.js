@@ -8231,7 +8231,7 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'carlbot_test') {
-      // 🐢 Carlbot Test (PoC) — modal in, plain bot message out. Reece-only.
+      // 🐢 Carlbot Test (PoC) — modal in, webhook-persona message out. Reece-only.
       return ButtonHandlerFactory.create({
         id: 'carlbot_test',
         requiresModal: true,
@@ -8242,19 +8242,8 @@ To fix this:
           if (!['391415444084490240', '1086246253819613274'].includes(context.userId)) {
             return { content: '❌ Access denied.', ephemeral: true };
           }
-          return {
-            type: InteractionResponseType.MODAL,
-            data: {
-              custom_id: 'carlbot_test_modal',
-              title: 'Carlbot Test',
-              components: [{
-                type: 18, // Label
-                label: 'Message',
-                description: 'CastBot will post this into the current channel',
-                component: { type: 4, custom_id: 'message_text', style: 2, min_length: 1, max_length: 2000, required: true, placeholder: 'Type what CastBot should say...' }
-              }]
-            }
-          };
+          const { buildPersonaModal } = await import('./src/webhooks/personaWebhook.js');
+          return { type: InteractionResponseType.MODAL, data: buildPersonaModal('carlbot_test_modal', 'Carlbot Test') };
         }
       })(req, res, client);
     } else if (custom_id === 'reece_uptime') {
@@ -39327,9 +39316,9 @@ To fix this:
     console.log(`🔍 DEBUG: MODAL_SUBMIT received - custom_id: ${custom_id}`);
 
     if (custom_id === 'carlbot_test_modal') {
-      // 🐢 Carlbot Test (PoC) — post the typed text into the channel as a plain CastBot message.
-      // Deliberately NOT an interaction reply: this proves the bot can speak in its own voice,
-      // which is the whole point of the PoC. The interaction gets a separate ephemeral ack.
+      // 🐢 Carlbot Test (PoC) — post the typed text under an arbitrary display name via a channel
+      // webhook, giving the APP-tagged "service user" look of `CastBot Health Monitor - Test`.
+      // NOT an interaction reply: the point is a standalone message in someone else's voice.
       return ButtonHandlerFactory.create({
         id: 'carlbot_test_modal',
         ephemeral: true,
@@ -39337,13 +39326,25 @@ To fix this:
           if (!['391415444084490240', '1086246253819613274'].includes(context.userId)) {
             return { content: '❌ Access denied.' };
           }
-          const text = (components || []).find(r => r?.type === 18)?.component?.value?.trim();
+          const { validatePersonaName, postAsPersona } = await import('./src/webhooks/personaWebhook.js');
+          const fields = {};
+          for (const row of (components || [])) {
+            if (row?.type === 18 && row.component?.custom_id) fields[row.component.custom_id] = row.component.value ?? '';
+          }
+          const text = (fields.message_text || '').trim();
           if (!text) return { content: '❌ No message text provided.' };
 
-          const channel = await context.client.channels.fetch(context.channelId);
-          const sent = await channel.send({ content: text, allowedMentions: { parse: [] } });
-          console.log(`🐢 [CARLBOT PoC] ${context.userId} posted ${text.length} chars as CastBot in ${context.channelId}`);
-          return { content: `✅ Posted as CastBot — ${sent.url}` };
+          const named = validatePersonaName(fields.persona_name, 'CastBot');
+          if (!named.ok) return { content: `❌ ${named.error}` };
+
+          const sent = await postAsPersona({
+            client: context.client, guildId: context.guildId, channelId: context.channelId,
+            username: named.name, content: text
+          });
+          if (!sent.ok) return { content: `❌ ${sent.error}` };
+
+          console.log(`🐢 [CARLBOT PoC] ${context.userId} posted ${text.length} chars as "${named.name}" in ${context.channelId}`);
+          return { content: `✅ Posted as **${named.name}** — ${sent.url}` };
         }
       })(req, res, client);
     } else if (custom_id.startsWith('casting_messages_save:')) {
