@@ -32467,52 +32467,17 @@ To fix this:
     // ==================== END ENTITY MANAGEMENT HANDLERS ====================
     
     } else if (custom_id === 'safari_currency_reset_confirm') {
-      // Handle confirmation to reset all currency (MIGRATED TO FACTORY)
       return ButtonHandlerFactory.create({
         id: 'safari_currency_reset_confirm',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         ephemeral: true,
         handler: async (context) => {
-          console.log('🗑️ DEBUG: Currency reset confirmed');
-          
-          // Reset all currency
-          const playerData = await loadPlayerData();
-          const guildPlayers = playerData[context.guildId]?.players || {};
-          
-          let playersResetCount = 0;
-          let totalCurrencyReset = 0;
-          
-          for (const [userId, player] of Object.entries(guildPlayers)) {
-            if (player.safari?.currency !== undefined) {
-              totalCurrencyReset += player.safari.currency;
-              player.safari.currency = 0;
-              player.safari.lastInteraction = Date.now();
-              playersResetCount++;
-            }
-          }
-          
-          if (playersResetCount > 0) {
-            await savePlayerData(playerData);
-          }
-
-          // Return Components V2 format for proper ephemeral support
-          return {
-            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
-            components: [{
-              type: 17, // Container
-              accent_color: 0x27ae60, // Green for success
-              components: [
-                {
-                  type: 10, // Text Display
-                  content: `✅ **Currency Reset Complete!**\n\n**Players affected:** ${playersResetCount}\n**Total currency reset:** ${totalCurrencyReset} coins\n\nAll player balances have been set to 0.`
-                }
-              ]
-            }]
-          };
+          const { handleCurrencyResetConfirm } = await import('./safariReset.js');
+          return handleCurrencyResetConfirm(context);
         }
       })(req, res, client);
-    
+
     // ==================== MAP EXPLORER HANDLERS ====================
     
     } else if (custom_id === 'safari_map_explorer') {
@@ -38072,6 +38037,28 @@ To fix this:
         handler: async (context) => {
           const { handleRemovePlayersGo } = await import('./safariStartSafari.js');
           return handleRemovePlayersGo(context);
+        }
+      })(req, res, client);
+
+    // 🔄 Reset Safari — clears play state, never authored content. All three interactions
+    // (open / scope select / confirm) share one factory config, so safariReset.js sub-routes them.
+    // Map Explorer also renders PUBLICLY (Prod Map), and that render includes this button: only
+    // update in place when the parent message is already ephemeral, else a click would swap the
+    // shared map for a destructive admin panel in front of the whole server.
+    // NOTE: keep ButtonHandlerFactory.create within 3 lines of the `else if` — the pre-commit
+    // legacy-handler detector only scans that far and reads a wider gap as a legacy handler.
+    } else if (custom_id === 'safari_reset' || custom_id === 'safari_reset_scope' || custom_id.startsWith('safari_reset_go:')) {
+      const resetParentEphemeral = ((req.body.message?.flags || 0) & 64) !== 0;
+      return ButtonHandlerFactory.create({
+        id: custom_id.startsWith('safari_reset_go:') ? 'safari_reset_go' : custom_id,
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: resetParentEphemeral,
+        ephemeral: true,
+        deferred: true, // the wipe scope walks every player + edits channel permissions — well past 3s
+        handler: async (context) => {
+          const { routeResetInteraction } = await import('./safariReset.js');
+          return routeResetInteraction(context);
         }
       })(req, res, client);
 

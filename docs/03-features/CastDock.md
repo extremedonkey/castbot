@@ -15,32 +15,43 @@ Every other menu in CastBot is ephemeral (private, visible only to whoever invok
 
 Built in response to a user request to explore "a Discord bot that keeps a sticky message on a channel — whenever another user posts, it deletes its old message and reposts down the bottom." The initial ask was specifically about understanding **Discord intents/privileges** needed (the user was worried about polling/heavy resource use) before committing to build it. Key finding that shaped the whole design: **no new privileged intent was needed** — `GatewayIntentBits.GuildMessages` (non-privileged) was already declared in `app.js` for `messageDelete` cleanup (reaction-role bookkeeping), and that same intent delivers `MESSAGE_CREATE` events. CastDock's `messageCreate` listener was the first thing in the codebase to actually consume that event stream — Discord had been pushing those events over the gateway the whole time, just unread.
 
-The feature was then iterated heavily in a single session: full-menu integration → a "compact view" redesign (multiple rounds, driven by live testing and mobile-rendering feedback) → direct-action wiring for specific buttons → a privacy notice. All of that history matters for understanding *why* the code looks the way it does — see "Design Decisions & Their Reasoning" below.
+The feature was then iterated heavily in a single session: full-menu integration → a "compact view" redesign (multiple rounds, driven by live testing and mobile-rendering feedback) → direct-action wiring for specific buttons → a privacy notice. Two later rounds reshaped it further: **2026-07-25** replaced the fire-then-notify toggle with the deferred setup screen and per-channel button selection, and **2026-08-01** made that selection actually authoritative (see Button Selection). All of that history matters for understanding *why* the code looks the way it does.
 
 ## Architecture — No Polling, Purely Event-Driven
 
 ```mermaid
 flowchart TD
-    A[Player enables CastDock<br/>via Enable/Disable select] --> B[applyCastDockToggle]
-    B --> C[setCastDockConfig<br/>persists to playerData.json]
-    B --> D[client.castDockChannels.set<br/>in-memory cache entry]
-    B --> E[repostCastDockMenu<br/>immediate first post]
+    A["'Enable' chosen on the CastDock select"] --> A1["buildCastDockSetupScreen<br/>NOTHING persisted, NOTHING posted"]
+    A1 -->|"picks buttons"| A2["setCastDockButtonSelection<br/>writes selectedButtons only, leaves enabled alone"]
+    A2 -->|"re-render, ⚠️ flags refresh"| A1
+    A1 -->|"clicks Activate CastDock"| B[applyCastDockToggle]
+    A1 -->|"walks away"| A3["nothing happens — selection kept for next time"]
 
-    F[Anyone posts a message<br/>anywhere, any guild] --> G{client.on 'messageCreate'}
-    G --> H[client.castDockChannels.get channelId]
-    H -->|no entry| I[return — O(1), zero disk I/O]
+    B --> C["setCastDockConfig<br/>spreads the existing entry so<br/>selectedButtons survives activation"]
+    B --> D["client.castDockChannels.set<br/>in-memory cache entry"]
+    B --> E["repostCastDockMenu<br/>immediate first post"]
+
+    F["Anyone posts a message<br/>anywhere, any guild"] --> G{"client.on 'messageCreate'"}
+    G --> H["client.castDockChannels.get channelId"]
+    H -->|no entry| I["return — O(1), zero disk I/O"]
     H -->|entry found| J[evaluateCastDockTrigger]
     J -->|bot author| I
     J -->|within 3s cooldown| I
     J -->|repost| K[repostCastDockMenu]
 
-    K --> L[Fetch target member fresh<br/>never cached]
+    K --> L["Fetch target member fresh<br/>never cached"]
     L --> M[buildCompactCastDockMenu]
-    M --> N[POST new message<br/>raw REST fetch]
-    N --> O[DELETE old message<br/>post-then-delete order]
+    M --> M1["resolveCompactRowIds<br/>the host's selection"]
+    M --> M2["calculateVisibility<br/>what this server/player can show"]
+    M1 --> M3["applyCastDockSelection<br/>selection wins over a 'player' gate,<br/>never over a 'config' gate"]
+    M2 --> M3
+    M3 --> N["POST new message<br/>raw REST fetch"]
+    N --> O["DELETE old message<br/>post-then-delete order"]
 
-    P[channelDelete event] --> Q[handleCastDockChannelDelete<br/>cleans up config + cache]
+    P[channelDelete event] --> Q["handleCastDockChannelDelete<br/>cleans up config + cache"]
 ```
+
+**The two things this diagram exists to make obvious**: (1) choosing Enable persists *nothing* — only **Activate CastDock** does; (2) the rendered button row is the host's selection **combined with** `calculateVisibility`, never the selection alone. Both have burned people (see Button Selection below).
 
 **Why this is cheap even at scale**: `GuildMessages` means Discord already pushes a `MESSAGE_CREATE` dispatch for every message in every channel across every guild the bot is in — this was true before CastDock existed. The listener does a single `Map.get(channelId)` for each one; for the overwhelming majority of messages (any channel without CastDock enabled) that's the entire cost — no disk I/O, no API calls, no per-message `loadPlayerData()`. Memory cost is one small object per **enabled channel**, not per guild or per message.
 

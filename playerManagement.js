@@ -471,6 +471,17 @@ export function createManagementButtons(targetUserId, mode, enabled = true, acti
  *
  * The currency/inventory PLAYER-mode economy gate (hasEconomyActivity) keeps menus clean before
  * Safari is live for a player — Jason feedback 2026-06-18, mirrors the player-card economy line.
+ *
+ * ── `gatedBy`: DON'T DROP THIS FIELD ──────────────────────────────────────────────────────
+ * Six entries (currency, inventory, map, challenges, crafting, actions, commands) also carry a
+ * `gatedBy` tag saying WHY they're hidden: 'config' (the guild switched it off / configured
+ * nothing) vs 'player' (only this player's own state — broke, not on the map yet) vs null.
+ * It never affects `show`, so the player menu is indifferent to it — but CastDock's compact row
+ * reads it to decide which gates a host's explicit per-channel button choice may overrule
+ * (castDock.js `applyCastDockSelection`), and its setup screen reads it to explain a ticked
+ * button that can't render. That field name is the ONLY coupling between the two files: delete
+ * or rename it and CastDock silently renders fewer buttons than were selected, with no error
+ * anywhere — the exact bug fixed 2026-08-01. tests/castDock.test.js static-guards it.
  * ════════════════════════════════════════════════════════════════════════════════════════
  *
  * @param {string} guildId

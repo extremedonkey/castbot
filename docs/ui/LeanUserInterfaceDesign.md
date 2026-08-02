@@ -84,6 +84,21 @@ return {
 - **Excessive dividers**: Don't separate every single button
 - **Mixed metaphors**: Keep emoji themes consistent within sections
 - **Nested menus beyond 2 levels**: Flatten navigation where possible
+- **Silently gated selections**: see below — the one that keeps getting reported as a bug
+
+### 🚫 Silently Gated Selections
+
+**The trap**: a config screen lets someone pick what appears (checkboxes, a multi-select), but the thing they configured *also* runs through a runtime visibility check. The rendered result is `selection ∩ visibility`, and when the intersection is smaller than the selection, **nothing anywhere says why**. The user ticks six boxes, sees two, and files a bug — against code that is working exactly as designed.
+
+CastBot is full of `calculateVisibility`-style gating, so this is easy to walk into. Live example: CastDock's button picker, [2026-08-01](../03-features/CastDock.md#button-selection--and-why-a-ticked-button-can-still-be-missing).
+
+**If your screen offers a choice that a runtime gate can override, do all three:**
+
+1. **Decide which side wins, deliberately, and write down why.** An explicit user selection should beat a *cosmetic* gate ("hide this until they own an item"). It should NOT beat a *substantive* one ("this server has no recipes; the button would do nothing"). Tag the gate with its reason at the source so the consumer can tell the two apart — don't collapse it to a bare boolean and then guess downstream.
+2. **Dry-run the real gate on the config screen.** Call the same visibility function the live screen calls; don't reimplement its rules, or the two drift and the preview starts lying. Wrap it in try/catch — a failed *prediction* must never block the actual configuration.
+3. **Say so in place, on the option itself.** Swap the blocked option's description for `⚠️ <reason>`, and list blocked-and-selected items near the control. Tell them whether it's permanent or self-correcting ("appears automatically once configured").
+
+**Not a substitute**: a general disclaimer like *"selected items may not appear if requirements aren't met."* CastDock had exactly that sentence on the screen the whole time. It was true, it was ignored, and it named no specific button — per-option feedback is what actually works.
 
 ## 📏 Size Guidelines
 - **Menu height**: Aim for 5-8 visible rows without scrolling

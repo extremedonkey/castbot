@@ -2,7 +2,8 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   isTimed, getClaimants, claimStatusLine,
-  addClaim, clearClaim, setCooldown, clearAllClaims, resolveNames
+  addClaim, clearClaim, setCooldown, clearAllClaims, resolveNames,
+  countClaims, describeOutcome
 } from '../claimsManager.js';
 
 const HOUR = 3600000;
@@ -201,5 +202,87 @@ describe('claimsManager — resolveNames', () => {
     const names = await resolveNames(guild, ['a', 'b'], { fetch: true });
     assert.equal(names.a, 'Alice');
     assert.equal(names.b, 'Bob');
+  });
+});
+
+describe('claimsManager — countClaims', () => {
+  it('unlimited / missing / unknown → 0', () => {
+    assert.equal(countClaims({ type: 'unlimited', claimedBy: ['a'] }), 0);
+    assert.equal(countClaims(null), 0);
+    assert.equal(countClaims({ type: 'not_a_type', claimedBy: ['a'] }), 0);
+  });
+
+  it('once_per_player counts the array', () => {
+    assert.equal(countClaims({ type: 'once_per_player', claimedBy: ['a', 'b', 'c'] }), 3);
+    assert.equal(countClaims({ type: 'once_per_player', claimedBy: [] }), 0);
+    // legacy shape: a bare string where an array was expected
+    assert.equal(countClaims({ type: 'once_per_player', claimedBy: 'a' }), 1);
+  });
+
+  it('once_globally is 0 or 1, and empty-but-truthy means unclaimed', () => {
+    assert.equal(countClaims({ type: 'once_globally', claimedBy: 'a' }), 1);
+    assert.equal(countClaims({ type: 'once_globally', claimedBy: '' }), 0);
+    assert.equal(countClaims({ type: 'once_globally', claimedBy: null }), 0);
+    assert.equal(countClaims({ type: 'once_globally' }), 0);
+  });
+
+  it('once_per_period counts the keys', () => {
+    assert.equal(countClaims({ type: 'once_per_period', claimedBy: { a: 1, b: 2 } }), 2);
+    assert.equal(countClaims({ type: 'once_per_period', claimedBy: {} }), 0);
+    assert.equal(countClaims({ type: 'once_per_period', claimedBy: [] }), 0); // wrong shape → 0
+  });
+
+  it('custom counts the claims array, never claimedBy', () => {
+    assert.equal(countClaims({ type: 'custom', claims: [{ u: 'a', t: 1 }, { u: 'a', t: 2 }] }), 2);
+    assert.equal(countClaims({ type: 'custom', claims: [], claimedBy: ['a', 'b'] }), 0);
+    assert.equal(countClaims({ type: 'custom' }), 0);
+  });
+
+  it('agrees with clearAllClaims — clearing always drops the count to zero', () => {
+    for (const limit of [
+      { type: 'once_per_player', claimedBy: ['a', 'b'] },
+      { type: 'once_globally', claimedBy: 'a' },
+      { type: 'once_per_period', claimedBy: { a: 1 } },
+      { type: 'custom', claims: [{ u: 'a', t: 1 }] }
+    ]) {
+      assert.ok(countClaims(limit) > 0, `${limit.type} should start non-zero`);
+      clearAllClaims(limit);
+      assert.equal(countClaims(limit), 0, `${limit.type} should be zero after clearAllClaims`);
+    }
+  });
+});
+
+describe('claimsManager — describeOutcome', () => {
+  const G = 'g1';
+  const data = {
+    [G]: {
+      items: { idol: { name: 'Idol', emoji: '🗿' } },
+      enemies: { dig: { name: 'Diglett', emoji: '🐹' } },
+      attributeDefinitions: { luck: { name: 'Luck', emoji: '🍀' } }
+    }
+  };
+  const terms = { currencyName: 'Gil', currencyEmoji: '💎' };
+
+  it('describes give_item with emoji, verb and quantity', () => {
+    assert.equal(describeOutcome(data, G, { type: 'give_item', config: { itemId: 'idol', quantity: 2 } }, 0, terms), '🗿 Give 2x Idol');
+    assert.equal(describeOutcome(data, G, { type: 'give_item', config: { itemId: 'idol', operation: 'remove' } }, 0, terms), '🗿 Remove 1x Idol');
+  });
+
+  it('uses the per-server currency name/emoji, never a hardcoded coin', () => {
+    assert.equal(describeOutcome(data, G, { type: 'give_currency', config: { amount: 50 } }, 0, terms), '💎 +50 Gil');
+    assert.equal(describeOutcome(data, G, { type: 'give_currency', config: { amount: -5 } }, 0, terms), '💎 -5 Gil');
+  });
+
+  it('describes attributes, stamina and enemies', () => {
+    assert.equal(describeOutcome(data, G, { type: 'modify_attribute', config: { attributeId: 'luck', operation: 'add', amount: 1 } }, 0, terms), '🍀 +1 Luck');
+    assert.equal(describeOutcome(data, G, { type: 'give_stamina', config: { amount: 3 } }, 0, terms), '⚡ +3 Stamina');
+    assert.equal(describeOutcome(data, G, { type: 'fight_enemy', config: { enemyId: 'dig' } }, 0, terms), '🐹 Fight Diglett');
+  });
+
+  it('falls back gracefully for deleted references and unknown types', () => {
+    assert.equal(describeOutcome(data, G, { type: 'give_item', config: { itemId: 'gone' } }, 0, terms), '📦 Give 1x gone');
+    assert.equal(describeOutcome(data, G, { type: 'fight_enemy', config: {} }, 0, terms), '🐙 Fight Unknown Enemy');
+    assert.equal(describeOutcome(data, G, { type: 'display_text', config: {} }, 4, terms), 'Outcome #5');
+    assert.equal(describeOutcome({}, G, { type: 'give_currency', config: { amount: 1 } }, 0, {}), '🪙 +1 Currency');
   });
 });

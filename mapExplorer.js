@@ -2464,8 +2464,19 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     .setEmoji('🚪')
     .setDisabled(!hasActiveMap);
 
-  // Row 2: Player lifecycle
-  const mapButtonRow2 = new ActionRowBuilder().addComponents([startSafariButton, pausedPlayersButton, removePlayersButton]);
+  // Reset Safari: clears claims / play state without deleting any authored content.
+  // Sits beside Remove Players so the two destructive actions read as one group.
+  // Deliberately NOT map-gated (unlike its row-mates): claims live on Actions, which exist
+  // with or without a map, so a map-less Safari still needs resetting.
+  // NOTE: plain 🔄 (U+1F504) — the VS16 variant 🔄️ is rejected by Discord's emoji parser.
+  const resetSafariButton = new ButtonBuilder()
+    .setCustomId('safari_reset')
+    .setLabel('Reset Safari')
+    .setStyle(ButtonStyle.Danger)
+    .setEmoji('🔄');
+
+  // Row 2: Player lifecycle + reset
+  const mapButtonRow2 = new ActionRowBuilder().addComponents([startSafariButton, pausedPlayersButton, removePlayersButton, resetSafariButton]);
 
   // Row 3: Map views & data
   const safariProgressButton = new ButtonBuilder()

@@ -8,7 +8,7 @@
  */
 
 import { formatPeriod, summarizeLimit } from './utils/periodUtils.js';
-import { getClaimants, claimStatusLine, isTimed, resolveNames } from './claimsManager.js';
+import { getClaimants, claimStatusLine, isTimed, resolveNames, describeOutcome } from './claimsManager.js';
 
 const CLAIMANTS_PER_PAGE = 10;
 
@@ -20,43 +20,6 @@ function truncate(str, max) {
 function checkId(id) {
   if (id.length >= 90) console.warn(`⚠️ Claims custom_id near 100-char limit (${id.length}): ${id}`);
   return id;
-}
-
-/** Resolve the outcome's human description (matches the legacy view's switch). */
-async function describeOutcome(safariData, guildId, action, actionIndex) {
-  const items = safariData[guildId]?.items || {};
-  const enemies = safariData[guildId]?.enemies || {};
-  const { getCustomTerms } = await import('./safariManager.js');
-  const customTerms = await getCustomTerms(guildId);
-
-  switch (action.type) {
-    case 'give_item': {
-      const item = items[action.config.itemId];
-      const qty = action.config.quantity || 1;
-      const op = action.config.operation === 'remove' ? 'Remove' : 'Give';
-      return `${item?.emoji || '📦'} ${op} ${qty}x ${item?.name || action.config.itemId || 'Unknown Item'}`;
-    }
-    case 'give_currency': {
-      const amt = action.config.amount || 0;
-      return `${customTerms.currencyEmoji || '🪙'} ${amt > 0 ? '+' : ''}${amt} ${customTerms.currencyName || 'Currency'}`;
-    }
-    case 'modify_attribute': {
-      const attrDefs = safariData[guildId]?.attributeDefinitions || {};
-      const attrDef = attrDefs[action.config.attributeId];
-      const op = action.config.operation === 'add' ? '+' : action.config.operation === 'subtract' ? '-' : '=';
-      return `${attrDef?.emoji || '📊'} ${op}${action.config.amount || 0} ${attrDef?.name || action.config.attributeId || 'Unknown Attribute'}`;
-    }
-    case 'give_stamina': {
-      const staminaAmt = action.config.amount || 0;
-      return `⚡ ${staminaAmt > 0 ? '+' : ''}${staminaAmt} Stamina`;
-    }
-    case 'fight_enemy': {
-      const enemy = enemies[action.config.enemyId];
-      return `${enemy?.emoji || '🐙'} Fight ${enemy?.name || 'Unknown Enemy'}`;
-    }
-    default:
-      return `Outcome #${actionIndex + 1}`;
-  }
 }
 
 function errorContainer(message, buttonId) {
@@ -99,7 +62,8 @@ export async function buildClaimsManagerUI({ client, guildId, buttonId, actionIn
     once_per_period: `⏱️ **Once Per Period** — every **${formatPeriod(limit.periodMs || 0)}**`,
     custom: `⚙️ **Custom** — ${summarizeLimit(limit)}`
   };
-  const outcomeDesc = await describeOutcome(safariData, guildId, action, actionIndex);
+  const { getCustomTerms } = await import('./safariManager.js');
+  const outcomeDesc = describeOutcome(safariData, guildId, action, actionIndex, await getCustomTerms(guildId));
 
   const components = [
     { type: 10, content: `## 👥 Player Claims | ${button.name || buttonId}` },

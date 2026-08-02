@@ -126,6 +126,8 @@ Same as current implementation. Hot-swap select shows role select (pronouns/time
 **Conditional section:** If no buttons would render (no currency, no inventory, no challenges, no crafting, no actions, no stores), hide the entire section heading + action row. This is enforced by `if (row2.length)` in `createPlayerManagementUI` — the heading TextDisplay is only pushed when the row produced ≥1 button. **There is no separate "hide heading" flag; hide the buttons and the heading follows.**
 
 > 📌 **Single source of truth for all of these rules:** `calculateVisibility()` in `playerManagement.js` (see the big doc-comment above the function). The list below is the human-readable mirror — if they disagree, the code wins.
+>
+> ⚠️ **One consumer is allowed to disagree (since 2026-08-01):** CastDock's compact row. A host ticking a button on that feature's per-channel setup screen is an explicit configuration decision, so it overrules the *per-player* gates below (the economy gate, "player must be on the map") — but never a guild-level one (feature switched off, nothing configured). Which is which is carried by the `gatedBy` tag `calculateVisibility` sets on each entry. The player menu itself is unaffected; see [CastDock.md](../03-features/CastDock.md#button-selection--and-why-a-ticked-button-can-still-be-missing).
 
 **Buttons (each conditional):**
 

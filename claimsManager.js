@@ -20,6 +20,73 @@ function nonNeg(n, fallback = 0) {
   return Number.isNaN(n) ? fallback : Math.max(0, n);
 }
 
+/**
+ * How many claim records this outcome is currently holding. Type-aware, and treats the
+ * empty-but-truthy shapes (`[]`, `''`, `{}`) as zero — see the hazard note in SafariUsageLimits.md.
+ * @param {object} limit - action.config.limit
+ * @returns {number}
+ */
+export function countClaims(limit) {
+  if (!limit || limit.type === 'unlimited') return 0;
+  const cb = limit.claimedBy;
+
+  if (limit.type === 'custom') return Array.isArray(limit.claims) ? limit.claims.length : 0;
+  if (limit.type === 'once_per_player') {
+    if (Array.isArray(cb)) return cb.length;
+    return (typeof cb === 'string' && cb) ? 1 : 0;
+  }
+  if (limit.type === 'once_globally') return (typeof cb === 'string' && cb.length > 0) ? 1 : 0;
+  if (limit.type === 'once_per_period') {
+    return (cb && typeof cb === 'object' && !Array.isArray(cb)) ? Object.keys(cb).length : 0;
+  }
+  return 0;
+}
+
+/**
+ * Human description of what an outcome hands out ("🗝️ Give 1x Office Key", "🪙 +50 Coins").
+ * Pure: `customTerms` is passed in so callers can resolve it once for a whole sweep.
+ *
+ * @param {object} safariData - full safariContent
+ * @param {string} guildId
+ * @param {object} action - safariData[guildId].buttons[id].actions[i]
+ * @param {number} actionIndex
+ * @param {object} customTerms - from getCustomTerms(guildId)
+ * @returns {string}
+ */
+export function describeOutcome(safariData, guildId, action, actionIndex, customTerms = {}) {
+  const items = safariData?.[guildId]?.items || {};
+  const enemies = safariData?.[guildId]?.enemies || {};
+
+  switch (action?.type) {
+    case 'give_item': {
+      const item = items[action.config?.itemId];
+      const qty = action.config?.quantity || 1;
+      const op = action.config?.operation === 'remove' ? 'Remove' : 'Give';
+      return `${item?.emoji || '📦'} ${op} ${qty}x ${item?.name || action.config?.itemId || 'Unknown Item'}`;
+    }
+    case 'give_currency': {
+      const amt = action.config?.amount || 0;
+      return `${customTerms.currencyEmoji || '🪙'} ${amt > 0 ? '+' : ''}${amt} ${customTerms.currencyName || 'Currency'}`;
+    }
+    case 'modify_attribute': {
+      const attrDefs = safariData?.[guildId]?.attributeDefinitions || {};
+      const attrDef = attrDefs[action.config?.attributeId];
+      const op = action.config?.operation === 'add' ? '+' : action.config?.operation === 'subtract' ? '-' : '=';
+      return `${attrDef?.emoji || '📊'} ${op}${action.config?.amount || 0} ${attrDef?.name || action.config?.attributeId || 'Unknown Attribute'}`;
+    }
+    case 'give_stamina': {
+      const staminaAmt = action.config?.amount || 0;
+      return `⚡ ${staminaAmt > 0 ? '+' : ''}${staminaAmt} Stamina`;
+    }
+    case 'fight_enemy': {
+      const enemy = enemies[action.config?.enemyId];
+      return `${enemy?.emoji || '🐙'} Fight ${enemy?.name || 'Unknown Enemy'}`;
+    }
+    default:
+      return `Outcome #${actionIndex + 1}`;
+  }
+}
+
 /** True when the outcome uses a time-based (cooldown/window) limit. */
 export function isTimed(limit) {
   if (limit?.type === 'once_per_period') return true;

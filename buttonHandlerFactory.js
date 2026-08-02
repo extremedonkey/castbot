@@ -3107,6 +3107,33 @@ export const BUTTON_REGISTRY = {
     style: 'Danger',
     category: 'safari_map_admin'
   },
+  'safari_reset': {
+    label: 'Reset Safari',
+    description: 'Clear Safari play state (action claims, map drops, player economy) without deleting any content',
+    emoji: '🔄',
+    style: 'Danger',
+    category: 'safari_map_admin',
+    parent: 'safari_map_explorer',
+    requiresPermission: 'ManageRoles'
+  },
+  'safari_reset_scope': {
+    label: 'Reset Scope',
+    description: 'String select choosing how much Safari play state to reset',
+    emoji: '🔄',
+    style: 'Secondary',
+    category: 'safari_map_admin',
+    parent: 'safari_reset',
+    requiresPermission: 'ManageRoles'
+  },
+  'safari_reset_go_*': {
+    label: 'Confirm Reset',
+    description: 'Execute the selected Safari reset scope (testing / full / wipe)',
+    emoji: '🔄',
+    style: 'Danger',
+    category: 'safari_map_admin',
+    parent: 'safari_reset',
+    requiresPermission: 'ManageRoles'
+  },
   'map_player_locations': {
     label: 'Player Locations',
     description: 'View all player locations on the map',
