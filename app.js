@@ -36,6 +36,7 @@ import { capitalize, DiscordRequest } from './utils.js';
 import { discordLogTags } from './src/utils/discordLogTags.js';  // Educational logging tags
 import { buildCustomLimit } from './customUsageLimitUI.js';  // ⚙️ Custom usage-limit builder
 import { buildExecuteOnOptions } from './utils/executeOnOptions.js';  // single source: outcome executeOn copy
+import { buildConditionTypeOptions } from './utils/conditionTypes.js';  // single source: condition type copy
 import { MAX_STAMINA, MAX_STAMINA_DIGITS } from './config/safariLimits.js';  // single source: stamina input ceiling
 import { 
   loadPlayerData, 
@@ -29864,71 +29865,27 @@ To fix this:
         }
       })(req, res, client);
       
+    // Opens the one-shot Add Condition modal. This used to create a CURRENCY condition
+    // immediately — the 5% case — so almost every admin then had to open the editor and change
+    // the type. The modal asks once, defaulting to Item (95% of production conditions).
     } else if (custom_id.startsWith('condition_add_')) {
-      // Add new condition handler
       return ButtonHandlerFactory.create({
         id: 'condition_add',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
-        updateMessage: true,
         handler: async (context) => {
-          console.log(`🔍 START: condition_add - user ${context.userId}`);
-          
-          // Parse custom_id: condition_add_actionId_currentPage
           const customIdParts = context.customId.split('_');
           customIdParts.shift(); // Remove 'condition'
           customIdParts.shift(); // Remove 'add'
           const currentPage = parseInt(customIdParts.pop() || '0');
           const actionId = customIdParts.join('_');
-          
-          // Load action data
-          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
-          const allSafariContent = await loadSafariContent();
-          const action = allSafariContent[context.guildId]?.buttons?.[actionId];
-          
-          if (!action) {
-            throw new Error('Action not found');
-          }
-          
-          // Ensure conditions is an array (legacy actions might have old structure)
-          if (!Array.isArray(action.conditions)) {
-            action.conditions = [];
-          }
-          
-          // Create new condition with default values
-          const newCondition = {
-            id: `cond_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-            type: 'currency', // Default type
-            operator: 'gte',  // Default operator
-            value: 0,         // Default value
-            logic: 'AND'      // Default logic for next condition
-          };
-          
-          // Add to conditions array
-          action.conditions.push(newCondition);
-          
-          // Save updated action
-          await saveSafariContent(allSafariContent);
-          
-          console.log(`✅ SUCCESS: condition_add - added new condition to action ${actionId}`);
-          
-          // For now, redirect back to condition manager
-          // TODO: Show condition editor for the new condition
-          const { refreshConditionManagerUI } = await import('./customActionUI.js');
-          
-          // Calculate which page the new condition will be on
-          const conditionsPerPage = 3;
-          const newConditionPage = Math.floor((action.conditions.length - 1) / conditionsPerPage);
-          
-          await refreshConditionManagerUI({
-            res,
-            actionId,
-            guildId: context.guildId,
-            currentPage: newConditionPage
-          });
-          
-          // Return undefined as response already sent
-          return;
+
+          const { loadSafariContent } = await import('./safariManager.js');
+          const { buildAddConditionModal, getSortedGuildItems } = await import('./customActionUI.js');
+          const items = (await loadSafariContent())[context.guildId]?.items || {};
+
+          console.log(`🧩 ADD CONDITION: showing modal for ${actionId} (page ${currentPage})`);
+          return buildAddConditionModal(actionId, currentPage, getSortedGuildItems(items));
         }
       })(req, res, client);
       
@@ -41065,6 +41022,37 @@ To fix this:
           }
         });
       }
+    } else if (custom_id.startsWith('safari_condition_add_')) {
+      // One-shot Add Condition modal
+      try {
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to edit actions.')) return;
+        const { handleAddConditionSubmit, showConditionEditor, refreshConditionManagerUI } = await import('./customActionUI.js');
+        const guildId = req.body.guild_id;
+        const result = await handleAddConditionSubmit(guildId, custom_id, req.body.data);
+
+        if (result.error) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { content: result.error, flags: InteractionResponseFlags.EPHEMERAL }
+          });
+        }
+
+        // An item condition with an item chosen is complete — land back on the list. Anything
+        // else still needs its own fields, so open that type's editor on the new condition.
+        if (result.needsEditor) {
+          return await showConditionEditor({
+            res, actionId: result.actionId, conditionIndex: result.conditionIndex,
+            guildId, currentPage: result.page
+          });
+        }
+        return await refreshConditionManagerUI({ res, actionId: result.actionId, guildId, currentPage: result.page });
+      } catch (error) {
+        console.error('Error in safari_condition_add handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { content: '❌ Error adding condition.', flags: InteractionResponseFlags.EPHEMERAL }
+        });
+      }
     } else if (custom_id.startsWith('safari_item_quick_')) {
       // One-shot Give / Remove Item create modal
       try {
@@ -42202,11 +42190,10 @@ To fix this:
                     type: 3,
                     custom_id: `condition_type_select_${actionId}_${conditionIndex}_${currentPage}`,
                     placeholder: 'Select Condition Type...',
-                    options: [
-                      { label: 'Currency', value: 'currency', emoji: { name: '🪙' }, default: condition.type === 'currency' },
-                      { label: 'Item', value: 'item', emoji: { name: '📦' }, default: true },
-                      { label: 'Role', value: 'role', emoji: { name: '👑' }, default: condition.type === 'role' }
-                    ]
+                    // Was a hand-written copy offering only 3 of the 8 types, with `default: true`
+                    // hardcoded on Item — so searching for an item hid five types and misreported
+                    // the condition's own type. Shared source: utils/conditionTypes.js.
+                    options: buildConditionTypeOptions(condition.type)
                   }]
                 },
                 { type: 14 }, // Separator

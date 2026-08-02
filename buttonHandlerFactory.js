@@ -4384,7 +4384,7 @@ export const BUTTON_REGISTRY = {
   },
   'condition_add_*': {
     label: 'Add Condition',
-    description: 'Add a new condition',
+    description: 'Opens the one-shot Add Condition modal (type + item + operator). Item-with-item-chosen completes immediately; anything else routes to that type\'s editor. Types come from utils/conditionTypes.js',
     emoji: '➕',
     style: 'Primary',
     category: 'conditional_logic'

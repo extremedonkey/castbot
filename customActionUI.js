@@ -10,6 +10,12 @@ import { parseTextEmoji, resolveEmoji, parseAndValidateEmoji } from './utils/emo
 import { buildImageFieldLabel, collectModalFields, resolveUploadedImageField } from './src/images/modalImageUpload.js';
 import { buildExecuteOnOptions, buildExecuteOnRadioOptions, toRadioOptions, normalizeExecuteOn } from './utils/executeOnOptions.js';
 import { buildItemSelectField } from './utils/itemSelectField.js';
+import {
+  buildConditionTypeOptions,
+  buildConditionTypeRadioOptions,
+  normalizeConditionType,
+  DEFAULT_CONDITION_TYPE
+} from './utils/conditionTypes.js';
 
 /**
  * Shared outcome type options for the "Add Outcome" select menus.
@@ -2714,64 +2720,8 @@ export async function showConditionEditor({ res, actionId, conditionIndex, guild
         type: 3, // String Select
         custom_id: `condition_type_select_${actionId}_${conditionIndex}_${currentPage}`,
         placeholder: 'Select Condition Type...',
-        options: [
-          {
-            label: 'Currency',
-            value: 'currency',
-            description: "User's currency is greater/less than or equal to a value",
-            emoji: { name: '🪙' },
-            default: condition.type === 'currency'
-          },
-          {
-            label: 'Item',
-            value: 'item',
-            description: "User has/doesn't have item",
-            emoji: { name: '📦' },
-            default: condition.type === 'item'
-          },
-          {
-            label: 'Role',
-            value: 'role',
-            description: "User has/doesn't have role",
-            emoji: { name: '👑' },
-            default: condition.type === 'role'
-          },
-          {
-            label: 'Attribute',
-            value: 'attribute_check',
-            description: "Check player attribute (HP, Mana, Strength, etc.)",
-            emoji: { name: '📊' },
-            default: condition.type === 'attribute_check'
-          },
-          {
-            label: 'Compare Attributes',
-            value: 'attribute_compare',
-            description: "Compare two attributes (e.g., Strength > Dexterity)",
-            emoji: { name: '⚔️' },
-            default: condition.type === 'attribute_compare'
-          },
-          {
-            label: 'Multi-Attribute',
-            value: 'multi_attribute_check',
-            description: "Check multiple attributes (all/any >= value, total >= value)",
-            emoji: { name: '📈' },
-            default: condition.type === 'multi_attribute_check'
-          },
-          {
-            label: 'Random Probability',
-            value: 'random_probability',
-            description: "Randomises chance of pass / fail outcome",
-            emoji: { name: '🎲' },
-            default: condition.type === 'random_probability'
-          },
-          {
-            label: 'D20 Dice Roll',
-            value: 'd20_roll',
-            description: "D&D-style d20 roll with DC, modifiers, crits & fumbles",
-            emoji: { name: '🐉' },
-            default: condition.type === 'd20_roll'
-          }
-        ]
+        // Single source — see utils/conditionTypes.js. Adding a type is one edit there.
+        options: buildConditionTypeOptions(condition.type)
       }]
     }
   ];
@@ -5587,6 +5537,155 @@ export async function handleGiveItemQuickSubmit(guildId, customId, formData) {
 
   const editorUI = await createCustomActionEditorUI({ guildId, actionId: buttonId });
   return { ...editorUI, ephemeral: true };
+}
+
+// ─── Add Condition: one-shot create modal ───────────────────────────────────
+// Adding an item condition — 95% of all conditions in production — took EIGHT interactions:
+// Manage → Add Condition (which created a CURRENCY condition) → Edit → open the type select →
+// pick Item → open the item select → search → pick. The type defaulting to the 5% case meant
+// essentially every admin had to correct it. Now one modal covers type + item + operator.
+
+/**
+ * Pure — the Add Condition modal.
+ * Submits to `safari_condition_add_{actionId}_{page}`.
+ *
+ * Three Labels, optimised for the common case without hiding the others:
+ *   - Condition type  — Radio Group, defaults to Item
+ *   - Item            — optional; only meaningful when type is Item, blank falls through to search
+ *   - Player must     — Has / Does not have; applies to Item and Role
+ * Choosing any other type ignores the last two and routes to that type's own config screen.
+ *
+ * @param {string} actionId @param {number} page @param {Array} items - sorted guild items
+ * @returns {object} MODAL interaction response
+ */
+export function buildAddConditionModal(actionId, page, items) {
+  return {
+    type: 9, // MODAL
+    data: {
+      custom_id: `safari_condition_add_${actionId}_${page}`,
+      title: 'Add Condition',
+      components: [
+        {
+          type: 18, // Label
+          label: 'Condition type',
+          description: 'What gets checked before this action runs.',
+          component: {
+            type: 21, // Radio Group — a select's `default` is ignored in modals
+            custom_id: 'condition_type',
+            required: true,
+            options: buildConditionTypeRadioOptions(DEFAULT_CONDITION_TYPE)
+          }
+        },
+        buildItemSelectField({
+          items,
+          customId: 'condition_item',
+          label: 'Item',
+          required: false,
+          escape: 'search'
+        }),
+        {
+          type: 18, // Label
+          label: 'Player must',
+          description: 'Applies to Item and Role conditions.',
+          component: {
+            type: 21, // Radio Group
+            custom_id: 'condition_operator',
+            required: true,
+            options: [
+              { label: '✅ Have it', value: 'has', description: 'The condition passes when they hold it', default: true },
+              { label: '❌ Not have it', value: 'not_has', description: 'The condition passes when they do NOT hold it' }
+            ]
+          }
+        }
+      ]
+    }
+  };
+}
+
+/**
+ * Pure — normalise the Add Condition modal's fields.
+ * @param {object} fields - from collectModalFields()
+ * @returns {{type: string, itemId: string|null, operator: string}}
+ */
+export function parseAddConditionFields(fields) {
+  const pick = key => (Array.isArray(fields[key]) ? fields[key][0] : fields[key]) || null;
+  return {
+    type: normalizeConditionType(pick('condition_type')),
+    itemId: pick('condition_item'),
+    operator: pick('condition_operator') === 'not_has' ? 'not_has' : 'has'
+  };
+}
+
+/**
+ * Pure — build the stored condition object. Shape must match what condition_add + the editors
+ * write, or evaluateConditions reads it differently.
+ * @param {object} parsed - from parseAddConditionFields
+ * @param {number} now - Date.now() (injected so the result is testable)
+ * @param {string} rand - random suffix (injected for the same reason)
+ */
+export function buildConditionObject(parsed, now, rand) {
+  const condition = {
+    id: `cond_${now}_${rand}`,
+    type: parsed.type,
+    logic: 'AND'
+  };
+
+  if (parsed.type === 'item') {
+    condition.operator = parsed.operator;
+    if (parsed.itemId) condition.itemId = parsed.itemId;
+  } else if (parsed.type === 'role') {
+    condition.operator = parsed.operator;
+  } else if (parsed.type === 'currency') {
+    // Same defaults the old Add Condition button produced, so currency behaves as before
+    condition.operator = 'gte';
+    condition.value = 0;
+  }
+
+  return condition;
+}
+
+/**
+ * Handle the Add Condition modal submit — appends the condition and decides where to land.
+ *
+ * @returns {Promise<{conditionIndex: number, needsEditor: boolean, type: string}>}
+ *   needsEditor=false → fully configured (item chosen), caller re-renders the Condition Manager.
+ *   needsEditor=true  → caller opens showConditionEditor for the new condition.
+ */
+export async function handleAddConditionSubmit(guildId, customId, formData) {
+  const rest = customId.replace('safari_condition_add_', '');
+  const lastUnderscore = rest.lastIndexOf('_');
+  const page = parseInt(rest.slice(lastUnderscore + 1), 10) || 0;
+  const actionId = rest.slice(0, lastUnderscore);
+
+  const parsed = parseAddConditionFields(collectModalFields(formData.components));
+
+  const safariData = await loadSafariContent();
+  const action = safariData[guildId]?.buttons?.[actionId];
+  if (!action) {
+    console.error(`❌ Action ${actionId} not found during add-condition save for guild ${guildId}`);
+    return { error: `❌ Custom action "${actionId}" no longer exists — dismiss this and reopen the action.` };
+  }
+
+  // Legacy actions carry `conditions` as a {logic, items} OBJECT rather than an array (126 in
+  // production, all with an EMPTY items list — scaffolding from a UI that was never finished).
+  // Replacing it is safe and is what the existing Add Condition button already did.
+  if (!Array.isArray(action.conditions)) action.conditions = [];
+
+  const condition = buildConditionObject(parsed, Date.now(), Math.random().toString(36).substr(2, 5));
+  action.conditions.push(condition);
+  const conditionIndex = action.conditions.length - 1;
+
+  action.metadata = action.metadata
+    ? { ...action.metadata, lastModified: Date.now() }
+    : { createdAt: Date.now(), lastModified: Date.now(), usageCount: 0 };
+
+  await saveSafariContent(safariData);
+
+  // An item condition with an item chosen is complete — nothing left to ask.
+  const needsEditor = !(parsed.type === 'item' && parsed.itemId);
+  console.log(`✅ ADD CONDITION: ${parsed.type}${parsed.itemId ? ` (${parsed.operator} ${parsed.itemId})` : ''} on ${actionId}[${conditionIndex}] — ${needsEditor ? 'opening editor' : 'complete'}`);
+
+  return { conditionIndex, needsEditor, type: parsed.type, page, actionId };
 }
 
 export async function handleDisplayTextSave(guildId, customId, formData, client) {
