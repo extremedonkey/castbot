@@ -1,6 +1,6 @@
 # 🖼️ Image Uploads (Media Gallery Migration)
 
-**Status**: 🟡 **Active — infrastructure shipped, migration mostly done.** Converted: map cell location image (pilot), map create/update (download-source), enemy image, rich card shared def (+ challenges and channels consumers), dice/d20 result images, tips showcase. Remaining legacy: custom-action Display Text image (+ its legacy twin), Season App question images, and the legacy map-cell editor (retirement candidate) — see [RaP 0894 § Migration Backlog](../01-RaP/0894_20260720_ImageUploadComponent_Analysis.md#-migration-backlog--every-remaining-image-url-modal-input-swept-2026-07-20). Deployed to **TEST only** (castbot-blue). **Not on prod.**
+**Status**: 🟡 **Active — infrastructure shipped, migration mostly done.** Converted: map cell location image (pilot), map create/update (download-source), enemy image, rich card shared def (+ challenges and channels consumers), dice/d20 result images, tips showcase. Remaining legacy: custom-action Display Text image (+ its legacy twin), Season App question images, and the legacy map-cell editor (retirement candidate) — see [RaP 0894 § Migration Backlog](../01-RaP/0894_20260720_ImageUploadComponent_Analysis.md#-migration-backlog--every-remaining-image-url-modal-input-swept-2026-07-20). **Live on PROD** (shipped with the late-July deploy train; the earlier "TEST only" note was stale and briefly misled a map-image investigation on 2026-07-29).
 
 **Read this if**: you're picking up the "convert legacy Image URL fields to native Discord uploads" work with no other context — a fresh Claude Code session, a new contributor, or future-you in six months.
 
@@ -13,7 +13,7 @@
 1. **The infrastructure is done and reusable.** A per-guild toggle (Settings → General), a renamed shared image-storage channel (`#🗺️castbot-images`, was `#🗺️map-storage`), and a resolve-on-submit helper all exist and work for *any* image field you want to convert next.
 2. **Converted so far**: map cell location image (pilot), map create/update image (download-source), enemy image, the rich-card shared modal def (cascading to challenges + channels msg composer), dice/d20 result images, and the tips showcase image. **Still legacy paste-URL**: custom-action "Display Text" image (modern + legacy twin), Season App question images, and the legacy `map_grid_edit_modal_` editor (retirement candidate) — inventory in [RaP 0894 § Migration Backlog](../01-RaP/0894_20260720_ImageUploadComponent_Analysis.md#-migration-backlog--every-remaining-image-url-modal-input-swept-2026-07-20).
 3. **Converting another field** is a checklist against the working examples — see [§ How to Convert the Next Field](#-how-to-convert-the-next-field). The shared building blocks are `buildImageFieldLabel()` (modal side) and `resolveUploadedImageField({ fieldKey, currentValue })` (submit side), both in [src/images/modalImageUpload.js](../../src/images/modalImageUpload.js).
-4. Nothing here has touched prod. Verify on TEST (`CastBot Test` in Discord) before ever asking to deploy further.
+4. This is live on prod. Verify any new conversion on TEST (`CastBot Test` in Discord) before deploying further.
 
 ---
 
@@ -210,7 +210,7 @@ Done as a prerequisite for the pilot (the upload needed a general-purpose host, 
 - **Every other image field is still paste-URL only** regardless of a guild's toggle setting — the toggle currently only affects the one wired-up field. Don't assume flipping the setting changes anything else yet.
 - **No bulk/retroactive re-hosting** of already-pasted URLs — switching a guild to Upload Component mode does nothing to images already stored via paste; it only changes the *next* edit's modal.
 - **No cleanup/retention policy** for `#🗺️castbot-images` — messages accumulate indefinitely (known, accepted tradeoff, same as the old map-storage channel always had).
-- **Not deployed to prod.** Verified on TEST (castbot-blue) only.
+- ~~Not deployed to prod~~ — **this is now live on prod.** Verify changes on TEST first as always, but the feature itself is no longer TEST-gated.
 
 ---
 

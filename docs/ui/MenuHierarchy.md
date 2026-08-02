@@ -2,7 +2,16 @@
 
 > **Open this file when** you need to understand where a feature sits in the user-facing navigation, or decide where a new button should live in the menu tree. This is a snapshot — verify against the actual code if the tree looks wrong.
 
-**Last Updated**: 2025-02-11
+**Last Updated**: 2026-07-30
+
+> ⚠️ **2026-07-29/30 menu moves** — the tree below predates these; trust this list where they conflict, and see [docs/askcastbot-kb/ui-paths.md](../askcastbot-kb/ui-paths.md), which is the source Ask CastBot itself uses for navigation answers:
+> - `⚙️ Setup` (was Tools → "Re-Run Setup") and `⏰ Scheduled Jobs` → **CastBot Settings → CastBot-Wide Settings**
+> - `⚓ Anchors` (was Tools → "Refresh Anchors") → **Map Explorer**, right of Whispers
+> - `🚀 Progress` — Map Explorer label shortened from "Safari Progress"
+> - `👾 Ask CastBot` + `👾 Post Ask CastBot` share their own row in **Tools**; Post Ask left Reece's Stuff. The short-lived `🛠️ Edit Safari` / `Post Edit Card` buttons were **merged into Ask CastBot and deleted** — see [AskCastBot.md](../03-features/AskCastBot.md)
+> - `🎟️ Entitlements` added to **Reece's Stuff** (runtime per-guild feature grants)
+> - `🧹 Archive Channels` is no longer TEST-gated in the **Premium** menu
+> - The CastBot Settings screen no longer prints a ~30-line dump of every setting value above its buttons
 
 ---
 

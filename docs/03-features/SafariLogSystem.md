@@ -57,6 +57,7 @@ Safari Interaction → safariLogger.js → analyticsLogger.js → Discord Channe
 ✅ **Test Message Support** - Admin testing functionality
 ✅ **Stamina Change Logging** - Before/after stamina tags on movement, initialization, consumable use, and action outcomes
 ✅ **Stamina Changes Toggle** - `staminaChanges` log type toggle for Safari Log (hosts can control independently)
+✅ **Ask CastBot Edits** - `askCastBotEdits` (default ON, added 2026-07-29): logs Safari changes applied via [Ask CastBot](AskCastBot.md) — who asked, what they asked for, and the per-change summary. Emitter: `logAskCastBotEdit()` in safariLogger.js. Replaced a raw plan-JSON dump that was being posted into the **image storage channel**, which was both the wrong home and unreadable.
 
 ## Configuration
 
@@ -79,7 +80,8 @@ Safari Interaction → safariLogger.js → analyticsLogger.js → Discord Channe
         "attacks": true,
         "customActions": true,
         "testMessages": true,
-        "staminaChanges": true
+        "staminaChanges": true,
+        "askCastBotEdits": true
       },
       "formatting": {
         "accentColor": 0x9B59B6,

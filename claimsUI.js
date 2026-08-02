@@ -49,9 +49,12 @@ export async function buildClaimsManagerUI({ client, guildId, buttonId, actionIn
   const button = safariData[guildId]?.buttons?.[buttonId];
   const action = button?.actions?.[actionIndex];
 
-  if (!action?.config?.limit) return errorContainer('No claim limit configured for this outcome', buttonId);
+  if (!action) return errorContainer('Outcome not found', buttonId);
 
-  const limit = action.config.limit;
+  // An outcome with no limit object IS unlimited at runtime (evaluateClassicGate returns
+  // not-blocked for a missing limit), so render it as such rather than erroring — the menu
+  // now offers Player Claims for every claim-capable outcome, including unconfigured ones.
+  const limit = action.config?.limit || { type: 'unlimited' };
   const limitType = limit.type || 'unlimited';
   const timed = isTimed(limit);
 

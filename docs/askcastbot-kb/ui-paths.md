@@ -37,7 +37,7 @@ Top-level rows:
   cells this item unlocks, e.g. `A1, B1`).
 - **Create or edit a store / stock items in it**: `/menu` → `🏪 Stores` → pick or
   create the store → manage its items and prices from that screen.
-- **Change currency name/emoji and other Safari settings**: `/menu` → `⚙️ Settings`.
+- **Change currency name/emoji and other Safari settings**: `/menu` → `⚙️ Settings`. That screen is buttons only — each group's editor shows its current values when you open it.
 - **Give/take a player's currency or items**: `/menu` → `🧭 Player Admin` → pick the
   player.
 - **Create or edit Actions** (buttons/commands with outcomes and conditions):
@@ -47,19 +47,33 @@ Top-level rows:
 - **Map management** (create map, blacklist coordinates, player locations, location
   content): `/menu` → `🗺️ Map Admin`. Location text/images are edited via the
   **Location Editor** inside Map Admin.
-- **Refresh location cards** after edits: `/menu` → `🪛 Tools` → `🔄 Refresh Anchors`.
+- **Refresh location cards** after edits: `/menu` → `🗺️ Map Admin` → `⚓ Anchors`.
+- **Re-run CastBot setup** (roles etc.): `/menu` → `⚙️ Settings` → `⚙️ Setup`.
+- **See scheduled jobs**: `/menu` → `⚙️ Settings` → `⏰ Scheduled Jobs`.
 
 ## Tools Menu (`/menu` → `🪛 Tools`)
 
-- **Special Features**: `📊 Attributes`, `🖼️ Category Post`, `🐙 Enemies`,
-  `💼 Tycoons`, and (whitelisted servers) `👾 Ask CastBot`
-- **Edit Safari row** (entitled servers only): `🛠️ Edit Safari` (describe a change in
-  plain English and apply it), `🛠️ Post Edit Card`
+- **Special Features**: `📊 Attributes`, `🖼️ Category Post`, `🐙 Enemies`, `💼 Tycoons`
+- **Ask CastBot row** (entitled servers): `👾 Ask CastBot`, `👾 Post Ask CastBot`
 - **Cleanup**: `🗺️ Navigate Tidy`, `☢️ Nuke Category`, `💅 Clear Vanity Roles`
 - **Timers (Snowflake)**: `⏱️ Calculator`, `🔍 Lookup`
-- **Utilities**: `🪛 Re-Run Setup`, `🕐 Availability`, `🎨 Emoji Editor`,
-  `🔄 Refresh Anchors`, `⏰ Scheduled Jobs`
+- **Utilities**: `🕐 Availability`, `🎨 Emoji Editor`
 - **Info & Support**: Terms of Service, Privacy Policy, Need Help? (support server)
+
+## CastBot Settings (`/menu` → `⚙️ Settings`)
+
+- **CastBot-Wide Settings**: `⚙️ General`, `🕹️ Player Menu`, `💜 Reaction Roles`,
+  `⚙️ Setup` (re-runs setup — idempotent), `⏰ Scheduled Jobs`
+- **Idol Hunts, Challenges and Safari Settings**: `🪙 Currency`, `🛠️ Crafting`,
+  `📍 Location`, `⚡ Stamina`, `❗ Commands`
+- **Advanced**: `🔐 Roles & Security`, `🪵 Logs`, `📤 Export`, `📥 Import`, `🔄 Reset`
+- **Legacy**: `☄️ Events`, `🎲 Rounds`
+
+## Map Admin (`/menu` → `🗺️ Map Admin`)
+
+Map management (create/update/delete), blacklisted coordinates, player locations,
+paused players, `📍 Location Editor`, `🚀 Progress`, `🤫 Whispers`, `⚓ Anchors`
+(rebuilds every location card), `🗺️ Prod Map`.
 
 ## Things that do NOT exist (never invent these)
 

@@ -206,7 +206,8 @@ export async function createFieldGroupModal(groupKey, currentConfig) {
         round2GoodProbability: 'Chance of a good event in round 2 (0-100).',
         round3GoodProbability: 'Chance of a good event in round 3 (0-100).',
         defaultStartingCoordinate: 'Where new players spawn on the map (e.g. A1).',
-        reverseBlacklistRequireAll: 'Multi-key doors: when a blocked cell is unlocked by several items, players must hold ALL of them. Off = any one item unlocks it.'
+        // Discord caps Label.description at 100 chars — keep it short or the modal is rejected
+        reverseBlacklistRequireAll: 'Multi-key doors: a cell unlocked by several items needs ALL of them. Off = any one unlocks it.'
     };
 
     const components = [];
@@ -228,11 +229,13 @@ export async function createFieldGroupModal(groupKey, currentConfig) {
 
         // Boolean fields render as a Checkbox (type 23) inside the Label, not a text input.
         // Unset/undefined must render UNCHECKED so legacy guilds see their real (legacy) state.
+        // NEVER add `required` here — a Checkbox cannot be required and Discord rejects the
+        // WHOLE modal with "This interaction failed" (see ComponentsV2.md, Checkbox type 23).
         if (fieldConfig.type === 'boolean') {
             const label = {
                 type: 18,
                 label: fieldConfig.label,
-                component: { type: 23, custom_id: fieldKey, required: false, default: currentValue === true }
+                component: { type: 23, custom_id: fieldKey, default: currentValue === true }
             };
             const boolDesc = fieldDescriptions[fieldKey];
             if (boolDesc) label.description = boolDesc;

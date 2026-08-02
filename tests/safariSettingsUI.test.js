@@ -2,6 +2,12 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { EDIT_CONFIGS } from '../editFramework.js';
 import { EDIT_TYPES } from '../config/safariLimits.js';
+// The REAL builder — not a replica. The suite below validates the exact payload Discord
+// receives. A replica cannot do this job: on 2026-08-02 the Location modal shipped broken
+// (a `required` key on a Checkbox + a 128-char description) while every replica-based test
+// passed, because the replica omitted descriptions entirely. Replicas are fine for pure
+// logic; payload validity must be checked against the real thing.
+import { createFieldGroupModal } from '../safariConfigUI.js';
 
 // ─── Replicated pure logic (avoids importing modules with file-I/O deps) ───
 
@@ -118,6 +124,69 @@ function processFieldGroupSubmission(groupKey, modalData) {
 
   return updates;
 }
+
+// ───────────────────────────────────────────────────────────────────────────
+// Real-payload validation — Discord rejects the WHOLE modal for any one violation
+// ───────────────────────────────────────────────────────────────────────────
+
+const ALL_GROUPS = Object.keys(EDIT_CONFIGS[EDIT_TYPES.SAFARI_CONFIG].fieldGroups);
+
+// Discord limits (docs/standards/ComponentsV2.md)
+const LIMITS = { MODAL_COMPONENTS: 5, LABEL: 45, DESCRIPTION: 100, CUSTOM_ID: 100, TITLE: 45 };
+
+describe('Safari Settings — real modal payloads satisfy Discord limits', () => {
+  for (const group of ALL_GROUPS) {
+    it(`${group}: every Label is within label/description limits`, async () => {
+      const modal = (await createFieldGroupModal(group, {})).toJSON();
+      for (const row of modal.components) {
+        if (row.type !== 18) continue; // Text Display etc.
+        assert.ok(row.label.length <= LIMITS.LABEL,
+          `${group}.${row.component?.custom_id}: label ${row.label.length} > ${LIMITS.LABEL}`);
+        const desc = row.description || '';
+        assert.ok(desc.length <= LIMITS.DESCRIPTION,
+          `${group}.${row.component?.custom_id}: description ${desc.length} > ${LIMITS.DESCRIPTION} — Discord rejects the whole modal`);
+      }
+    });
+
+    it(`${group}: no Checkbox (type 23) carries a 'required' key`, async () => {
+      const modal = (await createFieldGroupModal(group, {})).toJSON();
+      for (const row of modal.components) {
+        const comp = row.component;
+        if (comp?.type !== 23) continue;
+        // ComponentsV2.md: "Checkbox cannot be set as required." Sending it => interaction failed.
+        assert.equal('required' in comp, false,
+          `${group}.${comp.custom_id}: Checkbox must not declare 'required'`);
+      }
+    });
+
+    it(`${group}: fits the ${LIMITS.MODAL_COMPONENTS}-component modal limit and has a valid shell`, async () => {
+      const modal = (await createFieldGroupModal(group, {})).toJSON();
+      assert.ok(modal.components.length <= LIMITS.MODAL_COMPONENTS,
+        `${group}: ${modal.components.length} components > ${LIMITS.MODAL_COMPONENTS}`);
+      assert.ok(modal.components.length > 0, `${group}: modal has no components`);
+      assert.ok(modal.custom_id.length <= LIMITS.CUSTOM_ID);
+      assert.ok(modal.title.length <= LIMITS.TITLE, `${group}: title ${modal.title.length} > ${LIMITS.TITLE}`);
+    });
+
+    it(`${group}: every interactive component sits inside a Label and has a custom_id`, async () => {
+      const modal = (await createFieldGroupModal(group, {})).toJSON();
+      for (const row of modal.components) {
+        if (row.type === 10) continue; // Text Display is a valid top-level modal component
+        assert.equal(row.type, 18, `${group}: top-level type ${row.type} — modal inputs must be Label-wrapped`);
+        assert.ok(row.component?.custom_id, `${group}: Label "${row.label}" has no custom_id`);
+      }
+    });
+  }
+
+  it('the location checkbox renders with a real pre-populated state, both ways', async () => {
+    const off = (await createFieldGroupModal('location', {})).toJSON();
+    const on = (await createFieldGroupModal('location', { reverseBlacklistRequireAll: true })).toJSON();
+    const find = (m) => m.components.find(r => r.component?.custom_id === 'reverseBlacklistRequireAll').component;
+    assert.equal(find(off).type, 23);
+    assert.equal(find(off).default, false);
+    assert.equal(find(on).default, true);
+  });
+});
 
 // ───────────────────────────────────────────────────────────────────────────
 // Tests

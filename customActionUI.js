@@ -511,7 +511,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
             type: 10,
             content: `### \`\`\`🔵 Opening Outcomes (${alwaysActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What always happens when this action triggers?${capWarning}`
           });
-          components.push(...getActionListComponents(alwaysActions, actionId, guildItems, guildButtons, 'always', allActions, guildEnemies));
+          components.push(...getActionListComponents(alwaysActions, actionId, guildItems, guildButtons, allActions, guildEnemies));
           if (notAtMax && maxAddSelects >= 3) {
             components.push({
               type: 1,
@@ -550,7 +550,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           });
 
           // Display TRUE outcomes
-          components.push(...getActionListComponents(trueActions, actionId, guildItems, guildButtons, 'true', allActions, guildEnemies));
+          components.push(...getActionListComponents(trueActions, actionId, guildItems, guildButtons, allActions, guildEnemies));
 
           // Add Pass Outcome select (if not at max total and budget allows — always prioritized)
           if (notAtMax && maxAddSelects >= 1) {
@@ -572,7 +572,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
               ? `### \`\`\`🔴 Fail Outcomes (0/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What happens if the player fails conditions?\n*No fail outcomes — displays generic error message*${capWarning}`
               : `### \`\`\`🔴 Fail Outcomes (${falseActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What happens if the player fails conditions?${capWarning}`
           });
-          components.push(...getActionListComponents(falseActions, actionId, guildItems, guildButtons, 'false', allActions, guildEnemies));
+          components.push(...getActionListComponents(falseActions, actionId, guildItems, guildButtons, allActions, guildEnemies));
 
           // Add Fail Outcome select (if not at max total and budget allows)
           if (notAtMax && maxAddSelects >= 2) {
@@ -868,58 +868,105 @@ function formatButtonLocations(action, guildItems = {}, customTerms = null) {
   return parts.length > 0 ? parts.join('; ') : 'No locations';
 }
 
-function getActionListComponents(actions, actionId, guildItems = {}, guildButtons = {}, executeOn = 'true', allActions = null, guildEnemies = {}) {
+/** Outcome types that carry a usage limit, and therefore have claims worth managing. */
+export const CLAIM_OUTCOME_TYPES = ['give_item', 'give_currency', 'modify_attribute', 'give_stamina', 'fight_enemy'];
+
+/**
+ * Pure — "Give X" vs "Remove X" for the two outcome types that do both.
+ *
+ * They signal direction differently: give_item has an explicit `operation` field, give_currency
+ * uses the sign of `amount`. Both render as "Give / Remove …" in the add-outcome menu, so both
+ * must name the direction in the list too — currency previously always read "Give Currency",
+ * including for a -50 outcome.
+ *
+ * @param {object} action
+ * @returns {string|null} label, or null for types that have no direction
+ */
+export function outcomeOperationLabel(action) {
+  if (action?.type === 'give_item') {
+    return action.config?.operation === 'remove' ? 'Remove Item' : 'Give Item';
+  }
+  if (action?.type === 'give_currency') {
+    const amount = action.config?.amount ?? action.amount ?? 0;
+    return amount < 0 ? 'Remove Currency' : 'Give Currency';
+  }
+  return null;
+}
+
+/** Emoji per outcome type — mirrors OUTCOME_TYPE_OPTIONS so the list and the add-menu agree. */
+const OUTCOME_TYPE_EMOJI = {
+  display_text: '📄', give_currency: '🪙', give_item: '🎁', give_role: '👑',
+  remove_role: '🚫', modify_attribute: '📊', give_stamina: '⚡', follow_up_button: '🔗', follow_up: '🔗',
+  calculate_results: '🌾', calculate_attack: '⚔️', manage_player_state: '🚀',
+  fight_enemy: '🐙'
+};
+
+/** The three branches an outcome can live in, and the copy for moving it between them. */
+const MOVE_TARGETS = [
+  { executeOn: 'always', value: 'move_to_always', label: 'Move to Opening Outcomes', emoji: '🔵', description: 'Always runs when triggered' },
+  { executeOn: 'true', value: 'move_to_true', label: 'Move to Pass Outcomes', emoji: '🟢', description: 'Runs when conditions pass' },
+  { executeOn: 'false', value: 'move_to_false', label: 'Move to Fail Outcomes', emoji: '🔴', description: 'Runs when conditions fail' }
+];
+
+/**
+ * Pure — the per-outcome context menu (the `outcome_select_*` String Select options).
+ *
+ * ONE builder for all three sections. Opening / Pass / Fail must offer an IDENTICAL menu
+ * except for the two "Move to…" entries (which exclude the section the outcome is already in).
+ * Anything that varies per SECTION belongs in MOVE_TARGETS; anything varying per OUTCOME
+ * (type, position) belongs below. Enforced by tests/outcomeMenu.test.js.
+ *
+ * @param {object} action - the outcome
+ * @param {object} [opts]
+ * @param {number} [opts.position=1] - 1-based position within its section (for the summary label)
+ * @param {Array}  [opts.allActions] - every outcome on the parent action (for the cap check)
+ * @param {object} [opts.guildItems] @param {object} [opts.guildButtons] @param {object} [opts.guildEnemies]
+ * @returns {Array<object>} String Select options
+ */
+export function buildOutcomeMenuOptions(action, { position = 1, allActions = null, guildItems = {}, guildButtons = {}, guildEnemies = {} } = {}) {
+  const currentExecuteOn = normalizeExecuteOn(action.executeOn);
+  const atMax = !!allActions && allActions.length >= SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON;
+
+  // Player Claims is offered for every claim-capable TYPE, whatever its limit is currently set
+  // to. It used to also require a non-unlimited limit, which made the entry appear on one
+  // outcome and vanish on the next and read as a Pass-vs-Fail inconsistency. The claims
+  // manager renders unlimited//unset outcomes perfectly well ("no restrictions").
+  const claimsCapable = CLAIM_OUTCOME_TYPES.includes(action.type);
+
+  return [
+    {
+      label: getActionSummaryPlain(action, position, guildItems, guildButtons, guildEnemies),
+      value: 'summary',
+      default: true,
+      emoji: { name: OUTCOME_TYPE_EMOJI[action.type] || '▫️' }
+    },
+    { label: 'Edit Outcome', value: 'edit', emoji: { name: '✏️' }, description: 'Configure settings' },
+    { label: 'Move Up', value: 'move_up', emoji: { name: '⬆️' }, description: 'Change execution order' },
+    { label: 'Move Down', value: 'move_down', emoji: { name: '⬇️' }, description: 'Change execution order' },
+    { label: '───────────────────', value: 'divider', description: ' ' },
+    ...(!atMax ? [{ label: 'Clone Outcome', value: 'clone', emoji: { name: '📋' }, description: 'Duplicate this outcome' }] : []),
+    ...(claimsCapable ? [{ label: 'Player Claims', value: 'player_claims', emoji: { name: '👥' }, description: 'View and manage which players have claimed this outcome already.' }] : []),
+    ...MOVE_TARGETS
+      .filter(t => t.executeOn !== currentExecuteOn)
+      .map(t => ({ label: t.label, value: t.value, emoji: { name: t.emoji }, description: t.description })),
+    { label: 'Delete Outcome', value: 'delete', emoji: { name: '🗑️' }, description: 'Remove from action' }
+  ];
+}
+
+function getActionListComponents(actions, actionId, guildItems = {}, guildButtons = {}, allActions = null, guildEnemies = {}) {
   if (!actions || actions.length === 0) {
     return [];
   }
 
-  return actions.map((action, index) => {
-    // Find the actual index in the full actions array for proper removal
-    const actualIndex = allActions ? allActions.findIndex(a => a === action) : index;
-    const summaryText = getActionSummaryPlain(action, index + 1, guildItems, guildButtons, guildEnemies);
-
-    // Move options — cycle through sections
-    const currentExecuteOn = action.executeOn || 'true';
-    const moveOptions = [];
-    if (currentExecuteOn !== 'always') moveOptions.push({ label: 'Move to Opening Outcomes', value: 'move_to_always', emoji: { name: '🔵' }, description: 'Always runs when triggered' });
-    if (currentExecuteOn !== 'true') moveOptions.push({ label: 'Move to Pass Outcomes', value: 'move_to_true', emoji: { name: '🟢' }, description: 'Runs when conditions pass' });
-    if (currentExecuteOn !== 'false') moveOptions.push({ label: 'Move to Fail Outcomes', value: 'move_to_false', emoji: { name: '🔴' }, description: 'Runs when conditions fail' });
-
-    // Match emoji to outcome type (same as OUTCOME_TYPE_OPTIONS)
-    const outcomeEmoji = {
-      display_text: '📄', give_currency: '🪙', give_item: '🎁', give_role: '👑',
-      remove_role: '🚫', modify_attribute: '📊', give_stamina: '⚡', follow_up_button: '🔗', follow_up: '🔗',
-      calculate_results: '🌾', calculate_attack: '⚔️', manage_player_state: '🚀',
-      fight_enemy: '🐙'
-    }[action.type] || '▫️';
-
-    // Build options array
-    const atMax = allActions && allActions.length >= SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON;
-    // Player Claims option: only for outcome types that track claims AND when a (non-unlimited) limit is set
-    const CLAIM_OUTCOME_TYPES = ['give_item', 'give_currency', 'modify_attribute', 'give_stamina', 'fight_enemy'];
-    const claimsManageable = CLAIM_OUTCOME_TYPES.includes(action.type)
-      && !!action.config?.limit?.type && action.config.limit.type !== 'unlimited';
-    const options = [
-      { label: summaryText, value: 'summary', default: true, emoji: { name: outcomeEmoji } },
-      { label: 'Edit Outcome', value: 'edit', emoji: { name: '✏️' }, description: 'Configure settings' },
-      { label: 'Move Up', value: 'move_up', emoji: { name: '⬆️' }, description: 'Change execution order' },
-      { label: 'Move Down', value: 'move_down', emoji: { name: '⬇️' }, description: 'Change execution order' },
-      { label: '───────────────────', value: 'divider', description: ' ' },
-      ...(!atMax ? [{ label: 'Clone Outcome', value: 'clone', emoji: { name: '📋' }, description: 'Duplicate this outcome' }] : []),
-      ...(claimsManageable ? [{ label: 'Player Claims', value: 'player_claims', emoji: { name: '👥' }, description: 'View and manage which players have claimed this outcome already.' }] : []),
-      ...moveOptions,
-      { label: 'Delete Outcome', value: 'delete', emoji: { name: '🗑️' }, description: 'Remove from action' }
-    ];
-
-    return {
-      type: 1, // ActionRow
-      components: [{
-        type: 3, // StringSelect
-        custom_id: `outcome_select_${actionId}_${actualIndex}`,
-        options
-      }]
-    };
-  });
+  return actions.map((action, index) => ({
+    type: 1, // ActionRow
+    components: [{
+      type: 3, // StringSelect
+      // Index within the FULL actions array — that's what every outcome_select action mutates
+      custom_id: `outcome_select_${actionId}_${allActions ? allActions.findIndex(a => a === action) : index}`,
+      options: buildOutcomeMenuOptions(action, { position: index + 1, allActions, guildItems, guildButtons, guildEnemies })
+    }]
+  }));
 }
 
 const MAX_SELECT_LABEL = 100;
@@ -943,15 +990,14 @@ function getActionSummaryPlain(action, number, guildItems = {}, guildButtons = {
       const itemName = guildItems[itemId]?.name || itemId || 'Unknown Item';
       const qty = action.config?.quantity || action.quantity || 1;
       const limitText = action.config?.limit?.type ? ` (${action.config.limit.type.replace(/_/g, ' ')})` : '';
-      const op = action.config?.operation === 'remove' ? 'Remove Item' : 'Give Item';
-      summary = `${number}. ${op} | ${itemName} x${qty}${limitText}`;
+      summary = `${number}. ${outcomeOperationLabel(action)} | ${itemName} x${qty}${limitText}`;
       break;
     }
     case 'give_currency': {
       const amount = action.config?.amount || action.amount || 0;
       const displayAmount = amount > 0 ? `+${amount}` : `${amount}`;
       const limitText = action.config?.limit?.type ? ` (${action.config.limit.type.replace(/_/g, ' ')})` : '';
-      summary = `${number}. Give Currency | ${displayAmount}${limitText}`;
+      summary = `${number}. ${outcomeOperationLabel(action)} | ${displayAmount}${limitText}`;
       break;
     }
     case 'update_currency':
@@ -1043,10 +1089,8 @@ function getActionTypeLabel(action) {
     case 'display_text':
       return 'Display Text';
     case 'give_item':
-      // Check operation to show "Give Item" or "Remove Item"
-      return action.config?.operation === 'remove' ? 'Remove Item' : 'Give Item';
     case 'give_currency':
-      return 'Give Currency';
+      return outcomeOperationLabel(action);
     case 'update_currency':
       return 'Update Currency';
     case 'give_role':
@@ -1107,13 +1151,12 @@ function getActionSummary(action, number, guildItems = {}, guildButtons = {}, is
       const itemName = item?.name || itemId || 'Unknown Item';
       const quantity = action.config?.quantity || action.quantity || 1;
       const limitText = action.config?.limit?.type ? ` (${action.config.limit.type.replace(/_/g, ' ')})` : '';
-      const operationLabel = action.config?.operation === 'remove' ? 'Remove Item' : 'Give Item';
-      return `**\`${number}. ${operationLabel}\`** ${itemName} x${quantity}${limitText}`;
+      return `**\`${number}. ${outcomeOperationLabel(action)}\`** ${itemName} x${quantity}${limitText}`;
     case 'give_currency':
       const amount = action.config?.amount || action.amount || 0;
       const currencyLimitText = action.config?.limit?.type ? ` (${action.config.limit.type.replace(/_/g, ' ')})` : '';
       const displayAmount = amount > 0 ? `+${amount}` : `${amount}`;
-      return `**\`${number}. Give Currency\`** Amount: ${displayAmount}${currencyLimitText}`;
+      return `**\`${number}. ${outcomeOperationLabel(action)}\`** Amount: ${displayAmount}${currencyLimitText}`;
     case 'update_currency':
       return `**\`${number}. Update Currency\`** Amount: ${action.amount || 0}`;
     case 'give_role':
