@@ -1,0 +1,88 @@
+{
+  "period": "AUGUST 2026",
+  "title": "CastBot Update",
+  "subtitle": "Faster Safari Authoring — Currency in One Step, Reset Safari & Player Claims",
+  "footer": "Deployed to production 2 August 2026",
+  "accent": "#3498db",
+  "cards": [
+    {
+      "title": "Currency Drops in One Step",
+      "badge": "IMPROVED",
+      "color": "#f1c40f",
+      "desc": [
+        "Adding a Give / Remove Currency outcome used to take five",
+        "clicks across four screens. It is now a single popup: amount,",
+        "usage limit and when-it-runs, all in one place, then straight",
+        "back to the Action editor. Usage limit defaults to per-player."
+      ]
+    },
+    {
+      "title": "Reset Safari",
+      "badge": "NEW",
+      "color": "#e74c3c",
+      "desc": [
+        "Finished testing and want a clean slate? Clear claimed idols,",
+        "opened chests, tester inventories and round state in one go.",
+        "Three scopes, a preview of exactly what will be wiped, and it",
+        "NEVER deletes your Actions, Items, Stores or Maps."
+      ]
+    },
+    {
+      "title": "Player Claims Everywhere",
+      "badge": "IMPROVED",
+      "color": "#9b59b6",
+      "desc": [
+        "The Player Claims screen now appears on every claimable",
+        "outcome, in every section — Opening, Pass and Fail alike.",
+        "It used to quietly vanish whenever an outcome had no usage",
+        "limit set, which made it look like Fail outcomes lacked it."
+      ]
+    },
+    {
+      "title": "Honest Currency Messages",
+      "badge": "FIXED",
+      "color": "#e67e22",
+      "desc": [
+        "A -50 outcome against a player holding 10 took 10 but told",
+        "them it took 50. Players now see what actually happened, and",
+        "an outcome that removes currency finally says Remove Currency",
+        "rather than Give Currency throughout the editor."
+      ]
+    },
+    {
+      "title": "CastDock Button Visibility",
+      "badge": "FIXED",
+      "color": "#1abc9c",
+      "desc": [
+        "Ticked a button and it never showed up on the dock? An",
+        "explicit tick now wins over the tidiness rules that were",
+        "silently hiding it, and the setup screen flags any button",
+        "that genuinely cannot appear yet, with the reason."
+      ]
+    },
+    {
+      "title": "Sheets Import Guidance",
+      "badge": "IMPROVED",
+      "color": "#2ecc71",
+      "desc": [
+        "The Google Sheets importer now tells you up front that a",
+        "season needs a category before Apply will work — checked",
+        "against your real season, flagged on the screen, and written",
+        "into the generated script instead of failing halfway."
+      ]
+    }
+  ],
+  "underHood": [
+    "Map Drops fully retired",
+    "New servers default to Gold",
+    "Simultaneous claims can no longer double-grant",
+    "2,919 tests passing"
+  ],
+  "stats": [
+    { "value": "16", "label": "COMMITS", "color": "#3498db" },
+    { "value": "+4,400", "label": "INSERTIONS", "color": "#2ecc71" },
+    { "value": "-3,544", "label": "DELETIONS", "color": "#e74c3c" },
+    { "value": "53", "label": "FILES CHANGED", "color": "#e91e63" },
+    { "value": "2,919", "label": "TESTS PASSING", "color": "#f1c40f" }
+  ]
+}

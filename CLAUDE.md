@@ -640,6 +640,24 @@ git log --follow --format="%ai %s" -- "filename.md" | tail -1
 - External: `curl -s "URL" -o /tmp/img.png && Read /tmp/img.png`
 - 🪟 Windows-native sessions: same screenshots at `C:\Users\extre\OneDrive\Pictures\Screenshots 1`
 
+### 📰 Release Notes Image
+
+The "CastBot Update" card image Reece posts to Discord is generated from a **JSON spec**, not a
+bespoke script per release (there used to be one hand-copied fork in `temp/` per month):
+
+```bash
+node scripts/release/releaseImage.js scripts/release/releases/<spec>.json [out.png]
+```
+
+- **Renderer** (fixed, don't fork it): [scripts/release/releaseImage.js](scripts/release/releaseImage.js) — spec format is documented in its header.
+- **Per-release specs + the matching Discord markdown**: [scripts/release/releases/](scripts/release/releases/)
+- SVG can't measure text or render emoji, so `desc` lines are hand-wrapped at 62 chars and emoji
+  are stripped — `validateSpec()` fails loudly on both rather than rendering off the card edge.
+- Quote **`git diff --shortstat -w --ignore-blank-lines`** for insertion/deletion stats. The raw
+  figure is routinely inflated 10-20× by CRLF churn from the Windows tree (Aug 2026: 68,159 raw
+  vs 4,400 real).
+- Image building in general: [docs/standards/SharpImageGeneration.md](docs/standards/SharpImageGeneration.md) (or the `sharp` skill).
+
 ### Workflow Requirements
 - **Definition of Done**: [docs/workflow/DefinitionOfDone.md](docs/workflow/DefinitionOfDone.md)
 - **Dev Workflow**: [docs/workflow/DevWorkflow.md](docs/workflow/DevWorkflow.md)
