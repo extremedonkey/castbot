@@ -8,6 +8,7 @@ import { scheduler } from './scheduler.js';
 import { formatPeriod, formatCountdown, buildLimitOptions, buildPeriodModalComponents } from './utils/periodUtils.js';
 import { parseTextEmoji, resolveEmoji } from './utils/emojiUtils.js';
 import { buildImageFieldLabel, collectModalFields, resolveUploadedImageField } from './src/images/modalImageUpload.js';
+import { buildExecuteOnOptions, normalizeExecuteOn } from './utils/executeOnOptions.js';
 
 /**
  * Shared outcome type options for the "Add Outcome" select menus.
@@ -5042,6 +5043,189 @@ export function buildDisplayTextModal(buttonId, actionIndex, action, imageUpload
       ]
     }
   };
+}
+
+// ─── Give / Remove Currency: one-shot create modal ──────────────────────────
+// Adding a currency outcome used to cost five interactions (type select → Set Amount
+// button → amount modal → limit select → Save & Finish). Everything it collected fits in
+// one modal, so creation is now a single step. The legacy Container editor is still the
+// EDIT surface (Outcome list → Edit), because Custom limits need its sub-screens.
+
+/** Regex for the trailing executeOn segment shared by the create custom_ids. */
+const EXECUTE_ON_SUFFIX = /_(true|false|always)$/;
+
+/**
+ * Pure — the Give / Remove Currency create modal.
+ * Submits to safari_currency_quick_{buttonId}_{executeOn}.
+ *
+ * Discord ignores `default: true` on String Selects inside modals, so each select also
+ * names its default in the placeholder and the submit handler falls back to the same value.
+ *
+ * @param {string} buttonId
+ * @param {string} executeOn - which branch the admin clicked "Add Outcome" under
+ * @param {object} customTerms - from getCustomTerms(guildId)
+ * @returns {object} Modal interaction response
+ */
+export function buildGiveCurrencyModal(buttonId, executeOn, customTerms = {}) {
+  const currencyName = customTerms.currencyName || 'Currency';
+  const resolvedExecuteOn = normalizeExecuteOn(executeOn);
+  const executeOnOptions = buildExecuteOnOptions({
+    current: resolvedExecuteOn,
+    includeAlways: resolvedExecuteOn === 'always'
+  });
+  const defaultExecuteOnLabel = executeOnOptions.find(o => o.default)?.label || executeOnOptions[0].label;
+
+  return {
+    type: 9, // MODAL
+    data: {
+      custom_id: `safari_currency_quick_${buttonId}_${resolvedExecuteOn}`,
+      title: `Give / Remove ${currencyName}`.slice(0, 45),
+      components: [
+        {
+          type: 18, // Label
+          label: 'Amount',
+          description: `How much to give (or use negative to remove, e.g. -50).`,
+          component: {
+            type: 4, // Text Input
+            custom_id: 'amount',
+            style: 1,
+            placeholder: 'e.g., 100 or -50',
+            required: true,
+            max_length: 10
+          }
+        },
+        {
+          type: 18, // Label
+          label: 'Usage Limit',
+          description: 'How many times can this outcome be claimed?',
+          component: {
+            type: 3, // String Select
+            custom_id: 'usage_limit',
+            placeholder: 'Once Per Player (default)',
+            required: false,
+            min_values: 0,
+            max_values: 1,
+            options: buildLimitOptions({
+              currentLimit: QUICK_CURRENCY_DEFAULT_LIMIT,
+              periodDescription: 'Defaults to 1d here — change it in Outcome Config',
+              includeCustom: false
+            })
+          }
+        },
+        {
+          type: 18, // Label
+          label: 'Executes if',
+          description: 'Which side of this action\'s conditions this outcome belongs to.',
+          component: {
+            type: 3, // String Select
+            custom_id: 'execute_on',
+            placeholder: defaultExecuteOnLabel.slice(0, 100),
+            required: false,
+            min_values: 0,
+            max_values: 1,
+            options: executeOnOptions
+          }
+        }
+      ]
+    }
+  };
+}
+
+/** Pre-selected usage limit for the quick currency modal — the overwhelmingly common case. */
+const QUICK_CURRENCY_DEFAULT_LIMIT = 'once_per_player';
+
+/** Default cooldown when Once Per Period is picked in a modal that can't collect a duration. */
+const QUICK_PERIOD_MS = 86400000; // 1 day
+
+/**
+ * Pure — turn a limit select value into the stored `config.limit` object.
+ * Mirrors the shapes the legacy Save & Finish handler writes, so an outcome created here is
+ * byte-identical to one created through the Container editor.
+ * @param {string} limitType
+ * @returns {object}
+ */
+export function buildQuickLimit(limitType) {
+  if (limitType === 'once_per_period') return { type: 'once_per_period', periodMs: QUICK_PERIOD_MS, claimedBy: {} };
+  if (limitType === 'unlimited' || !limitType) return { type: 'unlimited' };
+  return { type: limitType, claimedBy: limitType === 'once_per_player' ? [] : null };
+}
+
+/**
+ * Pure — validate + normalise the quick currency modal's fields into an outcome object.
+ * Separated from the save so the parsing rules are unit-testable without any I/O.
+ * @param {object} fields - from collectModalFields()
+ * @param {string} fallbackExecuteOn - executeOn from the custom_id (where they clicked Add)
+ * @returns {{error: string} | {action: object}}
+ */
+export function parseQuickCurrencyFields(fields, fallbackExecuteOn) {
+  const raw = typeof fields.amount === 'string' ? fields.amount.trim() : '';
+  const amount = parseInt(raw, 10);
+
+  if (!raw || isNaN(amount)) {
+    return { error: `❌ "${raw || 'blank'}" isn't a number. Enter a whole number — positive to give, negative to remove (e.g. \`100\` or \`-50\`).` };
+  }
+  if (amount === 0) {
+    return { error: '❌ Amount can\'t be 0 — that outcome would do nothing. Enter a positive number to give, or a negative one to remove.' };
+  }
+  if (amount < -999999 || amount > 999999) {
+    return { error: '❌ Amount must be between -999999 and 999999.' };
+  }
+
+  const limitType = (Array.isArray(fields.usage_limit) ? fields.usage_limit[0] : fields.usage_limit) || QUICK_CURRENCY_DEFAULT_LIMIT;
+  const executeOn = normalizeExecuteOn(
+    (Array.isArray(fields.execute_on) ? fields.execute_on[0] : fields.execute_on) || fallbackExecuteOn
+  );
+
+  return {
+    action: {
+      type: 'give_currency',
+      config: { amount, limit: buildQuickLimit(limitType) },
+      executeOn
+    }
+  };
+}
+
+/**
+ * Handle the quick currency modal submit — appends the outcome and returns the Action Editor.
+ * @returns {Promise<object>} Action Editor UI, or an ephemeral error payload
+ */
+export async function handleGiveCurrencyQuickSubmit(guildId, customId, formData) {
+  const rest = customId.replace('safari_currency_quick_', '');
+  const executeOnFromId = rest.match(EXECUTE_ON_SUFFIX)?.[1] || 'true';
+  const buttonId = rest.replace(EXECUTE_ON_SUFFIX, '');
+
+  const parsed = parseQuickCurrencyFields(collectModalFields(formData.components), executeOnFromId);
+  if (parsed.error) return { content: parsed.error, ephemeral: true };
+
+  const safariData = await loadSafariContent();
+  const button = safariData[guildId]?.buttons?.[buttonId];
+  if (!button) {
+    console.error(`❌ Button ${buttonId} not found during quick currency save for guild ${guildId}`);
+    return { content: `❌ Custom action "${buttonId}" no longer exists — dismiss this and reopen the action list.`, ephemeral: true };
+  }
+
+  if (!Array.isArray(button.actions)) button.actions = [];
+  // Append rather than writing to an index captured when the modal opened: a concurrent
+  // edit could have appended in the meantime, and an index write would silently clobber it.
+  parsed.action.order = button.actions.length;
+  button.actions.push(parsed.action);
+
+  button.metadata = button.metadata
+    ? { ...button.metadata, lastModified: Date.now() }
+    : { createdAt: Date.now(), lastModified: Date.now(), usageCount: 0 };
+
+  await saveSafariContent(safariData);
+  console.log(`✅ QUICK CURRENCY: added give_currency (${parsed.action.config.amount}, ${parsed.action.config.limit.type}, executeOn=${parsed.action.executeOn}) to ${buttonId}[${parsed.action.order}]`);
+
+  try {
+    const { queueActionCoordinateUpdates } = await import('./anchorMessageManager.js');
+    await queueActionCoordinateUpdates(guildId, buttonId, 'currency_action_saved');
+  } catch (error) {
+    console.error('Error queueing anchor updates:', error);
+  }
+
+  const editorUI = await createCustomActionEditorUI({ guildId, actionId: buttonId });
+  return { ...editorUI, ephemeral: true };
 }
 
 export async function handleDisplayTextSave(guildId, customId, formData, client) {

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   isTimed, getClaimants, claimStatusLine,
   addClaim, clearClaim, setCooldown, clearAllClaims, resolveNames,
-  countClaims, describeOutcome
+  countClaims, describeOutcome, evaluateClassicGate
 } from '../claimsManager.js';
 
 const HOUR = 3600000;
@@ -284,5 +284,89 @@ describe('claimsManager — describeOutcome', () => {
     assert.equal(describeOutcome(data, G, { type: 'fight_enemy', config: {} }, 0, terms), '🐙 Fight Unknown Enemy');
     assert.equal(describeOutcome(data, G, { type: 'display_text', config: {} }, 4, terms), 'Outcome #5');
     assert.equal(describeOutcome({}, G, { type: 'give_currency', config: { amount: 1 } }, 0, {}), '🪙 +1 Currency');
+  });
+});
+
+/**
+ * evaluateClassicGate is the runtime "may this player claim?" decision for the non-custom
+ * limit types. It replaced three hand-rolled copies inside give_currency / give_item that had
+ * drifted apart (one blocked once_globally on a non-empty ARRAY, the other only on a string).
+ * It is pure so the gate can be paired with addClaim inside a single withSafariLock cycle.
+ */
+describe('claimsManager — evaluateClassicGate', () => {
+  const NOW = 1_000_000_000;
+
+  it('never blocks when there is no limit, unlimited, or custom (custom has its own gate)', () => {
+    assert.equal(evaluateClassicGate(null, 'u1').blocked, false);
+    assert.equal(evaluateClassicGate({}, 'u1').blocked, false);
+    assert.equal(evaluateClassicGate({ type: 'unlimited' }, 'u1').blocked, false);
+    assert.equal(evaluateClassicGate({ type: 'custom', claims: [{ u: 'u1', t: 1 }] }, 'u1').blocked, false);
+  });
+
+  it('once_per_player blocks only the players in claimedBy', () => {
+    const limit = { type: 'once_per_player', claimedBy: ['u1', 'u2'] };
+    assert.deepEqual(evaluateClassicGate(limit, 'u1'), { blocked: true, reason: 'once_per_player' });
+    assert.equal(evaluateClassicGate(limit, 'u3').blocked, false);
+  });
+
+  it('once_per_player treats the empty-but-truthy shapes as unclaimed', () => {
+    assert.equal(evaluateClassicGate({ type: 'once_per_player', claimedBy: [] }, 'u1').blocked, false);
+    assert.equal(evaluateClassicGate({ type: 'once_per_player', claimedBy: '' }, 'u1').blocked, false);
+    assert.equal(evaluateClassicGate({ type: 'once_per_player' }, 'u1').blocked, false);
+  });
+
+  it('once_per_player honours a legacy bare-string claimedBy', () => {
+    assert.equal(evaluateClassicGate({ type: 'once_per_player', claimedBy: 'u1' }, 'u1').blocked, true);
+    assert.equal(evaluateClassicGate({ type: 'once_per_player', claimedBy: 'u1' }, 'u2').blocked, false);
+  });
+
+  it('once_globally blocks everyone once a userId string is recorded', () => {
+    const claimed = { type: 'once_globally', claimedBy: 'u1' };
+    assert.equal(evaluateClassicGate(claimed, 'u1').blocked, true);
+    assert.equal(evaluateClassicGate(claimed, 'u2').blocked, true);
+  });
+
+  it('once_globally is open for null/empty/array residue from a limit-type switch', () => {
+    assert.equal(evaluateClassicGate({ type: 'once_globally', claimedBy: null }, 'u1').blocked, false);
+    assert.equal(evaluateClassicGate({ type: 'once_globally', claimedBy: '' }, 'u1').blocked, false);
+    assert.equal(evaluateClassicGate({ type: 'once_globally', claimedBy: [] }, 'u1').blocked, false);
+    assert.equal(evaluateClassicGate({ type: 'once_globally', claimedBy: ['u9'] }, 'u1').blocked, false);
+  });
+
+  it('once_per_period blocks inside the window and reports the remaining time', () => {
+    const limit = { type: 'once_per_period', periodMs: PERIOD, claimedBy: { u1: NOW - HOUR } };
+    const v = evaluateClassicGate(limit, 'u1', NOW);
+    assert.equal(v.blocked, true);
+    assert.equal(v.reason, 'once_per_period');
+    assert.equal(v.remainingMs, HOUR);
+    assert.equal(v.periodMs, PERIOD);
+  });
+
+  it('once_per_period frees up exactly at the boundary and after', () => {
+    const at = { type: 'once_per_period', periodMs: PERIOD, claimedBy: { u1: NOW - PERIOD } };
+    assert.equal(evaluateClassicGate(at, 'u1', NOW).blocked, false);
+    const past = { type: 'once_per_period', periodMs: PERIOD, claimedBy: { u1: NOW - 3 * HOUR } };
+    assert.equal(evaluateClassicGate(past, 'u1', NOW).blocked, false);
+  });
+
+  it('once_per_period never blocks a player with no record, or on a malformed claim store', () => {
+    assert.equal(evaluateClassicGate({ type: 'once_per_period', periodMs: PERIOD, claimedBy: { u2: NOW } }, 'u1', NOW).blocked, false);
+    assert.equal(evaluateClassicGate({ type: 'once_per_period', periodMs: PERIOD, claimedBy: ['u1'] }, 'u1', NOW).blocked, false);
+    assert.equal(evaluateClassicGate({ type: 'once_per_period', claimedBy: { u1: NOW } }, 'u1', NOW).blocked, false, 'no periodMs → no cooldown');
+  });
+
+  it('gate + addClaim round-trip: a claim taken now blocks the next attempt for every type', () => {
+    for (const limit of [
+      { type: 'once_per_player', claimedBy: [] },
+      { type: 'once_globally', claimedBy: null },
+      { type: 'once_per_period', periodMs: PERIOD, claimedBy: {} }
+    ]) {
+      assert.equal(evaluateClassicGate(limit, 'u1', NOW).blocked, false, `${limit.type} starts open`);
+      addClaim(limit, 'u1', { now: NOW });
+      assert.equal(evaluateClassicGate(limit, 'u1', NOW).blocked, true, `${limit.type} blocks after claim`);
+      // …and clearClaim (the rollback path when the grant fails) reopens it
+      clearClaim(limit, 'u1');
+      assert.equal(evaluateClassicGate(limit, 'u1', NOW).blocked, false, `${limit.type} reopens after release`);
+    }
   });
 });

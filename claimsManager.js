@@ -43,6 +43,54 @@ export function countClaims(limit) {
 }
 
 /**
+ * Decide whether `userId` may claim an outcome carrying one of the CLASSIC limit types
+ * (unlimited / once_per_player / once_globally / once_per_period). `custom` limits are gated
+ * by checkLimitGate() in customUsageLimitUI.js and always return `{blocked:false}` here.
+ *
+ * Pure — pair it with addClaim() inside ONE withSafariLock cycle so the check and the claim
+ * write can't be interleaved by a second claimant (see reserveClassicClaim in safariManager.js).
+ *
+ * Empty-but-truthy claim shapes (`[]`, `''`, `{}`) count as unclaimed, and a bare string under
+ * once_per_player counts as a single claimant — matching countClaims()/getClaimants() above.
+ *
+ * @param {object} limit - action.config.limit
+ * @param {string} userId
+ * @param {number} [now]
+ * @returns {{blocked: boolean, reason?: 'once_per_player'|'once_globally'|'once_per_period', remainingMs?: number, periodMs?: number}}
+ */
+export function evaluateClassicGate(limit, userId, now = Date.now()) {
+  if (!limit || !limit.type || limit.type === 'unlimited' || limit.type === 'custom') {
+    return { blocked: false };
+  }
+
+  const cb = limit.claimedBy;
+
+  if (limit.type === 'once_per_player') {
+    const claimed = Array.isArray(cb) ? cb : (typeof cb === 'string' && cb ? [cb] : []);
+    return claimed.includes(userId) ? { blocked: true, reason: 'once_per_player' } : { blocked: false };
+  }
+
+  if (limit.type === 'once_globally') {
+    // Only a non-empty userId string means "taken" — an array here is residue from a
+    // limit-type switch, and every save path rewrites once_globally's claimedBy to null.
+    return (typeof cb === 'string' && cb.length > 0)
+      ? { blocked: true, reason: 'once_globally', claimedBy: cb }
+      : { blocked: false };
+  }
+
+  if (limit.type === 'once_per_period') {
+    const lastUsed = (cb && typeof cb === 'object' && !Array.isArray(cb)) ? cb[userId] : undefined;
+    const periodMs = nonNeg(limit.periodMs);
+    if (typeof lastUsed === 'number' && (now - lastUsed) < periodMs) {
+      return { blocked: true, reason: 'once_per_period', remainingMs: periodMs - (now - lastUsed), periodMs };
+    }
+    return { blocked: false };
+  }
+
+  return { blocked: false };
+}
+
+/**
  * Human description of what an outcome hands out ("🗝️ Give 1x Office Key", "🪙 +50 Coins").
  * Pure: `customTerms` is passed in so callers can resolve it once for a whole sweep.
  *

@@ -38,6 +38,7 @@ import {
     initializePlayerOnMap
 } from './mapMovement.js';
 import { checkLimitGate, recordLimitClaim, formatCountdown, formatPeriod, formatPeriodVerbose, formatCountdownVerbose } from './utils/periodUtils.js';
+import { evaluateClassicGate, addClaim, clearClaim } from './claimsManager.js';
 
 /**
  * Build an ephemeral rejection card for a blocked CUSTOM usage limit.
@@ -119,6 +120,70 @@ async function persistCustomClaim(guildId, buttonId, actionIndex, userId, expect
             await saveSafariContent(safariData);
             console.log(`✅ Recorded custom claim for ${expectedType} ${buttonId}[${actionIndex}] (${action.config.limit.claims?.length} total)`);
         }
+    });
+}
+
+/**
+ * Atomically gate-and-claim a CLASSIC usage limit (once_per_player / once_globally /
+ * once_per_period) for one outcome.
+ *
+ * WHY LOCKED: the check and the claim write used to be two separate unlocked
+ * loadSafariContent → mutate → saveSafariContent cycles inside each executor. Two players
+ * hitting a once_globally drop in the same tick could both read "unclaimed", both be granted
+ * the reward, and the second claim write could clobber the first (the incident-05 class —
+ * atomicSave serializes writes, not cycles). Reading, deciding and recording inside ONE
+ * withSafariLock cycle closes that window.
+ *
+ * Claims the reward BEFORE it is granted, so the failure mode is a burnt claim rather than a
+ * double grant; callers roll back with releaseClassicClaim() if the grant then fails.
+ *
+ * Always gates against the LIVE limit on disk, not the (possibly stale) config the caller
+ * was handed by executeButtonActions.
+ *
+ * @param {string} guildId
+ * @param {string|null} buttonId
+ * @param {number|null} actionIndex
+ * @param {string} userId
+ * @param {string} expectedType - outcome type guard ('give_currency' | 'give_item' | …)
+ * @param {object} configLimit - action.config.limit as the caller sees it (fallback only)
+ * @returns {Promise<{blocked: boolean, reason?: string, remainingMs?: number, recorded: boolean}>}
+ */
+async function reserveClassicClaim(guildId, buttonId, actionIndex, userId, expectedType, configLimit) {
+    if (!configLimit || configLimit.type === 'unlimited' || configLimit.type === 'custom') {
+        return { blocked: false, recorded: false };
+    }
+
+    // No coordinates for the live record — gate on what we were handed; nothing to record.
+    if (!buttonId || actionIndex == null) {
+        console.warn(`⚠️ classic limit but no buttonId/actionIndex — claim NOT recorded for ${expectedType}`);
+        return { ...evaluateClassicGate(configLimit, userId), recorded: false };
+    }
+
+    return withSafariLock(async () => {
+        const safariData = await loadSafariContent();
+        const action = safariData[guildId]?.buttons?.[buttonId]?.actions?.[actionIndex];
+        const liveLimit = (action && action.type === expectedType) ? action.config?.limit : null;
+
+        const verdict = evaluateClassicGate(liveLimit || configLimit, userId);
+        if (verdict.blocked) return { ...verdict, recorded: false };
+        if (!liveLimit) return { blocked: false, recorded: false };
+
+        addClaim(liveLimit, userId);
+        await saveSafariContent(safariData);
+        console.log(`✅ Reserved ${liveLimit.type} claim for ${expectedType} ${buttonId}[${actionIndex}] (user ${userId})`);
+        return { blocked: false, recorded: true };
+    });
+}
+
+/** Undo a reserveClassicClaim() when the reward it was reserving failed to be granted. */
+async function releaseClassicClaim(guildId, buttonId, actionIndex, userId, expectedType) {
+    await withSafariLock(async () => {
+        const safariData = await loadSafariContent();
+        const action = safariData[guildId]?.buttons?.[buttonId]?.actions?.[actionIndex];
+        if (!action || action.type !== expectedType || !action.config?.limit) return;
+        clearClaim(action.config.limit, userId);
+        await saveSafariContent(safariData);
+        console.log(`↩️ Released claim for ${expectedType} ${buttonId}[${actionIndex}] (user ${userId}) — grant failed`);
     });
 }
 
@@ -917,8 +982,13 @@ async function grantDefaultItems(playerData, guildId, userId) {
  * @param {string} userId - Discord user ID
  * @param {number} amount - Amount to add/subtract
  * @param {Object} context - Optional context for logging (username, source, etc.)
+ * @param {Object} [options]
+ * @param {boolean} [options.detail=false] - Return {balance, previous, applied} instead of just
+ *   the new balance. `applied` is the ACTUAL delta after the zero-floor clamp, which differs
+ *   from `amount` whenever a subtraction would have taken the player below 0.
+ * @returns {Promise<number|{balance:number, previous:number, applied:number}>}
  */
-async function updateCurrency(guildId, userId, amount, context = {}) {
+async function updateCurrency(guildId, userId, amount, context = {}, options = {}) {
     try {
         // Load→mutate→save runs under withStorageLock so a concurrent whole-file save can't
         // erase this write (docs/incidents/05-LostMovementRace). Lock section stays I/O-only:
@@ -972,7 +1042,9 @@ async function updateCurrency(guildId, userId, amount, context = {}) {
             }
         }
         
-        return newCurrency;
+        return options.detail
+            ? { balance: newCurrency, previous: currentCurrency, applied: newCurrency - currentCurrency }
+            : newCurrency;
     } catch (error) {
         console.error('Error updating currency:', error);
         throw error;
@@ -1110,64 +1182,26 @@ async function executeGiveCurrency(config, userId, guildId, interaction, buttonI
         }
     }
 
-    // Check usage limits
-    if (config.limit && config.limit.type !== 'unlimited' && config.limit.type !== 'custom') {
-        const claimedBy = config.limit.claimedBy;
-
-        // Normalize claimedBy to check actual claims, not just truthiness
-        // (empty arrays [] and empty strings '' are truthy but mean "no claims")
-        const hasClaims = Array.isArray(claimedBy) ? claimedBy.length > 0
-            : typeof claimedBy === 'string' ? claimedBy.length > 0
-            : false;
-
-        if (config.limit.type === 'once_per_player') {
-            const claimedList = Array.isArray(claimedBy) ? claimedBy : (claimedBy ? [claimedBy] : []);
-            if (claimedList.includes(userId)) {
-                return {
-                    flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
-                    components: [{
-                        type: 17,
-                        components: [{
-                            type: 10,
-                            content: `❌ You have already claimed this ${customTerms.currencyName} reward!`
-                        }]
-                    }]
-                };
-            }
+    // Classic usage limits — gate + record atomically against LIVE claims (see reserveClassicClaim)
+    const reservation = await reserveClassicClaim(guildId, buttonId, actionIndex, userId, 'give_currency', config.limit);
+    if (reservation.blocked) {
+        const amountStr = config.amount > 0 ? `+${config.amount}` : `${config.amount}`;
+        let content;
+        if (reservation.reason === 'once_per_player') {
+            content = `❌ You have already claimed this ${customTerms.currencyName} reward!`;
+        } else if (reservation.reason === 'once_globally') {
+            content = `❌ This ${customTerms.currencyName} reward has already been claimed!`;
+        } else {
+            content = `❌⏰ **Unable to claim** — **${customTerms.currencyEmoji || '🪙'} ${amountStr} ${customTerms.currencyName}** — You can only claim this every **${formatPeriod(reservation.periodMs)}**. Wait **${formatPeriod(reservation.remainingMs)}**.`;
         }
-
-        if (config.limit.type === 'once_globally' && hasClaims) {
-            return {
-                flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
-                components: [{
-                    type: 17,
-                    components: [{
-                        type: 10,
-                        content: `❌ This ${customTerms.currencyName} reward has already been claimed!`
-                    }]
-                }]
-            };
-        }
-
-        if (config.limit.type === 'once_per_period') {
-            const lastUsed = (typeof claimedBy === 'object' && !Array.isArray(claimedBy)) ? claimedBy?.[userId] : undefined;
-            if (lastUsed && (Date.now() - lastUsed < config.limit.periodMs)) {
-                const { formatPeriod } = await import('./utils/periodUtils.js');
-                const remainingMs = config.limit.periodMs - (Date.now() - lastUsed);
-                const amountStr = config.amount > 0 ? `+${config.amount}` : `${config.amount}`;
-                return {
-                    flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
-                    components: [{
-                        type: 17,
-                        accent_color: 0xE74C3C,
-                        components: [{
-                            type: 10,
-                            content: `❌⏰ **Unable to claim** — **${customTerms.currencyEmoji || '🪙'} ${amountStr} ${customTerms.currencyName}** — You can only claim this every **${formatPeriod(config.limit.periodMs)}**. Wait **${formatPeriod(remainingMs)}**.`
-                        }]
-                    }]
-                };
-            }
-        }
+        return {
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+            components: [{
+                type: 17,
+                ...(reservation.reason === 'once_per_period' ? { accent_color: 0xE74C3C } : {}),
+                components: [{ type: 10, content }]
+            }]
+        };
     }
 
     // Give the currency with context for logging
@@ -1177,83 +1211,31 @@ async function executeGiveCurrency(config, userId, guildId, interaction, buttonI
         source: buttonId ? `Button: ${buttonId}` : 'give_currency',
         channelName: interaction?.channel?.name || null
     };
-    const newBalance = await updateCurrency(guildId, userId, config.amount, context);
+    let applied, previous;
+    try {
+        ({ applied, previous } = await updateCurrency(guildId, userId, config.amount, context, { detail: true }));
+    } catch (error) {
+        // The claim was reserved before the grant — hand it back rather than burning it
+        if (reservation.recorded) await releaseClassicClaim(guildId, buttonId, actionIndex, userId, 'give_currency');
+        throw error;
+    }
 
     // Custom usage limit: record claim into the live action's claims[]
     if (config.limit?.type === 'custom') {
         await persistCustomClaim(guildId, buttonId, actionIndex, userId, 'give_currency');
     }
 
-    // Update claim tracking persistently - use specific button and action if provided
-    if (config.limit && config.limit.type !== 'unlimited' && config.limit.type !== 'custom') {
-        const safariData = await loadSafariContent();
-        
-        if (buttonId && actionIndex !== null) {
-            // Direct update to specific action
-            const button = safariData[guildId]?.buttons?.[buttonId];
-            if (button && button.actions && button.actions[actionIndex]) {
-                const action = button.actions[actionIndex];
-                if (action.type === 'give_currency') {
-                    if (config.limit.type === 'once_per_player') {
-                        if (!action.config.limit.claimedBy) {
-                            action.config.limit.claimedBy = [];
-                        }
-                        if (!action.config.limit.claimedBy.includes(userId)) {
-                            action.config.limit.claimedBy.push(userId);
-                        }
-                    } else if (config.limit.type === 'once_globally') {
-                        action.config.limit.claimedBy = userId;
-                    } else if (config.limit.type === 'once_per_period') {
-                        if (!action.config.limit.claimedBy || typeof action.config.limit.claimedBy !== 'object' || Array.isArray(action.config.limit.claimedBy)) {
-                            action.config.limit.claimedBy = {};
-                        }
-                        action.config.limit.claimedBy[userId] = Date.now();
-                    }
-
-                    await saveSafariContent(safariData);
-                    console.log(`✅ Updated claim tracking for give_currency action ${buttonId}[${actionIndex}]`);
-                }
-            }
-        } else {
-            // Legacy fallback: Find the button and action to update (DEPRECATED - causes cross-action issues)
-            console.warn(`⚠️ Using legacy claim tracking for currency - this may cause cross-action claim conflicts`);
-            for (const fallbackButtonId in safariData[guildId]?.buttons || {}) {
-                const button = safariData[guildId].buttons[fallbackButtonId];
-                if (button.actions) {
-                    for (let i = 0; i < button.actions.length; i++) {
-                        const action = button.actions[i];
-                        // Match by type and amount to find the right action
-                        if (action.type === 'give_currency' && 
-                            action.config?.amount === config.amount &&
-                            action.config?.limit?.type === config.limit.type) {
-                            
-                            if (config.limit.type === 'once_per_player') {
-                                if (!action.config.limit.claimedBy) {
-                                    action.config.limit.claimedBy = [];
-                                }
-                                if (!action.config.limit.claimedBy.includes(userId)) {
-                                    action.config.limit.claimedBy.push(userId);
-                                }
-                            } else if (config.limit.type === 'once_globally') {
-                                action.config.limit.claimedBy = userId;
-                            }
-                            
-                            await saveSafariContent(safariData);
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    // Build message
-    const sign = config.amount >= 0 ? '+' : '';
+    // Build message from the APPLIED delta, not the configured amount: balances are floored at
+    // 0, so a -50 outcome against a balance of 10 only ever takes 10 and must say so.
+    const sign = applied > 0 ? '+' : '';
     const defaultMessage = config.amount >= 0
         ? `You received some ${customTerms.currencyName}!`
         : `You lost some ${customTerms.currencyName}!`;
     const flavorText = config.message || defaultMessage;
-    const message = `${customTerms.currencyEmoji} **${sign}${config.amount} ${customTerms.currencyName}** — ${flavorText}`;
+    let message = `${customTerms.currencyEmoji} **${sign}${applied} ${customTerms.currencyName}** — ${flavorText}`;
+    if (applied !== config.amount) {
+        message += `\n-# Your balance can't go below 0 — you only had ${previous} ${customTerms.currencyName} of the ${Math.abs(config.amount)} this would have taken.`;
+    }
 
     return {
         flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
@@ -1293,80 +1275,31 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
         }
     }
 
-    // Check usage limits using live data from safariContent
-    if (config.limit && config.limit.type !== 'unlimited' && config.limit.type !== 'custom') {
-        const safariData = await loadSafariContent();
-
-        // Get live claim data from the actual button action
-        let liveClaimedBy = null;
-        if (buttonId && actionIndex !== null) {
-            const button = safariData[guildId]?.buttons?.[buttonId];
-            if (button && button.actions && button.actions[actionIndex]) {
-                const action = button.actions[actionIndex];
-                if (action.type === 'give_item' && action.config?.limit) {
-                    liveClaimedBy = action.config.limit.claimedBy;
-                }
-            }
+    // Classic usage limits — gate + record atomically against LIVE claims (see reserveClassicClaim)
+    const reservation = await reserveClassicClaim(guildId, buttonId, actionIndex, userId, 'give_item', config.limit);
+    if (reservation.blocked) {
+        let content;
+        if (reservation.reason === 'once_per_player') {
+            content = `❌ You have already ${operation === 'give' ? 'received' : 'had removed'} **${itemEmoji} ${quantity}x ${itemName}**`;
+        } else if (reservation.reason === 'once_globally') {
+            content = `❌ **${itemEmoji} ${quantity}x ${itemName}** has already ${operation === 'give' ? 'been given' : 'been removed'} globally!`;
+        } else {
+            content = `⏱️ **${itemEmoji} ${quantity}x ${itemName}** — You can only ${operation === 'give' ? 'receive' : 'use'} this every **${formatPeriod(reservation.periodMs)}**. Wait **${formatPeriod(reservation.remainingMs)}**.`;
         }
-
-        // Fallback to config if live data not available
-        const claimedBy = liveClaimedBy !== null ? liveClaimedBy : config.limit.claimedBy;
-
-        if (config.limit.type === 'once_per_player') {
-            // For once_per_player, claimedBy should be an array
-            const claimedArray = Array.isArray(claimedBy) ? claimedBy : [];
-            if (claimedArray.includes(userId)) {
-                const actionVerb = operation === 'give' ? 'received' : 'had removed';
-                return {
-                    flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
-                    components: [{
-                        type: 17, // Container
-                        components: [{
-                            type: 10, // Text Display
-                            content: `❌ You have already ${actionVerb} **${itemEmoji} ${quantity}x ${itemName}**`
-                        }]
-                    }]
-                };
-            }
-        }
-
-        if (config.limit.type === 'once_globally') {
-            // For once_globally, only block if claimedBy is a valid user ID (string)
-            // Arrays (empty or not) and null/undefined should allow claiming
-            if (typeof claimedBy === 'string' && claimedBy !== '') {
-                const actionVerb = operation === 'give' ? 'been given' : 'been removed';
-                return {
-                    flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
-                    components: [{
-                        type: 17, // Container
-                        components: [{
-                            type: 10, // Text Display
-                            content: `❌ **${itemEmoji} ${quantity}x ${itemName}** has already ${actionVerb} globally!`
-                        }]
-                    }]
-                };
-            }
-        }
-
-        if (config.limit.type === 'once_per_period') {
-            const lastUsed = (typeof claimedBy === 'object' && !Array.isArray(claimedBy)) ? claimedBy?.[userId] : undefined;
-            if (lastUsed && (Date.now() - lastUsed < config.limit.periodMs)) {
-                const { formatPeriod } = await import('./utils/periodUtils.js');
-                const remainingMs = config.limit.periodMs - (Date.now() - lastUsed);
-                return {
-                    flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
-                    components: [{
-                        type: 17,
-                        accent_color: 0xE74C3C,
-                        components: [{
-                            type: 10,
-                            content: `⏱️ **${itemEmoji} ${quantity}x ${itemName}** — You can only ${operation === 'give' ? 'receive' : 'use'} this every **${formatPeriod(config.limit.periodMs)}**. Wait **${formatPeriod(remainingMs)}**.`
-                        }]
-                    }]
-                };
-            }
-        }
+        return {
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+            components: [{
+                type: 17, // Container
+                ...(reservation.reason === 'once_per_period' ? { accent_color: 0xE74C3C } : {}),
+                components: [{ type: 10, content }]
+            }]
+        };
     }
+
+    /** Hand the reserved claim back when the inventory change didn't actually happen. */
+    const rollbackClaim = async () => {
+        if (reservation.recorded) await releaseClassicClaim(guildId, buttonId, actionIndex, userId, 'give_item');
+    };
 
     // Execute the operation based on type
     let operationResult;
@@ -1386,6 +1319,7 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
         const success = await addItemToInventory(guildId, userId, config.itemId, quantity, null, logContext);
 
         if (!success) {
+            await rollbackClaim();
             return {
                 flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
                 components: [{
@@ -1406,6 +1340,7 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
         const result = await removeItemFromInventory(guildId, userId, config.itemId, quantity, null);
 
         if (!result.success) {
+            await rollbackClaim();
             return {
                 flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
                 components: [{
@@ -1429,6 +1364,7 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
     } else {
         // Unknown operation - should never happen but handle gracefully
         console.error(`Unknown operation type: ${operation}`);
+        await rollbackClaim();
         return {
             flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
             components: [{
@@ -1446,75 +1382,8 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
         await persistCustomClaim(guildId, buttonId, actionIndex, userId, 'give_item');
     }
 
-    // Update claim tracking persistently - use specific button and action if provided
-    if (config.limit && config.limit.type !== 'unlimited' && config.limit.type !== 'custom') {
-        const safariData = await loadSafariContent();
-
-        if (buttonId && actionIndex !== null) {
-            // Direct update to specific action
-            const button = safariData[guildId]?.buttons?.[buttonId];
-            if (button && button.actions && button.actions[actionIndex]) {
-                const action = button.actions[actionIndex];
-                if (action.type === 'give_item') {
-                    console.log(`${operationEmoji} BEFORE CLAIM: ${config.limit.type}, claimedBy:`, action.config.limit.claimedBy);
-
-                    if (config.limit.type === 'once_per_player') {
-                        if (!action.config.limit.claimedBy) {
-                            action.config.limit.claimedBy = [];
-                        }
-                        if (!action.config.limit.claimedBy.includes(userId)) {
-                            action.config.limit.claimedBy.push(userId);
-                        }
-                    } else if (config.limit.type === 'once_globally') {
-                        action.config.limit.claimedBy = userId;
-                    } else if (config.limit.type === 'once_per_period') {
-                        if (!action.config.limit.claimedBy || typeof action.config.limit.claimedBy !== 'object' || Array.isArray(action.config.limit.claimedBy)) {
-                            action.config.limit.claimedBy = {};
-                        }
-                        action.config.limit.claimedBy[userId] = Date.now();
-                    }
-
-                    console.log(`${operationEmoji} AFTER CLAIM: ${config.limit.type}, claimedBy:`, action.config.limit.claimedBy);
-
-                    await saveSafariContent(safariData);
-                    console.log(`✅ Updated claim tracking for give_item action ${buttonId}[${actionIndex}]`);
-                }
-            }
-        } else {
-            // Legacy fallback: Find the button and action to update (DEPRECATED - causes cross-action issues)
-            console.warn(`⚠️ Using legacy claim tracking - this may cause cross-action claim conflicts`);
-            for (const fallbackButtonId in safariData[guildId]?.buttons || {}) {
-                const button = safariData[guildId].buttons[fallbackButtonId];
-                if (button.actions) {
-                    for (let i = 0; i < button.actions.length; i++) {
-                        const action = button.actions[i];
-                        // Match by type, itemId, quantity and operation to find the right action
-                        if (action.type === 'give_item' &&
-                            action.config?.itemId === config.itemId &&
-                            action.config?.quantity === config.quantity &&
-                            (action.config?.operation || 'give') === operation &&
-                            action.config?.limit?.type === config.limit.type) {
-
-                            if (config.limit.type === 'once_per_player') {
-                                if (!action.config.limit.claimedBy) {
-                                    action.config.limit.claimedBy = [];
-                                }
-                                if (!action.config.limit.claimedBy.includes(userId)) {
-                                    action.config.limit.claimedBy.push(userId);
-                                }
-                            } else if (config.limit.type === 'once_globally') {
-                                action.config.limit.claimedBy = userId;
-                            }
-
-                            await saveSafariContent(safariData);
-                            console.log(`✅ Updated claim tracking for give_item action (legacy fallback)`);
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-    }
+    // NOTE: classic claims were already recorded by reserveClassicClaim() above, before the
+    // grant — see that function for why the order is reserve-then-grant, not grant-then-claim.
 
     return {
         flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
@@ -1845,12 +1714,15 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
             return await armScheduledAction({ guildId, actionId: buttonId, userId, action: button, interaction, client });
         }
 
-        // Update usage count
-        const safariData = await loadSafariContent();
-        if (safariData[guildId]?.buttons?.[buttonId]) {
-            safariData[guildId].buttons[buttonId].metadata.usageCount++;
-            await saveSafariContent(safariData);
-        }
+        // Update usage count — locked: an unlocked increment cycle here would resurrect
+        // claims recorded by a concurrent execution of another action (incident-05 class)
+        await withSafariLock(async () => {
+            const safariData = await loadSafariContent();
+            if (safariData[guildId]?.buttons?.[buttonId]?.metadata) {
+                safariData[guildId].buttons[buttonId].metadata.usageCount++;
+                await saveSafariContent(safariData);
+            }
+        });
         
         // Note: Safari button logging is now handled by the comprehensive custom action logging at the end of executeButtonActions
         

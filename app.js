@@ -35,6 +35,7 @@ import {
 import { capitalize, DiscordRequest } from './utils.js';
 import { discordLogTags } from './src/utils/discordLogTags.js';  // Educational logging tags
 import { buildCustomLimit } from './customUsageLimitUI.js';  // ⚙️ Custom usage-limit builder
+import { buildExecuteOnOptions } from './utils/executeOnOptions.js';  // single source: outcome executeOn copy
 import { MAX_STAMINA, MAX_STAMINA_DIGITS } from './config/safariLimits.js';  // single source: stamina input ceiling
 import { 
   loadPlayerData, 
@@ -20394,16 +20395,12 @@ To fix this:
               ephemeral: true
             };
           } else if (actionType === 'give_currency') {
-            // Show currency configuration directly (no item selection needed)
+            // One-shot create modal (amount + usage limit + executes-if). The Container editor
+            // at showGiveCurrencyConfig is still the EDIT surface — Outcome list → Edit.
             const { getCustomTerms } = await import('./safariManager.js');
-            const customTerms = await getCustomTerms(context.guildId);
-            
-            console.log(`✅ SUCCESS: safari_action_type_select - showing currency config`);
-            
-            // Create a temporary action config to show the configuration UI
-            const tempActionIndex = button.actions?.length || 0;
-            
-            return await showGiveCurrencyConfig(context.guildId, buttonId, tempActionIndex, customTerms);
+            const { buildGiveCurrencyModal } = await import('./customActionUI.js');
+            console.log(`✅ SUCCESS: safari_action_type_select - showing quick currency modal`);
+            return buildGiveCurrencyModal(buttonId, executeOn, await getCustomTerms(context.guildId));
           } else if (actionType === 'follow_up_button') {
             // Get existing buttons to show in dropdown
             const { loadSafariContent } = await import('./safariManager.js');
@@ -22225,12 +22222,21 @@ To fix this:
             });
           }
           
+          // dropConfigState is in-memory: a restart between "Set Amount" and "Save & Finish"
+          // loses it. Fall back to what's already saved rather than inventing an amount —
+          // the old `|| 100` silently wrote 100 over whatever the admin had typed.
+          const savedAmount = button.actions?.[actionIndex]?.config?.amount;
+          const resolvedAmount = state.amount ?? savedAmount;
+          if (resolvedAmount == null) {
+            return { content: '❌ Set an amount first (💰 Set Amount), then Save & Finish.', ephemeral: true };
+          }
+
           // Create the give_currency action with state values (with defaults)
           const action = {
             type: 'give_currency',
             order: actionIndex,
             config: {
-              amount: state.amount || 100,  // Default to 100 if not set
+              amount: resolvedAmount,
               limit: (() => {
                 const lt = state.limit || 'unlimited';
                 if (lt === 'unlimited') return { type: 'unlimited' };
@@ -43088,6 +43094,28 @@ To fix this:
           }
         });
       }
+    } else if (custom_id.startsWith('safari_currency_quick_')) {
+      // One-shot Give / Remove Currency create modal (amount + limit + executes-if)
+      try {
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to edit actions.')) return;
+        const { handleGiveCurrencyQuickSubmit } = await import('./customActionUI.js');
+        const result = await handleGiveCurrencyQuickSubmit(req.body.guild_id, custom_id, req.body.data);
+
+        // Validation failures arrive as a NEW ephemeral so the Action Editor stays on screen
+        if (!result.components) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { content: result.content, flags: InteractionResponseFlags.EPHEMERAL }
+          });
+        }
+        return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: { ...result } });
+      } catch (error) {
+        console.error('Error in safari_currency_quick handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { content: '❌ Error saving currency outcome.', flags: InteractionResponseFlags.EPHEMERAL }
+        });
+      }
     } else if (custom_id.startsWith('safari_display_text_save_')) {
       // Handle display text edit/save modal submissions
       try {
@@ -51787,6 +51815,11 @@ async function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) 
           state.customConfig = customConfigFromLimit(lim);
         }
       }
+      // Hydrate quantity/operation too — without these, a state lost to a restart mid-edit
+      // silently rewrote the saved outcome back to "give 1x" on Save & Finish.
+      if (existing?.config?.quantity != null) state.quantity = existing.config.quantity;
+      if (existing?.config?.operation) state.operation = existing.config.operation;
+      if (existing?.executeOn) state.executeOn = existing.executeOn;
     } catch (e) { console.error('Hydrate give_item state error:', e); }
     // CRITICAL: Save the default state so it's available when user clicks Save
     dropConfigState.set(stateKey, state);
@@ -51883,20 +51916,7 @@ async function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) 
             type: 3, // String Select
             custom_id: `safari_item_execute_on_${buttonId}_${itemId}_${actionIndex}`,
             placeholder: 'When to execute this action...',
-            options: [
-              { 
-                label: 'Execute if all conditions are true', 
-                value: 'true', 
-                emoji: { name: '✅' }, 
-                default: state.executeOn !== 'false' // Default to true
-              },
-              { 
-                label: 'Execute if all conditions are false', 
-                value: 'false', 
-                emoji: { name: '❌' }, 
-                default: state.executeOn === 'false' 
-              }
-            ]
+            options: buildExecuteOnOptions({ current: state.executeOn })
           }]
         },
         
@@ -51971,6 +51991,9 @@ async function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerm
         }
       }
       if (existing?.config?.amount != null) state.amount = existing.config.amount;
+      // Without this the editor showed "conditions true" for a false-branch outcome and
+      // Save & Finish then moved it to the true branch.
+      if (existing?.executeOn) state.executeOn = existing.executeOn;
     } catch (e) { console.error('Hydrate give_currency state error:', e); }
     dropConfigState.set(stateKey, state);
   }
@@ -52048,20 +52071,7 @@ async function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerm
             type: 3, // String Select
             custom_id: `safari_currency_execute_on_${buttonId}_${actionIndex}`,
             placeholder: 'When to execute this action...',
-            options: [
-              { 
-                label: 'Execute if all conditions are true', 
-                value: 'true', 
-                emoji: { name: '✅' }, 
-                default: state.executeOn !== 'false' // Default to true
-              },
-              { 
-                label: 'Execute if all conditions are false', 
-                value: 'false', 
-                emoji: { name: '❌' }, 
-                default: state.executeOn === 'false' 
-              }
-            ]
+            options: buildExecuteOnOptions({ current: state.executeOn })
           }]
         },
         
@@ -52157,22 +52167,7 @@ async function showFollowUpConfig(guildId, buttonId, targetButtonId, actionIndex
               type: 3, // String Select
               custom_id: `safari_followup_execute_on_${buttonId}_${targetButtonId}_${actionIndex}`,
               placeholder: 'Select when to execute...',
-              options: [
-                {
-                  label: 'Execute if all conditions are TRUE',
-                  value: 'true',
-                  description: 'Only show follow-up when conditions are met',
-                  emoji: { name: '✅' },
-                  default: state.executeOn === 'true'
-                },
-                {
-                  label: 'Execute if all conditions are FALSE',
-                  value: 'false',
-                  description: 'Only show follow-up when conditions are NOT met',
-                  emoji: { name: '❌' },
-                  default: state.executeOn === 'false'
-                }
-              ]
+              options: buildExecuteOnOptions({ current: state.executeOn })
             }]
           },
           
