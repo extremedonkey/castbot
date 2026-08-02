@@ -17,7 +17,8 @@ import {
   buildQuickLimit,
   parseQuickCurrencyFields
 } from '../customActionUI.js';
-import { buildExecuteOnOptions, normalizeExecuteOn, EXECUTE_ON_TERMS } from '../utils/executeOnOptions.js';
+// The executeOn vocabulary itself is covered by tests/executeOnOptions.test.js — here we only
+// assert how this modal wires it up.
 
 const TERMS = { currencyName: 'Contraband', currencyEmoji: '🚬' };
 
@@ -152,39 +153,12 @@ describe('Quick Currency — limit shapes match the legacy Save & Finish handler
   });
 });
 
-describe('executeOn options — the shared terminology source', () => {
-  it('marks the default option and uses the agreed emoji', () => {
-    const [pass, fail] = buildExecuteOnOptions();
-    assert.equal(pass.value, 'true');
+describe('Quick Currency modal — executes-if copy comes from the shared source', () => {
+  it('renders the agreed labels/emoji rather than a local restatement', () => {
+    const [pass, fail] = labelFor(buildGiveCurrencyModal('b', 'true', TERMS), 'execute_on').component.options;
     assert.equal(pass.label, 'All conditions are true (default)');
     assert.equal(pass.emoji.name, '🟢');
     assert.equal(fail.label, 'All conditions are false');
     assert.equal(fail.emoji.name, '🔴');
-  });
-
-  it('marks exactly one option as selected, for any current value', () => {
-    for (const current of ['true', 'false', 'always', undefined, 'nonsense']) {
-      const opts = buildExecuteOnOptions({ current, includeAlways: true });
-      assert.equal(opts.filter(o => o.default).length, 1, `one default for ${current}`);
-    }
-  });
-
-  it('can drop the "(default)" suffix for screens that don\'t want it', () => {
-    assert.equal(buildExecuteOnOptions({ markDefault: false })[0].label, 'All conditions are true');
-  });
-
-  it('normalizes unknown/missing values to true, matching the runtime engine', () => {
-    assert.equal(normalizeExecuteOn(undefined), 'true');
-    assert.equal(normalizeExecuteOn(''), 'true');
-    assert.equal(normalizeExecuteOn('TRUE'), 'true');
-    assert.equal(normalizeExecuteOn('false'), 'false');
-    assert.equal(normalizeExecuteOn('always'), 'always');
-  });
-
-  it('every branch has copy defined (guards a partial terminology rename)', () => {
-    for (const key of ['true', 'false', 'always']) {
-      const term = EXECUTE_ON_TERMS[key];
-      assert.ok(term.label && term.short && term.description && term.emoji, `${key} fully defined`);
-    }
   });
 });
