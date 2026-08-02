@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import {
   RESET_SCOPES, RESET_SCOPE_ORDER,
   locateAction, collectClaimTargets, summarizeClaimTargets,
-  collectItemDropClaims, collectMapWorldState, collectStockedStoreItems, collectPlayerState,
+  collectItemDropClaims, collectStockedStoreItems, collectPlayerState,
   packLines,
-  resetActionClaims, resetMapWorldState, resetSalesCounters, resetRoundState,
+  resetActionClaims, resetItemDropClaims, resetSalesCounters, resetRoundState,
   renderResetUI, buildResetResultUI
 } from '../safariReset.js';
 
@@ -188,15 +188,6 @@ describe('safariReset — map + store collectors', () => {
 
   it('handles a guild with no map', () => {
     assert.deepEqual(collectItemDropClaims(null), { claims: 0, coords: [] });
-    assert.equal(collectMapWorldState(null).total, 0);
-  });
-
-  it('counts opened chests / triggered events / discovered secrets', () => {
-    const w = collectMapWorldState(fixture()[G].maps.map_1);
-    assert.deepEqual(
-      { openedChests: w.openedChests, triggeredEvents: w.triggeredEvents, discoveredSecrets: w.discoveredSecrets, total: w.total },
-      { openedChests: 2, triggeredEvents: 1, discoveredSecrets: 0, total: 3 }
-    );
   });
 
   it('reports only FINITE store stock — undefined/null/-1 all mean unlimited', () => {
@@ -290,27 +281,33 @@ describe('safariReset — resetActionClaims', () => {
   });
 });
 
-describe('safariReset — resetMapWorldState', () => {
-  it('clears item-drop claims and the shared world flags', () => {
+describe('safariReset — resetItemDropClaims (legacy Map Drops)', () => {
+  it('clears legacy item-drop claims', () => {
     const map = fixture()[G].maps.map_1;
-    const r = resetMapWorldState(map);
-    assert.equal(r.drops, 2);
-    assert.equal(r.world, 3);
+    assert.equal(resetItemDropClaims(map), 2);
     assert.deepEqual(map.coordinates.A1.itemDrops[0].claimedBy, []);
-    assert.deepEqual(map.globalState.openedChests, []);
-    assert.deepEqual(map.globalState.triggeredEvents, []);
   });
 
   it('keeps the drop definition itself — only claimedBy is emptied', () => {
     const map = fixture()[G].maps.map_1;
-    resetMapWorldState(map);
+    resetItemDropClaims(map);
     assert.equal(map.coordinates.A1.itemDrops.length, 1);
     assert.equal(map.coordinates.A1.itemDrops[0].itemId, 'rock_1');
     assert.equal(map.coordinates.C1.channelId, '3');
   });
 
+  // globalState.{openedChests,triggeredEvents,discoveredSecrets} are initialised to [] at map
+  // creation and NOTHING in the codebase ever writes to them. Clearing them would be dead code
+  // dressed up as behaviour — and a preview line for them can only ever read 0.
+  it('never touches map.globalState — no code path writes those arrays', () => {
+    const map = fixture()[G].maps.map_1;
+    const before = JSON.stringify(map.globalState);
+    resetItemDropClaims(map);
+    assert.equal(JSON.stringify(map.globalState), before);
+  });
+
   it('no-ops on a missing map', () => {
-    assert.deepEqual(resetMapWorldState(null), { drops: 0, world: 0 });
+    assert.equal(resetItemDropClaims(null), 0);
   });
 });
 
@@ -349,7 +346,7 @@ describe('safariReset — THE INVARIANT: content is never deleted', () => {
     };
 
     resetActionClaims(data, G);
-    resetMapWorldState(data[G].maps.map_1);
+    resetItemDropClaims(data[G].maps.map_1);
     resetSalesCounters(data, G);
     resetRoundState(data, G);
 
@@ -367,7 +364,7 @@ describe('safariReset — THE INVARIANT: content is never deleted', () => {
   it('store STOCK is never touched — it cannot be restored, so it is only reported', () => {
     const data = fixture();
     resetActionClaims(data, G);
-    resetMapWorldState(data[G].maps.map_1);
+    resetItemDropClaims(data[G].maps.map_1);
     resetSalesCounters(data, G);
     resetRoundState(data, G);
     assert.equal(data[G].stores.shop_1.items[0].stock, 2, 'stock must survive a reset untouched');
@@ -378,8 +375,8 @@ describe('safariReset — THE INVARIANT: content is never deleted', () => {
 
 describe('safariReset — buildResetResultUI', () => {
   const tally = {
-    scope: 'testing', outcomesReset: 4, claimsCleared: 6, dropClaimsCleared: 2,
-    worldFlagsCleared: 3, salesCountersReset: 0, playersReset: 0, playersRemoved: 0,
+    scope: 'testing', outcomesReset: 4, claimsCleared: 6, dropClaimsCleared: 0,
+    salesCountersReset: 0, playersReset: 0, playersRemoved: 0,
     playersFailed: 0, startingCurrency: 0
   };
 
@@ -416,7 +413,7 @@ describe('safariReset — buildResetResultUI', () => {
 // ─── Screen rendering: the Discord budgets are the thing worth locking in ───
 
 /** A preview bundle shaped exactly like buildResetPreview() returns. */
-function preview({ globals = 0, stocked = 0, claimedGlobals = 0 } = {}) {
+function preview({ globals = 0, stocked = 0, claimedGlobals = 0, claims = 0 } = {}) {
   return {
     customTerms: TERMS,
     hasMap: true,
@@ -429,8 +426,7 @@ function preview({ globals = 0, stocked = 0, claimedGlobals = 0 } = {}) {
       })),
       globalsClaimed: claimedGlobals
     },
-    drops: { claims: 14, coords: ['A1', 'B1', 'C1'] },
-    world: { openedChests: 4, triggeredEvents: 2, discoveredSecrets: 1, total: 7 },
+    drops: { claims, coords: claims ? ['A1', 'B1', 'C1'] : [] },
     stocked: Array.from({ length: stocked }, (_, i) => ({
       storeName: `A Store With A Fairly Long Name ${i}`, storeEmoji: '🥚',
       itemName: `An Item With A Fairly Long Name ${i}`, itemEmoji: '📦', stock: i
@@ -515,6 +511,28 @@ describe('safariReset — renderResetUI', () => {
     const text = JSON.stringify(ui);
     assert.match(text, /store stock \(4\)/);
     assert.match(text, /can’t restore/);
+  });
+
+  it('hides the legacy Map Drops line on servers that never used the retired feature', () => {
+    const text = JSON.stringify(renderResetUI({ preview: preview({ claims: 0 }), scope: 'testing' }));
+    assert.ok(!text.includes('item-drop'), 'modern servers must not see legacy Drops jargon');
+  });
+
+  it('shows the legacy Map Drops line, with coordinates, when a server still has them', () => {
+    const text = JSON.stringify(renderResetUI({ preview: preview({ claims: 14 }), scope: 'testing' }));
+    assert.match(text, /\*\*14\*\* legacy map item-drop claims at A1, B1, C1/);
+  });
+
+  it('never mentions chests/events/secrets — that state does not exist', () => {
+    for (const scope of RESET_SCOPE_ORDER) {
+      const text = JSON.stringify(renderResetUI({ preview: preview({ claims: 5 }), scope }));
+      assert.ok(!/opened chest|triggered event|discovered secret/i.test(text));
+    }
+  });
+
+  it('spells out what a "limited outcome" is instead of using internal jargon', () => {
+    const text = JSON.stringify(renderResetUI({ preview: preview(), scope: 'testing' }));
+    assert.match(text, /Usage Limit/, 'uses the same words as the outcome editor');
   });
 
   it('omits the globals / stock sections entirely when there is nothing to say', () => {

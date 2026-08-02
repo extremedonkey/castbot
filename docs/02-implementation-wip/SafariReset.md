@@ -3,7 +3,7 @@
 **Status**: 🚧 Built, deployed to TEST (not yet in production)
 **Entry point**: `/menu` → Safari → Map → **🔄 Reset Safari** (red, Map Explorer row 2)
 **Code**: [safariReset.js](../../safariReset.js) · claim primitives in [claimsManager.js](../../claimsManager.js) · button in [mapExplorer.js](../../mapExplorer.js)
-**Tests**: `tests/safariReset.test.js` (45), `tests/claimsManager.test.js`
+**Tests**: `tests/safariReset.test.js` (49), `tests/claimsManager.test.js`
 **Related**: [SafariUsageLimits](../03-features/SafariUsageLimits.md) (where claims live) · [SafariMapDrops](../03-features/SafariMapDrops.md) · [SurvivorContext](../concepts/SurvivorContext.md) (why hosts care about `once_globally`)
 
 ---
@@ -13,7 +13,6 @@
 A host spends days testing a Safari before a season launches. By the time they're happy, the world is full of residue:
 
 - every `once_globally` idol has been claimed by a tester and will never fire again
-- every chest on the map is marked opened
 - testers are walking around with loot, currency and drained stamina
 - the round counter is at 4 and the attack queue is full of test attacks
 
@@ -32,8 +31,7 @@ Each is a strict superset of the one before. Two booleans on `RESET_SCOPES` (`cl
 | | 🧪 **Testing Reset** | 🧹 **Full Server Reset** | 🚪 **Full Reset + Remove Players** |
 |---|:---:|:---:|:---:|
 | Action outcome claims (`limit.claimedBy` / `limit.claims`) | ✅ | ✅ | ✅ |
-| Map item-drop claims (`itemDrops[].claimedBy`) | ✅ | ✅ | ✅ |
-| Opened chests / triggered events / discovered secrets | ✅ | ✅ | ✅ |
+| Legacy Map Drops claims (`itemDrops[].claimedBy`) | ✅ | ✅ | ✅ |
 | Player inventory, currency, history, cooldowns | — | ✅ | ✅ |
 | Stamina / HP / attributes (`entityPoints`) | — | ✅ | ✅ |
 | Round counter + attack queue + sales counters | — | ✅ | ✅ |
@@ -53,7 +51,7 @@ flowchart TD
     C --> D[Pre-flight preview<br/>counts + 🌍 once_globally roster<br/>+ 📦 store stock warning]
     D -->|← Map Explorer| A
     D -->|🔄 Reset — scope| E{executeReset}
-    E --> F[Phase 1: safariContent sweep<br/>claims · drops · world · rounds]
+    E --> F[Phase 1: safariContent sweep<br/>claims · legacy drops · rounds]
     F --> G{clearsPlayers?}
     G -->|no| I[✅ Result screen]
     G -->|deinitializes| H1[bulkDeinitializePlayers<br/>NO storage lock — makes Discord calls]
@@ -72,7 +70,7 @@ Nothing is destroyed until the red confirm button on the **preview** screen. The
 
 The point of the preview is that a host cannot see this state anywhere else. It reports:
 
-- **counts** — total claims, how many of the guild's limited outcomes hold them, item-drop claims, world flags, players and their aggregate inventory/currency
+- **counts** — total claims and how many of the guild's Usage-Limited outcomes hold them, players and their aggregate inventory/currency, round state. Deliberately phrased in the outcome editor's own words ("outcomes that have a Usage Limit set"), not internal jargon like "limited outcomes".
 - **🌍 the `once_globally` roster** — every globally-limited outcome with its **map coordinate**, the item it hands out, and who currently holds it (`D1 🗿 Give 1x Office Key — claimed by @Reece`). This is the section hosts actually asked for: in ORG play, `once_globally` is where hidden advantages live ([SurvivorContext](../concepts/SurvivorContext.md)), there are usually fewer than five per server, and getting one wrong decides a season. Claimed entries **sort first** so they survive any char-budget truncation.
 - **📦 store stock** — see below
 - **what is left alone** — spelled out per scope, because "reset" means different things to different hosts
@@ -85,6 +83,14 @@ So the preview lists every store item with a finite stock level (`undefined` / `
 
 **Do not "fix" this by inventing an original level.** Adding real restock support means adding an `originalStock` field and a migration — a separate piece of work.
 
+### 🪦 Legacy Map Drops (and one field that does not exist)
+
+Two findings from reviewing this preview in Discord, both worth recording:
+
+**`itemDrops` is the retired Map Drops feature.** Its authoring UI is *already* unreachable — `getFieldGroups('map_cell')` (entityManagementUI.js) returns only `info` / `stores` / `blacklist`, so nothing can emit `entity_field_group_map_cell_<coord>_items`, the sole route into the "Drop Management" screen at app.js ~28882. Roughly 25 `map_*_drop_*` / `safari_drop_*` handlers behind it are orphaned. But drops authored *before* that removal still **render** (`safariButtonHelper.js:267`), still **work** (handlers live), and still appear in Safari Progress — so their claims are real state a reset must clear. Footprint in the 2026-05-21 prod export: **3 of 42 guilds, 6 coordinates, 6 itemDrops, 0 currencyDrops, 29 claims**. The preview line is therefore **conditional on `drops.claims > 0`**, so modern servers never see legacy jargon. Superseded by Quick Items / Quick Currency actions. See [RaP 0966](../01-RaP/0966_20251206_DropsFeature_TechDebt_Options.md) — its Phase 1-3 cleanup is still unchecked; the entry point was removed without the rest.
+
+**`map.globalState` is dead scaffolding.** `openedChests`, `triggeredEvents` and `discoveredSecrets` are initialised to `[]` at map creation ([mapExplorer.js:546](../../mapExplorer.js#L546), [:1607](../../mapExplorer.js#L1607)) and **nothing in the codebase ever writes to them** — confirmed across all 42 guilds in the prod export. The first version of this feature reported and cleared them, which meant a preview line that could only ever read `0` on every server forever. Both the line and the clearing were removed; `resetItemDropClaims` now carries a comment and a test asserting `globalState` is left alone, so nobody re-adds it.
+
 ## 🗄️ What lives where
 
 The single most useful thing this document records: Safari play state is spread across **two stores and five shapes**.
@@ -92,8 +98,7 @@ The single most useful thing this document records: Safari play state is spread 
 | State | Location |
 |---|---|
 | Action outcome claims | `safariContent[guild].buttons[id].actions[i].config.limit` — `claimedBy` (array \| string \| object, by type) or `claims[]` for `custom` |
-| **Map item-drop claims** | `safariContent[guild].maps[mapId].coordinates[coord].itemDrops[].claimedBy` — **a completely separate claim store**, easy to forget |
-| Map world flags | `safariContent[guild].maps[mapId].globalState.{openedChests,triggeredEvents,discoveredSecrets}` |
+| **Legacy Map Drops claims** | `safariContent[guild].maps[mapId].coordinates[coord].itemDrops[].claimedBy` — **a completely separate claim store** from action limits; see the note below |
 | Stamina / HP / attributes | `safariContent[guild].entityPoints["player_<id>"]` — **authoritative**; `playerData…safari.points` is a legacy duplicate |
 | Inventory / currency / history | `playerData[guild].players[id].safari` |
 | Rounds & combat | `safariContent[guild].safariConfig.currentRound`, `.attackQueue`, `.roundHistory` |

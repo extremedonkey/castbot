@@ -173,8 +173,17 @@ export function summarizeClaimTargets(targets) {
 }
 
 /**
- * Map item-drops carry their OWN `claimedBy` array, entirely separate from action limits
- * (safariContent → maps[id].coordinates[coord].itemDrops[]). Easy to forget; always reset together.
+ * 🪦 LEGACY: the retired **Map Drops** feature. Its authoring UI is already unreachable —
+ * `getFieldGroups('map_cell')` no longer offers an `items` group, so nothing can emit
+ * `entity_field_group_map_cell_<coord>_items`, the only route into "Drop Management" — but
+ * drops authored before that removal STILL render (safariButtonHelper.js) and still block on
+ * their claims. Superseded by Quick Items / Quick Currency actions.
+ *
+ * These claims live at `maps[id].coordinates[coord].itemDrops[].claimedBy`, a claim store
+ * entirely separate from action limits, so a reset has to sweep both. The preview hides this
+ * line unless a guild actually has legacy drops, so modern servers never see it.
+ *
+ * See RaP 0966 (DropsFeature_TechDebt_Options). When Drops is fully scrubbed, delete this.
  */
 export function collectItemDropClaims(mapData) {
   const coordinates = mapData?.coordinates || {};
@@ -193,16 +202,6 @@ export function collectItemDropClaims(mapData) {
   }
 
   return { claims, coords };
-}
-
-/** Shared world flags a map accumulates as players poke at it. */
-export function collectMapWorldState(mapData) {
-  const gs = mapData?.globalState || {};
-  const count = (k) => (Array.isArray(gs[k]) ? gs[k].length : 0);
-  const openedChests = count('openedChests');
-  const triggeredEvents = count('triggeredEvents');
-  const discoveredSecrets = count('discoveredSecrets');
-  return { openedChests, triggeredEvents, discoveredSecrets, total: openedChests + triggeredEvents + discoveredSecrets };
 }
 
 /**
@@ -300,7 +299,6 @@ export async function buildResetPreview(guildId) {
     hasMap: !!mapData,
     claims: summarizeClaimTargets(targets),
     drops: collectItemDropClaims(mapData),
-    world: collectMapWorldState(mapData),
     stocked: collectStockedStoreItems(safariData, guildId),
     players: collectPlayerState(playerData, guildId, activeMapId),
     rounds: {
@@ -337,11 +335,16 @@ export function resetActionClaims(safariData, guildId) {
 }
 
 /**
- * Clear map item-drop claims and shared world flags. Mutates in place; caller saves.
- * @returns {{drops: number, world: number}}
+ * Clear legacy Map Drops claims (see collectItemDropClaims). Mutates in place; caller saves.
+ *
+ * Deliberately does NOT touch `map.globalState.{openedChests,triggeredEvents,discoveredSecrets}`:
+ * those arrays are initialised to `[]` at map creation (mapExplorer.js) and **nothing in the
+ * codebase ever writes to them**, so clearing them is a guaranteed no-op. Don't re-add it.
+ *
+ * @returns {number} claims cleared
  */
-export function resetMapWorldState(mapData) {
-  if (!mapData) return { drops: 0, world: 0 };
+export function resetItemDropClaims(mapData) {
+  if (!mapData) return 0;
 
   let drops = 0;
   for (const cell of Object.values(mapData.coordinates || {})) {
@@ -354,14 +357,7 @@ export function resetMapWorldState(mapData) {
     }
   }
 
-  const world = collectMapWorldState(mapData).total;
-  if (mapData.globalState) {
-    mapData.globalState.openedChests = [];
-    mapData.globalState.triggeredEvents = [];
-    mapData.globalState.discoveredSecrets = [];
-  }
-
-  return { drops, world };
+  return drops;
 }
 
 /** Zero the cumulative sales counters that testing inflates (pure stats, not content). */
@@ -456,7 +452,7 @@ export async function executeReset(guildId, scope, client) {
   const mapData = activeMapId ? safariData[guildId]?.maps?.[activeMapId] : null;
 
   const claimResult = resetActionClaims(safariData, guildId);
-  const worldResult = resetMapWorldState(mapData);
+  const dropClaimsCleared = resetItemDropClaims(mapData);
   let salesReset = 0;
 
   if (config.clearsPlayers) {
@@ -471,8 +467,7 @@ export async function executeReset(guildId, scope, client) {
     scope,
     outcomesReset: claimResult.outcomes,
     claimsCleared: claimResult.claims,
-    dropClaimsCleared: worldResult.drops,
-    worldFlagsCleared: worldResult.world,
+    dropClaimsCleared,
     salesCountersReset: salesReset,
     playersReset: 0,
     playersRemoved: 0,
@@ -633,14 +628,14 @@ export function renderResetUI({ preview, scope = null }) {
   }
 
   // ---- Preview for the chosen scope ----
-  const { claims, drops, world, players, stocked, rounds, customTerms } = preview;
+  const { claims, drops, players, stocked, rounds, customTerms } = preview;
 
   const clearLines = [
-    `> ⚡ **${claims.totalClaims}** claim${claims.totalClaims === 1 ? '' : 's'} across **${claims.outcomesWithClaims}** of **${claims.limitedOutcomes}** limited outcome${claims.limitedOutcomes === 1 ? '' : 's'}`
+    `> ⚡ **${claims.totalClaims}** claim${claims.totalClaims === 1 ? '' : 's'}, held on **${claims.outcomesWithClaims}** of the **${claims.limitedOutcomes}** action outcome${claims.limitedOutcomes === 1 ? '' : 's'} that have a Usage Limit set`
   ];
-  if (preview.hasMap) {
-    clearLines.push(`> 🎁 **${drops.claims}** map item-drop claim${drops.claims === 1 ? '' : 's'}${drops.coords.length ? ` at ${drops.coords.length} location${drops.coords.length === 1 ? '' : 's'}` : ''}`);
-    clearLines.push(`> 🗝️ **${world.total}** opened chest${world.total === 1 ? '' : 's'} / triggered event${world.total === 1 ? '' : 's'} / discovered secret${world.total === 1 ? '' : 's'}`);
+  // Legacy Map Drops only — hidden entirely on servers that never used the retired feature
+  if (drops.claims > 0) {
+    clearLines.push(`> 🎁 **${drops.claims}** legacy map item-drop claim${drops.claims === 1 ? '' : 's'} at ${drops.coords.join(', ')}`);
   }
 
   if (config.clearsPlayers) {
@@ -720,10 +715,11 @@ export async function buildResetUI({ guildId, scope = null }) {
 export function buildResetResultUI(tally) {
   const config = RESET_SCOPES[tally.scope];
   const lines = [
-    `> ⚡ **${tally.claimsCleared}** claim${tally.claimsCleared === 1 ? '' : 's'} cleared across **${tally.outcomesReset}** outcome${tally.outcomesReset === 1 ? '' : 's'}`,
-    `> 🎁 **${tally.dropClaimsCleared}** map item-drop claim${tally.dropClaimsCleared === 1 ? '' : 's'} cleared`,
-    `> 🗝️ **${tally.worldFlagsCleared}** chest/event/secret flag${tally.worldFlagsCleared === 1 ? '' : 's'} cleared`
+    `> ⚡ **${tally.claimsCleared}** claim${tally.claimsCleared === 1 ? '' : 's'} cleared across **${tally.outcomesReset}** outcome${tally.outcomesReset === 1 ? '' : 's'}`
   ];
+  if (tally.dropClaimsCleared > 0) {
+    lines.push(`> 🎁 **${tally.dropClaimsCleared}** legacy map item-drop claim${tally.dropClaimsCleared === 1 ? '' : 's'} cleared`);
+  }
 
   if (config.deinitializes) {
     lines.push(`> 🚪 **${tally.playersRemoved}** player${tally.playersRemoved === 1 ? '' : 's'} de-initialised`);
