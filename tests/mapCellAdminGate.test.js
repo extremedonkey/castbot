@@ -42,9 +42,12 @@ function findUngatedCallSites(filename, source) {
 describe('Security — Location Manager (map_cell) admin gating', () => {
   const sources = SCAN_FILES.map(f => ({ file: f, text: readFileSync(path.join(REPO_ROOT, f), 'utf8') }));
 
+  // Threshold lowered 10 -> 5 when the retired Map Drops UI was scrubbed (2026-08-02), which
+  // removed 3 legitimate call sites. This guards that the scan is LIVE, not that a specific
+  // number of call sites exists — only lower it alongside a real deletion.
   it('scan target files actually contain map_cell entityType call sites (scan is live)', () => {
     const total = sources.reduce((sum, { text }) => sum + (text.match(/entityType:\s*['"]map_cell['"]/g) || []).length, 0);
-    assert.ok(total >= 10, `expected >=10 map_cell call sites across ${SCAN_FILES.join(', ')}, found ${total} — scan may be broken`);
+    assert.ok(total >= 5, `expected >=5 map_cell call sites across ${SCAN_FILES.join(', ')}, found ${total} — scan may be broken`);
   });
 
   it('every map_cell entityType call site threads member through within the next few lines', () => {

@@ -2,7 +2,7 @@
 
 **Date**: 2025-12-06
 **Triggered By**: Investigation of duplicate "button style" selectors in Safari admin UI
-**Status**: Options Analysis
+**Status**: ✅ RESOLVED 2026-08-02 — Option D (full removal). See the Outcome section at the bottom.
 
 ## Original Context
 
@@ -204,3 +204,31 @@ When resources allow, build migration tools and sunset Map Drops.
 - [ ] Add deprecation banner to Map Drops (future - Option B Phase 1)
 - [ ] Create migration button (future - Option B Phase 2)
 - [ ] Sunset Map Drops handlers (future - Option B Phase 3)
+
+
+---
+
+## ✅ Outcome (2026-08-02)
+
+Neither the recommended phased path (Option B) nor Option A actually happened. What happened
+instead: at some point the `map_cell` entity editor stopped offering an `items` field group,
+which silently made the entire Map Drops authoring UI **unreachable** — but nothing else was
+cleaned up. The result was ~2,200 lines of orphaned handlers in app.js plus a still-live render
+path, and a second claim store (`itemDrops[].claimedBy`) that new features had to keep accounting
+for. That second cost is what finally forced the issue: building **Reset Safari** meant sweeping
+two parallel claim stores instead of one.
+
+Reece chose **Option D (full removal, accept the loss)** on 2026-08-02:
+
+- Deleted: Drop Management UI, all `map_*_drop_*` / `map_item_search_*` / `map_currency_*` handlers,
+  `createMapItemSelectionUI` / `createMapItemSelector`, anchor drop-button rendering, Safari Progress
+  drop reporting, 30 BUTTON_REGISTRY entries. **app.js shrank by ~2,250 lines.**
+- **Kept**: `safari_drop_*` handlers — despite the name these belong to **Custom Actions** (they
+  configure `action.config.limit`), not Map Drops. They were nearly deleted by mistake; the catch
+  was an emitted-but-unhandled `custom_id` scan. If you scrub by name here, you will break Custom Actions.
+- **Data left in place**: orphaned `itemDrops` / `currencyDrops` remain in `safariContent.json`.
+  Nothing reads them, so removal would be risk without benefit.
+- **Blast radius at removal**: 5 drops, 2 guilds — EpochORG S11 (dormant ~6 weeks, no active season)
+  and Safari Test. Those buttons disappeared from their anchor messages.
+
+Action items 2-4 below are obsolete — superseded by this removal.

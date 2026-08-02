@@ -62,10 +62,8 @@ export async function createSafariProgressUI(guildId, currentRow = 'A', client =
     
     // Check if coordinate has any content
     const hasActions = coordData.buttons && coordData.buttons.length > 0;
-    const hasItemDrops = coordData.itemDrops && coordData.itemDrops.length > 0;
-    const hasCurrencyDrops = coordData.currencyDrops && coordData.currencyDrops.length > 0;
-    
-    if (!hasActions && !hasItemDrops && !hasCurrencyDrops) continue;
+
+    if (!hasActions) continue;
     
     hasContent = true;
     let coordSection = `## 📍 ${coord}${coordData.baseContent?.title ? ` - ${coordData.baseContent.title.replace('📍 Location ', '')}` : ''}\n`;
@@ -108,46 +106,6 @@ export async function createSafariProgressUI(guildId, currentRow = 'A', client =
             
             coordSection += await formatAction(action, prefix, guildId, items, playerData, client, buttons);
           }
-        }
-        
-        coordSection += '\n';
-      }
-    }
-    
-    // Process Item Drops
-    if (hasItemDrops) {
-      coordSection += `**💎 Item Drops (${coordData.itemDrops.length})**\n`;
-      
-      for (const drop of coordData.itemDrops) {
-        const item = items[drop.itemId];
-        const itemName = item?.name || `[Unknown Item: ${drop.itemId}]`;
-        
-        coordSection += `• ${itemName} [${formatDropType(drop.dropType)}]`;
-        
-        if (drop.claimedBy && drop.claimedBy.length > 0) {
-          const claimInfo = await formatClaimInfo(drop.claimedBy, drop.dropType, playerData[guildId], client);
-          coordSection += `\n  └─ ${claimInfo}`;
-        } else if (drop.dropType !== 'unlimited') {
-          coordSection += '\n  └─ Claimed by: 🎁 Unclaimed';
-        }
-        
-        coordSection += '\n';
-      }
-      coordSection += '\n';
-    }
-    
-    // Process Currency Drops
-    if (hasCurrencyDrops) {
-      coordSection += `**🪙 Currency Drops (${coordData.currencyDrops.length})**\n`;
-      
-      for (const drop of coordData.currencyDrops) {
-        coordSection += `• ${drop.amount} coins [${formatDropType(drop.dropType)}]`;
-        
-        if (drop.claimedBy && drop.claimedBy.length > 0) {
-          const claimInfo = await formatClaimInfo(drop.claimedBy, drop.dropType, playerData[guildId], client);
-          coordSection += `\n  └─ ${claimInfo}`;
-        } else if (drop.dropType !== 'unlimited') {
-          coordSection += '\n  └─ Claimed by: 🎁 Unclaimed';
         }
         
         coordSection += '\n';
@@ -367,19 +325,7 @@ function formatLimitType(limit) {
 }
 
 /**
- * Format drop type for display
- */
-function formatDropType(dropType) {
-  switch(dropType) {
-    case 'unlimited': return 'Unlimited';
-    case 'once_per_player': return 'Once Per Player';
-    case 'once_globally': return 'Once Globally';
-    default: return dropType || 'Unlimited';
-  }
-}
-
-/**
- * Format claim info for drops
+ * Format claim info for an outcome's claim list
  */
 async function formatClaimInfo(claimedBy, dropType, guildPlayers, client) {
   if (!claimedBy || claimedBy.length === 0) return 'Claimed by: 🎁 Unclaimed';

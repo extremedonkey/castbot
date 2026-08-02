@@ -124,8 +124,6 @@
   "app.js::map_admin_reset_explored",
   "app.js::map_admin_user_select_continue",
   "app.js::map_coord_store",
-  "app.js::map_currency_drop_player",
-  "app.js::map_item_drop_player",
   "app.js::map_location_display",
   "app.js::map_player_locations_back",
   "app.js::moai_ask",

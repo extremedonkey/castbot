@@ -2699,24 +2699,8 @@ export const BUTTON_REGISTRY = {
   },
   
   // Map Item Drop Management
-  'map_add_item_drop_*': {
-    label: 'Add Item Drop',
-    description: 'Add item drop to map location with searchable item selection',
-    emoji: '📦',
-    style: 'Primary',
-    category: 'safari_map_admin',
-    requiresPermission: 'ManageRoles'
-  },
   
   // Map Item Search
-  'map_item_search_*': {
-    label: 'Search Items',
-    description: 'Search items for map location selection',
-    emoji: '🔍',
-    style: 'Secondary',
-    category: 'safari_map_admin',
-    requiresPermission: 'ManageRoles'
-  },
   
   // Map Store Management
   'map_stores_select_*': {
@@ -2746,208 +2730,14 @@ export const BUTTON_REGISTRY = {
   },
   
   // Map Item Drop Selection
-  'map_item_drop_select_*': {
-    label: 'Configure Item Drop',
-    description: 'Configure item drop settings for map location',
-    emoji: '📦',
-    style: 'Primary',
-    category: 'safari_map_admin',
-    requiresPermission: 'ManageRoles'
-  },
   
   // Map Drop Management
-  'map_drop_save_*': {
-    label: 'Save Item Drop',
-    description: 'Save item drop configuration for map location',
-    emoji: '✅',
-    style: 'Success',
-    category: 'safari_map_admin',
-    requiresPermission: 'ManageRoles'
-  },
-  'map_drop_remove_*': {
-    label: 'Remove Item Drop',
-    description: 'Remove item drop from map location',
-    emoji: '🗑️',
-    style: 'Danger',
-    category: 'safari_map_admin',
-    requiresPermission: 'ManageRoles'
-  },
-  'map_drop_style_*': {
-    label: 'Drop Button Style',
-    description: 'Select button style for item drop',
-    emoji: '🎨',
-    style: 'Secondary',
-    category: 'safari_map_admin',
-    requiresPermission: 'ManageRoles'
-  },
-  'map_drop_type_*': {
-    label: 'Drop Type',
-    description: 'Select drop type (once per player/season)',
-    emoji: '🔄',
-    style: 'Secondary',
-    category: 'safari_map_admin',
-    requiresPermission: 'ManageRoles'
-  },
   
   // Map Item/Currency Drops (removed duplicate - keeping the one above)
-  'map_add_currency_drop_*': {
-    label: 'Add Currency Drop',
-    description: 'Configure currency drop for location',
-    emoji: '🪙',
-    style: 'Primary',
-    category: 'safari_map_admin'
-  },
-  'map_item_drop_select_*': {
-    label: 'Item Drop Select',
-    description: 'Select item for drop configuration',
-    emoji: '📦',
-    style: 'Secondary',
-    category: 'safari_map_admin',
-    type: 'select_menu'
-  },
-  'map_item_drop_config_*': {
-    label: 'Configure Item Drop',
-    description: 'Configure existing item drop settings',
-    emoji: '⚙️',
-    style: 'Secondary',
-    category: 'safari_map_admin'
-  },
-  'map_item_drop_*': {
-    label: 'Item Drop',
-    description: 'Player collects item drop',
-    emoji: '📦',
-    style: 'Secondary',
-    category: 'safari_map'
-  },
-  'map_currency_drop_config_*': {
-    label: 'Configure Currency Drop',
-    description: 'Configure currency drop settings',
-    emoji: '⚙️',
-    style: 'Secondary',
-    category: 'safari_map'
-  },
-  'map_currency_drop_style_*': {
-    label: 'Currency Drop Style',
-    description: 'Select currency drop button style',
-    emoji: '🎨',
-    style: 'Secondary',
-    category: 'safari_map'
-  },
-  'map_currency_drop_type_*': {
-    label: 'Currency Drop Type',
-    description: 'Select currency drop type',
-    emoji: '🔢',
-    style: 'Secondary',
-    category: 'safari_map'
-  },
-  'map_currency_drop_save_*': {
-    label: 'Save Currency Drop',
-    description: 'Save currency drop configuration',
-    emoji: '✅',
-    style: 'Success',
-    category: 'safari_map'
-  },
-  'map_currency_drop_remove_*': {
-    label: 'Remove Currency Drop',
-    description: 'Remove currency drop from location',
-    emoji: '🗑️',
-    style: 'Danger',
-    category: 'safari_map'
-  },
-  'map_currency_drop_*': {
-    label: 'Currency Drop',
-    description: 'Player collects currency drop',
-    emoji: '🪙',
-    style: 'Secondary',
-    category: 'safari_map'
-  },
   
   // Map Drop Configuration
-  'map_drop_style_*': {
-    label: 'Drop Style',
-    description: 'Configure drop button style',
-    emoji: '🎨',
-    style: 'Secondary',
-    category: 'safari_map_admin',
-    type: 'select_menu'
-  },
-  'map_drop_type_*': {
-    label: 'Drop Type',
-    description: 'Configure drop availability',
-    emoji: '🎯',
-    style: 'Secondary',
-    category: 'safari_map_admin',
-    type: 'select_menu'
-  },
-  'map_drop_text_*': {
-    label: 'Set Button Text',
-    description: 'Configure drop button text',
-    emoji: '✏️',
-    style: 'Secondary',
-    category: 'safari_map_admin',
-    requiresModal: true
-  },
-  'map_drop_save_*': {
-    label: 'Save Drop',
-    description: 'Save item drop configuration',
-    emoji: '✅',
-    style: 'Success',
-    category: 'safari_map_admin'
-  },
-  'map_drop_remove_*': {
-    label: 'Remove Drop',
-    description: 'Remove item drop from location',
-    emoji: '🗑️',
-    style: 'Danger',
-    category: 'safari_map_admin'
-  },
-  'map_drop_reset_*': {
-    label: 'Reset Drop',
-    description: 'Reset drop claims for testing',
-    emoji: '🔃',
-    style: 'Secondary',
-    category: 'safari_map_admin'
-  },
   
   // Map Currency Configuration
-  'map_currency_style_*': {
-    label: 'Currency Style',
-    description: 'Configure currency button style',
-    emoji: '🎨',
-    style: 'Secondary',
-    category: 'safari_map_admin',
-    type: 'select_menu'
-  },
-  'map_currency_type_*': {
-    label: 'Currency Type',
-    description: 'Configure currency availability',
-    emoji: '🎯',
-    style: 'Secondary',
-    category: 'safari_map_admin',
-    type: 'select_menu'
-  },
-  'map_currency_edit_*': {
-    label: 'Edit Currency',
-    description: 'Edit currency amount/text',
-    emoji: '✏️',
-    style: 'Secondary',
-    category: 'safari_map_admin',
-    requiresModal: true
-  },
-  'map_currency_remove_*': {
-    label: 'Remove Currency',
-    description: 'Remove currency drop from location',
-    emoji: '🗑️',
-    style: 'Danger',
-    category: 'safari_map_admin'
-  },
-  'map_currency_reset_*': {
-    label: 'Reset Currency',
-    description: 'Reset currency claims for testing',
-    emoji: '🔃',
-    style: 'Secondary',
-    category: 'safari_map_admin'
-  },
 
   // Safari Currency Configuration (Action Outcomes)
   // NOTE: safari_currency_style_* removed - button style is set at parent Action level
@@ -5433,8 +5223,6 @@ export const BUTTON_REGISTRY = {
   'map_admin_edit_items_deprecated_*': { label: 'Map Edit Items (Deprecated)', emoji: '🗺️', category: 'safari_map' },
   'map_admin_refresh_anchors_modal_*': { label: 'Map Refresh Anchors Modal', emoji: '🗺️', category: 'safari_map' },
   'map_admin_view_inventory_*': { label: 'Map View Inventory', emoji: '🎒', category: 'safari_map' },
-  'map_currency_drop_player_*': { label: 'Map Currency Drop', emoji: '💰', category: 'safari_map' },
-  'map_item_drop_player_*': { label: 'Map Item Drop', emoji: '📦', category: 'safari_map' },
   'map_location_display_*': { label: 'Map Location Display', emoji: '📍', category: 'safari_map' },
   'safari_map_admin_player_*': { label: 'Map Admin Player', emoji: '👤', category: 'safari_map' },
 

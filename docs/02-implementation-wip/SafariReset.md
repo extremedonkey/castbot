@@ -3,7 +3,7 @@
 **Status**: 🚧 Built, deployed to TEST (not yet in production)
 **Entry point**: `/menu` → Safari → Map → **🔄 Reset Safari** (red, Map Explorer row 2)
 **Code**: [safariReset.js](../../safariReset.js) · claim primitives in [claimsManager.js](../../claimsManager.js) · button in [mapExplorer.js](../../mapExplorer.js)
-**Tests**: `tests/safariReset.test.js` (49), `tests/claimsManager.test.js`
+**Tests**: `tests/safariReset.test.js` (41), `tests/claimsManager.test.js`
 **Related**: [SafariUsageLimits](../03-features/SafariUsageLimits.md) (where claims live) · [SafariMapDrops](../03-features/SafariMapDrops.md) · [SurvivorContext](../concepts/SurvivorContext.md) (why hosts care about `once_globally`)
 
 ---
@@ -31,7 +31,6 @@ Each is a strict superset of the one before. Two booleans on `RESET_SCOPES` (`cl
 | | 🧪 **Testing Reset** | 🧹 **Full Server Reset** | 🚪 **Full Reset + Remove Players** |
 |---|:---:|:---:|:---:|
 | Action outcome claims (`limit.claimedBy` / `limit.claims`) | ✅ | ✅ | ✅ |
-| Legacy Map Drops claims (`itemDrops[].claimedBy`) | ✅ | ✅ | ✅ |
 | Player inventory, currency, history, cooldowns | — | ✅ | ✅ |
 | Stamina / HP / attributes (`entityPoints`) | — | ✅ | ✅ |
 | Round counter + attack queue + sales counters | — | ✅ | ✅ |
@@ -51,7 +50,7 @@ flowchart TD
     C --> D[Pre-flight preview<br/>counts + 🌍 once_globally roster<br/>+ 📦 store stock warning]
     D -->|← Map Explorer| A
     D -->|🔄 Reset — scope| E{executeReset}
-    E --> F[Phase 1: safariContent sweep<br/>claims · legacy drops · rounds]
+    E --> F[Phase 1: safariContent sweep<br/>claims · rounds]
     F --> G{clearsPlayers?}
     G -->|no| I[✅ Result screen]
     G -->|deinitializes| H1[bulkDeinitializePlayers<br/>NO storage lock — makes Discord calls]
@@ -83,13 +82,21 @@ So the preview lists every store item with a finite stock level (`undefined` / `
 
 **Do not "fix" this by inventing an original level.** Adding real restock support means adding an `originalStock` field and a migration — a separate piece of work.
 
-### 🪦 Legacy Map Drops (and one field that does not exist)
+### 🪦 Two dead-state findings from reviewing this screen
 
-Two findings from reviewing this preview in Discord, both worth recording:
+**`map.globalState` does not exist in practice.** `openedChests`, `triggeredEvents` and
+`discoveredSecrets` are initialised to `[]` at map creation ([mapExplorer.js:546](../../mapExplorer.js#L546),
+[:1607](../../mapExplorer.js#L1607)) and **nothing in the codebase ever writes to them** — confirmed
+empty across all 42 guilds in prod. The first version of this feature reported and cleared them,
+which meant a preview line that could only ever read `0` on every server forever. Both the line and
+the clearing were removed.
 
-**`itemDrops` is the retired Map Drops feature.** Its authoring UI is *already* unreachable — `getFieldGroups('map_cell')` (entityManagementUI.js) returns only `info` / `stores` / `blacklist`, so nothing can emit `entity_field_group_map_cell_<coord>_items`, the sole route into the "Drop Management" screen at app.js ~28882. Roughly 25 `map_*_drop_*` / `safari_drop_*` handlers behind it are orphaned. But drops authored *before* that removal still **render** (`safariButtonHelper.js:267`), still **work** (handlers live), and still appear in Safari Progress — so their claims are real state a reset must clear. Footprint in the 2026-05-21 prod export: **3 of 42 guilds, 6 coordinates, 6 itemDrops, 0 currencyDrops, 29 claims**. The preview line is therefore **conditional on `drops.claims > 0`**, so modern servers never see legacy jargon. Superseded by Quick Items / Quick Currency actions. See [RaP 0966](../01-RaP/0966_20251206_DropsFeature_TechDebt_Options.md) — its Phase 1-3 cleanup is still unchecked; the entry point was removed without the rest.
-
-**`map.globalState` is dead scaffolding.** `openedChests`, `triggeredEvents` and `discoveredSecrets` are initialised to `[]` at map creation ([mapExplorer.js:546](../../mapExplorer.js#L546), [:1607](../../mapExplorer.js#L1607)) and **nothing in the codebase ever writes to them** — confirmed across all 42 guilds in the prod export. The first version of this feature reported and cleared them, which meant a preview line that could only ever read `0` on every server forever. Both the line and the clearing were removed; `resetItemDropClaims` now carries a comment and a test asserting `globalState` is left alone, so nobody re-adds it.
+**Map Drops was removed entirely.** The first version also swept `itemDrops[].claimedBy`, a second
+claim store parallel to action limits. Reviewing that line is what surfaced that Map Drops had been
+half-retired — authoring UI unreachable, ~2,200 lines of handlers orphaned, render path still live.
+Reece opted for full removal on 2026-08-02, so the sweep went with it. See
+[RaP 0966](../01-RaP/0966_20251206_DropsFeature_TechDebt_Options.md#-outcome-2026-08-02) and
+[the archived doc](../archive/SafariMapDrops-Removed.md).
 
 ## 🗄️ What lives where
 
@@ -98,7 +105,6 @@ The single most useful thing this document records: Safari play state is spread 
 | State | Location |
 |---|---|
 | Action outcome claims | `safariContent[guild].buttons[id].actions[i].config.limit` — `claimedBy` (array \| string \| object, by type) or `claims[]` for `custom` |
-| **Legacy Map Drops claims** | `safariContent[guild].maps[mapId].coordinates[coord].itemDrops[].claimedBy` — **a completely separate claim store** from action limits; see the note below |
 | Stamina / HP / attributes | `safariContent[guild].entityPoints["player_<id>"]` — **authoritative**; `playerData…safari.points` is a legacy duplicate |
 | Inventory / currency / history | `playerData[guild].players[id].safari` |
 | Rounds & combat | `safariContent[guild].safariConfig.currentRound`, `.attackQueue`, `.roundHistory` |

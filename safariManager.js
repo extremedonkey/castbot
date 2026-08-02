@@ -516,7 +516,7 @@ async function ensureSafariContentFile() {
                     "stores": {},      // NEW: MVP2 - Multiple stores per server
                     "items": {},       // NEW: MVP2 - Reusable items across stores
                     "safariConfig": {  // NEW: Custom terminology per guild
-                        "currencyName": "Dollars",
+                        "currencyName": "Gold",
                         "inventoryName": "Inventory",
                         "currencyEmoji": "🪙"
                     }
@@ -573,7 +573,7 @@ async function ensureSafariContentFile() {
                 }
                 if (!data[guildId].safariConfig) {
                     data[guildId].safariConfig = {
-                        currencyName: 'Dollars',
+                        currencyName: 'Gold',
                         inventoryName: 'Inventory',
                         currencyEmoji: '🪙'
                     };
@@ -5402,7 +5402,7 @@ async function getCustomTerms(guildId) {
         
         return {
             // Basic terms
-            currencyName: config.currencyName || 'Dollars',
+            currencyName: config.currencyName || 'Gold',
             inventoryName: config.inventoryName || 'Inventory',
             currencyEmoji: config.currencyEmoji || '🪙',
             inventoryEmoji: config.inventoryEmoji || '🧰',
@@ -5436,7 +5436,7 @@ async function getCustomTerms(guildId) {
         console.error('Error getting custom terms:', error);
         return {
             // Basic terms fallbacks
-            currencyName: 'Dollars',
+            currencyName: 'Gold',
             inventoryName: 'Inventory',
             currencyEmoji: '🪙',
             inventoryEmoji: '🧰',
@@ -5490,7 +5490,7 @@ async function updateCustomTerms(guildId, terms) {
         // Ensure safariConfig exists
         if (!safariData[guildId].safariConfig) {
             safariData[guildId].safariConfig = {
-                currencyName: 'Dollars',
+                currencyName: 'Gold',
                 inventoryName: 'Inventory',
                 currencyEmoji: '🪙'
             };
@@ -5498,7 +5498,7 @@ async function updateCustomTerms(guildId, terms) {
         
         // Update basic terms
         if (terms.currencyName !== undefined) {
-            safariData[guildId].safariConfig.currencyName = terms.currencyName || 'Dollars';
+            safariData[guildId].safariConfig.currencyName = terms.currencyName || 'Gold';
         }
         if (terms.inventoryName !== undefined) {
             safariData[guildId].safariConfig.inventoryName = terms.inventoryName || 'Inventory';
@@ -5614,7 +5614,7 @@ async function updateCustomTerms(guildId, terms) {
 async function resetCustomTerms(guildId) {
     return await updateCustomTerms(guildId, {
         // Currency & Inventory
-        currencyName: 'Dollars',
+        currencyName: 'Gold',
         currencyEmoji: '🪙',
         inventoryName: 'Inventory',
         inventoryEmoji: '🧰',

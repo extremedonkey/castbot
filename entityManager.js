@@ -70,7 +70,7 @@ export async function updateEntity(guildId, entityType, entityId, updates) {
             items: {},
             enemies: {},
             safariConfig: {
-                currencyName: 'Dollars',
+                currencyName: 'Gold',
                 inventoryName: 'Inventory',
                 currencyEmoji: '🪙'
             }
@@ -217,7 +217,7 @@ export async function createEntity(guildId, entityType, entityData, userId) {
             items: {},
             enemies: {},
             safariConfig: {
-                currencyName: 'Dollars',
+                currencyName: 'Gold',
                 inventoryName: 'Inventory',
                 currencyEmoji: '🪙'
             }

@@ -1,3 +1,23 @@
+> # 🪦 REMOVED — 2026-08-02
+>
+> **Map Drops (item drops / currency drops) no longer exists.** The feature was superseded by
+> **Quick Items / Quick Currency** actions; its authoring UI had already been made unreachable
+> (the `map_cell` entity editor stopped offering an `items` field group), leaving ~2,200 lines of
+> orphaned handlers plus a live render path. All of it was deleted on 2026-08-02:
+>
+> - `app.js` — Drop Management UI + every `map_*_drop_*` / `map_item_search_*` / `map_currency_*` handler
+> - `entityManagementUI.js` — `createMapItemSelectionUI` / `createMapItemSelector`
+> - `safariButtonHelper.js` — anchor-message drop buttons
+> - `safariProgress.js` — drop reporting
+> - `buttonHandlerFactory.js` — 30 BUTTON_REGISTRY entries
+>
+> At removal, prod held **5 drops across 2 guilds** (EpochORG S11, dormant ~6 weeks; and Safari Test).
+> Orphaned `itemDrops` / `currencyDrops` data was deliberately LEFT in `safariContent.json` — nothing
+> reads it, so deleting it would be risk without benefit.
+>
+> **Use Quick Items / Quick Currency actions instead.** Kept for historical reference only.
+> See [RaP 0966](../01-RaP/0966_20251206_DropsFeature_TechDebt_Options.md).
+
 # Safari Map Drops System
 
 This document describes the Store, Item Drop, and Currency Drop systems for Safari Map locations.

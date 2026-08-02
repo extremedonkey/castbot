@@ -12,7 +12,7 @@ import { DEFAULT_LOG_TYPES } from './safariLogger.js';
  * Default Safari configuration template
  */
 const DEFAULT_SAFARI_CONFIG = {
-    currencyName: "Dollars",
+    currencyName: "Gold",
     inventoryName: "Inventory", 
     currencyEmoji: "🪙",
     goodEventName: "Good Event",

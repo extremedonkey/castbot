@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import {
   RESET_SCOPES, RESET_SCOPE_ORDER,
   locateAction, collectClaimTargets, summarizeClaimTargets,
-  collectItemDropClaims, collectStockedStoreItems, collectPlayerState,
+  collectStockedStoreItems, collectPlayerState,
   packLines,
-  resetActionClaims, resetItemDropClaims, resetSalesCounters, resetRoundState,
+  resetActionClaims, resetSalesCounters, resetRoundState,
   renderResetUI, buildResetResultUI
 } from '../safariReset.js';
 
@@ -68,11 +68,10 @@ function fixture() {
         active: 'map_1',
         map_1: {
           id: 'map_1',
-          globalState: { openedChests: ['c1', 'c2'], triggeredEvents: ['e1'], discoveredSecrets: [] },
           coordinates: {
-            A1: { channelId: '1', itemDrops: [{ itemId: 'rock_1', claimedBy: [U1, U2] }] },
-            B1: { channelId: '2', itemDrops: [{ itemId: 'idol_1', claimedBy: [] }] },
-            C1: { channelId: '3' } // no drops
+            A1: { channelId: '1' },
+            B1: { channelId: '2' },
+            C1: { channelId: '3' }
           }
         }
       },
@@ -179,17 +178,7 @@ describe('safariReset — summarizeClaimTargets', () => {
   });
 });
 
-describe('safariReset — map + store collectors', () => {
-  it('counts item-drop claims per coordinate (a claim store separate from action limits)', () => {
-    const d = collectItemDropClaims(fixture()[G].maps.map_1);
-    assert.equal(d.claims, 2);
-    assert.deepEqual(d.coords, ['A1'], 'coords with zero claims are not listed');
-  });
-
-  it('handles a guild with no map', () => {
-    assert.deepEqual(collectItemDropClaims(null), { claims: 0, coords: [] });
-  });
-
+describe('safariReset — store collectors', () => {
   it('reports only FINITE store stock — undefined/null/-1 all mean unlimited', () => {
     const rows = collectStockedStoreItems(fixture(), G);
     assert.equal(rows.length, 2, 'only the stock:2 and stock:0 rows are finite');
@@ -281,36 +270,6 @@ describe('safariReset — resetActionClaims', () => {
   });
 });
 
-describe('safariReset — resetItemDropClaims (legacy Map Drops)', () => {
-  it('clears legacy item-drop claims', () => {
-    const map = fixture()[G].maps.map_1;
-    assert.equal(resetItemDropClaims(map), 2);
-    assert.deepEqual(map.coordinates.A1.itemDrops[0].claimedBy, []);
-  });
-
-  it('keeps the drop definition itself — only claimedBy is emptied', () => {
-    const map = fixture()[G].maps.map_1;
-    resetItemDropClaims(map);
-    assert.equal(map.coordinates.A1.itemDrops.length, 1);
-    assert.equal(map.coordinates.A1.itemDrops[0].itemId, 'rock_1');
-    assert.equal(map.coordinates.C1.channelId, '3');
-  });
-
-  // globalState.{openedChests,triggeredEvents,discoveredSecrets} are initialised to [] at map
-  // creation and NOTHING in the codebase ever writes to them. Clearing them would be dead code
-  // dressed up as behaviour — and a preview line for them can only ever read 0.
-  it('never touches map.globalState — no code path writes those arrays', () => {
-    const map = fixture()[G].maps.map_1;
-    const before = JSON.stringify(map.globalState);
-    resetItemDropClaims(map);
-    assert.equal(JSON.stringify(map.globalState), before);
-  });
-
-  it('no-ops on a missing map', () => {
-    assert.equal(resetItemDropClaims(null), 0);
-  });
-});
-
 describe('safariReset — sales counters & round state', () => {
   it('zeroes only non-zero sales counters', () => {
     const data = fixture();
@@ -346,7 +305,6 @@ describe('safariReset — THE INVARIANT: content is never deleted', () => {
     };
 
     resetActionClaims(data, G);
-    resetItemDropClaims(data[G].maps.map_1);
     resetSalesCounters(data, G);
     resetRoundState(data, G);
 
@@ -364,7 +322,6 @@ describe('safariReset — THE INVARIANT: content is never deleted', () => {
   it('store STOCK is never touched — it cannot be restored, so it is only reported', () => {
     const data = fixture();
     resetActionClaims(data, G);
-    resetItemDropClaims(data[G].maps.map_1);
     resetSalesCounters(data, G);
     resetRoundState(data, G);
     assert.equal(data[G].stores.shop_1.items[0].stock, 2, 'stock must survive a reset untouched');
@@ -375,7 +332,7 @@ describe('safariReset — THE INVARIANT: content is never deleted', () => {
 
 describe('safariReset — buildResetResultUI', () => {
   const tally = {
-    scope: 'testing', outcomesReset: 4, claimsCleared: 6, dropClaimsCleared: 0,
+    scope: 'testing', outcomesReset: 4, claimsCleared: 6,
     salesCountersReset: 0, playersReset: 0, playersRemoved: 0,
     playersFailed: 0, startingCurrency: 0
   };
@@ -413,7 +370,7 @@ describe('safariReset — buildResetResultUI', () => {
 // ─── Screen rendering: the Discord budgets are the thing worth locking in ───
 
 /** A preview bundle shaped exactly like buildResetPreview() returns. */
-function preview({ globals = 0, stocked = 0, claimedGlobals = 0, claims = 0 } = {}) {
+function preview({ globals = 0, stocked = 0, claimedGlobals = 0 } = {}) {
   return {
     customTerms: TERMS,
     hasMap: true,
@@ -426,7 +383,6 @@ function preview({ globals = 0, stocked = 0, claimedGlobals = 0, claims = 0 } = 
       })),
       globalsClaimed: claimedGlobals
     },
-    drops: { claims, coords: claims ? ['A1', 'B1', 'C1'] : [] },
     stocked: Array.from({ length: stocked }, (_, i) => ({
       storeName: `A Store With A Fairly Long Name ${i}`, storeEmoji: '🥚',
       itemName: `An Item With A Fairly Long Name ${i}`, itemEmoji: '📦', stock: i
@@ -501,7 +457,7 @@ describe('safariReset — renderResetUI', () => {
   it('lists once_globally outcomes with location, item and claimant', () => {
     const ui = renderResetUI({ preview: preview({ globals: 3, claimedGlobals: 1 }), scope: 'testing' });
     const text = JSON.stringify(ui);
-    assert.match(text, /Once Globally \(3\)/);
+    assert.match(text, /Global Actions \(3\)/);
     assert.match(text, new RegExp(`<@${U1}>`), 'claimant is rendered as a mention');
     assert.match(text, /unclaimed/);
   });
@@ -513,19 +469,9 @@ describe('safariReset — renderResetUI', () => {
     assert.match(text, /can’t restore/);
   });
 
-  it('hides the legacy Map Drops line on servers that never used the retired feature', () => {
-    const text = JSON.stringify(renderResetUI({ preview: preview({ claims: 0 }), scope: 'testing' }));
-    assert.ok(!text.includes('item-drop'), 'modern servers must not see legacy Drops jargon');
-  });
-
-  it('shows the legacy Map Drops line, with coordinates, when a server still has them', () => {
-    const text = JSON.stringify(renderResetUI({ preview: preview({ claims: 14 }), scope: 'testing' }));
-    assert.match(text, /\*\*14\*\* legacy map item-drop claims at A1, B1, C1/);
-  });
-
   it('never mentions chests/events/secrets — that state does not exist', () => {
     for (const scope of RESET_SCOPE_ORDER) {
-      const text = JSON.stringify(renderResetUI({ preview: preview({ claims: 5 }), scope }));
+      const text = JSON.stringify(renderResetUI({ preview: preview(), scope }));
       assert.ok(!/opened chest|triggered event|discovered secret/i.test(text));
     }
   });
@@ -537,7 +483,7 @@ describe('safariReset — renderResetUI', () => {
 
   it('omits the globals / stock sections entirely when there is nothing to say', () => {
     const text = JSON.stringify(renderResetUI({ preview: preview({ globals: 0, stocked: 0 }), scope: 'full' }));
-    assert.ok(!text.includes('Once Globally'));
+    assert.ok(!text.includes('Global Actions'));
     assert.ok(!text.includes('store stock'));
   });
 
@@ -553,7 +499,7 @@ describe('safariReset — renderResetUI', () => {
     const p = preview({ globals: 200, stocked: 200, claimedGlobals: 3 });
     const text = JSON.stringify(renderResetUI({ preview: p, scope: 'testing' }));
     assert.match(text, /…and \*\*\d+\*\* more/, 'truncation tail is shown');
-    assert.match(text, /Once Globally \(200\)/, 'the true total is still stated');
+    assert.match(text, /Global Actions \(200\)/, 'the true total is still stated');
     // claimedGlobals sort first in summarizeClaimTargets, so index 0..2 must survive
     assert.ok(text.includes('Advantage Item Name Number 0'), 'first (claimed) global survived truncation');
   });

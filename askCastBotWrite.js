@@ -140,7 +140,7 @@ export function formatGuildDigest(guildSafari, guildPlayers = {}, names = {}) {
   const cfg = g.safariConfig || {};
   const lines = [];
 
-  lines.push(`SETTINGS: currency "${cfg.currencyName || 'Dollars'}" ${cfg.currencyEmoji || '🪙'} · inventory "${cfg.inventoryName || 'Inventory'}" ${cfg.inventoryEmoji || '🧰'} · starting currency ${cfg.defaultStartingCurrencyValue ?? 100} · starting coordinate ${cfg.defaultStartingCoordinate || '(unset)'}`);
+  lines.push(`SETTINGS: currency "${cfg.currencyName || 'Gold'}" ${cfg.currencyEmoji || '🪙'} · inventory "${cfg.inventoryName || 'Inventory'}" ${cfg.inventoryEmoji || '🧰'} · starting currency ${cfg.defaultStartingCurrencyValue ?? 100} · starting coordinate ${cfg.defaultStartingCoordinate || '(unset)'}`);
 
   const items = Object.values(g.items || {});
   const stores = Object.values(g.stores || {});
@@ -284,7 +284,7 @@ export function formatPlayerDigest(guildPlayers, guildSafari, names = {}) {
   const activeMapId = guildSafari?.maps?.active;
   const itemName = (id) => items[id]?.name || id;
 
-  const lines = [`CURRENCY: "${cfg.currencyName || 'Dollars'}" ${cfg.currencyEmoji || '🪙'}`, ''];
+  const lines = [`CURRENCY: "${cfg.currencyName || 'Gold'}" ${cfg.currencyEmoji || '🪙'}`, ''];
   lines.push(`PLAYERS (${players.length}) — name · currency · total items · location · inventory:`);
 
   for (const [id, p] of players.slice(0, 50)) {

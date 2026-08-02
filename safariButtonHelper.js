@@ -263,36 +263,6 @@ export async function createAnchorMessageComponents(coordData, guildId, coord, f
     }
   }
   
-  // Add item drop buttons
-  if (coordData.itemDrops?.length > 0) {
-    for (const [index, drop] of coordData.itemDrops.entries()) {
-      const isExhausted = drop.dropType === 'once_per_season' && drop.claimedBy;
-      allButtons.push({
-        type: 2, // Button
-        custom_id: `map_item_drop_${coord}_${index}`,
-        label: isExhausted ? `${drop.buttonText} (Taken)` : drop.buttonText,
-        style: drop.buttonStyle || 2,
-        emoji: await createSafeEmoji(drop.buttonEmoji),
-        disabled: !!isExhausted // Force boolean conversion
-      });
-    }
-  }
-  
-  // Add currency drop buttons
-  if (coordData.currencyDrops?.length > 0) {
-    for (const [index, drop] of coordData.currencyDrops.entries()) {
-      const isExhausted = drop.dropType === 'once_per_season' && drop.claimedBy;
-      allButtons.push({
-        type: 2, // Button
-        custom_id: `map_currency_drop_${coord}_${index}`,
-        label: isExhausted ? `${drop.buttonText} (Taken)` : drop.buttonText,
-        style: drop.buttonStyle || 2,
-        emoji: await createSafeEmoji(drop.buttonEmoji),
-        disabled: !!isExhausted // Force boolean conversion
-      });
-    }
-  }
-  
   // Safari Buttons (existing functionality)
   if (coordData.buttons?.length > 0) {
     try {

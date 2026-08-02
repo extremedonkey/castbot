@@ -3,7 +3,7 @@
  *
  * The problem it solves: a host spends days testing a Safari before a season launches, and by
  * the time they're happy the world is full of residue — every `once_globally` idol has been
- * claimed by a tester, every chest is opened, testers are carrying loot, stamina is drained.
+ * claimed by a tester, testers are carrying loot, stamina is drained, the round counter is wrong.
  * There was no way to see what needed undoing, let alone undo it in bulk.
  *
  * 🔴 THE INVARIANT: this module NEVER deletes an Action, Item, Store, Enemy, Attribute, Map or
@@ -11,7 +11,7 @@
  * removes an authored entity, you have broken the feature's contract.
  *
  * Three scopes (see RESET_SCOPES), each a strict superset of the one before:
- *   testing → claims + map world state only. Players keep inventory/currency/points/location.
+ *   testing → outcome claims only. Players keep inventory/currency/points/location.
  *   full    → testing + every player's economy & progress wiped back to starting values.
  *   wipe    → full + de-initialise every player off the map (revokes channel access).
  *
@@ -60,7 +60,7 @@ export const RESET_SCOPES = {
     emoji: '🧪',
     label: 'Testing Reset',
     blurb: 'Actions only — testers keep their items',
-    description: 'Clears every claim so actions can be re-tested. Players keep everything.',
+    description: 'Resets all actions which have a limit on the number of times it can be claimed, e.g., if you have an idol hidden in the safari and a tester has already found it, or you want to retest a full section of the Safari where you’ve already activated the actions.',
     clearsPlayers: false,
     deinitializes: false,
     accent: 0xf39c12 // orange — caution
@@ -173,38 +173,6 @@ export function summarizeClaimTargets(targets) {
 }
 
 /**
- * 🪦 LEGACY: the retired **Map Drops** feature. Its authoring UI is already unreachable —
- * `getFieldGroups('map_cell')` no longer offers an `items` group, so nothing can emit
- * `entity_field_group_map_cell_<coord>_items`, the only route into "Drop Management" — but
- * drops authored before that removal STILL render (safariButtonHelper.js) and still block on
- * their claims. Superseded by Quick Items / Quick Currency actions.
- *
- * These claims live at `maps[id].coordinates[coord].itemDrops[].claimedBy`, a claim store
- * entirely separate from action limits, so a reset has to sweep both. The preview hides this
- * line unless a guild actually has legacy drops, so modern servers never see it.
- *
- * See RaP 0966 (DropsFeature_TechDebt_Options). When Drops is fully scrubbed, delete this.
- */
-export function collectItemDropClaims(mapData) {
-  const coordinates = mapData?.coordinates || {};
-  const coords = [];
-  let claims = 0;
-
-  for (const [coord, cell] of Object.entries(coordinates)) {
-    const drops = Array.isArray(cell?.itemDrops) ? cell.itemDrops : [];
-    const cellClaims = drops.reduce(
-      (n, d) => n + (Array.isArray(d?.claimedBy) ? d.claimedBy.length : 0), 0
-    );
-    if (cellClaims > 0) {
-      coords.push(coord);
-      claims += cellClaims;
-    }
-  }
-
-  return { claims, coords };
-}
-
-/**
  * Every store item with a FINITE stock level — i.e. one that testing may have eaten into and that
  * this feature deliberately cannot restore (no original level is recorded anywhere).
  * `stock` of undefined/null/-1 all mean unlimited.
@@ -290,15 +258,12 @@ export async function buildResetPreview(guildId) {
   const customTerms = await getCustomTerms(guildId);
 
   const activeMapId = safariData[guildId]?.maps?.active;
-  const mapData = activeMapId ? safariData[guildId]?.maps?.[activeMapId] : null;
-
   const targets = collectClaimTargets(safariData, guildId, customTerms);
 
   return {
     customTerms,
-    hasMap: !!mapData,
+    hasMap: !!activeMapId,
     claims: summarizeClaimTargets(targets),
-    drops: collectItemDropClaims(mapData),
     stocked: collectStockedStoreItems(safariData, guildId),
     players: collectPlayerState(playerData, guildId, activeMapId),
     rounds: {
@@ -332,32 +297,6 @@ export function resetActionClaims(safariData, guildId) {
   }
 
   return { outcomes, claims };
-}
-
-/**
- * Clear legacy Map Drops claims (see collectItemDropClaims). Mutates in place; caller saves.
- *
- * Deliberately does NOT touch `map.globalState.{openedChests,triggeredEvents,discoveredSecrets}`:
- * those arrays are initialised to `[]` at map creation (mapExplorer.js) and **nothing in the
- * codebase ever writes to them**, so clearing them is a guaranteed no-op. Don't re-add it.
- *
- * @returns {number} claims cleared
- */
-export function resetItemDropClaims(mapData) {
-  if (!mapData) return 0;
-
-  let drops = 0;
-  for (const cell of Object.values(mapData.coordinates || {})) {
-    if (!Array.isArray(cell?.itemDrops)) continue;
-    for (const drop of cell.itemDrops) {
-      if (Array.isArray(drop?.claimedBy) && drop.claimedBy.length) {
-        drops += drop.claimedBy.length;
-      }
-      drop.claimedBy = [];
-    }
-  }
-
-  return drops;
 }
 
 /** Zero the cumulative sales counters that testing inflates (pure stats, not content). */
@@ -448,11 +387,7 @@ export async function executeReset(guildId, scope, client) {
 
   // ---- Phase 1: safariContent sweeps (claims, world state, rounds) ----
   const safariData = await loadSafariContent();
-  const activeMapId = safariData[guildId]?.maps?.active;
-  const mapData = activeMapId ? safariData[guildId]?.maps?.[activeMapId] : null;
-
   const claimResult = resetActionClaims(safariData, guildId);
-  const dropClaimsCleared = resetItemDropClaims(mapData);
   let salesReset = 0;
 
   if (config.clearsPlayers) {
@@ -467,7 +402,6 @@ export async function executeReset(guildId, scope, client) {
     scope,
     outcomesReset: claimResult.outcomes,
     claimsCleared: claimResult.claims,
-    dropClaimsCleared,
     salesCountersReset: salesReset,
     playersReset: 0,
     playersRemoved: 0,
@@ -556,7 +490,11 @@ function buildScopeSelect(scope) {
   };
 }
 
-/** Render the `once_globally` roster — the outcomes hosts most need to eyeball before resetting. */
+/**
+ * Render the `once_globally` roster — the outcomes hosts most need to eyeball before resetting.
+ * Headed "Global Actions" rather than the internal `once_globally` type name: hosts think in
+ * terms of the advantage, not the limit type.
+ */
 function buildGlobalsSection(globals, budget) {
   if (globals.length === 0) return null;
 
@@ -566,12 +504,13 @@ function buildGlobalsSection(globals, budget) {
   });
 
   const packed = packLines(lines, budget);
-  const claimed = globals.filter(g => g.claimant).length;
 
   return {
     type: 10,
-    content: `### \`\`\`🌍 Once Globally (${globals.length})\`\`\`\n`
-      + `-# One claim for the whole server — where hidden advantages usually live. **${claimed}** currently claimed.\n`
+    content: `### \`\`\`🌍 Global Actions (${globals.length})\`\`\`\n`
+      + '-# These global actions are being reset - these are typically used for things like advantages '
+      + 'where only one player can pick it up. For example, if a tester has claimed an idol, you want to '
+      + 'reset the action so a real player is able to pick it up when the game starts.\n'
       + packed.text
   };
 }
@@ -628,16 +567,11 @@ export function renderResetUI({ preview, scope = null }) {
   }
 
   // ---- Preview for the chosen scope ----
-  const { claims, drops, players, stocked, rounds, customTerms } = preview;
+  const { claims, players, stocked, rounds, customTerms } = preview;
 
   const clearLines = [
     `> ⚡ **${claims.totalClaims}** claim${claims.totalClaims === 1 ? '' : 's'}, held on **${claims.outcomesWithClaims}** of the **${claims.limitedOutcomes}** action outcome${claims.limitedOutcomes === 1 ? '' : 's'} that have a Usage Limit set`
   ];
-  // Legacy Map Drops only — hidden entirely on servers that never used the retired feature
-  if (drops.claims > 0) {
-    clearLines.push(`> 🎁 **${drops.claims}** legacy map item-drop claim${drops.claims === 1 ? '' : 's'} at ${drops.coords.join(', ')}`);
-  }
-
   if (config.clearsPlayers) {
     if (config.deinitializes) {
       clearLines.push(`> 🚪 **${players.withSafari}** player${players.withSafari === 1 ? '' : 's'} de-initialised — inventories (**${players.totalItems}** stack${players.totalItems === 1 ? '' : 's'}), **${players.totalCurrency}** ${customTerms.currencyEmoji || '🪙'} ${customTerms.currencyName || 'currency'}, stamina/attributes, map location and channel access`);
@@ -717,10 +651,6 @@ export function buildResetResultUI(tally) {
   const lines = [
     `> ⚡ **${tally.claimsCleared}** claim${tally.claimsCleared === 1 ? '' : 's'} cleared across **${tally.outcomesReset}** outcome${tally.outcomesReset === 1 ? '' : 's'}`
   ];
-  if (tally.dropClaimsCleared > 0) {
-    lines.push(`> 🎁 **${tally.dropClaimsCleared}** legacy map item-drop claim${tally.dropClaimsCleared === 1 ? '' : 's'} cleared`);
-  }
-
   if (config.deinitializes) {
     lines.push(`> 🚪 **${tally.playersRemoved}** player${tally.playersRemoved === 1 ? '' : 's'} de-initialised`);
   } else if (config.clearsPlayers) {
