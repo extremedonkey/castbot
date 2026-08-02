@@ -22,13 +22,56 @@ function checkId(id) {
   return id;
 }
 
+/**
+ * Pure — the Claims manager footer rows.
+ *
+ * LEAN (docs/ui/LeanUserInterfaceDesign.md): the back button gets its own ActionRow as the
+ * LAST row, alone — like the `[← Menu]` row in the Analytics example. It used to share a row
+ * with the pagination arrows, which put page controls above the action buttons they don't
+ * relate to and buried Back mid-screen.
+ *
+ * Row order: pagination (only when there's more than one page, directly under the claimant
+ * list it pages) → actions → Back alone.
+ *
+ * @param {object} args
+ * @param {string} args.buttonId @param {number} args.actionIndex
+ * @param {number} args.page - current (already clamped) page index
+ * @param {number} args.totalPages
+ * @param {boolean} args.hasClaims - false disables Reset All
+ * @returns {Array<object>} ActionRows
+ */
+export function buildClaimsFooterRows({ buttonId, actionIndex, page, totalPages, hasClaims }) {
+  const rows = [];
+
+  if (totalPages > 1) {
+    rows.push({ type: 1, components: [
+      { type: 2, custom_id: checkId(`safari_claims_page:${page - 1}:${buttonId}:${actionIndex}`), label: '◀', style: 2, disabled: page === 0 },
+      { type: 2, custom_id: checkId(`safari_claims_page:${page + 1}:${buttonId}:${actionIndex}`), label: '▶', style: 2, disabled: page >= totalPages - 1 }
+    ]});
+  }
+
+  rows.push({ type: 1, components: [
+    { type: 2, custom_id: checkId(`safari_claim_add:${buttonId}:${actionIndex}`), label: 'Manual Claim', style: 2, emoji: { name: '👤' } },
+    { type: 2, custom_id: checkId(`safari_claims_refresh:${buttonId}:${actionIndex}`), label: 'Refresh', style: 2, emoji: { name: '🔄' } },
+    { type: 2, custom_id: checkId(`safari_claims_reset_all:${buttonId}:${actionIndex}`), label: 'Reset All', style: 4, emoji: { name: '🗑️' }, disabled: !hasClaims }
+  ]});
+
+  rows.push(buildClaimsBackRow(buttonId));
+  return rows;
+}
+
+/** The Back row — its own ActionRow, one button, always last. Shared by every claims screen. */
+export function buildClaimsBackRow(buttonId) {
+  return { type: 1, components: [
+    { type: 2, custom_id: `custom_action_editor_${buttonId}`, label: '← Back', style: 2, emoji: { name: '⚡' } }
+  ]};
+}
+
 function errorContainer(message, buttonId) {
   return { components: [{ type: 17, accent_color: 0x3498DB, components: [
     { type: 10, content: `## 👥 Player Claims\n-# ${message}` },
     { type: 14 },
-    { type: 1, components: [
-      { type: 2, custom_id: `custom_action_editor_${buttonId}`, label: '← Back', style: 2, emoji: { name: '⚡' } }
-    ]}
+    buildClaimsBackRow(buttonId)
   ]}]};
 }
 
@@ -113,23 +156,14 @@ export async function buildClaimsManagerUI({ client, guildId, buttonId, actionIn
     }
   }
 
-  // Footer — navigation row (Back + pagination) then actions row (Add / Refresh / Reset All)
   components.push({ type: 14 });
-  const navRow = [
-    { type: 2, custom_id: `custom_action_editor_${buttonId}`, label: '← Back', style: 2, emoji: { name: '⚡' } }
-  ];
-  if (totalPages > 1) {
-    navRow.push(
-      { type: 2, custom_id: checkId(`safari_claims_page:${safePage - 1}:${buttonId}:${actionIndex}`), label: '◀', style: 2, disabled: safePage === 0 },
-      { type: 2, custom_id: checkId(`safari_claims_page:${safePage + 1}:${buttonId}:${actionIndex}`), label: '▶', style: 2, disabled: safePage >= totalPages - 1 }
-    );
-  }
-  components.push({ type: 1, components: navRow });
-  components.push({ type: 1, components: [
-    { type: 2, custom_id: checkId(`safari_claim_add:${buttonId}:${actionIndex}`), label: 'Manual Claim', style: 2, emoji: { name: '👤' } },
-    { type: 2, custom_id: checkId(`safari_claims_refresh:${buttonId}:${actionIndex}`), label: 'Refresh', style: 2, emoji: { name: '🔄' } },
-    { type: 2, custom_id: checkId(`safari_claims_reset_all:${buttonId}:${actionIndex}`), label: 'Reset All', style: 4, emoji: { name: '🗑️' }, disabled: claimants.length === 0 }
-  ]});
+  components.push(...buildClaimsFooterRows({
+    buttonId,
+    actionIndex,
+    page: safePage,
+    totalPages,
+    hasClaims: claimants.length > 0
+  }));
 
   const container = { type: 17, accent_color: 0x3498DB, components };
   const { countComponents } = await import('./utils.js');
