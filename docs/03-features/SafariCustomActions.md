@@ -134,16 +134,36 @@ Awards or removes items from players with configurable usage limits.
 - **Quest mechanics**: Consume quest items on completion
 - **Conditional logic**: Check if player has item, then remove it
 
-### 3. Give Currency (Enhanced!)
-Awards currency with new usage limit options.
+### 3. Give / Remove Currency
+Awards or deducts currency, claim-gated by a usage limit.
+
+**Creating one is a single modal.** Picking `Give / Remove Currency` from the Add Outcome
+select opens a 3-field modal (Amount · Usage Limit · Executes if) and returns straight to the
+Action Editor — one interaction, not the five the old Container flow needed. Builder:
+`buildGiveCurrencyModal()` in [customActionUI.js](../../customActionUI.js), submitted to
+`safari_currency_quick_{buttonId}_{executeOn}`.
+
+- **Usage Limit** pre-selects **Once Per Player**. Discord ignores `default: true` on String
+  Selects *inside modals*, so the default is also named in the placeholder and re-applied by
+  the submit handler — don't "fix" one of those three without the others.
+- **Executes if** defaults to whichever branch the admin clicked Add Outcome under. The
+  `always` option only appears for an always-branch outcome, so rendering the select can't
+  silently demote one to conditional.
+- **`Custom…` and Usage Templates are deliberately absent** — their config sub-screens can't
+  live inside a modal. Pick them from the Container editor instead.
+
+**Editing** still uses the legacy Container screen (`showGiveCurrencyConfig`), reached from the
+Outcome list → Edit. Both surfaces write byte-identical `config.limit` shapes; the assertion
+that they stay identical lives in [tests/quickCurrencyOutcome.test.js](../../tests/quickCurrencyOutcome.test.js).
 
 **Configuration:**
-- Amount (positive or negative)
-- Message (optional)
-- Usage limit:
-  - Unlimited (default)
-  - Once per player
-  - Once globally
+- Amount (positive to give, negative to remove; 0 is rejected)
+- Message (optional flavor text — set via import/export or Ask CastBot, not the modal)
+- Usage limit (see [Usage Limits](#usage-limits))
+
+**Player-facing amounts are the APPLIED delta, not the configured one.** Balances floor at 0,
+so a `-50` outcome against a balance of 10 takes 10 and says so — see `executeGiveCurrency` in
+[safariManager.js](../../safariManager.js).
 
 **Example:**
 ```javascript
@@ -376,7 +396,17 @@ Stored in `safariContent.json` (under legacy key `buttons`):
 Claims are tracked within each action's config:
 - `claimedBy: []` - Array for per-player limits
 - `claimedBy: "userId"` - Single ID for global limits
+- `claimedBy: {userId: timestamp}` - Per-period cooldowns
 - No `claimedBy` field for unlimited actions
+
+**Claiming is reserve-then-grant, under a lock.** `reserveClassicClaim()` in
+[safariManager.js](../../safariManager.js) reads the LIVE limit, evaluates the gate
+(`evaluateClassicGate()` in [claimsManager.js](../../claimsManager.js) — pure, unit-tested) and
+records the claim inside **one** `withSafariLock` cycle, *before* the reward is granted; the
+executor rolls back with `clearClaim` if the grant then fails. Gate and claim used to be two
+separate unlocked load→mutate→save cycles, which let two players both win the same
+`once_globally` drop. If you add a new claim-gated outcome type, call `reserveClassicClaim` —
+do not re-implement the check.
 
 ### Player Inventory
 Items are added to `playerData.json`:
