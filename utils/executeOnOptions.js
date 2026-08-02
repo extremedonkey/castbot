@@ -96,3 +96,44 @@ export function buildExecuteOnOptions({ current = DEFAULT_EXECUTE_ON, includeAlw
     };
   });
 }
+
+/**
+ * Radio Group (type 21) options for the SAME choice, for use inside modals.
+ *
+ * Why a separate builder rather than reusing the select options — two documented modal
+ * behaviours make them incompatible (docs/standards/ComponentsV2.md):
+ *   1. A String Select's option `default` is IGNORED in modals, so nothing pre-selects.
+ *      A Radio Group's `default` DOES work — it's the only way to show the current value.
+ *   2. A Radio Group pre-selects only if exactly ONE option carries `default` and the
+ *      siblings OMIT the key entirely. An explicit `default: false` on a sibling silently
+ *      suppresses pre-selection for the whole group.
+ * Radio options also carry no `emoji` field (no working example in the codebase uses one,
+ * and an unsupported field rejects the entire modal), so the emoji rides in the label.
+ *
+ * @param {Object}  [opts] — same shape as buildExecuteOnOptions
+ * @returns {Array<Object>} Radio Group options
+ */
+export function buildExecuteOnRadioOptions({ current = DEFAULT_EXECUTE_ON, includeAlways = false, markDefault = true } = {}) {
+  return buildExecuteOnOptions({ current, includeAlways, markDefault }).map(opt => ({
+    label: `${EXECUTE_ON_TERMS[opt.value].emoji} ${opt.label}`.slice(0, 100),
+    value: opt.value,
+    description: opt.description,
+    // ONLY the selected option may carry the key — see (2) above
+    ...(opt.default ? { default: true } : {})
+  }));
+}
+
+/**
+ * Convert any String Select option list into Radio Group options, applying the same two
+ * rules as above. Used for the usage-limit field, whose options come from periodUtils.
+ * @param {Array<Object>} options - select options (may carry emoji and default: false)
+ * @returns {Array<Object>} Radio Group options (max 10 — Discord's cap)
+ */
+export function toRadioOptions(options) {
+  return (options || []).slice(0, 10).map(opt => ({
+    label: `${opt.emoji?.name ? `${opt.emoji.name} ` : ''}${opt.label}`.slice(0, 100),
+    value: opt.value,
+    ...(opt.description ? { description: String(opt.description).slice(0, 100) } : {}),
+    ...(opt.default ? { default: true } : {})
+  }));
+}

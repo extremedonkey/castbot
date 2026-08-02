@@ -6,9 +6,10 @@ import { loadEntity, updateEntity } from './entityManager.js';
 import { loadSafariContent, saveSafariContent, getCustomTerms } from './safariManager.js';
 import { scheduler } from './scheduler.js';
 import { formatPeriod, formatCountdown, buildLimitOptions, buildPeriodModalComponents } from './utils/periodUtils.js';
-import { parseTextEmoji, resolveEmoji } from './utils/emojiUtils.js';
+import { parseTextEmoji, resolveEmoji, parseAndValidateEmoji } from './utils/emojiUtils.js';
 import { buildImageFieldLabel, collectModalFields, resolveUploadedImageField } from './src/images/modalImageUpload.js';
-import { buildExecuteOnOptions, normalizeExecuteOn } from './utils/executeOnOptions.js';
+import { buildExecuteOnOptions, buildExecuteOnRadioOptions, toRadioOptions, normalizeExecuteOn } from './utils/executeOnOptions.js';
+import { buildItemSelectField } from './utils/itemSelectField.js';
 
 /**
  * Shared outcome type options for the "Add Outcome" select menus.
@@ -3690,6 +3691,47 @@ async function createMultiAttributeCheckUI(condition, actionId, conditionIndex, 
 /**
  * Show configuration UI for display_text action
  */
+/**
+ * Discord's Text Display cap is 4000 chars COMBINED across every Text Display in the message
+ * (ComponentsV2.md), not per component. The Display Text config screen spends its budget on a
+ * header, the "### Preview" wrapper and an optional invalid-image warning; this reserve covers
+ * those with room to spare, and whatever is left goes to the preview.
+ */
+const DISPLAY_TEXT_CHROME_RESERVE = 400;
+export const DISPLAY_TEXT_PREVIEW_BUDGET = 4000 - DISPLAY_TEXT_CHROME_RESERVE;
+
+/**
+ * Pure — the preview body for the Display Text config screen.
+ *
+ * It used to cut content at 100 chars (with a title) or 150 (without). That fired on 57% of
+ * real Display Text outcomes — median content is 126 chars — so most admins could not read
+ * back what they had written without reopening the modal. Nothing required it: the modal caps
+ * input at 2000 and the longest content in production is 1984, both comfortably inside the
+ * budget below. The cap that remains is Discord's, not ours, and it says when it bites.
+ *
+ * @param {object|null} action - the display_text outcome (or null/other type)
+ * @param {number} [budget]
+ * @returns {string} markdown preview body
+ */
+export function buildDisplayTextPreview(action, budget = DISPLAY_TEXT_PREVIEW_BUDGET) {
+  if (!action || action.type !== 'display_text') return 'No content configured yet';
+
+  const title = action.config?.title || action.title || '';
+  const content = action.config?.content || action.content || '';
+
+  if (!title && !content) return 'No content configured yet';
+  if (title && !content) return `**${title}**\n*No content*`;
+
+  const header = title ? `**${title}**\n` : '';
+  const room = budget - header.length;
+  if (content.length <= room) return `${header}${content}`;
+
+  // Only reachable via imported/API-authored content longer than the modal allows — say so
+  // rather than trailing an anonymous "..." that reads like the content itself is broken.
+  const notice = `\n-# … truncated for display — ${content.length.toLocaleString()} chars total, full text still runs in-game.`;
+  return `${header}${content.slice(0, Math.max(0, room - notice.length))}${notice}`;
+}
+
 export async function showDisplayTextConfig(guildId, buttonId, actionIndex) {
   // Load safari data to get existing action information
   const safariData = await loadSafariContent();
@@ -3703,20 +3745,7 @@ export async function showDisplayTextConfig(guildId, buttonId, actionIndex) {
     isEdit = true;
   }
   
-  // Build preview text for existing action
-  let previewText = "No content configured yet";
-  if (action && action.type === 'display_text') {
-    const title = action.config?.title || action.title || '';
-    const content = action.config?.content || action.content || '';
-    
-    if (title && content) {
-      previewText = `**${title}**\n${content.substring(0, 100)}${content.length > 100 ? '...' : ''}`;
-    } else if (content) {
-      previewText = content.substring(0, 150) + (content.length > 150 ? '...' : '');
-    } else if (title) {
-      previewText = `**${title}**\n*No content*`;
-    }
-  }
+  const previewText = buildDisplayTextPreview(action);
   
   // Get accent color from action config (if configured)
   let accentColor = 0x3498db; // Default blue for text actions
@@ -4983,11 +5012,47 @@ export async function handleDisplayTextEdit(guildId, userId, customId) {
 }
 
 /**
+ * The CREATE entry point — opens the Display Text modal straight from the Add Outcome select,
+ * with the Executes-if field included. Creating used to land on the config Container first,
+ * which on a new outcome could only say "No content configured yet" and offer an Edit button:
+ * a whole interaction spent to reach the form.
+ *
+ * @param {string} guildId @param {string} buttonId
+ * @param {number} actionIndex - provisional; the save handler appends rather than trusting it
+ * @param {string} executeOn - branch the admin clicked Add Outcome under
+ * @returns {Promise<object>} MODAL interaction response
+ */
+export async function buildDisplayTextCreateModal(guildId, buttonId, actionIndex, executeOn) {
+  const { getImageUploadMode } = await import('./src/settings/generalSettings.js');
+  const imageUploadMode = await getImageUploadMode(guildId);
+  return buildDisplayTextModal(buttonId, actionIndex, null, imageUploadMode, executeOn);
+}
+
+/**
  * Pure — the Display Text outcome create/edit modal. The image field honors the
  * guild's imageUploadMode: paste-URL text input or File Upload (type 19).
  * Submits to safari_display_text_save_{buttonId}_{actionIndex}.
  */
-export function buildDisplayTextModal(buttonId, actionIndex, action, imageUploadMode) {
+export function buildDisplayTextModal(buttonId, actionIndex, action, imageUploadMode, executeOn = null) {
+  // Executes-if rides in the modal only on CREATE. On edit the outcome already lives in a
+  // branch and the outcome context menu's "Move to…" owns moving it — putting the control in
+  // both places invites them to disagree. Radio Group, not String Select: a select's `default`
+  // is ignored in modals so the current branch wouldn't show (ComponentsV2.md).
+  const executeOnField = executeOn === null ? [] : [{
+    type: 18, // Label
+    label: 'Executes if',
+    description: 'Which side of this action\'s conditions this outcome belongs to.',
+    component: {
+      type: 21, // Radio Group
+      custom_id: 'execute_on',
+      required: true,
+      options: buildExecuteOnRadioOptions({
+        current: executeOn,
+        includeAlways: normalizeExecuteOn(executeOn) === 'always'
+      })
+    }
+  }];
+
   return {
     type: 9, // MODAL
     data: {
@@ -5028,7 +5093,8 @@ export function buildDisplayTextModal(buttonId, actionIndex, action, imageUpload
           textPlaceholder: 'Enter link of an image you have uploaded to Discord.',
           textStyle: 1,
           uploadEmptyDescription: 'Upload an image shown with the text (optional).'
-        })
+        }),
+        ...executeOnField
       ]
     }
   };
@@ -5120,8 +5186,256 @@ export function buildGiveCurrencyModal(buttonId, executeOn, customTerms = {}) {
   };
 }
 
-/** Pre-selected usage limit for the quick currency modal — the overwhelmingly common case. */
+/** Pre-selected usage limit for the quick create modals — the overwhelmingly common case. */
 const QUICK_CURRENCY_DEFAULT_LIMIT = 'once_per_player';
+
+// ─── Give / Remove Item: one-shot create modal ──────────────────────────────
+// Adding an item outcome cost 3-7 interactions (type select → item picker → then a select
+// each for quantity, give/remove, usage limit and executes-if, then Save & Finish). All five
+// fields fit one modal. The item select is OPTIONAL: leaving it blank falls through to the
+// existing picker, which has search — that's the escape hatch for the 4-in-33 guilds holding
+// more than the 25 items a Discord select can show.
+
+/**
+ * Pure — the Give / Remove Item create modal (5 Labels, Discord's cap).
+ * Submits to safari_item_quick_{buttonId}_{executeOn}.
+ *
+ * Give-vs-Remove is an explicit Radio Group rather than a negative quantity (the trick
+ * give_currency uses). For currency, -50 is ordinary arithmetic on a balance; "negative 5
+ * swords" is not a quantity anyone thinks in, it's a mode switch — and removes are 45% of all
+ * item outcomes in production, so the control is exercised constantly and wants to be obvious.
+ *
+ * @param {string} buttonId
+ * @param {string} executeOn - branch the admin clicked Add Outcome under
+ * @param {Array}  items - guild items, sorted newest-first (FULL list; capping is internal)
+ * @param {Array}  limitOptions - from buildLimitOptions()
+ * @returns {object} MODAL interaction response
+ */
+export function buildGiveItemModal(buttonId, executeOn, items, limitOptions) {
+  const resolvedExecuteOn = normalizeExecuteOn(executeOn);
+
+  return {
+    type: 9, // MODAL
+    data: {
+      custom_id: `safari_item_quick_${buttonId}_${resolvedExecuteOn}`,
+      title: 'Give / Remove Item',
+      components: [
+        buildItemSelectField({ items, required: false, escape: 'search' }),
+        {
+          type: 18, // Label
+          label: 'Quantity',
+          description: 'How many — a whole number, 1 or more.',
+          component: {
+            type: 4, // Text Input
+            custom_id: 'quantity',
+            style: 1,
+            placeholder: 'e.g., 1',
+            value: '1',
+            required: true,
+            max_length: 5
+          }
+        },
+        {
+          type: 18, // Label
+          label: 'Give or Remove',
+          description: 'Whether this hands the item out or takes it away.',
+          component: {
+            type: 21, // Radio Group — `default` actually pre-selects in modals
+            custom_id: 'operation',
+            required: true,
+            options: [
+              { label: '🎁 Give to the player', value: 'give', description: 'Adds the item to their inventory', default: true },
+              { label: '🧨 Remove from the player', value: 'remove', description: 'Takes the item out of their inventory' }
+            ]
+          }
+        },
+        {
+          type: 18, // Label
+          label: 'Usage Limit',
+          description: 'How many times can this outcome be claimed?',
+          component: {
+            type: 21, // Radio Group
+            custom_id: 'usage_limit',
+            required: true,
+            options: toRadioOptions(limitOptions)
+          }
+        },
+        {
+          type: 18, // Label
+          label: 'Executes if',
+          description: 'Which side of this action\'s conditions this outcome belongs to.',
+          component: {
+            type: 21, // Radio Group
+            custom_id: 'execute_on',
+            required: true,
+            options: buildExecuteOnRadioOptions({
+              current: resolvedExecuteOn,
+              includeAlways: resolvedExecuteOn === 'always'
+            })
+          }
+        }
+      ]
+    }
+  };
+}
+
+/**
+ * Pure — guild items as sorted records for the modal select. Newest-first (by lastModified,
+ * falling back to createdAt) so the item you just made is at the top. Returns the FULL list;
+ * buildItemSelectField caps it and reports what it left out.
+ * @param {object} items - guild items map
+ * @returns {Array<{id,name,emoji,description}>}
+ */
+export function getSortedGuildItems(items) {
+  return Object.entries(items || {})
+    .map(([id, item]) => ({
+      id,
+      name: item.name,
+      emoji: item.emoji,
+      description: item.description,
+      _sortKey: item.metadata?.lastModified || item.metadata?.createdAt || 0
+    }))
+    .sort((a, b) => b._sortKey - a._sortKey)
+    .map(({ _sortKey, ...rest }) => rest);
+}
+
+/**
+ * Pure — the full-list item picker screen (the "next screen" the modal's Item field points at).
+ *
+ * Shown when the admin leaves the modal's Item select blank, and it is what the pre-existing
+ * `safari_give_item_select_*` chain already drives, so the search path stays untouched.
+ *
+ * @param {string} buttonId
+ * @param {object} items - guild items map (id → item)
+ * @param {string} [note] - optional line above the select (e.g. "your other answers are kept")
+ * @returns {object} Components V2 response
+ */
+export function buildItemPickerUI(buttonId, items, note = '') {
+  const entries = Object.entries(items || {});
+  const itemOptions = [];
+
+  // Discord's select has no search box, so >10 items gets an explicit search entry which the
+  // existing handler turns into a search modal over the full list.
+  if (entries.length > 10) {
+    itemOptions.push({
+      label: '🔍 Search: "Type to search..."',
+      value: 'search_entities',
+      description: 'Search every item in this server'
+    });
+  }
+
+  const maxItems = entries.length > 10 ? 24 : 25; // leave a slot for the search entry
+  entries
+    .sort((a, b) => (b[1].metadata?.createdAt || 0) - (a[1].metadata?.createdAt || 0))
+    .slice(0, maxItems)
+    .forEach(([itemId, item]) => {
+      const { cleanText, emoji } = parseAndValidateEmoji(`${item.emoji || ''} ${item.name}`, '📦');
+      itemOptions.push({
+        label: (cleanText || `${item.emoji || '📦'} ${item.name || 'Unnamed Item'}`).substring(0, 100),
+        value: itemId,
+        description: item.description?.substring(0, 100),
+        emoji
+      });
+    });
+
+  // Discord rejects a String Select with zero options, which would turn an empty guild into a
+  // bare "This interaction failed". Reachable if every item is deleted between the modal opening
+  // and the blank submit landing.
+  if (itemOptions.length === 0) {
+    return {
+      components: [{
+        type: 17, // Container
+        components: [
+          { type: 10, content: '## Item\n❌ This server has no items to pick from.\n-# Create one via Production Menu → Safari → Manage Items, then add this outcome.' },
+          { type: 14 },
+          {
+            type: 1,
+            components: [{ type: 2, custom_id: `custom_action_editor_${buttonId}`, label: '⬅ Back', style: 2, emoji: { name: '⚡' } }]
+          }
+        ]
+      }],
+      flags: (1 << 15), // IS_COMPONENTS_V2
+      ephemeral: true
+    };
+  }
+
+  return {
+    components: [{
+      type: 17, // Container
+      components: [
+        { type: 10, content: `## Item${note ? `\n-# ${note}` : ''}` },
+        { type: 14 }, // Separator
+        {
+          type: 1, // Action Row
+          components: [{
+            type: 3, // String Select
+            custom_id: `safari_give_item_select_${buttonId}`,
+            placeholder: 'Select item to give...',
+            options: itemOptions
+          }]
+        }
+      ]
+    }],
+    flags: (1 << 15), // IS_COMPONENTS_V2
+    ephemeral: true
+  };
+}
+
+/**
+ * Pure — validate + normalise the item modal's fields.
+ * `itemId` is null when the admin left the select blank; the caller then routes to the picker.
+ *
+ * @param {object} fields - from collectModalFields()
+ * @param {string} fallbackExecuteOn
+ * @returns {{error: string} | {itemId: string|null, quantity: number, operation: string, limitType: string, executeOn: string}}
+ */
+export function parseGiveItemFields(fields, fallbackExecuteOn) {
+  const raw = typeof fields.quantity === 'string' ? fields.quantity.trim() : '';
+  const quantity = parseInt(raw, 10);
+
+  if (!raw || isNaN(quantity)) {
+    return { error: `❌ "${raw || 'blank'}" isn't a number. Enter how many — a whole number, 1 or more.` };
+  }
+  if (quantity < 1) {
+    // Direction is the Give/Remove field's job, so a negative here is a misunderstanding
+    // worth naming rather than quietly turning into a removal.
+    return { error: '❌ Quantity must be 1 or more. To take items away, set **Give or Remove** to Remove.' };
+  }
+  if (quantity > 99999) {
+    return { error: '❌ Quantity must be 99999 or less.' };
+  }
+
+  const pick = key => (Array.isArray(fields[key]) ? fields[key][0] : fields[key]) || null;
+  const limitType = pick('usage_limit') || QUICK_CURRENCY_DEFAULT_LIMIT;
+
+  return {
+    itemId: pick('item_select'),
+    quantity,
+    operation: pick('operation') === 'remove' ? 'remove' : 'give',
+    limitType,
+    // The period MUST ride along. When the Item select is left blank this object is carried to
+    // the Container editor, which builds the limit itself — and that path has no other source
+    // for a period, so a once_per_period outcome would save with periodMs undefined. At runtime
+    // evaluateClassicGate coerces that to 0, meaning `now - lastUsed < 0` is never true and the
+    // cooldown silently never blocks: an item the admin believes is on a 24h timer becomes
+    // infinitely farmable. Same default buildQuickLimit uses, so both routes agree.
+    ...(limitType === 'once_per_period' ? { periodMs: QUICK_PERIOD_MS } : {}),
+    executeOn: normalizeExecuteOn(pick('execute_on') || fallbackExecuteOn)
+  };
+}
+
+/**
+ * Build the stored give_item outcome. Shape must match what the Container editor writes, or
+ * the runtime claim engine reads the two differently.
+ */
+export function buildGiveItemOutcome({ itemId, quantity, operation, limitType, executeOn }, order) {
+  return {
+    type: 'give_item',
+    order,
+    config: { itemId, quantity, operation, limit: buildQuickLimit(limitType) },
+    executeOn
+  };
+}
 
 /** Default cooldown when Once Per Period is picked in a modal that can't collect a duration. */
 const QUICK_PERIOD_MS = 86400000; // 1 day
@@ -5217,6 +5531,64 @@ export async function handleGiveCurrencyQuickSubmit(guildId, customId, formData)
   return { ...editorUI, ephemeral: true };
 }
 
+/**
+ * Handle the Give / Remove Item modal submit.
+ *
+ * Two outcomes:
+ *  - item chosen  → append the outcome, return the Action Editor (1 interaction total)
+ *  - item blank   → return `{ needsPicker, pending }` so the caller can show the existing
+ *                   picker (which has search) and carry the fields the admin already filled in
+ *
+ * @returns {Promise<object>} Action Editor UI, an ephemeral error, or a needsPicker signal
+ */
+export async function handleGiveItemQuickSubmit(guildId, customId, formData) {
+  const rest = customId.replace('safari_item_quick_', '');
+  const executeOnFromId = rest.match(EXECUTE_ON_SUFFIX)?.[1] || 'true';
+  const buttonId = rest.replace(EXECUTE_ON_SUFFIX, '');
+
+  const parsed = parseGiveItemFields(collectModalFields(formData.components), executeOnFromId);
+  if (parsed.error) return { content: parsed.error, ephemeral: true };
+
+  const safariData = await loadSafariContent();
+  const button = safariData[guildId]?.buttons?.[buttonId];
+  if (!button) {
+    console.error(`❌ Button ${buttonId} not found during quick item save for guild ${guildId}`);
+    return { content: `❌ Custom action "${buttonId}" no longer exists — dismiss this and reopen the action list.`, ephemeral: true };
+  }
+
+  // Blank select → hand the caller everything it needs to show the picker without losing input
+  if (!parsed.itemId) {
+    console.log(`🔍 QUICK ITEM: no item picked for ${buttonId} — routing to the search picker`);
+    return { needsPicker: true, buttonId, pending: parsed };
+  }
+
+  if (!safariData[guildId]?.items?.[parsed.itemId]) {
+    return { content: '❌ That item no longer exists — dismiss this and try again.', ephemeral: true };
+  }
+
+  if (!Array.isArray(button.actions)) button.actions = [];
+  // Append, never index-write: see handleGiveCurrencyQuickSubmit for why
+  const outcome = buildGiveItemOutcome(parsed, button.actions.length);
+  button.actions.push(outcome);
+
+  button.metadata = button.metadata
+    ? { ...button.metadata, lastModified: Date.now() }
+    : { createdAt: Date.now(), lastModified: Date.now(), usageCount: 0 };
+
+  await saveSafariContent(safariData);
+  console.log(`✅ QUICK ITEM: added give_item (${parsed.operation} ${parsed.quantity}x ${parsed.itemId}, ${parsed.limitType}, executeOn=${parsed.executeOn}) to ${buttonId}[${outcome.order}]`);
+
+  try {
+    const { queueActionCoordinateUpdates } = await import('./anchorMessageManager.js');
+    await queueActionCoordinateUpdates(guildId, buttonId, 'item_action_saved');
+  } catch (error) {
+    console.error('Error queueing anchor updates:', error);
+  }
+
+  const editorUI = await createCustomActionEditorUI({ guildId, actionId: buttonId });
+  return { ...editorUI, ephemeral: true };
+}
+
 export async function handleDisplayTextSave(guildId, customId, formData, client) {
   // Parse buttonId and actionIndex from custom_id: safari_display_text_save_buttonId_actionIndex
   const parts = customId.replace('safari_display_text_save_', '').split('_');
@@ -5277,10 +5649,13 @@ export async function handleDisplayTextSave(guildId, customId, formData, client)
     actionConfig.color = color;
   }
 
-  // Preserve existing executeOn value, check pendingExecuteOn for new outcomes, or default to 'true'
+  // executeOn precedence: an EXISTING outcome keeps its branch (the modal doesn't offer the
+  // field on edit); a new one takes the modal's Executes-if, falling back to the pending value
+  // stashed by the type select, then 'true'.
   const pendingKey = `${guildId}_${buttonId}`;
   const pendingExecuteOn = global.pendingExecuteOn?.get(pendingKey);
-  const executeOnValue = existingAction?.executeOn || pendingExecuteOn || 'true';
+  const executeOnValue = existingAction?.executeOn
+    || normalizeExecuteOn(fields.execute_on || pendingExecuteOn);
   if (pendingExecuteOn) {
     global.pendingExecuteOn.delete(pendingKey);
   }
@@ -5297,12 +5672,15 @@ export async function handleDisplayTextSave(guildId, customId, formData, client)
     button.actions = [];
   }
   
-  // Add or update the action (same logic as other save handlers)
-  if (actionIndex < button.actions.length) {
+  // Append on create, replace only on a genuine edit. Trusting the index alone would let a
+  // concurrent edit that appended while this modal was open be silently overwritten — the
+  // index was captured when the modal opened and means "the end" only at that instant.
+  if (existingAction) {
     console.log(`✏️ Updating existing display_text action at index ${actionIndex}`);
     button.actions[actionIndex] = action;
   } else {
-    console.log(`➕ Adding new display_text action at index ${actionIndex}`);
+    action.order = button.actions.length;
+    console.log(`➕ Appending new display_text action at index ${action.order}`);
     button.actions.push(action);
   }
   

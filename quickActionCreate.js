@@ -10,6 +10,7 @@
 import { InteractionResponseType } from 'discord-interactions';
 import { parseAndValidateEmoji } from './utils/emojiUtils.js';
 import { buildLimitOptions } from './utils/periodUtils.js';
+import { buildItemSelectField } from './utils/itemSelectField.js';
 
 // Quick create defaults: once_per_player is pre-selected. Custom/templates are excluded here
 // because a single quick-create modal can't host the multi-step Custom config sub-screen —
@@ -73,20 +74,24 @@ function buildTextToDisplayField() {
     };
 }
 
-function buildItemToGiveField(itemOptions) {
-    return {
-        type: 18,
+/**
+ * Item picker for the Quick Create modals.
+ *
+ * Quick Create has no "next screen" to escape to — the whole point is one modal — so when a
+ * guild holds more items than a Discord select can show (25), the field says so and points at
+ * the Action editor rather than silently offering the 25 newest and leaving the admin to
+ * wonder where their item went.
+ *
+ * @param {Array} items - FULL sorted item list (capping happens inside the shared builder)
+ */
+function buildItemToGiveField(items) {
+    return buildItemSelectField({
+        items,
+        customId: 'item_select',
         label: 'Item to Give',
-        description: 'Select which item the player receives.',
-        component: {
-            type: 3,
-            custom_id: 'item_select',
-            placeholder: 'Select item...',
-            min_values: 1,
-            max_values: 1,
-            options: itemOptions
-        }
-    };
+        required: true,
+        escape: 'edit'
+    });
 }
 
 function buildButtonEmojiField(placeholder) {
@@ -162,7 +167,9 @@ function buildItemOptions(items) {
  * every ~16.7 minutes, so two items created that far apart could sort in the
  * wrong order even by "newest first" semantics, let alone "last updated."
  * @param {string} guildId
- * @returns {Promise<Array>} up to 25 items: { id, name, emoji, description }
+ * @returns {Promise<Array>} ALL items, newest-first: { id, name, emoji, description }.
+ *   Deliberately uncapped — buildItemSelectField caps to 25 AND reports how many it left out;
+ *   capping here made the true total invisible, which is what hid the truncation.
  */
 export async function getSortedQuickCreateItems(guildId) {
     const { loadSafariContent } = await import('./safariManager.js');
@@ -177,7 +184,6 @@ export async function getSortedQuickCreateItems(guildId) {
             _sortKey: item.metadata?.lastModified || item.metadata?.createdAt || 0
         }))
         .sort((a, b) => b._sortKey - a._sortKey)
-        .slice(0, 25)
         .map(({ _sortKey, ...rest }) => rest);
 }
 
@@ -252,14 +258,13 @@ export function buildQuickTextModal(coordinate) {
  * @returns {object} Modal interaction response data
  */
 export function buildQuickItemTextModal(coordinate, items) {
-    const itemOptions = buildItemOptions(items);
     return {
         custom_id: `quick_itemtext_modal_${coordinate}`,
         title: 'Quick ItemText Action',
         components: [
             buildButtonNameField('e.g., "Open Chest"'),
             buildTextToDisplayField(),
-            buildItemToGiveField(itemOptions),
+            buildItemToGiveField(items),
             buildButtonEmojiField('e.g., 📦'),
             buildUsageLimitField()
         ]
@@ -353,14 +358,12 @@ export function buildQuickCurrencyModal(coordinate, currencyName) {
  * @returns {object} Modal interaction response data
  */
 export function buildQuickItemModal(coordinate, items) {
-    const itemOptions = buildItemOptions(items);
-
     return {
         custom_id: `quick_item_modal_${coordinate}`,
         title: 'Quick Item Action',
         components: [
             buildButtonNameField('e.g., "Open Chest"'),
-            buildItemToGiveField(itemOptions),
+            buildItemToGiveField(items),
             buildButtonEmojiField('e.g., 📦'),
             buildUsageLimitField(),
             buildButtonColorField()

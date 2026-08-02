@@ -20342,58 +20342,17 @@ To fix this:
               };
             }
             
-            // Create item options array
-            const itemOptions = [];
-            
-            // Add search option if more than 10 items
-            if (itemCount > 10) {
-              itemOptions.push({
-                label: '🔍 Search: "Type to search..."',
-                value: 'search_entities',
-                description: 'Click to search items'
-              });
-            }
-            
-            // Add item options (limited to remaining slots after search option), newest first
-            const maxItems = itemCount > 10 ? 24 : 25; // Leave room for search option
-            Object.entries(items)
-              .sort((a, b) => (b[1].metadata?.createdAt || 0) - (a[1].metadata?.createdAt || 0))
-              .slice(0, maxItems).forEach(([itemId, item]) => {
-              const { cleanText, emoji } = parseAndValidateEmoji(`${item.emoji || ''} ${item.name}`, '📦');
-              const safeCleanText = cleanText || `${item.emoji || '📦'} ${item.name || 'Unnamed Item'}`;
-              itemOptions.push({
-                label: safeCleanText.substring(0, 100),
-                value: itemId,
-                description: item.description?.substring(0, 100),
-                emoji: emoji
-              });
-            });
-            
-            console.log(`✅ SUCCESS: safari_action_type_select - showing item selection for give_item`);
-            
-            return {
-              components: [{
-                type: 17, // Container
-                components: [
-                  {
-                    type: 10, // Text Display
-                    content: `## Item`
-                  },
-                  { type: 14 }, // Separator
-                  {
-                    type: 1, // Action Row
-                    components: [{
-                      type: 3, // String Select
-                      custom_id: `safari_give_item_select_${buttonId}`,
-                      placeholder: `Select item to give...`,
-                      options: itemOptions
-                    }]
-                  }
-                ]
-              }],
-              flags: (1 << 15), // IS_COMPONENTS_V2
-              ephemeral: true
-            };
+            // One-shot create modal. Its Item select is optional — leaving it blank falls
+            // through to buildItemPickerUI (with search) for guilds holding >25 items.
+            const { buildGiveItemModal, getSortedGuildItems } = await import('./customActionUI.js');
+            const { buildLimitOptions } = await import('./utils/periodUtils.js');
+            console.log(`✅ SUCCESS: safari_action_type_select - showing give_item create modal (${itemCount} items)`);
+            return buildGiveItemModal(
+              buttonId,
+              executeOn,
+              getSortedGuildItems(items),
+              buildLimitOptions({ currentLimit: 'once_per_player', periodDescription: 'Defaults to 1d here — change it in Outcome Config', includeCustom: false })
+            );
           } else if (actionType === 'give_currency') {
             // One-shot create modal (amount + usage limit + executes-if). The Container editor
             // at showGiveCurrencyConfig is still the EDIT surface — Outcome list → Edit.
@@ -20539,17 +20498,13 @@ To fix this:
             };
           }
           
-          // For display_text, show new entity interface
+          // One-shot create modal. The config Container is still the EDIT surface (it renders
+          // the image preview + invalid-URL warning, which a modal can't).
           if (actionType === 'display_text') {
-            // Determine the action index for new action
-            const { loadSafariContent } = await import('./safariManager.js');
-            const safariData = await loadSafariContent();
-            const currentButton = safariData[context.guildId]?.buttons?.[buttonId];
-            const actionIndex = currentButton?.actions?.length || 0;
-
-            console.log(`✅ SUCCESS: safari_action_type_select - showing display_text entity for ${buttonId}[${actionIndex}]`);
-            const { showDisplayTextConfig } = await import('./customActionUI.js');
-            return await showDisplayTextConfig(context.guildId, buttonId, actionIndex);
+            const actionIndex = button.actions?.length || 0;
+            console.log(`✅ SUCCESS: safari_action_type_select - showing display_text create modal for ${buttonId}[${actionIndex}]`);
+            const { buildDisplayTextCreateModal } = await import('./customActionUI.js');
+            return await buildDisplayTextCreateModal(context.guildId, buttonId, actionIndex, executeOn);
 
           // For calculate_results, show new entity interface
           } else if (actionType === 'calculate_results') {
@@ -41110,6 +41065,40 @@ To fix this:
           }
         });
       }
+    } else if (custom_id.startsWith('safari_item_quick_')) {
+      // One-shot Give / Remove Item create modal
+      try {
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to edit actions.')) return;
+        const { handleGiveItemQuickSubmit, buildItemPickerUI } = await import('./customActionUI.js');
+        const guildId = req.body.guild_id;
+        const result = await handleGiveItemQuickSubmit(guildId, custom_id, req.body.data);
+
+        // Item left blank → show the picker (which has search), carrying what they already
+        // filled in so showGiveItemConfig can hydrate it once an item is chosen.
+        if (result.needsPicker) {
+          dropConfigState.set(`${guildId}_${result.buttonId}_pending`, result.pending);
+          const { loadSafariContent } = await import('./safariManager.js');
+          const items = (await loadSafariContent())[guildId]?.items || {};
+          return res.send({
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: buildItemPickerUI(result.buttonId, items, 'Your quantity, limit and condition are kept — just pick the item.')
+          });
+        }
+
+        if (!result.components) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { content: result.content, flags: InteractionResponseFlags.EPHEMERAL }
+          });
+        }
+        return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: { ...result } });
+      } catch (error) {
+        console.error('Error in safari_item_quick handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { content: '❌ Error saving item outcome.', flags: InteractionResponseFlags.EPHEMERAL }
+        });
+      }
     } else if (custom_id.startsWith('safari_currency_quick_')) {
       // One-shot Give / Remove Currency create modal (amount + limit + executes-if)
       try {
@@ -49547,14 +49536,23 @@ async function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) 
   const stateKey = `${guildId}_${buttonId}_${itemId}_${actionIndex}`;
   let state = dropConfigState.get(stateKey);
 
+  // Carry from the one-shot modal when the admin left Item blank and came via the picker.
+  // Consumed on FIRST entry whether used or not, so it can't re-apply to a later item.
+  const pendingKey = `${guildId}_${buttonId}_pending`;
+  const pending = dropConfigState.get(pendingKey);
+  if (pending) dropConfigState.delete(pendingKey);
+
   // If no state exists, create with defaults and save it immediately
   if (!state) {
     state = {
-      limit: 'once_per_player',   // Default to once per player (most common)
-      style: '2',                 // Default to Secondary/Grey
-      quantity: 1,                // Default to 1 item
-      operation: 'give',          // Default to give (not remove)
-      executeOn: global.pendingExecuteOn?.get(`${guildId}_${buttonId}`) || 'true'
+      limit: pending?.limitType || 'once_per_player',   // Default to once per player (most common)
+      style: '2',                                       // Default to Secondary/Grey
+      quantity: pending?.quantity ?? 1,                 // Default to 1 item
+      operation: pending?.operation || 'give',          // Default to give (not remove)
+      executeOn: pending?.executeOn || global.pendingExecuteOn?.get(`${guildId}_${buttonId}`) || 'true',
+      // MUST ride along: Save & Finish writes `periodMs: state.periodMs`, and an undefined
+      // period makes a once_per_period limit coerce to 0 and never block. See parseGiveItemFields.
+      ...(pending?.periodMs ? { periodMs: pending.periodMs } : {})
     };
     // Hydrate from the saved action so re-editing reflects current config (esp. custom limits)
     try {

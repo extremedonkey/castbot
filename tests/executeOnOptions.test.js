@@ -15,6 +15,8 @@ import {
   EXECUTE_ON_TERMS,
   DEFAULT_EXECUTE_ON,
   buildExecuteOnOptions,
+  buildExecuteOnRadioOptions,
+  toRadioOptions,
   normalizeExecuteOn,
   executeOnEmoji,
   executeOnShortLabel
@@ -101,5 +103,98 @@ describe('executeOnOptions — buildExecuteOnOptions', () => {
       assert.equal(typeof o.emoji.name, 'string');
       assert.equal(typeof o.value, 'string');
     }
+  });
+});
+
+/**
+ * Radio Group variants. Modals ignore a String Select's option `default`, so any modal field
+ * that must show the CURRENT value has to be a Radio Group (type 21) — and a Radio Group
+ * pre-selects only if exactly one option carries `default` and the siblings omit the key
+ * entirely. An explicit `default: false` on a sibling silently kills pre-selection for the
+ * whole group, and an unsupported field like `emoji` rejects the entire modal with no
+ * server-side error. Both documented in ComponentsV2.md; both invisible until a user reports
+ * "the modal just says This interaction failed".
+ */
+describe('executeOnOptions — buildExecuteOnRadioOptions', () => {
+  it('marks exactly one option and OMITS the key from the rest', () => {
+    for (const current of ['true', 'false', 'always']) {
+      const opts = buildExecuteOnRadioOptions({ current, includeAlways: true });
+      const withKey = opts.filter(o => 'default' in o);
+      assert.equal(withKey.length, 1, `exactly one carries \`default\` for ${current}`);
+      assert.equal(withKey[0].default, true);
+      assert.equal(withKey[0].value, current);
+    }
+  });
+
+  it('never emits `default: false` — the sibling that would kill the whole group', () => {
+    const opts = buildExecuteOnRadioOptions({ current: 'true', includeAlways: true });
+    assert.equal(opts.some(o => o.default === false), false);
+  });
+
+  it('carries no emoji field — no working Radio Group in the codebase has one', () => {
+    for (const o of buildExecuteOnRadioOptions({ includeAlways: true })) {
+      assert.equal('emoji' in o, false);
+    }
+  });
+
+  it('keeps the emoji visible by folding it into the label instead', () => {
+    const [pass, fail] = buildExecuteOnRadioOptions();
+    assert.match(pass.label, /^🟢/);
+    assert.match(fail.label, /^🔴/);
+  });
+
+  it('stays within Discord\'s option-count and field limits', () => {
+    const opts = buildExecuteOnRadioOptions({ includeAlways: true });
+    assert.ok(opts.length >= 2 && opts.length <= 10, 'Radio Group holds 2-10 options');
+    for (const o of opts) {
+      assert.ok(o.label.length <= 100, `label within 100: ${o.label}`);
+      assert.ok(o.description.length <= 100, 'description within 100');
+    }
+  });
+
+  it('mirrors the select builder\'s branch visibility rules', () => {
+    assert.equal(buildExecuteOnRadioOptions({ current: 'true' }).length, 2);
+    assert.equal(buildExecuteOnRadioOptions({ current: 'always' }).length, 3, 'never demotes an always-outcome');
+  });
+});
+
+describe('executeOnOptions — toRadioOptions', () => {
+  const selectOpts = [
+    { label: 'Unlimited', value: 'unlimited', description: 'forever', emoji: { name: '♾️' }, default: false },
+    { label: 'Once Per Player', value: 'once_per_player', description: 'each once', emoji: { name: '👤' }, default: true },
+    { label: 'Once Globally', value: 'once_globally', emoji: { name: '🌍' }, default: false }
+  ];
+
+  it('strips every `default: false` and keeps the single true one', () => {
+    const radio = toRadioOptions(selectOpts);
+    assert.equal(radio.filter(o => 'default' in o).length, 1);
+    assert.equal(radio.find(o => o.default).value, 'once_per_player');
+  });
+
+  it('moves the emoji into the label and drops the unsupported field', () => {
+    const [first] = toRadioOptions(selectOpts);
+    assert.equal('emoji' in first, false);
+    assert.match(first.label, /^♾️ Unlimited/);
+  });
+
+  it('omits description entirely when the source had none', () => {
+    const last = toRadioOptions(selectOpts).at(-1);
+    assert.equal('description' in last, false);
+  });
+
+  it('caps at 10 — Discord\'s Radio Group limit', () => {
+    const many = Array.from({ length: 30 }, (_, i) => ({ label: `L${i}`, value: `v${i}` }));
+    assert.equal(toRadioOptions(many).length, 10);
+  });
+
+  it('clamps over-long labels and descriptions to 100 chars', () => {
+    const [o] = toRadioOptions([{ label: 'L'.repeat(200), value: 'v', description: 'D'.repeat(200) }]);
+    assert.equal(o.label.length, 100);
+    assert.equal(o.description.length, 100);
+  });
+
+  it('handles empty and missing input', () => {
+    assert.deepEqual(toRadioOptions([]), []);
+    assert.deepEqual(toRadioOptions(undefined), []);
   });
 });
