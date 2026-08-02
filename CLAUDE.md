@@ -110,6 +110,8 @@ const count = countComponents([container], { enableLogging: false });
 - **Buttons that TRIGGER modals** → use factory with `requiresModal: true`
 - **Modal SUBMIT handlers** → use `res.send()` in the MODAL_SUBMIT section (this is correct, not legacy)
 
+**Modal custom_ids do NOT go in BUTTON_REGISTRY** — step 4 below is for message components only. The `[✨ FACTORY]`/`[🪨 LEGACY]` tag is computed inside the `MESSAGE_COMPONENT` branch, which the MODAL_SUBMIT branch never reaches. Long-standing precedent: `safari_display_text_save_*` has run in production for months with no entry, while every message-component id in the same flow has one.
+
 **🚨 QUICK CHECK BEFORE CREATING ANY BUTTON:**
 1. **Search ButtonHandlerRegistry.md** - Check if button already exists
 2. **Search for similar buttons**: `grep -A20 "similar_feature" app.js`
@@ -517,7 +519,7 @@ When a feature is **deployed to production and working**, move/rename its doc in
 **Safari Subsystems:**
 - **⚡ ACTIONS** (formerly Custom Actions) → [docs/03-features/SafariCustomActions.md](docs/03-features/SafariCustomActions.md) - Action system (triggers, outcomes, conditions). See [Terminology](docs/01-RaP/0956_20260308_ActionTerminology_Analysis.md) for naming conventions
 - **🔄 RESET SAFARI** → [docs/02-implementation-wip/SafariReset.md](docs/02-implementation-wip/SafariReset.md) - Map Explorer → **Reset Safari**: clears Safari *play state* (action claims, map item-drop claims, world flags, player economy/points, rounds) across three scopes — **never** deletes Actions/Items/Stores/Maps. Pre-flight preview lists the `once_globally` roster + finite store stock (which can't be restored — no `originalStock` exists). Module: [safariReset.js](safariReset.js)
-- **🚦 USAGE LIMITS** → [docs/03-features/SafariUsageLimits.md](docs/03-features/SafariUsageLimits.md) - Claim-gating for outcomes: `unlimited`/`once_per_player`/`once_globally`/`once_per_period` presets + the orthogonal `custom` type (maxClaims×scope×unique×reset), Usage Templates, Player Claims admin. Engine: [periodUtils.js](utils/periodUtils.js). Was RaP 0905
+- **🚦 USAGE LIMITS** → [docs/03-features/SafariUsageLimits.md](docs/03-features/SafariUsageLimits.md) - Claim-gating for outcomes: `unlimited`/`once_per_player`/`once_globally`/`once_per_period` presets + the orthogonal `custom` type (maxClaims×scope×unique×reset), Usage Templates, Player Claims admin. **The engine is SPLIT** — classic presets go through `evaluateClassicGate` ([claimsManager.js](claimsManager.js)), reserved atomically by `reserveClassicClaim` ([safariManager.js](safariManager.js), gate+record in one `withSafariLock` cycle, rollback on failure); only `custom` uses `checkLimitGate`/`recordLimitClaim` ([periodUtils.js](utils/periodUtils.js)). The two disagree on `once_globally` residue shapes, so chasing a claim bug in the wrong file gives a wrong answer, not just a wrong location. Was RaP 0905
 - **🏃 CHALLENGES** → [docs/03-features/Challenges.md](docs/03-features/Challenges.md) - Configurable challenge/rounds system (decoupled from map)
 - **🏪 STORES** → [docs/03-features/StoreManagementArchitecture.md](docs/03-features/StoreManagementArchitecture.md) - Store management, global stores, stock limits
 - **📦 ITEMS** → [docs/03-features/SafariImportExport.md](docs/03-features/SafariImportExport.md) - Items, stock management, import/export

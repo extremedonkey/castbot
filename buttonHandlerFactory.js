@@ -4062,7 +4062,7 @@ export const BUTTON_REGISTRY = {
   },
   'safari_action_type_select_*': {
     label: 'Select Outcome Type',
-    description: 'Add outcome to action. Suffix _true = Pass, _false = Fail. Uses shared OUTCOME_TYPE_OPTIONS from customActionUI.js',
+    description: 'Add outcome to action. Suffix _always = Opening, _true = Pass, _false = Fail — carried verbatim into the create modal custom_id and parsed back with /_(true|false|always)$/, so a two-value regex silently demotes Always outcomes. display_text / give_item / give_currency return a MODAL here; other types return a Container.',
     emoji: '🎯',
     style: 'Primary',
     category: 'safari_management',
@@ -4102,7 +4102,7 @@ export const BUTTON_REGISTRY = {
   },
   'safari_view_claims_*': {
     label: 'Player Claims',
-    description: 'Open the per-player claims manager for an outcome (give_item, give_currency, modify_attribute, fight_enemy)',
+    description: 'Open the per-player claims manager for an outcome — see CLAIM_OUTCOME_TYPES in customActionUI.js (give_item, give_currency, modify_attribute, give_stamina, fight_enemy); offered regardless of the outcome\'s usage limit',
     emoji: '👥',
     style: 'Secondary',
     category: 'safari_management'
@@ -5196,7 +5196,11 @@ export const BUTTON_REGISTRY = {
   'safari_currency_modal_*': { label: 'Currency Modal', emoji: '💰', category: 'safari_actions' },
   'safari_currency_reset_*': { label: 'Currency Reset', emoji: '💰', category: 'safari_actions' },
   'safari_display_text_edit_*': { label: 'Display Text Edit', emoji: '💬', category: 'safari_actions' },
-  'safari_display_text_execute_on_*': { label: 'Display Text Execute On', emoji: '💬', category: 'safari_actions' },
+  // ⚱️ DEAD — nothing renders this select. The handler (app.js) and handleDisplayTextExecuteOn
+  // (customActionUI.js) still exist but are unreachable: Display Text's branch is set by the
+  // create modal's Executes-if field, and changed afterwards via the outcome menu's "Move to…".
+  // Kept registered only so the entry documents itself; safe to delete with its handler.
+  'safari_display_text_execute_on_*': { label: 'Display Text Execute On (dead)', emoji: '💬', category: 'safari_actions' },
   'safari_drop_reset_*': { label: 'Drop Reset', emoji: '🔄', category: 'safari_actions' },
   'safari_drop_save_*': { label: 'Drop Save', emoji: '💾', category: 'safari_actions' },
   'safari_drop_style_*': { label: 'Drop Style', emoji: '🎨', category: 'safari_actions' },

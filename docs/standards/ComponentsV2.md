@@ -77,7 +77,7 @@ Components V2 is Discord's new component system that provides enhanced layout ca
 3. **Component Limits**:
    - Messages allow up to 40 total components
    - Action Rows can contain maximum 5 buttons
-   - Modals can have maximum 5 text inputs
+   - Modals allow maximum **5 top-level components of ANY type** — not 5 *text inputs*. A Label (18) wrapping a Radio Group counts the same as one wrapping a Text Input. All three Safari outcome-create modals sit exactly AT this cap, so the next field added to any of them breaks it.
 
 ## Architecture Components
 
@@ -270,8 +270,10 @@ Components V2 is Discord's new component system that provides enhanced layout ca
 }
 ```
 
-##### String Select Default Behavior (Important Discovery)
-**CRITICAL**: Discord String Selects DO support pre-selection via the `default` property on options, contrary to some documentation. This behavior has been verified in production:
+##### String Select Default Behavior — MESSAGES ONLY (Important Discovery)
+**CRITICAL**: in **messages**, Discord String Selects DO support pre-selection via the `default` property on options, contrary to some documentation. This behavior has been verified in production.
+
+> 🚨 **This does NOT hold in modals.** A modal String Select renders with nothing pre-selected no matter what `default` says — see [String Select in Modals](#string-select-in-modals-type-3) below. Both examples cited here are message components. Reading this section in isolation is what shipped `buildGiveCurrencyModal` (commit `3db35303`) with modal selects whose defaults could only be *described* in placeholder text. **For a single-choice modal field that must show its current value, use Radio Group (type 21).**
 
 ```javascript
 // Pre-selecting items in a String Select
@@ -309,7 +311,7 @@ const options = items.map(item => ({
 #### Label (Type 18) - NEW!
 - **Purpose**: Top-level wrapper for modal components with title and description
 - **Features**: Replaces ActionRow for better accessibility
-- **Contains**: Text Input OR String Select (not both)
+- **Contains**: exactly ONE component — Text Input (4), any Select (3/5/6/7/8), Radio Group (21), Checkbox Group (22), Checkbox (23), or File Upload (19)
 - **Usage**: Preferred pattern for all modal inputs
 
 ```javascript
@@ -440,6 +442,19 @@ All select menus MUST be wrapped in Label component when used in modals:
 - **Limits**: 2-10 options
 - **Features**: `required` field (defaults to true), `default` on options
 - **🚨 GOTCHA — put `default: true` on exactly ONE option and OMIT the key from the others** (observed 2026-07-16, Stamina Settings modal): an explicit `default: false` on a sibling option suppresses pre-selection for the WHOLE group — nothing renders selected. Use `...(cond ? { default: true } : {})` spreads, never `default: someBool` on every option.
+- **🚨 GOTCHA — Radio Group options take NO `emoji` field** (2026-08-02). No working Radio Group in this codebase carries one; an unsupported field rejects the entire modal with a bare "This interaction failed" and nothing server-side. Fold the emoji into the `label` instead (`'🟢 All conditions are true'`).
+- **Converting select options → radio options**: use `toRadioOptions()` in [utils/executeOnOptions.js](../../utils/executeOnOptions.js). It strips `emoji`, drops every `default: false`, keeps the single `default: true`, and caps at 10 — encoding both gotchas once instead of at each call site.
+
+**Choosing Radio Group vs String Select in a modal** — the deciding factor is option count and whether you need to show current state:
+
+| | Radio Group (21) | String Select (3) |
+|---|---|---|
+| Max options | **10** | **25** |
+| `default` pre-selects? | ✅ yes | ❌ **ignored in modals** |
+| Emoji on options | ❌ not supported | ✅ supported |
+| Use when | ≤10 options and the current value must be visible | >10 options, or nothing to pre-select |
+
+If you need >10 options *and* a visible default, you cannot have both — name the default in the `placeholder` and re-apply it in the submit handler (see `buildGiveCurrencyModal`).
 
 ```javascript
 {

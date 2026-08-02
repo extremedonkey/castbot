@@ -45,7 +45,7 @@ export function countClaims(limit) {
 /**
  * Decide whether `userId` may claim an outcome carrying one of the CLASSIC limit types
  * (unlimited / once_per_player / once_globally / once_per_period). `custom` limits are gated
- * by checkLimitGate() in customUsageLimitUI.js and always return `{blocked:false}` here.
+ * by checkLimitGate() in utils/periodUtils.js and always return `{blocked:false}` here.
  *
  * Pure — pair it with addClaim() inside ONE withSafariLock cycle so the check and the claim
  * write can't be interleaved by a second claimant (see reserveClassicClaim in safariManager.js).

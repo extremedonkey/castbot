@@ -103,7 +103,9 @@ describe('Give / Remove Item modal — shape', () => {
 });
 
 describe('Give / Remove Item modal — parsing', () => {
-  const base = { quantity: '1', operation: ['give'], usage_limit: ['once_per_player'], execute_on: ['true'] };
+  // Radio Groups submit `value` (a STRING); only Selects submit `values` (an array).
+  // Model the real payload here — array fixtures previously implied the wrong shape.
+  const base = { quantity: '1', operation: 'give', usage_limit: 'once_per_player', execute_on: 'true' };
 
   it('parses a complete submit', () => {
     const r = parseGiveItemFields({ ...base, item_select: ['idol_1'], quantity: '3' }, 'true');
@@ -135,8 +137,8 @@ describe('Give / Remove Item modal — parsing', () => {
     assert.equal(r.executeOn, 'false', 'falls back to the custom_id branch');
   });
 
-  it('tolerates bare strings as well as arrays from the modal payload', () => {
-    const r = parseGiveItemFields({ quantity: '2', operation: 'remove', usage_limit: 'unlimited', item_select: 'x' }, 'true');
+  it('tolerates arrays as well as the bare strings radios actually send', () => {
+    const r = parseGiveItemFields({ quantity: '2', operation: ['remove'], usage_limit: ['unlimited'], item_select: ['x'] }, 'true');
     assert.equal(r.operation, 'remove');
     assert.equal(r.limitType, 'unlimited');
     assert.equal(r.itemId, 'x');
@@ -279,7 +281,7 @@ describe('Display Text preview — no more premature truncation', () => {
  * The invariant: whatever route an admin takes, the SAME modal answers must store the SAME limit.
  */
 describe('Give / Remove Item — the blank-item route stores the same limit as the inline route', () => {
-  const answers = extra => ({ quantity: '1', operation: ['give'], usage_limit: ['once_per_period'], ...extra });
+  const answers = extra => ({ quantity: '1', operation: 'give', usage_limit: 'once_per_period', ...extra });
 
   it('carries periodMs in the pending so the Container editor can persist it', () => {
     const pending = parseGiveItemFields(answers(), 'true');
@@ -303,7 +305,7 @@ describe('Give / Remove Item — the blank-item route stores the same limit as t
 
   it('carries no periodMs for the limit types that have no period', () => {
     for (const limit of ['unlimited', 'once_per_player', 'once_globally']) {
-      const pending = parseGiveItemFields(answers({ usage_limit: [limit] }), 'true');
+      const pending = parseGiveItemFields(answers({ usage_limit: limit }), 'true');
       assert.equal('periodMs' in pending, false, `${limit} carries no stray period`);
     }
   });

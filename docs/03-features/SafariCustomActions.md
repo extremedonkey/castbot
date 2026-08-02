@@ -67,28 +67,50 @@ Custom Actions now support the same drop management features as map locations:
 
 ## Outcome Types
 
+> **All three of Display Text, Give / Remove Item and Give / Remove Currency are created from a
+> SINGLE modal** opened straight from the Add Outcome select. Their Container screens remain the
+> **edit** surface (Outcome list → Edit) because Custom usage-limit sub-screens and the image
+> preview can't live inside a modal. Every other outcome type still opens a Container to create.
+
 ### 1. Display Text
 Shows formatted text with optional images and styling.
 
+Create opens `buildDisplayTextModal` ([customActionUI.js](../../customActionUI.js)) via
+`buildDisplayTextCreateModal`, submitting to `safari_display_text_save_{buttonId}_{actionIndex}`.
+
 **Configuration:**
-- Title (optional)
-- Content (required)
+- Title (optional, ≤100 chars)
+- Content (required, ≤2000 chars)
 - Accent Color (optional)
-- Image URL (optional)
+- Image — **either** a paste-URL text input **or** a native File Upload (type 19), depending on
+  the guild's `imageUploadMode` (`buildImageFieldLabel` decides; see [ImageUploads.md](ImageUploads.md))
+- **Executes if** — Radio Group, **create only**. On edit the outcome already has a branch and the
+  outcome context menu's *Move to…* owns changing it, so the field is omitted rather than offering
+  two controls that can disagree.
+
+Unlike the other two, saving this modal returns to the Display Text **Container**, not the Action
+Editor — that screen is where the image preview lives.
 
 ### 2. Give / Remove Item
 Awards or removes items from players with configurable usage limits.
 
-**Configuration:**
-- Item selection from available items
-- Quantity (always positive)
-- **Operation** (new):
-  - `give` - Adds items to inventory (default)
-  - `remove` - Removes items from inventory
-- Usage limit:
-  - Unlimited
-  - Once per player
-  - Once globally (first come, first served)
+Create opens `buildGiveItemModal`, submitting to `safari_item_quick_{buttonId}_{executeOn}`.
+Five Labels — Discord's cap:
+
+| Field | Control | Notes |
+|---|---|---|
+| **Item** | String Select, **optional** | Caps at Discord's 25 options and always states how many it left out. **Leave it blank** to fall through to the full picker (which has search) — the escape hatch for guilds holding >25 items |
+| **Quantity** | Text Input | Always positive; 1–99999. Direction is the next field, never the sign |
+| **Give or Remove** | Radio Group | An explicit mode switch, deliberately unlike currency's negative amount — removes are ~45% of item outcomes |
+| **Usage Limit** | Radio Group | `unlimited` · `once_per_player` (pre-selected) · `once_globally` · `once_per_period`. **Custom… and Usage Templates are absent** — their sub-screens need the Container |
+| **Executes if** | Radio Group | Defaults to the branch you clicked Add Outcome under |
+
+Picking **Once Per Period** here hard-codes a **1 day** period (`QUICK_PERIOD_MS`) — change it
+afterwards in Outcome Config. Blank-item submits carry your other answers to the picker via
+`dropConfigState` key `` `${guildId}_${buttonId}_pending` ``, consumed on first read.
+
+The item select is shared with Quick Create via [utils/itemSelectField.js](../../utils/itemSelectField.js) —
+change the truncation messaging there, not at either call site.
 
 **Give Example:**
 ```javascript
@@ -289,12 +311,17 @@ Both are implemented in `evaluateSingleCondition()` in `safariManager.js`, confi
 2. Configure each outcome's settings
 3. Outcomes execute in order
 
-### Step 4: Configure Drops (if applicable)
-When adding Give Item or Give Currency actions:
-1. Select the resource (item/currency)
-2. Set quantity/amount
-3. Choose usage limit
-4. Configure button appearance (if triggered by button)
+### Step 4: Configure the outcome
+There is no multi-step "configure drops" flow any more. Picking **Display Text**, **Give / Remove
+Item** or **Give / Remove Currency** opens one modal that captures everything and lands you back on
+the Action Editor (Display Text lands on its config Container instead — see above). Every other
+outcome type opens a Container to configure.
+
+The one branch: leaving the item modal's **Item** select blank routes you to the search picker,
+carrying your other answers with you.
+
+**Button appearance is not part of an outcome.** Label, emoji and style belong to the parent
+Action's Trigger Type menu — outcomes have no button of their own.
 
 ## Usage Limits
 
@@ -310,37 +337,34 @@ Every rewarding outcome can be claim-gated via `action.config.limit`. There are 
 
 📖 **Full reference — types, the custom engine, Usage Templates, the Player Claims admin, and player-facing copy — lives in [SafariUsageLimits.md](SafariUsageLimits.md).**
 
-## Drop Configuration UI
+## Outcome Config (the edit Container)
 
-The drop configuration interface (reused from map drops) provides:
+Reached from the outcome context menu → **Edit Outcome**. `showGiveItemConfig` /
+`showGiveCurrencyConfig` render:
 
-1. **Item/Currency Selection**
-2. **Quantity/Amount Setting**
-3. **Usage Limit Options**
-4. **Button Customization** (for button triggers):
-   - Button text
-   - Emoji
-   - Style (Primary/Secondary/Success/Danger)
-5. **Reset Claims** option for admins
+1. **Quantity / Amount**
+2. **Usage Limit** select — the only place offering **⚙️ Custom…** and saved **Usage Templates**
+3. **Give / Remove** operation (item only)
+4. **Executes if**
+5. **👥 Player Claims** — opens the per-player claims manager
+6. **Delete Action** · **Save & Finish**
 
-## Button States
+> This screen was previously documented as "reused from map drops", with button-text/emoji/style
+> fields and a "Reset Claims" button. None of that holds: map drops were removed entirely
+> (commit `88447d75`), outcomes have never had their own button styling, and the control is
+> **Player Claims**, not Reset Claims.
 
-For Actions with usage limits:
+## Claim Gating (there are no claim-aware button states)
 
-### Available
-- Normal button appearance
-- Clickable
-- Shows reward name
+Buttons are **not** disabled or relabelled based on who has claimed. Gating happens at
+**execution** time: `reserveClassicClaim` ([safariManager.js](../../safariManager.js)) evaluates
+`evaluateClassicGate` and records the claim inside one `withSafariLock` cycle *before* granting the
+reward, rolling back if the grant fails. A blocked player gets an ephemeral message —
+e.g. `❌ You have already claimed this reward!`
 
-### Already Claimed (Per Player)
-- Disabled state
-- Gray appearance
-- Text: "[Reward] - Already claimed"
-
-### Globally Claimed
-- Disabled state
-- Gray appearance  
-- Text: "[Reward] - Claimed by [Username]"
+> An earlier version of this doc described disabled grey buttons reading "[Reward] - Already
+> claimed" / "Claimed by [Username]". No code has ever implemented that; those strings appear
+> nowhere in the codebase. Don't build against it.
 
 ## Admin Features
 

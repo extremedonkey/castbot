@@ -5654,8 +5654,13 @@ export async function handleDisplayTextSave(guildId, customId, formData, client)
   // stashed by the type select, then 'true'.
   const pendingKey = `${guildId}_${buttonId}`;
   const pendingExecuteOn = global.pendingExecuteOn?.get(pendingKey);
+  // Unwrap defensively: a Radio Group submits `value` (a string) while every Select submits
+  // `values` (an array), and collectModalFields passes whichever it finds straight through. A
+  // raw read would silently normalise an array to the default 'true' and file the outcome in
+  // the wrong branch, so never assume the shape here — parseGiveItemFields does the same.
+  const submittedExecuteOn = Array.isArray(fields.execute_on) ? fields.execute_on[0] : fields.execute_on;
   const executeOnValue = existingAction?.executeOn
-    || normalizeExecuteOn(fields.execute_on || pendingExecuteOn);
+    || normalizeExecuteOn(submittedExecuteOn || pendingExecuteOn);
   if (pendingExecuteOn) {
     global.pendingExecuteOn.delete(pendingKey);
   }
