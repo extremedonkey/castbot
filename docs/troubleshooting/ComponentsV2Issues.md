@@ -849,6 +849,53 @@ await channel.send({ flags: 1 << 15, components: [{ type: 17, ... }] });
 - `allowed_mentions` (snake_case), not discord.js's `allowedMentions`
 - `DiscordRequest` returns the parsed message JSON on success, but `null` (no throw) for deleted channel/message — check `message?.id` if you need delivery confirmation
 
+### 16. Modal Rejected Wholesale by One Bad Label/Component Field
+
+**Symptom**: A modal that previously worked now fails instantly — the button logs `isModal: true` and a response is sent, then Discord shows "This interaction failed". No error in the logs, because the send succeeded; Discord rejected the payload.
+
+**Root Cause**: ANY single invalid field anywhere in the modal invalidates the WHOLE modal. Two easy ones, both hit on 2026-08-02 in the Settings → 📍 Location modal:
+
+1. **`required` on a Checkbox (type 23)** — a Checkbox cannot be required (see [ComponentsV2.md](../standards/ComponentsV2.md) Checkbox section). Even `required: false` is rejected; omit the key entirely.
+2. **Label `description` over 100 characters** — Discord caps `description` at 100 and `label` at 45. A long, helpful description silently kills the modal.
+
+```javascript
+// ❌ WRONG — either of these alone breaks the entire modal
+{
+  type: 18, // Label
+  label: 'Require ALL Key Items',
+  description: 'Multi-key doors: when a blocked cell is unlocked by several items, players must hold ALL of them. Off = any one item unlocks it.', // 128 chars > 100
+  component: { type: 23, custom_id: 'flag', required: false, default: false } // Checkbox can't be required
+}
+
+// ✅ CORRECT
+{
+  type: 18,
+  label: 'Require ALL Key Items',                                          // ≤ 45
+  description: 'Multi-key doors: a cell unlocked by several items needs ALL of them. Off = any one unlocks it.', // ≤ 100
+  component: { type: 23, custom_id: 'flag', default: false }               // no `required`
+}
+```
+
+**Modal field limits worth memorizing**:
+
+| Field | Limit |
+|---|---|
+| Modal `title` | 45 |
+| Modal top-level components | 5 |
+| Label `label` | 45 |
+| Label `description` | 100 |
+| `custom_id` | 100 |
+
+**Why unit tests missed it**: the existing tests replicated the modal builder inline (per Testing Standards) but the replica omitted `description` entirely — so it passed while production broke. **Lesson: replicas are fine for pure logic, but payload validity must be asserted against the REAL builder.** `tests/safariSettingsUI.test.js` now imports `createFieldGroupModal` directly and validates every field group's actual payload against the table above (label/description lengths, no `required` on type 23, ≤5 components, everything Label-wrapped). Both assertions were verified to fail when the bug is reintroduced.
+
+**Debugging tip**: when a modal dies instantly, dump the payload and measure every string — don't eyeball it:
+```javascript
+for (const row of modal.components) {
+  if (row.type !== 18) continue;
+  console.log(row.component?.custom_id, 'label:', row.label.length, 'desc:', (row.description||'').length, row.component?.type);
+}
+```
+
 ## Quick Reference
 
 **Always Remember**:
@@ -868,6 +915,7 @@ await channel.send({ flags: 1 << 15, components: [{ type: 17, ... }] });
 14. **Plain content doesn't support ephemeral** - Must use full Container structure
 15. **Check for pattern conflicts** - `startsWith()` can match unintended button IDs
 16. **ButtonHandlerFactory select values** - Use `context.values[0]` not `context.data.values[0]`
+17. **Never put `required` on a Checkbox (type 23)** - and keep Label `description` ≤ 100 chars; either one kills the whole modal
 
 **Ephemeral Quick Pattern**:
 ```javascript

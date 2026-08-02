@@ -549,7 +549,9 @@ All select menus MUST be wrapped in Label component when used in modals:
 // component.value === true (checked) or false (unchecked)
 ```
 
-**Note**: Checkbox cannot be set as `required`. Use a Checkbox Group with 1 option + `required: true` if you need mandatory acknowledgment.
+**🚨 Note**: Checkbox cannot be set as `required` — **omit the key entirely**. Sending `required: false` is just as fatal as `required: true`: Discord rejects the ENTIRE modal and the user gets an instant "This interaction failed" with no server-side error (verified 2026-08-02, Settings → Location modal). Use a Checkbox Group with 1 option + `required: true` if you need mandatory acknowledgment.
+
+**Label limits that apply to every modal component**: `label` ≤ 45 chars, `description` ≤ 100 chars, modal `title` ≤ 45, max 5 top-level components. Any single overflow rejects the whole modal. See [ComponentsV2Issues.md §16](../troubleshooting/ComponentsV2Issues.md).
 
 #### File Upload (Type 19) - NEW!
 - **Purpose**: Allow users to upload files within modals
