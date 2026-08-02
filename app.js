@@ -29802,25 +29802,29 @@ To fix this:
         }
       })(req, res, client);
       
-    } else if (custom_id.startsWith('entity_action_conditions_')) {
-      // Legacy conditions handler - kept for backward compatibility
+    // 🧩 Manage, from the Action Editor. With ZERO conditions the manager screen can only say
+    // "No conditions defined yet" next to an Add button — a whole interaction to reach the form.
+    // Skip straight to the modal in that case. The Back buttons and pagination keep using
+    // condition_manager_* below, so returning to an emptied list never pops a modal at you.
+    } else if (custom_id.startsWith('condition_manage_')) {
       return ButtonHandlerFactory.create({
-        id: 'entity_action_conditions',
+        id: 'condition_manage',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         handler: async (context) => {
-          console.log(`🔍 START: entity_action_conditions - user ${context.userId}`);
-          
-          const actionId = context.customId.replace('entity_action_conditions_', '');
-          const { createConditionsConfigUI } = await import('./customActionUI.js');
-          
-          const ui = await createConditionsConfigUI({
-            guildId: context.guildId,
-            actionId
-          });
-          
-          console.log(`✅ SUCCESS: entity_action_conditions - showing conditions config`);
-          return ui;
+          const actionId = context.customId.replace('condition_manage_', '');
+          const { loadSafariContent } = await import('./safariManager.js');
+          const { buildAddConditionModal, getSortedGuildItems, refreshConditionManagerUI } = await import('./customActionUI.js');
+          const safariData = await loadSafariContent();
+          const action = safariData[context.guildId]?.buttons?.[actionId];
+          const conditions = Array.isArray(action?.conditions) ? action.conditions : [];
+
+          if (conditions.length === 0) {
+            console.log(`🧩 CONDITIONS: ${actionId} has none — straight to the Add modal`);
+            return buildAddConditionModal(actionId, 0, getSortedGuildItems(safariData[context.guildId]?.items || {}));
+          }
+          await refreshConditionManagerUI({ res, actionId, guildId: context.guildId, currentPage: 0 });
+          return;
         }
       })(req, res, client);
     } else if (custom_id.startsWith('condition_manager_')) {
@@ -31212,26 +31216,6 @@ To fix this:
           
           console.log(`✅ SUCCESS: custom_action_editor - showing action editor for ${actionId}`);
           return ui;
-        }
-      })(req, res, client);
-      
-    } else if (custom_id.startsWith('custom_action_add_condition_')) {
-      // Handle add condition button
-      return ButtonHandlerFactory.create({
-        id: 'custom_action_add_condition',
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        handler: async (context) => {
-          console.log(`🔍 START: custom_action_add_condition - user ${context.userId}`);
-          
-          const actionId = context.customId.replace('custom_action_add_condition_', '');
-          
-          // TODO: Implement add condition modal
-          console.log(`✅ SUCCESS: custom_action_add_condition - condition adding not yet implemented`);
-          return {
-            content: '🚧 **Add Condition**\n\nThis feature is coming soon! You\'ll be able to add conditions like "Has Item", "Has Currency", etc.',
-            ephemeral: true
-          };
         }
       })(req, res, client);
       

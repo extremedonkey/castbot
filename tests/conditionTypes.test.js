@@ -13,6 +13,7 @@
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 
 import {
   CONDITION_TYPES,
@@ -224,6 +225,42 @@ describe('Add Condition — parsing and stored shape', () => {
       assert.equal(c.type, t.value);
       assert.equal(c.logic, 'AND');
       assert.match(c.id, /^cond_/);
+    }
+  });
+});
+
+/**
+ * The 🧩 Manage entry point.
+ *
+ * With zero conditions the manager screen can only say "No conditions defined yet" beside an Add
+ * button — a whole interaction spent to reach the form. That entry now skips to the modal, but it
+ * needed its OWN custom_id: three Back buttons and the pagination controls target
+ * condition_manager_*, and gating there would make Back pop a modal after you emptied the list.
+ */
+describe('Conditions — the Manage entry point is distinct from the manager screen', () => {
+  it('the Action Editor accessory targets condition_manage_, not condition_manager_', async () => {
+    const src = await readFile(new URL('../customActionUI.js', import.meta.url), 'utf8');
+    assert.match(src, /custom_id: `condition_manage_\$\{actionId\}`/, 'Manage uses the skip-capable id');
+  });
+
+  it('every Back/pagination target still uses condition_manager_ so Back always shows the screen', async () => {
+    for (const file of ['../customActionUI.js', '../app.js', '../diceRoll.js']) {
+      const src = await readFile(new URL(file, import.meta.url), 'utf8');
+      for (const m of src.matchAll(/custom_id: `condition_manage(r?)_\$\{actionId\}([^`]*)`/g)) {
+        const isManager = m[1] === 'r';
+        const label = m[0];
+        // The only non-manager form allowed is the bare entry point with no page segment
+        if (!isManager) assert.equal(m[2], '', `${file}: ${label} is the entry point, not a Back target`);
+      }
+    }
+  });
+
+  it('the dead legacy conditions path is gone from the codebase', async () => {
+    for (const file of ['../app.js', '../customActionUI.js', '../buttonHandlerFactory.js']) {
+      const src = await readFile(new URL(file, import.meta.url), 'utf8');
+      for (const dead of ['entity_action_conditions', 'custom_action_add_condition', 'createConditionsConfigUI']) {
+        assert.equal(src.includes(dead), false, `${file} still references ${dead}`);
+      }
     }
   });
 });

@@ -541,8 +541,11 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
                 content: `-# What gets checked when it is triggered?\n${conditionsDisplay}`
               }],
               accessory: {
+                // Its own id, not condition_manager_*: this entry point skips the empty manager
+                // screen and opens the Add modal when there are no conditions yet. The Back
+                // buttons that target condition_manager_* must keep showing the screen.
                 type: 2,
-                custom_id: `condition_manager_${actionId}_0`,
+                custom_id: `condition_manage_${actionId}`,
                 label: "Manage",
                 style: 2,
                 emoji: { name: "🧩" }
@@ -1909,102 +1912,6 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
   };
 }
 
-/**
- * Create conditions configuration UI
- */
-export async function createConditionsConfigUI({ guildId, actionId }) {
-  const allSafariContent = await loadSafariContent();
-  const guildData = allSafariContent[guildId] || {};
-  const action = guildData.buttons?.[actionId] || createDefaultAction();
-  const conditions = action.conditions || { logic: 'AND', items: [] };
-  
-  const components = [
-    {
-      type: 10,
-      content: `## 🔧 Action Conditions\n\nSet requirements that must be met before this action can be triggered:`
-    },
-    { type: 14 }
-  ];
-  
-  // Logic selector
-  components.push({
-    type: 1, // Action Row
-    components: [{
-      type: 3, // String Select
-      custom_id: `custom_action_condition_logic_${actionId}`,
-      placeholder: "Condition logic",
-      options: [
-        {
-          label: "ALL conditions must be met (AND)",
-          value: "AND",
-          emoji: { name: "🔀" },
-          default: conditions.logic === 'AND'
-        },
-        {
-          label: "ANY condition must be met (OR)",
-          value: "OR",
-          emoji: { name: "🔁" },
-          default: conditions.logic === 'OR'
-        }
-      ]
-    }]
-  });
-  
-  // Display existing conditions
-  if (conditions.items?.length > 0) {
-    components.push({ type: 14, spacing: 1 });
-    conditions.items.forEach((condition, index) => {
-      components.push({
-        type: 9, // Section
-        components: [{
-          type: 10,
-          content: getConditionDescription(condition)
-        }],
-        accessory: {
-          type: 2,
-          custom_id: `custom_action_remove_condition_${actionId}_${index}`,
-          label: "Remove",
-          style: 4, // Danger
-          emoji: { name: "🗑️" }
-        }
-      });
-    });
-  }
-  
-  // Add condition button
-  components.push({ type: 14, spacing: 1 });
-  components.push({
-    type: 1, // Action Row
-    components: [{
-      type: 2,
-      custom_id: `custom_action_add_condition_${actionId}`,
-      label: "Add Condition",
-      style: 1, // Primary
-      emoji: { name: "➕" }
-    }]
-  });
-  
-  return {
-    flags: (1 << 15), // IS_COMPONENTS_V2
-    components: [{
-      type: 17, // Container
-      components
-    }]
-  };
-}
-
-function getConditionDescription(condition) {
-  switch (condition.type) {
-    case 'has_item':
-      return `**Has Item:** ${condition.itemId} (×${condition.quantity || 1})`;
-    case 'has_currency':
-      return `**Has Currency:** ${condition.operator || '>='} ${condition.amount}`;
-    case 'at_coordinate':
-      return `**At Location:** ${condition.coordinate}`;
-    default:
-      return `**Unknown condition type**`;
-  }
-}
 
 /**
  * Build the channel card posted when an action is "Posted to Channel"
@@ -6028,7 +5935,6 @@ export default {
   createCustomActionSelectionUI,
   createCustomActionEditorUI,
   createTriggerConfigUI,
-  createConditionsConfigUI,
   createCoordinateManagementUI,
   refreshConditionManagerUI,
   showConditionEditor,

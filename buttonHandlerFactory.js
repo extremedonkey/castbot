@@ -3796,12 +3796,12 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari_management'
   },
-  'entity_action_conditions_*': {
-    label: 'Edit Conditions',
-    description: 'Configure action conditions and logic',
-    emoji: '🔧',
+  'condition_manage_*': {
+    label: 'Manage Conditions',
+    description: 'Conditions entry point from the Action Editor. Opens the Add Condition modal directly when the action has none, otherwise the condition manager. Back buttons use condition_manager_* so an emptied list never pops a modal',
+    emoji: '🧩',
     style: 'Secondary',
-    category: 'safari_management'
+    category: 'conditional_logic'
   },
   'entity_action_coords_*': {
     label: 'Manage Coordinates',
@@ -3959,13 +3959,6 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari_management',
     type: 'select_menu'
-  },
-  'custom_action_add_condition_*': {
-    label: 'Add Condition',
-    description: 'Add a new condition to action',
-    emoji: '➕',
-    style: 'Primary',
-    category: 'safari_management'
   },
   'custom_action_remove_condition_*': {
     label: 'Remove Condition',
