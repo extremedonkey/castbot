@@ -3905,25 +3905,7 @@ export async function showCalculateResultsConfig(guildId, buttonId, actionIndex)
             type: 3, // String Select
             custom_id: `safari_calculate_results_execute_on_${buttonId}_${actionIndex}`,
             placeholder: 'Select when to execute...',
-            options: (() => {
-              const effectiveExecuteOn = action?.executeOn || global.pendingExecuteOn?.get(`${guildId}_${buttonId}`) || 'true';
-              return [
-                {
-                  label: 'Outcome runs when player passes conditions',
-                  value: 'true',
-                  description: 'Only execute when conditions are met',
-                  emoji: { name: '🟢' },
-                  default: effectiveExecuteOn === 'true'
-                },
-                {
-                  label: 'Outcome runs when player fails conditions',
-                  value: 'false',
-                  description: 'Only execute when conditions are NOT met',
-                  emoji: { name: '🔴' },
-                  default: effectiveExecuteOn === 'false'
-                }
-              ];
-            })()
+            options: buildExecuteOnOptions({ current: action?.executeOn || global.pendingExecuteOn?.get(`${guildId}_${buttonId}`) })
           }]
         },
 
@@ -4096,25 +4078,7 @@ export async function showManagePlayerStateConfig(guildId, buttonId, actionIndex
         type: 3, // String Select
         custom_id: `safari_player_state_execute_on_${buttonId}_${actionIndex}`,
         placeholder: 'Select when to execute...',
-        options: (() => {
-          const effectiveExecuteOn = action?.executeOn || global.pendingExecuteOn?.get(`${guildId}_${buttonId}`) || 'true';
-          return [
-            {
-              label: 'Outcome runs when player passes conditions',
-              value: 'true',
-              description: 'Only execute when conditions are met',
-              emoji: { name: '🟢' },
-              default: effectiveExecuteOn === 'true'
-            },
-            {
-              label: 'Outcome runs when player fails conditions',
-              value: 'false',
-              description: 'Only execute when conditions are NOT met',
-              emoji: { name: '🔴' },
-              default: effectiveExecuteOn === 'false'
-            }
-          ];
-        })()
+        options: buildExecuteOnOptions({ current: action?.executeOn || global.pendingExecuteOn?.get(`${guildId}_${buttonId}`) })
       }]
     }
   );
@@ -4278,25 +4242,7 @@ export async function showCalculateAttackConfig(guildId, buttonId, actionIndex) 
             type: 3, // String Select
             custom_id: `safari_calculate_attack_execute_on_${buttonId}_${actionIndex}`,
             placeholder: 'Select when to execute...',
-            options: (() => {
-              const effectiveExecuteOn = action?.executeOn || global.pendingExecuteOn?.get(`${guildId}_${buttonId}`) || 'true';
-              return [
-                {
-                  label: 'Outcome runs when player passes conditions',
-                  value: 'true',
-                  description: 'Only execute when conditions are met',
-                  emoji: { name: '🟢' },
-                  default: effectiveExecuteOn === 'true'
-                },
-                {
-                  label: 'Outcome runs when player fails conditions',
-                  value: 'false',
-                  description: 'Only execute when conditions are NOT met',
-                  emoji: { name: '🔴' },
-                  default: effectiveExecuteOn === 'false'
-                }
-              ];
-            })()
+            options: buildExecuteOnOptions({ current: action?.executeOn || global.pendingExecuteOn?.get(`${guildId}_${buttonId}`) })
           }]
         },
 
@@ -5515,11 +5461,14 @@ export async function showFightEnemyConfig(guildId, buttonId, actionIndex) {
         type: 3,
         custom_id: `safari_fight_enemy_execute_on_${buttonId}_${actionIndex}`,
         placeholder: 'Select when this runs...',
-        options: [
-          { label: '⚡ Opening (Always)', value: 'always', description: 'Runs before pass/fail — fight result determines outcome', default: currentExecuteOn === 'always' },
-          { label: '✅ Pass Only', value: 'true', description: 'Only fight if conditions pass', default: currentExecuteOn === 'true' },
-          { label: '❌ Fail Only', value: 'false', description: 'Only fight if conditions fail', default: currentExecuteOn === 'false' }
-        ]
+        // Always-first ordering: a fight is normally the OPENING outcome (its result is what
+        // decides pass/fail for everything after it), so it leads rather than trails here.
+        options: (() => {
+          const opts = buildExecuteOnOptions({ current: currentExecuteOn, includeAlways: true, markDefault: false });
+          const always = opts.find(o => o.value === 'always');
+          always.description = 'Runs before pass/fail — the fight result decides which branch runs';
+          return [always, ...opts.filter(o => o !== always)];
+        })()
       }]
     }
   );
