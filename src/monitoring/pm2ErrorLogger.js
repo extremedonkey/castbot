@@ -13,6 +13,7 @@ import os from 'os';
 // Configuration
 const PM2_ERROR_CHANNEL_ID = '1416025517706186845';  // #error channel
 const PM2_LOG_CHECK_INTERVAL = 60000;  // 60 seconds
+const REECE_USER_ID = '391415444084490240';  // pinged on severe batches (channel is @mentions-only notify)
 
 // PM2 log paths based on environment
 const PM2_LOG_PATHS = {
@@ -76,6 +77,63 @@ export function isBenignStderrLine(line) {
     line.includes('DEPRECATED');
 }
 
+// ── Severity classification (battle-stations ping vs quiet warning) ─────────
+// logger.js emits a CLOSED set of level markers at record start. That set — not the
+// error content — is the discriminator: enumerating what errors look like is
+// whack-a-mole, but enumerating our own deliberate non-error levels is a solved
+// problem. Anything on stderr that doesn't start with a quiet marker (raw stack
+// traces, unhandled rejections, PM2 crash output, ❌ logger.error) defaults to
+// SEVERE — an unknown format must page, never slip through silent.
+const QUIET_MARKERS = ['⚠️', 'ℹ️', '🔍', '⏱️'];
+
+// PM2 can prefix each line it writes with its own timestamp (log_date_format) —
+// e.g. "2026-07-08T03:53:52: ⚠️ DEPRECATED ..." — strip it so marker matching
+// sees the app's original line start.
+export function stripPm2Timestamp(line) {
+  return line.replace(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:?\d{2})?:?\s+/, '');
+}
+
+// Continuation of a multi-line record: console.warn(msg, obj) prints the object
+// dump on follow-on lines — indented fields, closing brackets at column 0.
+function isContinuationLine(line) {
+  return /^[\s}\])]/.test(line);
+}
+
+/**
+ * Group a stderr chunk into records and bucket the lines by severity.
+ * A line starting with a quiet marker opens a warn-grade record; continuation
+ * lines follow their record's bucket; everything else opens a severe record.
+ * Orphan continuations (batch boundary landed mid-record) stay quiet — their
+ * opener was already classified and posted in the previous tick.
+ * @returns {{severe: string[], warn: string[]}}
+ */
+export function classifyStderr(text) {
+  const severe = [];
+  const warn = [];
+  let bucket = null;
+  for (const raw of String(text).split('\n')) {
+    if (!raw.trim() || isBenignStderrLine(raw)) continue;
+    const line = stripPm2Timestamp(raw);
+    if (QUIET_MARKERS.some(m => line.startsWith(m + ' '))) {
+      bucket = warn;
+    } else if (isContinuationLine(line)) {
+      bucket = bucket || warn;
+    } else {
+      bucket = severe;  // ❌ logger.error AND any unknown format
+    }
+    bucket.push(raw);
+  }
+  return { severe, warn };
+}
+
+// stdout lines have already passed isCriticalLine (keyword match). One that starts
+// with a quiet marker (e.g. "ℹ️ ... sync failed for guild X") is a deliberate log
+// that merely mentions failure — post it, don't page on it.
+export function isQuietStdoutLine(line) {
+  const stripped = stripPm2Timestamp(line);
+  return QUIET_MARKERS.some(m => stripped.startsWith(m + ' '));
+}
+
 // Per-environment card identity. Colors match the deploy-notification convention
 // (prod red would be alarming for dev noise; dev gets yellow, test the blue box).
 const ENV_CARD_META = {
@@ -97,10 +155,15 @@ const LOG_CONTENT_CAP = 3500;
  * @param {string} opts.logContent - joined log lines
  * @param {boolean} [opts.askEnabled] - append the Ask Moai button (DEV/TEST only —
  *   prod has no Claude CLI; the container itself renders everywhere)
+ * @param {'error'|'warn'} [opts.severity] - warn-only batches get a muted card so
+ *   the channel scans at a glance (the channel is @mentions-only notify)
+ * @param {boolean} [opts.mention] - prepend Reece's mention (battle stations)
  * @returns {Object} type-17 Container
  */
-export function buildErrorLogContainer({ env, timeString, logContent, askEnabled = process.env.PRODUCTION !== 'TRUE' }) {
-  const meta = ENV_CARD_META[env] || { tag: `PM2 Errors · ${String(env).toUpperCase()}`, accent: 0x95a5a6 };
+export function buildErrorLogContainer({ env, timeString, logContent, askEnabled = process.env.PRODUCTION !== 'TRUE', severity = 'error', mention = false }) {
+  const meta = severity === 'warn'
+    ? { tag: `🟡 PM2 Warnings · ${String(env).toUpperCase()}`, accent: 0x95a5a6 }
+    : ENV_CARD_META[env] || { tag: `PM2 Errors · ${String(env).toUpperCase()}`, accent: 0x95a5a6 };
   let content = String(logContent || '');
   if (content.length > LOG_CONTENT_CAP) {
     content = content.substring(0, LOG_CONTENT_CAP) + '\n... [truncated]';
@@ -109,7 +172,7 @@ export function buildErrorLogContainer({ env, timeString, logContent, askEnabled
     type: 17,
     accent_color: meta.accent,
     components: [
-      { type: 10, content: `## ${meta.tag}\n-# 🕐 ${timeString}` },
+      { type: 10, content: `${mention ? `<@${REECE_USER_ID}>\n` : ''}## ${meta.tag}\n-# 🕐 ${timeString}` },
       { type: 10, content: `\`\`\`\n${content}\n\`\`\`` },
       ...(askEnabled ? [
         { type: 14 },
@@ -209,10 +272,11 @@ export class PM2ErrorLogger {
   }
 
   /**
-   * Read local PM2 logs (dev)
+   * Read local PM2 logs (dev/test/on-prod-server).
+   * @returns {{severe: string[], warn: string[]}} severity-bucketed lines
    */
   async readLogsLocal(config, positions) {
-    const logs = [];
+    const logs = { severe: [], warn: [] };
 
     // One-time migration: positions used to be JS string lengths (post-UTF-8 decode);
     // they are now byte offsets. Re-baseline to current file sizes and skip this tick.
@@ -233,14 +297,9 @@ export class PM2ErrorLogger {
       const errorRead = this.readNewBytes(config.error, positions.error);
       if (errorRead) {
         if (errorRead.text.length > 0) {
-          const errorLines = errorRead.text.split('\n')
-            .filter(line => line.trim() && !isBenignStderrLine(line))
-            .slice(-50); // Last 50 lines max
-
-          if (errorLines.length > 0) {
-            logs.push('=== ERRORS ===');
-            logs.push(...errorLines);
-          }
+          const { severe, warn } = classifyStderr(errorRead.text);
+          logs.severe.push(...severe.slice(-50)); // Last 50 lines max
+          logs.warn.push(...warn.slice(-50));
         }
         positions.error = errorRead.newPosition;
       }
@@ -256,11 +315,8 @@ export class PM2ErrorLogger {
           const criticalLines = outRead.text.split('\n')
             .filter(isCriticalLine)
             .slice(-30); // Last 30 critical lines max
-
-          if (criticalLines.length > 0) {
-            if (logs.length > 0) logs.push('');
-            logs.push('=== CRITICAL OUTPUT ===');
-            logs.push(...criticalLines);
+          for (const line of criticalLines) {
+            (isQuietStdoutLine(line) ? logs.warn : logs.severe).push(line);
           }
         }
         positions.out = outRead.newPosition;
@@ -273,10 +329,11 @@ export class PM2ErrorLogger {
   }
 
   /**
-   * Read remote PM2 logs (prod) via SSH
+   * Read remote PM2 logs (prod) via SSH.
+   * @returns {{severe: string[], warn: string[]}} severity-bucketed lines
    */
   async readLogsRemote(config, positions) {
-    const logs = [];
+    const logs = { severe: [], warn: [] };
 
     try {
       const SSH_KEY_PATH = path.join(os.homedir(), '.ssh', 'castbot-key.pem');
@@ -286,14 +343,12 @@ export class PM2ErrorLogger {
       const errorCommand = `ssh -i "${SSH_KEY_PATH}" -o StrictHostKeyChecking=no ${SSH_TARGET} "tail -n 100 ${config.error} 2>/dev/null || echo 'No error log'"`;
       const errorResult = execSync(errorCommand, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
 
-      const errorLines = errorResult.split('\n')
-        .filter(line => line.trim() && line !== 'No error log' && !isBenignStderrLine(line))
-        .slice(-50);
-
-      if (errorLines.length > 0) {
-        logs.push('=== PRODUCTION ERRORS ===');
-        logs.push(...errorLines);
-      }
+      const errText = errorResult.split('\n')
+        .filter(line => line !== 'No error log')
+        .join('\n');
+      const { severe, warn } = classifyStderr(errText);
+      logs.severe.push(...severe.slice(-50));
+      logs.warn.push(...warn.slice(-50));
 
       // Get critical output lines
       const outCommand = `ssh -i "${SSH_KEY_PATH}" -o StrictHostKeyChecking=no ${SSH_TARGET} "grep -E 'ERROR|FATAL|Failed' ${config.out} 2>/dev/null | tail -n 30 || echo 'No critical logs'"`;
@@ -302,11 +357,8 @@ export class PM2ErrorLogger {
       const criticalLines = outResult.split('\n')
         .filter(line => line.trim() && line !== 'No critical logs' && isCriticalLine(line))
         .slice(-30);
-
-      if (criticalLines.length > 0) {
-        if (logs.length > 0) logs.push('');
-        logs.push('=== PRODUCTION CRITICAL ===');
-        logs.push(...criticalLines);
+      for (const line of criticalLines) {
+        (isQuietStdoutLine(line) ? logs.warn : logs.severe).push(line);
       }
     } catch (error) {
       console.error('[PM2Logger] Failed to read remote PM2 logs:', error.message);
@@ -366,7 +418,7 @@ export class PM2ErrorLogger {
         : process.env.PRODUCTION === 'TRUE' ? 'prod' : 'dev';
       const config = PM2_LOG_PATHS[env];
       if (!monitoringState.positions[env]) monitoringState.positions[env] = { out: 0, error: 0 };
-      let logs = [];
+      let logs = { severe: [], warn: [] };
 
       // Determine if we should read local or remote
       // dev/test always read local files; on prod server read local; PRODUCTION from dev machine reads remote via SSH
@@ -383,17 +435,29 @@ export class PM2ErrorLogger {
         logs = await this.readLogsRemote(config, monitoringState.positions[env]);
       }
 
-      if (logs.length > 0) {
+      if (logs.severe.length > 0 || logs.warn.length > 0) {
         const timestamp = new Date().toLocaleTimeString('en-US', {
           hour: '2-digit',
           minute: '2-digit',
           hour12: true
         });
 
+        const sections = [];
+        if (logs.severe.length > 0) sections.push('=== ERRORS ===', ...logs.severe);
+        if (logs.warn.length > 0) {
+          if (sections.length > 0) sections.push('');
+          sections.push('=== WARNINGS ===', ...logs.warn);
+        }
+
+        // Ping only on severe batches, and not in dev — dev errors happen at the
+        // keyboard mid-development; prod/test run unattended.
+        const mention = logs.severe.length > 0 && env !== 'dev';
         const container = buildErrorLogContainer({
           env,
           timeString: timestamp,
-          logContent: logs.slice(0, 100).join('\n')
+          logContent: sections.slice(0, 100).join('\n'),
+          severity: logs.severe.length > 0 ? 'error' : 'warn',
+          mention
         });
 
         // Raw REST, not channel.send — discord.js cannot normalize raw Components V2
@@ -401,9 +465,13 @@ export class PM2ErrorLogger {
         const { DiscordRequest } = await import('../../utils.js');
         await DiscordRequest(`channels/${this.channelId}/messages`, {
           method: 'POST',
-          body: { components: [container], flags: (1 << 15) } // IS_COMPONENTS_V2
+          body: {
+            components: [container],
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            allowed_mentions: { users: mention ? [REECE_USER_ID] : [] }
+          }
         });
-        console.log(`[PM2Logger] 📋 PM2 logs posted to Discord (${logs.length} lines)`);
+        console.log(`[PM2Logger] 📋 PM2 logs posted to Discord (${logs.severe.length} error, ${logs.warn.length} warning lines${mention ? ', pinged' : ''})`);
       }
 
       // Always save positions, even if no errors found (prevents stale position tracking)

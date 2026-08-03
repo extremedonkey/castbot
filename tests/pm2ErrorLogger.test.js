@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { PM2ErrorLogger, isCriticalLine, isBenignStderrLine, stripZeroCountTokens, buildErrorLogContainer } from '../src/monitoring/pm2ErrorLogger.js';
+import { PM2ErrorLogger, isCriticalLine, isBenignStderrLine, stripZeroCountTokens, buildErrorLogContainer, classifyStderr, isQuietStdoutLine, stripPm2Timestamp } from '../src/monitoring/pm2ErrorLogger.js';
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pm2logger-test-'));
 const logger = new PM2ErrorLogger(null);
@@ -90,7 +90,7 @@ describe('PM2ErrorLogger — readLogsLocal position migration', () => {
     const positions = { out: 5, error: 3 }; // legacy positions, no _unit marker
 
     const logs = await logger.readLogsLocal(config, positions);
-    assert.deepEqual(logs, []); // migration tick emits nothing (no backlog spam)
+    assert.deepEqual(logs, { severe: [], warn: [] }); // migration tick emits nothing (no backlog spam)
     assert.equal(positions._unit, 'bytes');
     assert.equal(positions.error, fs.statSync(errPath).size);
     assert.equal(positions.out, fs.statSync(outPath).size);
@@ -98,8 +98,110 @@ describe('PM2ErrorLogger — readLogsLocal position migration', () => {
     // Next tick picks up only fresh lines
     fs.appendFileSync(errPath, 'FRESH ERROR after migration\n');
     const logs2 = await logger.readLogsLocal(config, positions);
-    assert.ok(logs2.some(l => l.includes('FRESH ERROR after migration')));
-    assert.ok(!logs2.some(l => l.includes('PRE-EXISTING')));
+    assert.ok(logs2.severe.some(l => l.includes('FRESH ERROR after migration')));
+    const all2 = [...logs2.severe, ...logs2.warn];
+    assert.ok(!all2.some(l => l.includes('PRE-EXISTING')));
+  });
+
+  it('buckets stderr warn records and stdout keyword hits by severity', async () => {
+    const errPath = tmpFile('sev-error.log', '');
+    const outPath = tmpFile('sev-out.log', '');
+    const config = { error: errPath, out: outPath };
+    const positions = { out: 0, error: 0, _unit: 'bytes' };
+    await logger.readLogsLocal(config, positions); // baseline at empty files
+
+    fs.appendFileSync(errPath,
+      "⚠️ [2026-08-03T16:21:12.889Z] [WHISPER] Read clicked by non-recipient {\n" +
+      "  clickerId: '391415444084490240'\n" +
+      "}\n" +
+      'TypeError: boom is not a function\n' +
+      '    at Object.handler (app.js:123:4)\n');
+    fs.appendFileSync(outPath,
+      'ℹ️ [2026-08-03T16:21:13.000Z] [SYNC] retry failed 3 times, backing off\n' +
+      'Failed to fetch guild 12345\n');
+
+    const logs = await logger.readLogsLocal(config, positions);
+    assert.ok(logs.warn.some(l => l.includes('non-recipient')));
+    assert.ok(logs.warn.some(l => l.includes('clickerId')));
+    assert.ok(logs.warn.some(l => l.includes('retry failed 3 times')));
+    assert.ok(logs.severe.some(l => l.includes('TypeError: boom')));
+    assert.ok(logs.severe.some(l => l.includes('at Object.handler')));
+    assert.ok(logs.severe.some(l => l.includes('Failed to fetch guild')));
+    assert.ok(!logs.severe.some(l => l.includes('non-recipient')));
+  });
+});
+
+describe('PM2ErrorLogger — classifyStderr (ping-worthy vs quiet warnings)', () => {
+  it('a logger.warn record with its object dump stays quiet, including continuations', () => {
+    const { severe, warn } = classifyStderr(
+      "⚠️ [2026-08-03T14:18:51.276Z] [WHISPER] Read clicked by non-recipient {\n" +
+      "  clickerId: '885136176883839026',\n" +
+      "  whisperId: '1785766725216_6jewz4vpe'\n" +
+      '}\n');
+    assert.equal(severe.length, 0);
+    assert.equal(warn.length, 4);
+  });
+
+  it('❌ logger.error records are severe', () => {
+    const { severe, warn } = classifyStderr('❌ [2026-08-03T14:18:51.276Z] [SAFARI] Failed to resolve outcome\n');
+    assert.equal(warn.length, 0);
+    assert.equal(severe.length, 1);
+  });
+
+  it('unknown formats (raw stack traces) default to severe — fail-loud direction', () => {
+    const { severe, warn } = classifyStderr(
+      'TypeError: x is not a function\n' +
+      '    at handler (app.js:42:1)\n' +
+      '    at process.processTicksAndRejections (node:internal:7)\n');
+    assert.equal(warn.length, 0);
+    assert.equal(severe.length, 3); // stack continuation lines follow their record
+  });
+
+  it('a raw error right after a warn record breaks out of the quiet bucket', () => {
+    const { severe, warn } = classifyStderr(
+      '⚠️ [2026-08-03T14:18:51.276Z] [WHISPER] deliberate warning\n' +
+      'ReferenceError: oops is not defined\n');
+    assert.equal(warn.length, 1);
+    assert.equal(severe.length, 1);
+  });
+
+  it('PM2 timestamp prefixes are stripped before marker matching', () => {
+    const { severe, warn } = classifyStderr('2026-07-08T03:53:52: ⚠️ [2026-07-08T03:53:52.100Z] [MENU] slow render\n');
+    assert.equal(severe.length, 0);
+    assert.equal(warn.length, 1);
+    assert.equal(stripPm2Timestamp('2026-07-08T03:53:52: ⚠️ hi'), '⚠️ hi');
+  });
+
+  it('orphan continuation at a batch boundary stays quiet (opener posted last tick)', () => {
+    const { severe, warn } = classifyStderr("  targetUserId: '823354355775438919'\n}\n");
+    assert.equal(severe.length, 0);
+    assert.equal(warn.length, 2);
+  });
+
+  it('benign stderr lines (DEPRECATED / ExperimentalWarning) are dropped entirely', () => {
+    const { severe, warn } = classifyStderr(
+      '2026-07-08T03:53:52: ⚠️ DEPRECATED season_management_menu hit — redirecting\n' +
+      'ExperimentalWarning: buffer.File\n');
+    assert.equal(severe.length, 0);
+    assert.equal(warn.length, 0);
+  });
+
+  it('ℹ️ info records are quiet even when they contain scary words', () => {
+    const { severe } = classifyStderr('ℹ️ [2026-08-03T14:18:51.276Z] [SYNC] 3 failed rows skipped\n');
+    assert.equal(severe.length, 0);
+  });
+});
+
+describe('PM2ErrorLogger — isQuietStdoutLine', () => {
+  it('deliberate info/warn logs mentioning failure are quiet', () => {
+    assert.equal(isQuietStdoutLine('ℹ️ [2026-08-03T16:21:13.000Z] [SYNC] retry failed 3 times'), true);
+    assert.equal(isQuietStdoutLine('⚠️ [2026-08-03T16:21:13.000Z] [MAP] render failed, using fallback'), true);
+    assert.equal(isQuietStdoutLine('2026-07-08T03:55:08: ℹ️ [SYNC] sendCastingInvites: sent 0, failed 3'), true);
+  });
+
+  it('unmarked failure lines are not quiet', () => {
+    assert.equal(isQuietStdoutLine('Failed to fetch guild 12345'), false);
+    assert.equal(isQuietStdoutLine('❌ setup_castbot background work failed: timeout'), false);
   });
 });
 
@@ -180,5 +282,18 @@ describe('PM2ErrorLogger — buildErrorLogContainer (Components V2 card)', () =>
     const total = c.components.filter(x => x.type === 10).reduce((n, x) => n + x.content.length, 0);
     assert.ok(total <= 4000, `total text ${total} exceeds 4000`);
     assert.ok(c.components[1].content.includes('[truncated]'));
+  });
+
+  it('warn severity gets the muted Warnings card regardless of env', () => {
+    const c = buildErrorLogContainer({ ...base, env: 'prod', severity: 'warn', askEnabled: false });
+    assert.ok(c.components[0].content.includes('🟡 PM2 Warnings · PROD'));
+    assert.equal(c.accent_color, 0x95a5a6);
+  });
+
+  it('mention prepends Reece and defaults off (channel is @mentions-only notify)', () => {
+    const pinged = buildErrorLogContainer({ ...base, env: 'prod', mention: true, askEnabled: false });
+    assert.ok(pinged.components[0].content.startsWith('<@391415444084490240>\n'));
+    const quiet = buildErrorLogContainer({ ...base, env: 'prod', askEnabled: false });
+    assert.ok(!quiet.components[0].content.includes('<@'));
   });
 });

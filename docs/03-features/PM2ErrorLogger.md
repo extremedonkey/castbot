@@ -50,8 +50,8 @@ const PM2_LOG_PATHS = {
 The logger identifies critical issues using pattern matching on log content:
 
 ### Error Log (`pm2-error.log`)
-- **All content** from the error log is considered critical
-- Last 50 lines maximum per check
+- All non-benign content is posted, **bucketed by severity** (see Severity Tiers below)
+- Last 50 lines maximum per bucket per check
 
 ### Output Log (`pm2-out.log`)
 Lines matching ANY of these patterns are flagged:
@@ -73,7 +73,26 @@ line.includes('ReferenceError')
 line.includes('SyntaxError')
 ```
 
-Last 30 critical lines maximum per check.
+Last 30 critical lines maximum per check. Zero-count success summaries (`failed 0`, `0 failed`) are stripped before matching (`stripZeroCountTokens`).
+
+## Severity Tiers & Battle-Stations Ping (2026-08-04)
+
+The `#error` channel is set to **@mentions-only** notifications in Discord. The logger decides per batch whether to ping Reece, keyed off the level markers `logger.js` emits — **not** off predicting what errors look like:
+
+| Line shape (stderr) | Bucket | Card |
+|---|---|---|
+| Starts `⚠️ ` / `ℹ️ ` / `🔍 ` / `⏱️ ` (deliberate `logger.warn`/`info`/`debug`/`perf`) | **warn** — posted, never pings | 🟡 `PM2 Warnings · ENV`, gray accent |
+| Starts `❌ ` (`logger.error`) | **severe** | Red/env card, `<@Reece>` ping |
+| Anything else — raw stack traces, unhandled rejections, unknown formats | **severe** (fail-loud default) | Red/env card, `<@Reece>` ping |
+
+Key mechanics (`classifyStderr` in pm2ErrorLogger.js, exported for tests):
+- **Continuation grouping**: `console.warn(msg, obj)` prints the object dump across multiple lines (indented fields, closing `}` at column 0). Those lines follow their record's bucket, so a warn's dump doesn't ping. Orphan continuations at a batch boundary stay quiet (their opener was classified last tick).
+- **PM2 timestamp prefixes** (`2026-07-08T03:53:52: ⚠️ ...`) are stripped before marker matching (`stripPm2Timestamp`).
+- **stdout keyword hits** starting with a quiet marker (e.g. `ℹ️ ... failed 3 times`) go to the warn bucket (`isQuietStdoutLine`).
+- **Ping rule**: `severe.length > 0 && env !== 'dev'` — dev errors happen at the keyboard mid-development; prod/test run unattended. The mention is a `<@userId>` line in the card header plus `allowed_mentions` on the POST (same pattern as ProdWatchdog).
+- Mixed batches render `=== ERRORS ===` above `=== WARNINGS ===` and ping.
+
+**Failure direction**: unknown formats default to *pinging*. Maintenance lives only on the quiet side (the closed set of markers logger.js deliberately emits) — a novel crash format can never slip through silently.
 
 ## Features
 
@@ -119,33 +138,24 @@ try {
 
 ### 4. Discord Message Formatting
 
-Posts are formatted with environment tags and timestamps:
+Posts are Components V2 cards (`buildErrorLogContainer`) with per-env identity:
 
 ```
-🔴 [PM2-PROD] 12:35 AM
-===  ERRORS ===
-[error log content]
+🔴 PM2 Errors · PROD        (red accent, pings <@Reece>)
+🟦 PM2 Errors · TEST        (blue accent, pings <@Reece>)
+🟡 PM2 Errors · DEV         (yellow accent, no ping)
+🟡 PM2 Warnings · <ENV>     (gray accent, warn-only batch, never pings)
 
-=== CRITICAL OUTPUT ===
-[critical output content]
+=== ERRORS ===
+[severe lines]
+
+=== WARNINGS ===
+[warn-grade lines]
 ```
-
-- **Production**: 🔴 `[PM2-PROD]`
-- **Development**: 🟡 `[PM2-DEV]`
 
 ### 5. Message Truncation
 
-Discord has a 2000 character limit - the logger handles this:
-
-```javascript
-// Limit to 100 lines
-let logContent = logs.slice(0, 100).join('\n');
-
-// Truncate if too long
-if (logContent.length > 1900) {
-  logContent = logContent.substring(0, 1900) + '\n... [truncated]';
-}
-```
+Discord caps total Text Display content at 4000 chars per message — the log body is capped at `LOG_CONTENT_CAP` (3500) with a `... [truncated]` marker, leaving headroom for the header and mention line.
 
 ## Usage
 
@@ -279,5 +289,5 @@ The PM2 Error Logger complements the Ultrathink health monitoring system (see [P
 
 ---
 
-**Last Updated**: 2025-11-23
-**Component Status**: ✅ Active (false positive issue resolved)
+**Last Updated**: 2026-08-04 (severity tiers + battle-stations ping)
+**Component Status**: ✅ Active

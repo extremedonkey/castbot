@@ -76,3 +76,6 @@ docs/01-RaP/.counter
 # Host-supplied spreadsheets — real applicant PII (emails, phones, emergency contacts, medical)
 temp/*.xlsx
 temp/*.csv
+
+# Generated release-card images (rebuild from scripts/release/releases/ specs)
+temp/castbot-update-*.png
