@@ -2493,8 +2493,16 @@ export const BUTTON_REGISTRY = {
     parent: 'custom_action_editor'
   },
   'quick_command_*': {
-    label: 'Quick Command',
-    description: 'Create a Command-triggered action with one modal',
+    label: 'CmdText',
+    description: 'Create a Command-triggered action with a display_text outcome in one modal',
+    emoji: '❗',
+    style: 'Secondary',
+    category: 'safari_quick_create',
+    requiresModal: true
+  },
+  'quick_cmditem_*': {
+    label: 'CmdItem',
+    description: 'Create a Command-triggered action with a give_item outcome in one modal',
     emoji: '❗',
     style: 'Secondary',
     category: 'safari_quick_create',

@@ -7,7 +7,7 @@
 # See: CLAUDE.md "Button Handler Factory" section
 
 BASELINE=99  # Legacy handler count as of 2026-07-28 (prod_setup_tycoons factory conversion). Includes completion_edit modal exception. Only goes DOWN.
-APP_JS_LINES_MAX=49963  # app.js line-count ratchet as of 2026-08-02 (actual: 49963, retired Map Drops feature fully removed: ~2,250 lines of orphaned handlers + Drop Management UI). Only goes DOWN. Extract more than you add.
+APP_JS_LINES_MAX=49959  # app.js line-count ratchet as of 2026-08-04 (actual: 49959, CmdItem added net-negative: prefix-detection + modal-build boilerplate extracted into quickActionCreate.js payload/byId helpers). Only goes DOWN. Extract more than you add.
 
 # ── Auto-sync: keep installed hook in sync with source ──
 SOURCE_HOOK="scripts/hooks/pre-commit"

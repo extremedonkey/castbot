@@ -1,5 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+// Real imports (not inline replicas): the CmdItem/CmdText builders are pure and the
+// module has no heavy top-level deps, so tests can exercise the actual code.
+import { buildQuickCmdItemModal, buildQuickCommandModal } from '../quickActionCreate.js';
 
 // Replicate buildLimitOptions inline (same as utils/periodUtils.js)
 function formatPeriodInline(ms) {
@@ -437,5 +440,60 @@ describe('handleQuickItemTextSubmit outcome ordering', () => {
     it('only give_item carries the usage limit — display_text is not claim-gated', () => {
         assert.equal(outcomes[0].config.limit, undefined);
         assert.deepEqual(outcomes[1].config.limit, { type: 'once_per_player', claimedBy: [] });
+    });
+});
+
+// ─── buildQuickCmdItemModal — CmdText × Item hybrid (real module) ───────────
+
+describe('buildQuickCmdItemModal — command trigger with item picker', () => {
+    const items = [
+        { id: 'item_idol', name: 'Hidden Idol', emoji: '🗿', description: 'A hidden immunity idol' },
+        { id: 'item_clue', name: 'Clue Scroll', emoji: '📜' }
+    ];
+    const prefixes = [{ label: 'Search', emoji: '🔍' }];
+
+    it('without prefixes: 4 fields — name, phrase, item picker, usage limit', () => {
+        const modal = buildQuickCmdItemModal('C3', [], items);
+        assert.equal(modal.custom_id, 'quick_cmditem_modal_C3');
+        assert.equal(modal.title, '❗ Quick CmdItem');
+        assert.deepEqual(
+            modal.components.map(c => c.component.custom_id),
+            ['command_name', 'command_phrase', 'item_select', 'usage_limit']
+        );
+    });
+
+    it('with prefixes: prefix select slots in at index 1 with Freeform default', () => {
+        const modal = buildQuickCmdItemModal('global', prefixes, items);
+        assert.deepEqual(
+            modal.components.map(c => c.component.custom_id),
+            ['command_name', 'command_prefix', 'command_phrase', 'item_select', 'usage_limit']
+        );
+        const prefixOpts = modal.components[1].component.options;
+        assert.equal(prefixOpts[0].value, 'freeform');
+        assert.equal(prefixOpts[0].default, true);
+        assert.equal(prefixOpts[1].value, 'search');
+    });
+
+    it('item picker is a required select listing the guild items', () => {
+        const modal = buildQuickCmdItemModal('C3', [], items);
+        const picker = modal.components[2];
+        assert.equal(picker.type, 18);
+        assert.equal(picker.component.type, 3);
+        assert.equal(picker.component.required, true);
+        assert.deepEqual(picker.component.options.map(o => o.value), ['item_idol', 'item_clue']);
+    });
+
+    it('command fields are structurally identical to buildQuickCommandModal — no drift', () => {
+        const cmdItem = buildQuickCmdItemModal('A1', prefixes, items);
+        const cmdText = buildQuickCommandModal('A1', prefixes);
+        assert.deepEqual(cmdItem.components[0], cmdText.components[0]); // Command Name
+        assert.deepEqual(cmdItem.components[1], cmdText.components[1]); // Prefix select
+        assert.deepEqual(cmdItem.components[2], cmdText.components[2]); // Command Phrase
+    });
+
+    it('CmdText modal keeps its quick_command_modal_ custom_id (routing unchanged by rename)', () => {
+        const modal = buildQuickCommandModal('B2', []);
+        assert.equal(modal.custom_id, 'quick_command_modal_B2');
+        assert.equal(modal.title, '❗ Quick CmdText');
     });
 });

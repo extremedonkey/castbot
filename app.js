@@ -32911,7 +32911,7 @@ To fix this:
       })(req, res, client);
 
     } else if (custom_id.startsWith('quick_command_') && !custom_id.startsWith('quick_command_modal_')) {
-      // Quick Command button — show modal with prefix select + command phrase
+      // Quick CmdText button — show modal with prefix select + command phrase
       return ButtonHandlerFactory.create({
         id: 'quick_command',
         requiresPermission: PermissionFlagsBits.ManageRoles,
@@ -32920,12 +32920,26 @@ To fix this:
         handler: async (context) => {
           const coord = context.customId.replace('quick_command_', '');
           console.log(`❗ START: quick_command - user ${context.userId}, coord ${coord}`);
-          const { loadSafariContent } = await import('./safariManager.js');
-          const safariData = await loadSafariContent();
-          const prefixes = safariData[context.guildId]?.safariConfig?.commandPrefixes || [];
-          const { buildQuickCommandModal } = await import('./quickActionCreate.js');
-          const modalData = buildQuickCommandModal(coord, prefixes);
-          return { type: InteractionResponseType.MODAL, data: modalData };
+          const { getQuickCommandModalPayload } = await import('./quickActionCreate.js');
+          const { modal } = await getQuickCommandModalPayload(context.guildId, coord);
+          return { type: InteractionResponseType.MODAL, data: modal };
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('quick_cmditem_') && !custom_id.startsWith('quick_cmditem_modal_')) {
+      // Quick CmdItem button — command trigger + item picker (CmdText × Item hybrid)
+      return ButtonHandlerFactory.create({
+        id: 'quick_cmditem',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        requiresModal: true,
+        handler: async (context) => {
+          const coord = context.customId.replace('quick_cmditem_', '');
+          console.log(`❗ START: quick_cmditem - user ${context.userId}, coord ${coord}`);
+          const { getQuickCmdItemModalPayload } = await import('./quickActionCreate.js');
+          const { modal, error } = await getQuickCmdItemModalPayload(context.guildId, coord);
+          if (error) return { content: `❌ ${error}`, ephemeral: true };
+          return { type: InteractionResponseType.MODAL, data: modal };
         }
       })(req, res, client);
 
@@ -45105,19 +45119,32 @@ To fix this:
         const guildId = req.body.guild_id;
         const userId = req.body.member?.user?.id || req.body.user?.id;
 
-        // Detect if prefix select was present (guild has prefixes configured)
-        const { loadSafariContent } = await import('./safariManager.js');
-        const safariData = await loadSafariContent();
-        const hasPrefixes = (safariData[guildId]?.safariConfig?.commandPrefixes || []).length > 0;
-
         const { handleQuickCommandSubmit } = await import('./quickActionCreate.js');
-        const result = await handleQuickCommandSubmit(guildId, userId, coordinate, components, hasPrefixes);
+        const result = await handleQuickCommandSubmit(guildId, userId, coordinate, components);
         if (result.error) {
           return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ ${result.error}`, flags: InteractionResponseFlags.EPHEMERAL } });
         }
         return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: { ...result, flags: (1 << 15) } });
       } catch (error) {
         console.error('Error handling quick command modal:', error);
+        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ Error: ${error.message}`, flags: InteractionResponseFlags.EPHEMERAL } });
+      }
+
+    } else if (custom_id.startsWith('quick_cmditem_modal_')) {
+      try {
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
+        const coordinate = custom_id.replace('quick_cmditem_modal_', '');
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+
+        const { handleQuickCmdItemSubmit } = await import('./quickActionCreate.js');
+        const result = await handleQuickCmdItemSubmit(guildId, userId, coordinate, components);
+        if (result.error) {
+          return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ ${result.error}`, flags: InteractionResponseFlags.EPHEMERAL } });
+        }
+        return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: { ...result, flags: (1 << 15) } });
+      } catch (error) {
+        console.error('Error handling quick cmditem modal:', error);
         return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ Error: ${error.message}`, flags: InteractionResponseFlags.EPHEMERAL } });
       }
 

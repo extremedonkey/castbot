@@ -125,7 +125,8 @@ export async function buildActionManagerSection({ guildId, coordinate = null, ma
     type: 1, // ActionRow
     components: [
       { type: 2, style: 2, label: craftingLabel, custom_id: `quick_crafting_${coordSuffix}`, emoji: craftingEmoji },
-      { type: 2, style: 2, label: 'Command', custom_id: `quick_command_${coordSuffix}`, emoji: { name: '❗' } },
+      { type: 2, style: 2, label: 'CmdText', custom_id: `quick_command_${coordSuffix}`, emoji: { name: '❗' } },
+      { type: 2, style: 2, label: 'CmdItem', custom_id: `quick_cmditem_${coordSuffix}`, emoji: { name: '❗' } },
       { type: 2, style: 2, label: 'Enemy', custom_id: `quick_enemy_${coordSuffix}`, emoji: { name: '🐙' } }
     ]
   };

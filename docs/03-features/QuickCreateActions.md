@@ -17,21 +17,26 @@ Quick Create Actions are one-modal shortcuts that create fully-formed Actions in
 
 ## Available Quick Actions
 
+Button labels dropped the word "Quick" on 2026-08-04 (the `> **Quick Actions**` divider above the rows carries it); custom_ids keep their historical `quick_*` names — renaming those would orphan deployed routing for zero user-visible benefit. "Quick Command" was renamed **CmdText** when **CmdItem** (its give_item sibling) was added.
+
 | Type | Button Label | Modal Title | Trigger Type | Outcome(s) Created |
 |------|-------------|-------------|--------------|-----------------|
-| **Quick Text** | 📃 Quick Text | Quick Text Action | Button Click | `display_text` |
-| **Quick Item** | 📦 Quick Item | Quick Item Action | Button Click | `give_item` (qty 1) |
-| **Quick ItemText** | 📦 Quick ItemText | Quick ItemText Action | Button Click | `display_text` + `give_item` (qty 1), display_text always first |
-| **Quick Currency** | 🪙 Quick {CurrencyName} | Quick {CurrencyName} Action | Button Click | `give_currency` |
-| **Quick Crafting** | 🛠️ Quick {CraftingName} | Quick {CraftingName} Action | Button Click | 2× `give_item` (remove) + 1× `give_item` (give) |
-| **Quick Command** | ❗ Quick Command | ❗ Quick Command | Command (modal) | `display_text` |
-| **Quick Enemy** | 🐙 Quick Enemy | Quick Enemy Action | Button Click | `fight_enemy` |
+| **Quick Text** | 📃 Text | Quick Text Action | Button Click | `display_text` |
+| **Quick Item** | 📦 Item | Quick Item Action | Button Click | `give_item` (qty 1) |
+| **Quick ItemText** | 📦 ItemText | Quick ItemText Action | Button Click | `display_text` + `give_item` (qty 1), display_text always first |
+| **Quick Currency** | 🪙 {CurrencyName} | Quick {CurrencyName} Action | Button Click | `give_currency` |
+| **Quick Crafting** | 🛠️ {CraftingName} | Quick {CraftingName} Action | Button Click | 2× `give_item` (remove) + 1× `give_item` (give) |
+| **Quick CmdText** (`quick_command_*`) | ❗ CmdText | ❗ Quick CmdText | Command (modal) | `display_text` |
+| **Quick CmdItem** (`quick_cmditem_*`) | ❗ CmdItem | ❗ Quick CmdItem | Command (modal) | `give_item` (qty 1) |
+| **Quick Enemy** | 🐙 Enemy | Quick Enemy Action | Button Click | `fight_enemy` |
 
 Quick Text/Item/ItemText/Currency/Enemy create **button-triggered** actions (5 fields: name, content/item/amount/enemy, emoji, limit, color — ItemText omits color, see below).
 
 Quick ItemText is a **composition of Quick Text + Quick Item** in one modal — it combines their two outcome types into a single Action rather than introducing a new outcome type. It exists because "show some flavor text, then hand over an item" is common enough at map locations to not need two separate quick-created actions bundled together by hand afterwards.
 
-Quick Command creates a **Command-triggered** action (3-5 fields depending on prefix config: name, prefix select (if prefixes exist), command phrase, display text, usage limit). No button color/emoji since Command actions don't render as buttons on anchor messages.
+Quick CmdText creates a **Command-triggered** action (3-5 fields depending on prefix config: name, prefix select (if prefixes exist), command phrase, display text, usage limit). No button color/emoji since Command actions don't render as buttons on anchor messages.
+
+Quick CmdItem is **Quick CmdText with the "Text to display" field swapped for Quick Item's item picker** — a Command-triggered action whose outcome hands over an item (qty 1) instead of showing text. Requires the guild to have at least one item (same error escape as Quick Item). The three command fields (name, prefix, phrase) are shared builders with CmdText (`buildCommandNameField`/`buildCommandPrefixField`/`buildCommandPhraseField`) so the two modals cannot drift.
 
 Quick Crafting creates a **button-triggered recipe Action** (5 fields: name, Crafting Item #1, Crafting Item #2, Item to Give, emoji). It auto-sets Grey color, auto-populates 2 `has item` conditions + 3 outcomes (remove ×2, give ×1), and auto-sets `menuVisibility: 'crafting_menu'` so the recipe appears in the player Crafting menu. See [Crafting.md](Crafting.md) for the crafting surface.
 
@@ -44,7 +49,7 @@ Quick Crafting creates a **button-triggered recipe Action** (5 fields: name, Cra
 ```
 > **Quick Actions**
 Row 1:  [📃 Text] [📦 Item] [📦 ItemText] [🪙 {CurrencyName}]
-Row 2:  [🛠️ {CraftingName}] [❗ Command] [🐙 Enemy]
+Row 2:  [🛠️ {CraftingName}] [❗ CmdText] [❗ CmdItem] [🐙 Enemy]
 ```
 
 Buttons in `entityManagementUI.js` `createEditModeUI()`, inside `if (entityType === 'map_cell')`, via `buildActionManagerSection()` (see below). Actions created here are automatically assigned to the coordinate (and the anchor message is updated via `afterAddCoordinate`). The `> **Quick Actions**` blockquote Text Display carries the "Quick" framing (2026-08-04 UX tweak) — the button labels dropped the word.
@@ -56,7 +61,7 @@ Buttons in `entityManagementUI.js` `createEditModeUI()`, inside `if (entityType 
 [Select an action to manage...                                    ▼]
 > **Quick Actions**
 Row 1:  [📃 Text] [📦 Item] [📦 ItemText] [🪙 {CurrencyName}]
-Row 2:  [🛠️ {CraftingName}] [❗ Command] [🐙 Enemy]
+Row 2:  [🛠️ {CraftingName}] [❗ CmdText] [❗ CmdItem] [🐙 Enemy]
 ─────────────────
 [← Menu]
 ```
@@ -65,7 +70,7 @@ Reached via the `action_manager` button (renamed from `safari_action_editor` —
 
 **As of the Location Manager UI-duplication fix, this screen and the Map Coordinate Screen share one builder** — `buildActionManagerSection({ guildId, coordinate, mapId })` in `customActionUI.js` — so they can no longer drift apart. `coordinate: null` (global) vs. `coordinate: 'A1'` (location) only changes: the header text ("Actions" vs. "Location Actions"), the button custom_id suffix (`_global` vs. `_{coordinate}`), and the select placeholder's location+count suffix (omitted for global — there's no "current location" to summarize). `createCustomActionSelectionUI()` (still the exported entry point, now a thin wrapper) additionally appends a `← Menu` back button + separator, but only when `!coordinate` — the coordinate-scoped variant is always reached from within another screen that already has its own navigation.
 
-**Custom IDs**: `quick_text_global`, `quick_item_global`, `quick_itemtext_global`, `quick_currency_global`, `quick_crafting_global`, `quick_command_global`, `quick_enemy_global` — all seven now exist globally (Quick ItemText's global variant was the specific gap this refactor closed).
+**Custom IDs**: `quick_text_global`, `quick_item_global`, `quick_itemtext_global`, `quick_currency_global`, `quick_crafting_global`, `quick_command_global`, `quick_cmditem_global`, `quick_enemy_global` — all eight exist globally (Quick ItemText's global variant was the specific gap the earlier refactor closed; CmdItem shipped global from day one via the shared `coordSuffix`).
 
 **Row split**: Discord allows max 5 buttons per ActionRow; the 7 Quick Create actions split 4/3. Row 1 holds the simpler single-modal, mostly-independent creators (Text, Item, ItemText, Currency); Row 2 holds the three with extra moving parts (Crafting — auto-populates conditions; Command — the one non-button trigger type; Enemy — invokes the combat system). This is a placement choice, not an enforced category — reorder freely as new Quick Create actions are added (edit `buildActionManagerSection()` once, both screens pick it up).
 

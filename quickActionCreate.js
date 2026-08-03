@@ -216,6 +216,31 @@ export async function getQuickItemTextModalPayload(guildId, coordinate) {
 }
 
 /**
+ * Resolve the Quick CmdText modal (needs the guild's command prefixes).
+ */
+export async function getQuickCommandModalPayload(guildId, coordinate) {
+    const { loadSafariContent } = await import('./safariManager.js');
+    const safariData = await loadSafariContent();
+    const prefixes = safariData[guildId]?.safariConfig?.commandPrefixes || [];
+    return { modal: buildQuickCommandModal(coordinate, prefixes) };
+}
+
+/**
+ * Resolve the Quick CmdItem modal — needs items (like Quick Item) AND the
+ * guild's command prefixes (like Quick CmdText), or an error if no items yet.
+ */
+export async function getQuickCmdItemModalPayload(guildId, coordinate) {
+    const sortedItems = await getSortedQuickCreateItems(guildId);
+    if (sortedItems.length === 0) {
+        return { error: 'No items exist yet. Create items first via **Actions** → **Give Item** outcome.' };
+    }
+    const { loadSafariContent } = await import('./safariManager.js');
+    const safariData = await loadSafariContent();
+    const prefixes = safariData[guildId]?.safariConfig?.commandPrefixes || [];
+    return { modal: buildQuickCmdItemModal(coordinate, prefixes, sortedItems) };
+}
+
+/**
  * Resolve the Quick Crafting modal, or an error if the guild has <2 items.
  */
 export async function getQuickCraftingModalPayload(guildId, coordinate) {
@@ -385,6 +410,14 @@ function getModalValue(comp) {
     // TextInput returns value string
     const val = comp.component.value;
     return typeof val === 'string' ? val.trim() || null : null;
+}
+
+/**
+ * Find a modal component by its custom_id and extract its value — index-free,
+ * so an optional field (the command prefix select) can't shift later reads.
+ */
+function getModalValueById(modalComponents, customId) {
+    return getModalValue((modalComponents || []).find(c => c?.component?.custom_id === customId));
 }
 
 /**
@@ -837,77 +870,93 @@ export function buildQuickEnemyModal(coordinate, enemies) {
     };
 }
 
+// ─── Shared command-trigger fields (Quick CmdText + Quick CmdItem) ──────
+// Same anti-divergence rule as the button field builders above: both
+// command-triggered modals compose from these, never copy-paste.
+
+function buildCommandNameField() {
+    return {
+        type: 18,
+        label: 'Command Name',
+        description: 'Name of the action, e.g., Beach Idol Clue, Note Hidden In Tree',
+        component: {
+            type: 4,
+            custom_id: 'command_name',
+            style: 1,
+            placeholder: 'e.g., "Beach Idol Clue"',
+            required: true,
+            max_length: 80
+        }
+    };
+}
+
+/** Prefix select — returns null when the guild has no prefixes configured. */
+function buildCommandPrefixField(prefixes) {
+    if (!prefixes || prefixes.length === 0) return null;
+    const prefixOptions = [
+        {
+            label: 'Freeform (no prefix)',
+            value: 'freeform',
+            description: 'Enter the full command exactly as it is — common for idol hunts',
+            emoji: { name: '♾️' },
+            default: true
+        }
+    ];
+    for (const prefix of prefixes) {
+        prefixOptions.push({
+            label: prefix.label,
+            value: prefix.label.toLowerCase(),
+            description: (prefix.description || `Prepends "${prefix.label}" to your command`).substring(0, 100),
+            emoji: { name: prefix.emoji || '🏷️' }
+        });
+    }
+    return {
+        type: 18,
+        label: 'Prefix (optional)',
+        description: 'Pick an action verb, or choose Freeform to enter the full command yourself',
+        component: {
+            type: 3,
+            custom_id: 'command_prefix',
+            min_values: 1,
+            max_values: 1,
+            options: prefixOptions
+        }
+    };
+}
+
+function buildCommandPhraseField() {
+    return {
+        type: 18,
+        label: 'Command Phrase',
+        description: 'Enter a secret word, phrase, or code',
+        component: {
+            type: 4,
+            custom_id: 'command_phrase',
+            style: 1,
+            placeholder: 'e.g., tree, rock, secret-code',
+            required: true,
+            max_length: 100
+        }
+    };
+}
+
 /**
- * Build the Quick Command modal — 5 fields
+ * Build the Quick CmdText modal (button label "CmdText", formerly "Quick Command") — 5 fields
  * Creates a Command-triggered action with one phrase and a display_text outcome.
+ * custom_ids keep the historical quick_command_* names — renaming them would
+ * orphan the deployed button/modal routing for zero user-visible benefit.
  * @param {string} coordinate - Map coordinate (e.g. "E7") or "global"
  * @param {Array} prefixes - Guild command prefixes [{ label, emoji?, description? }]
  * @returns {object} Modal interaction response data
  */
 export function buildQuickCommandModal(coordinate, prefixes = []) {
-    const modalComponents = [
-        {
-            type: 18,
-            label: 'Command Name',
-            description: 'Name of the action, e.g., Beach Idol Clue, Note Hidden In Tree',
-            component: {
-                type: 4,
-                custom_id: 'command_name',
-                style: 1,
-                placeholder: 'e.g., "Beach Idol Clue"',
-                required: true,
-                max_length: 80
-            }
-        }
-    ];
+    const modalComponents = [buildCommandNameField()];
 
-    // Prefix select (only when guild has prefixes)
-    if (prefixes.length > 0) {
-        const prefixOptions = [
-            {
-                label: 'Freeform (no prefix)',
-                value: 'freeform',
-                description: 'Enter the full command exactly as it is — common for idol hunts',
-                emoji: { name: '♾️' },
-                default: true
-            }
-        ];
-        for (const prefix of prefixes) {
-            prefixOptions.push({
-                label: prefix.label,
-                value: prefix.label.toLowerCase(),
-                description: (prefix.description || `Prepends "${prefix.label}" to your command`).substring(0, 100),
-                emoji: { name: prefix.emoji || '🏷️' }
-            });
-        }
-        modalComponents.push({
-            type: 18,
-            label: 'Prefix (optional)',
-            description: 'Pick an action verb, or choose Freeform to enter the full command yourself',
-            component: {
-                type: 3,
-                custom_id: 'command_prefix',
-                min_values: 1,
-                max_values: 1,
-                options: prefixOptions
-            }
-        });
-    }
+    const prefixField = buildCommandPrefixField(prefixes);
+    if (prefixField) modalComponents.push(prefixField);
 
     modalComponents.push(
-        {
-            type: 18,
-            label: 'Command Phrase',
-            description: 'Enter a secret word, phrase, or code',
-            component: {
-                type: 4,
-                custom_id: 'command_phrase',
-                style: 1,
-                placeholder: 'e.g., tree, rock, secret-code',
-                required: true,
-                max_length: 100
-            }
-        },
+        buildCommandPhraseField(),
         {
             type: 18,
             label: 'Text to display',
@@ -921,51 +970,57 @@ export function buildQuickCommandModal(coordinate, prefixes = []) {
                 max_length: 2000
             }
         },
-        {
-            type: 18,
-            label: 'Usage Limit',
-            description: 'How many times can this command be used?',
-            component: {
-                type: 3,
-                custom_id: 'usage_limit',
-                placeholder: 'Select usage limit...',
-                min_values: 1,
-                max_values: 1,
-                options: LIMIT_OPTIONS
-            }
-        }
+        buildUsageLimitField('How many times can this command be used?')
     );
 
     return {
         custom_id: `quick_command_modal_${coordinate}`,
-        title: '❗ Quick Command',
+        title: '❗ Quick CmdText',
         components: modalComponents
     };
 }
 
 /**
- * Handle Quick Command modal submit — creates a Command-trigger action with phrase + display_text
+ * Build the Quick CmdItem modal — Quick CmdText with the "Text to display"
+ * field swapped for Quick Item's item picker: a Command-triggered action
+ * whose outcome gives an item instead of showing text.
+ * @param {string} coordinate - Map coordinate (e.g. "E7") or "global"
+ * @param {Array} prefixes - Guild command prefixes [{ label, emoji?, description? }]
+ * @param {Array} items - FULL sorted item list (capping happens inside the shared builder)
+ * @returns {object} Modal interaction response data
  */
-export async function handleQuickCommandSubmit(guildId, userId, coordinate, modalComponents, hasPrefixes) {
+export function buildQuickCmdItemModal(coordinate, prefixes = [], items = []) {
+    const modalComponents = [buildCommandNameField()];
+
+    const prefixField = buildCommandPrefixField(prefixes);
+    if (prefixField) modalComponents.push(prefixField);
+
+    modalComponents.push(
+        buildCommandPhraseField(),
+        buildItemToGiveField(items),
+        buildUsageLimitField('How many times can this command be used?')
+    );
+
+    return {
+        custom_id: `quick_cmditem_modal_${coordinate}`,
+        title: '❗ Quick CmdItem',
+        components: modalComponents
+    };
+}
+
+/**
+ * Handle Quick CmdText modal submit — creates a Command-trigger action with phrase + display_text
+ */
+export async function handleQuickCommandSubmit(guildId, userId, coordinate, modalComponents) {
     const { createCustomButton, loadSafariContent, saveSafariContent } = await import('./safariManager.js');
 
-    // Component indices shift based on whether prefix select is present
-    const commandName = getModalValue(modalComponents[0]);
-    let prefixValue = 'freeform';
-    let phraseIndex = 1;
-    let displayIndex = 2;
-    let limitIndex = 3;
-
-    if (hasPrefixes) {
-        prefixValue = getModalValue(modalComponents[1]) || 'freeform';
-        phraseIndex = 2;
-        displayIndex = 3;
-        limitIndex = 4;
-    }
-
-    const phraseText = getModalValue(modalComponents[phraseIndex]);
-    const displayContent = getModalValue(modalComponents[displayIndex]);
-    const limitType = getModalValue(modalComponents[limitIndex]) || 'once_per_player';
+    // Fields resolved by custom_id — the prefix select only exists when the guild
+    // has prefixes configured, so positional indexing would misalign without it
+    const commandName = getModalValueById(modalComponents, 'command_name');
+    const prefixValue = getModalValueById(modalComponents, 'command_prefix') || 'freeform';
+    const phraseText = getModalValueById(modalComponents, 'command_phrase');
+    const displayContent = getModalValueById(modalComponents, 'display_content');
+    const limitType = getModalValueById(modalComponents, 'usage_limit') || 'once_per_player';
 
     if (!commandName) return { error: 'Command name is required.' };
     if (!phraseText) return { error: 'Command phrase is required.' };
@@ -1042,6 +1097,100 @@ export async function handleQuickCommandSubmit(guildId, userId, coordinate, moda
     }
 
     console.log(`⚡ QUICK COMMAND: Created action ${actionId} at ${coordinate} — Phrase: "${fullPhrase}"`);
+
+    const { createCustomActionEditorUI } = await import('./customActionUI.js');
+    const editorCoordinate = coordinate === 'global' ? null : coordinate;
+    return await createCustomActionEditorUI({ guildId, actionId, coordinate: editorCoordinate });
+}
+
+/**
+ * Handle Quick CmdItem modal submit — creates a Command-trigger action with
+ * phrase + give_item outcome (Quick CmdText × Quick Item hybrid).
+ */
+export async function handleQuickCmdItemSubmit(guildId, userId, coordinate, modalComponents) {
+    const { createCustomButton, loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+
+    // Fields resolved by custom_id — the prefix select only exists when the guild
+    // has prefixes configured, so positional indexing would misalign without it
+    const commandName = getModalValueById(modalComponents, 'command_name');
+    const prefixValue = getModalValueById(modalComponents, 'command_prefix') || 'freeform';
+    const phraseText = getModalValueById(modalComponents, 'command_phrase');
+    const itemId = getModalValueById(modalComponents, 'item_select');
+    const limitType = getModalValueById(modalComponents, 'usage_limit') || 'once_per_player';
+
+    if (!commandName) return { error: 'Command name is required.' };
+    if (!phraseText) return { error: 'Command phrase is required.' };
+    if (!itemId) return { error: 'Item selection is required.' };
+
+    // Concatenate prefix + phrase
+    const fullPhrase = (prefixValue === 'freeform' || !prefixValue)
+        ? phraseText.trim().toLowerCase()
+        : `${prefixValue} ${phraseText.trim()}`.toLowerCase();
+
+    const style = 'Secondary'; // Command trigger — no button, fixed default (grey)
+
+    // Create the action shell
+    const actionId = await createCustomButton(guildId, {
+        label: commandName, emoji: null, style, actions: [], tags: []
+    }, userId);
+
+    const safariData = await loadSafariContent();
+    const action = safariData[guildId].buttons[actionId];
+    action.name = commandName;
+    action.description = '';
+    action.metadata = { ...action.metadata, createdVia: 'quick_cmditem' };
+
+    // Set trigger to Command (modal) with the phrase
+    action.trigger = {
+        type: 'modal',
+        phrases: [fullPhrase]
+    };
+
+    const item = safariData[guildId]?.items?.[itemId];
+    const itemName = item?.name || itemId;
+
+    // give_item outcome — same shape as Quick Item (limit gates the reward)
+    action.actions.push({
+        type: 'give_item',
+        order: 0,
+        config: {
+            itemId,
+            quantity: 1,
+            operation: 'give',
+            limit: limitType === 'once_per_period'
+                ? { type: 'once_per_period', periodMs: 86400000, claimedBy: {} }
+                : { type: limitType, claimedBy: limitType === 'once_per_player' ? [] : null }
+        },
+        executeOn: 'true'
+    });
+
+    // Assign to coordinate (skip for global actions)
+    if (coordinate && coordinate !== 'global') {
+        const activeMapId = safariData[guildId]?.maps?.active;
+        if (activeMapId) {
+            const coordData = safariData[guildId].maps[activeMapId].coordinates[coordinate];
+            if (coordData) {
+                if (!coordData.buttons) coordData.buttons = [];
+                if (!coordData.buttons.includes(actionId)) coordData.buttons.push(actionId);
+            }
+            if (!action.coordinates) action.coordinates = [];
+            if (!action.coordinates.includes(coordinate)) action.coordinates.push(coordinate);
+        }
+    }
+
+    await saveSafariContent(safariData);
+
+    // Queue anchor update only for coordinate-based actions
+    if (coordinate && coordinate !== 'global') {
+        try {
+            const { afterAddCoordinate } = await import('./anchorMessageIntegration.js');
+            await afterAddCoordinate(guildId, actionId, coordinate);
+        } catch (error) {
+            console.error('Error queueing anchor update after quick cmditem:', error);
+        }
+    }
+
+    console.log(`⚡ QUICK CMDITEM: Created action ${actionId} at ${coordinate} — Phrase: "${fullPhrase}" → Gives 1x ${itemName}`);
 
     const { createCustomActionEditorUI } = await import('./customActionUI.js');
     const editorCoordinate = coordinate === 'global' ? null : coordinate;
