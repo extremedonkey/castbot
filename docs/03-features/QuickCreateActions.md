@@ -39,22 +39,24 @@ Quick Crafting creates a **button-triggered recipe Action** (5 fields: name, Cra
 
 ## Where They Appear
 
-### Map Coordinate Screen (Location Actions) — 2 rows
+### Map Coordinate Screen (Location Actions) — header + 2 rows
 
 ```
-Row 1:  [📃 Quick Text] [📦 Quick Item] [📦 Quick ItemText] [🪙 Quick Currency]
-Row 2:  [🛠️ Quick {CraftingName}] [❗ Quick Command] [🐙 Quick Enemy]
+> **Quick Actions**
+Row 1:  [📃 Text] [📦 Item] [📦 ItemText] [🪙 {CurrencyName}]
+Row 2:  [🛠️ {CraftingName}] [❗ Command] [🐙 Enemy]
 ```
 
-Buttons in `entityManagementUI.js` `createEditModeUI()`, inside `if (entityType === 'map_cell')`, via `buildActionManagerSection()` (see below). Actions created here are automatically assigned to the coordinate (and the anchor message is updated via `afterAddCoordinate`).
+Buttons in `entityManagementUI.js` `createEditModeUI()`, inside `if (entityType === 'map_cell')`, via `buildActionManagerSection()` (see below). Actions created here are automatically assigned to the coordinate (and the anchor message is updated via `afterAddCoordinate`). The `> **Quick Actions**` blockquote Text Display carries the "Quick" framing (2026-08-04 UX tweak) — the button labels dropped the word.
 
-### Global Actions Screen — 2 rows
+### Global Actions Screen — header + 2 rows
 
 ```
 ### ```⚡ Actions```
 [Select an action to manage...                                    ▼]
-Row 1:  [📃 Quick Text] [📦 Quick Item] [📦 Quick ItemText] [🪙 Quick Currency]
-Row 2:  [🛠️ Quick {CraftingName}] [❗ Quick Command] [🐙 Quick Enemy]
+> **Quick Actions**
+Row 1:  [📃 Text] [📦 Item] [📦 ItemText] [🪙 {CurrencyName}]
+Row 2:  [🛠️ {CraftingName}] [❗ Command] [🐙 Enemy]
 ─────────────────
 [← Menu]
 ```

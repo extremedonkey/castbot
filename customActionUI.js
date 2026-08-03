@@ -95,7 +95,7 @@ export async function createCustomActionSelectionUI({ guildId, coordinate = null
  * @param {string} params.guildId
  * @param {string} [params.coordinate] - Map coordinate (e.g. "A1"); omit for global
  * @param {string} [params.mapId] - Required when coordinate is set
- * @returns {Promise<Array>} [header, selectRow, quickRow1, quickRow2]
+ * @returns {Promise<Array>} [header, selectRow, quickHeader, quickRow1, quickRow2]
  */
 export async function buildActionManagerSection({ guildId, coordinate = null, mapId = null }) {
   const headerLabel = coordinate ? 'Location Actions' : 'Actions';
@@ -105,17 +105,19 @@ export async function buildActionManagerSection({ guildId, coordinate = null, ma
 
   const coordSuffix = coordinate || 'global';
   const customTerms = await getCustomTerms(guildId);
-  const currencyLabel = `Quick ${customTerms.currencyName || 'Currency'}`;
+  const currencyLabel = customTerms.currencyName || 'Currency';
   const currencyEmoji = parseTextEmoji(customTerms.currencyEmoji || '🪙', '🪙').emoji;
-  const craftingLabel = `Quick ${customTerms.craftingName || 'Crafting'}`;
+  const craftingLabel = customTerms.craftingName || 'Crafting';
   const craftingEmoji = resolveEmoji(customTerms.craftingEmoji || '🛠️', '🛠️');
 
+  // The divider carries the "Quick" framing so the buttons don't have to
+  const quickHeader = { type: 10, content: '> **Quick Actions**' };
   const quickRow1 = {
     type: 1, // ActionRow
     components: [
-      { type: 2, style: 2, label: 'Quick Text', custom_id: `quick_text_${coordSuffix}`, emoji: { name: '📃' } },
-      { type: 2, style: 2, label: 'Quick Item', custom_id: `quick_item_${coordSuffix}`, emoji: { name: '📦' } },
-      { type: 2, style: 2, label: 'Quick ItemText', custom_id: `quick_itemtext_${coordSuffix}`, emoji: { name: '📦' } },
+      { type: 2, style: 2, label: 'Text', custom_id: `quick_text_${coordSuffix}`, emoji: { name: '📃' } },
+      { type: 2, style: 2, label: 'Item', custom_id: `quick_item_${coordSuffix}`, emoji: { name: '📦' } },
+      { type: 2, style: 2, label: 'ItemText', custom_id: `quick_itemtext_${coordSuffix}`, emoji: { name: '📦' } },
       { type: 2, style: 2, label: currencyLabel, custom_id: `quick_currency_${coordSuffix}`, emoji: currencyEmoji }
     ]
   };
@@ -123,12 +125,12 @@ export async function buildActionManagerSection({ guildId, coordinate = null, ma
     type: 1, // ActionRow
     components: [
       { type: 2, style: 2, label: craftingLabel, custom_id: `quick_crafting_${coordSuffix}`, emoji: craftingEmoji },
-      { type: 2, style: 2, label: 'Quick Command', custom_id: `quick_command_${coordSuffix}`, emoji: { name: '❗' } },
-      { type: 2, style: 2, label: 'Quick Enemy', custom_id: `quick_enemy_${coordSuffix}`, emoji: { name: '🐙' } }
+      { type: 2, style: 2, label: 'Command', custom_id: `quick_command_${coordSuffix}`, emoji: { name: '❗' } },
+      { type: 2, style: 2, label: 'Enemy', custom_id: `quick_enemy_${coordSuffix}`, emoji: { name: '🐙' } }
     ]
   };
 
-  return [header, selectRow, quickRow1, quickRow2];
+  return [header, selectRow, quickHeader, quickRow1, quickRow2];
 }
 
 /**
