@@ -28375,7 +28375,7 @@ To fix this:
       // Handle whisper player selection (MIGRATED TO FACTORY)
       return ButtonHandlerFactory.create({
         id: 'whisper_player_select',
-        isModal: true,
+        requiresModal: true,
         handler: async (context) => {
           console.log(`🔍 START: whisper_player_select - user ${context.userId}`);
           

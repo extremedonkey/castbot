@@ -4608,13 +4608,16 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'safari_social'
   },
-  'whisper_player_select': {
+  // Key MUST stay wildcarded: runtime custom_id is whisper_player_select_<coord> (e.g. _F4).
+  // A bare key would both miss the wildcard matcher AND block auto-registration → false [🪨 LEGACY].
+  'whisper_player_select_*': {
     label: 'Select Player',
     description: 'Select player to whisper to',
     emoji: '👤',
     style: 'Secondary',
     category: 'safari_social',
-    isSelectMenu: true
+    isSelectMenu: true,
+    requiresModal: true
   },
   
   // === AVAILABILITY SYSTEM ===
