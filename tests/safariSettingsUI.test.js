@@ -202,6 +202,11 @@ describe('Safari Settings — real modal payloads satisfy Discord limits', () =>
       assert.ok(modal.components.length > 0, `${group}: modal has no components`);
       assert.ok(modal.custom_id.length <= LIMITS.CUSTOM_ID);
       assert.ok(modal.title.length <= LIMITS.TITLE, `${group}: title ${modal.title.length} > ${LIMITS.TITLE}`);
+      // Nonce suffix defeats Discord's cross-server modal draft cache (2026-08-05); the
+      // submit handler recovers the group key by stripping the trailing _digits.
+      assert.match(modal.custom_id, new RegExp(`^safari_config_modal_${group}_\\d+$`));
+      const roundTrip = modal.custom_id.replace('safari_config_modal_', '').replace(/_\d+$/, '');
+      assert.equal(roundTrip, group, 'submit-handler group-key extraction must round-trip');
     });
 
     it(`${group}: every interactive component sits inside a Label and has a custom_id`, async () => {

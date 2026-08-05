@@ -40,7 +40,9 @@ describe('General Settings — buildGeneralSettingsModal', () => {
 
     it('has the expected identities', () => {
         const modal = buildGeneralSettingsModal('textUrl');
-        assert.equal(modal.custom_id, 'castbot_general_modal');
+        // Nonce suffix defeats Discord's cross-server modal draft cache (2026-08-05):
+        // the id must keep the stable prefix (submit routes on startsWith) + trailing digits.
+        assert.match(modal.custom_id, /^castbot_general_modal_\d+$/);
         const label = modal.components.find(c => c.type === 18);
         assert.equal(label.component.custom_id, 'image_upload_mode');
         assert.deepEqual(label.component.options.map(o => o.value), ['textUrl', 'uploadComponent']);

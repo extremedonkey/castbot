@@ -78,7 +78,8 @@ export async function setImageUploadMode(guildId, mode) {
 export function buildGeneralSettingsModal(currentMode) {
     const isUpload = normalizeImageUploadMode(currentMode) === IMAGE_UPLOAD_MODES.UPLOAD_COMPONENT;
     return {
-        custom_id: 'castbot_general_modal',
+        // Nonce defeats Discord's cross-server modal draft cache (see safariConfigUI.js)
+        custom_id: `castbot_general_modal_${Date.now()}`,
         title: 'CastBot | General Settings',
         components: [
             {

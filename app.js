@@ -16404,7 +16404,8 @@ To fix this:
           // Robust mode detection: anything that isn't a positive number means Full refill.
           const isDrip = Number(currentConfig.regenerationAmount) > 0;
           const modal = {
-            custom_id: 'stamina_location_config_modal',
+            // Nonce defeats Discord's cross-server modal draft cache (see safariConfigUI.js)
+            custom_id: `stamina_location_config_modal_${Date.now()}`,
             title: 'Stamina Settings',
             components: [
               // [0] Starting Stamina
@@ -16630,7 +16631,8 @@ To fix this:
           // Create Components V2 modal with Label + String Select (following safari_store_stock pattern)
           const modal = {
             title: 'Player Menu Configuration',
-            custom_id: 'safari_player_menu_config_modal',
+            // Nonce defeats Discord's cross-server modal draft cache (see safariConfigUI.js)
+            custom_id: `safari_player_menu_config_modal_${Date.now()}`,
             components: [
               {
                 type: 18, // Label (Components V2)
@@ -44287,8 +44289,9 @@ To fix this:
         // Check admin permissions
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to customize Safari terms.')) return;
         
-        // Extract group key from custom_id (safari_config_modal_currency -> currency)
-        const groupKey = custom_id.replace('safari_config_modal_', '');
+        // Extract group key from custom_id (safari_config_modal_currency_1785944000000 ->
+        // currency). The trailing _digits nonce defeats Discord's cross-server draft cache.
+        const groupKey = custom_id.replace('safari_config_modal_', '').replace(/_\d+$/, '');
         
         console.log(`⚙️ DEBUG: Processing field group modal submission for ${groupKey}`);
         
@@ -44429,7 +44432,7 @@ To fix this:
           }
         });
       }
-    } else if (custom_id === 'stamina_location_config_modal') {
+    } else if (custom_id.startsWith('stamina_location_config_modal')) {
       // Handle per-server stamina & location configuration modal submission
       try {
         const guildId = req.body.guild_id;
@@ -44549,7 +44552,7 @@ To fix this:
           }
         });
       }
-    } else if (custom_id === 'castbot_general_modal') {
+    } else if (custom_id.startsWith('castbot_general_modal')) {
       // General settings modal submit — save Image Uploads mode, refresh Settings menu
       try {
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to change CastBot settings.')) return;
@@ -44563,7 +44566,7 @@ To fix this:
           data: { content: `❌ Error updating general settings: ${error.message}`, flags: InteractionResponseFlags.EPHEMERAL }
         });
       }
-    } else if (custom_id === 'safari_player_menu_config_modal') {
+    } else if (custom_id.startsWith('safari_player_menu_config_modal')) {
       // Handle Player Menu configuration modal submission
       try {
         const member = req.body.member;
@@ -47987,7 +47990,7 @@ To fix this:
         }
       }
       
-    } else if (custom_id === 'map_admin_blacklist_modal') {
+    } else if (custom_id.startsWith('map_admin_blacklist_modal')) {
       // Handle blacklist modal submission - updates parent Map Explorer with regenerated overlay
       return ButtonHandlerFactory.create({
         id: 'map_admin_blacklist_modal',

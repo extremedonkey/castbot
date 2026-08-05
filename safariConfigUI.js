@@ -314,7 +314,12 @@ export async function createFieldGroupModal(groupKey, currentConfig) {
     return {
         toJSON() {
             return {
-                custom_id: `safari_config_modal_${groupKey}`,
+                // Nonce suffix: Discord caches modal DRAFTS per custom_id ACROSS SERVERS —
+                // a static id let one guild's entries render inside another guild's modal
+                // (observed 2026-08-05: TEST selections shown on the prod modal). A unique
+                // id per open means the client can never match a stale draft. The submit
+                // handler strips the trailing _digits to recover the group key.
+                custom_id: `safari_config_modal_${groupKey}_${Date.now()}`,
                 title: `${groupConfig.label} Settings`,
                 components: components.slice(0, 5) // Discord modal limit
             };

@@ -899,7 +899,10 @@ export async function handleMapAdminBlacklist(context) {
   return {
     type: InteractionResponseType.MODAL,
     data: {
-      custom_id: 'map_admin_blacklist_modal',
+      // Nonce defeats Discord's cross-server modal draft cache (see safariConfigUI.js) —
+      // a drafted blacklist from another server silently replacing this one would be
+      // data corruption, not just cosmetic.
+      custom_id: `map_admin_blacklist_modal_${Date.now()}`,
       title: 'Manage Blacklisted Coordinates',
       components: [
         {
