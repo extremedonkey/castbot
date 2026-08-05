@@ -139,7 +139,7 @@ function processFieldGroupSubmission(groupKey, modalData) {
 
     if (fieldConfig.type === 'radio') {
       const raw = Array.isArray(value) ? value[0] : value;
-      if (raw !== undefined && raw !== '') updates[fieldKey] = raw;
+      if (raw !== undefined && raw !== null && raw !== '') updates[fieldKey] = raw;
       return;
     }
 
@@ -573,6 +573,32 @@ describe('Safari Settings — Modal submission processing', () => {
     };
     const updates = processFieldGroupSubmission('location', modalData);
     assert.ok(!('navigatePaneMode' in updates));
+  });
+
+  it('radio: value null (nothing selected — Discord contract) → no change, never a write', () => {
+    const modalData = {
+      components: [
+        { type: 18, component: { custom_id: 'currencyEnabled', value: null } }
+      ]
+    };
+    const updates = processFieldGroupSubmission('currency', modalData);
+    assert.ok(!('currencyEnabled' in updates));
+  });
+
+  it('radio option labels and descriptions carry NO emoji (only observed-working shape)', () => {
+    // The stamina modal is the sole radio with OBSERVED default pre-selection; it is
+    // plain-text throughout. An emoji-led label rendered UNSELECTED (2026-08-05).
+    const groups = EDIT_CONFIGS[EDIT_TYPES.SAFARI_CONFIG].fieldGroups;
+    const emojiPattern = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/u;
+    for (const group of Object.values(groups)) {
+      for (const [key, field] of Object.entries(group.fields)) {
+        if (field.type !== 'radio') continue;
+        for (const o of field.options) {
+          assert.ok(!emojiPattern.test(o.label), `${key} option "${o.value}" label carries emoji`);
+          assert.ok(!emojiPattern.test(o.description || ''), `${key} option "${o.value}" description carries emoji`);
+        }
+      }
+    }
   });
 });
 

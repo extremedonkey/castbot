@@ -149,15 +149,17 @@ export const EDIT_CONFIGS = {
           currencyEmoji: { type: 'text', maxLength: 100, required: false, label: 'Currency Emoji', placeholder: '🪙 or <:name:id>' },
           defaultStartingCurrencyValue: { type: 'text', maxLength: 10, required: false, label: 'Default Starting Currency', placeholder: '100' },
           // Escape-room opt-in. Unset/garbage reads as enabled (safariFeatureFlags.js) —
-          // only an explicit Disabled hides currency from players. Radio option labels
-          // carry the emoji (Radio Group options take NO emoji field — ComponentsV2.md).
+          // only an explicit Disabled hides currency from players. Options are PLAIN TEXT:
+          // the stamina modal is the only radio with OBSERVED default pre-selection
+          // (ComponentsV2.md 2026-07-16) and it carries no emoji in labels or descriptions —
+          // an emoji-led label rendered with NOTHING pre-selected (observed 2026-08-05).
           currencyEnabled: {
             type: 'radio', required: false, label: 'Currency Visibility',
             options: [
-              { label: '🟢 Enabled (default)', value: 'enabled',
+              { label: 'Enabled (default)', value: 'enabled',
                 description: 'Currency shows in menus, stores and inventories — standard behavior.' },
-              { label: '🔴 Disabled', value: 'disabled',
-                description: '⚠️ Hides currency from players (escape rooms). Balances still tracked silently.' }
+              { label: 'Disabled', value: 'disabled',
+                description: 'Warning: hides currency from players (escape rooms). Balances still tracked silently.' }
             ]
           }
         }
@@ -208,15 +210,16 @@ export const EDIT_CONFIGS = {
           // On = AND: player must hold EVERY item listing the cell (multi-key doors).
           reverseBlacklistRequireAll: { type: 'boolean', required: false, label: 'Require ALL Key Items' },
           // Escape-room opt-in. Unset/garbage reads as 'enabled' (safariFeatureFlags.js).
+          // Plain-text options — see currencyEnabled note (emoji-led labels broke pre-selection).
           navigatePaneMode: {
             type: 'radio', required: false, label: 'Navigate Pane',
             options: [
-              { label: '🟢 Enabled (default)', value: 'enabled',
+              { label: 'Enabled (default)', value: 'enabled',
                 description: 'Navigate panes post as players move — standard Safari behavior.' },
-              { label: '🤫 Silent', value: 'silent',
-                description: '⚠️ Not recommended — players can move, but no public navigate panes post.' },
-              { label: '🔴 Disabled', value: 'disabled',
-                description: '⚠️ Players cannot move themselves — only host teleports and admin moves work.' }
+              { label: 'Silent', value: 'silent',
+                description: 'Not recommended — players can move, but no public navigate panes post.' },
+              { label: 'Disabled', value: 'disabled',
+                description: 'Warning: players cannot move themselves — only host teleports and admin moves work.' }
             ]
           }
         }

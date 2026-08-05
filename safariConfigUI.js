@@ -367,9 +367,11 @@ export function processFieldGroupSubmission(groupKey, modalData) {
 
         // Radio Groups (type 21) submit the selected option value — pass the RAW string
         // through; normalization/coercion happens in the single setter (updateCustomTerms).
+        // Discord returns `value: null` when nothing is selected (ComponentsV2.md) — that
+        // MUST mean "no change", never a write.
         if (fieldConfig.type === 'radio') {
             const raw = Array.isArray(value) ? value[0] : value;
-            if (raw !== undefined && raw !== '') {
+            if (raw !== undefined && raw !== null && raw !== '') {
                 updates[fieldKey] = raw;
             }
             return;
