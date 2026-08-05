@@ -142,14 +142,32 @@ export const EDIT_CONFIGS = {
     displayName: 'Safari Customization',
     fieldGroups: {
       currency: {
-        label: 'Currency & Inventory',
-        description: 'Customize currency name, emoji, and inventory name',
+        label: 'Currency',
+        description: 'Currency name, emoji, starting amount and visibility',
         fields: {
           currencyName: { type: 'text', maxLength: 30, required: true, label: 'Currency Name', placeholder: 'Gold' },
           currencyEmoji: { type: 'text', maxLength: 100, required: false, label: 'Currency Emoji', placeholder: '🪙 or <:name:id>' },
+          defaultStartingCurrencyValue: { type: 'text', maxLength: 10, required: false, label: 'Default Starting Currency', placeholder: '100' },
+          // Escape-room opt-in. Unset/garbage reads as enabled (safariFeatureFlags.js) —
+          // only an explicit Disabled hides currency from players. Radio option labels
+          // carry the emoji (Radio Group options take NO emoji field — ComponentsV2.md).
+          currencyEnabled: {
+            type: 'radio', required: false, label: 'Currency Visibility',
+            options: [
+              { label: '🟢 Enabled (default)', value: 'enabled',
+                description: 'Currency shows in menus, stores and inventories — standard behavior.' },
+              { label: '🔴 Disabled', value: 'disabled',
+                description: '⚠️ Hides currency from players (escape rooms). Balances still tracked silently.' }
+            ]
+          }
+        }
+      },
+      inventory: {
+        label: 'Inventory',
+        description: 'Customize the inventory name and emoji',
+        fields: {
           inventoryName: { type: 'text', maxLength: 30, required: true, label: 'Inventory Name', placeholder: 'Inventory' },
-          inventoryEmoji: { type: 'text', maxLength: 100, required: false, label: 'Inventory Emoji', placeholder: '🧰 or <:name:id>' },
-          defaultStartingCurrencyValue: { type: 'text', maxLength: 10, required: false, label: 'Default Starting Currency', placeholder: '100' }
+          inventoryEmoji: { type: 'text', maxLength: 100, required: false, label: 'Inventory Emoji', placeholder: '🧰 or <:name:id>' }
         }
       },
       crafting: {
@@ -180,13 +198,27 @@ export const EDIT_CONFIGS = {
         }
       },
       location: {
-        label: 'Location',
-        description: 'Set default starting map location and map access rules',
+        // Key stays 'location' (custom_ids + the groupKey === 'location' validation branch
+        // in app.js depend on it) — only the label/emoji present as 'Map'.
+        label: 'Map',
+        description: 'Starting location, map access rules and navigation',
         fields: {
           defaultStartingCoordinate: { type: 'text', maxLength: 4, required: false, label: 'Starting Coordinate', placeholder: 'A1' },
           // Off (unset) = legacy OR: any one listing item unlocks the cell.
           // On = AND: player must hold EVERY item listing the cell (multi-key doors).
-          reverseBlacklistRequireAll: { type: 'boolean', required: false, label: 'Require ALL Key Items' }
+          reverseBlacklistRequireAll: { type: 'boolean', required: false, label: 'Require ALL Key Items' },
+          // Escape-room opt-in. Unset/garbage reads as 'enabled' (safariFeatureFlags.js).
+          navigatePaneMode: {
+            type: 'radio', required: false, label: 'Navigate Pane',
+            options: [
+              { label: '🟢 Enabled (default)', value: 'enabled',
+                description: 'Navigate panes post as players move — standard Safari behavior.' },
+              { label: '🤫 Silent', value: 'silent',
+                description: '⚠️ Not recommended — players can move, but no public navigate panes post.' },
+              { label: '🔴 Disabled', value: 'disabled',
+                description: '⚠️ Players cannot move themselves — only host teleports and admin moves work.' }
+            ]
+          }
         }
       }
     },

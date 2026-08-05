@@ -43,11 +43,39 @@ function buildFieldGroupModal(groupKey, currentConfig = {}) {
     components.push({ type: 10, content: '### ⚠️ Legacy Tycoons Feature' });
   }
 
+  const RADIO_VALUE_ADAPTERS = {
+    currencyEnabled: v => (v === false || v === 'disabled') ? 'disabled' : 'enabled',
+    navigatePaneMode: v => (v === 'silent' || v === 'disabled') ? v : 'enabled'
+  };
+
   Object.entries(groupConfig.fields).forEach(([fieldKey, fieldConfig]) => {
     let currentValue = currentConfig[fieldKey];
     if (fieldKey === 'inventoryEmoji' && !currentValue) currentValue = '🧰';
     if (fieldKey === 'craftingEmoji' && !currentValue) currentValue = '🛠️';
     if (fieldKey === 'craftingName' && !currentValue) currentValue = 'Crafting';
+
+    if (fieldConfig.type === 'radio') {
+      const adapt = RADIO_VALUE_ADAPTERS[fieldKey];
+      const current = adapt
+        ? adapt(currentValue)
+        : (fieldConfig.options.some(o => o.value === currentValue) ? currentValue : fieldConfig.options[0].value);
+      components.push({
+        type: 18,
+        label: fieldConfig.label,
+        component: {
+          type: 21,
+          custom_id: fieldKey,
+          required: true,
+          options: fieldConfig.options.map(o => ({
+            label: o.label,
+            value: o.value,
+            ...(o.description ? { description: o.description } : {}),
+            ...(o.value === current ? { default: true } : {})
+          }))
+        }
+      });
+      return;
+    }
 
     if (fieldConfig.type === 'boolean') {
       components.push({
@@ -92,13 +120,15 @@ function processFieldGroupSubmission(groupKey, modalData) {
   const valuesByCustomId = {};
   for (const row of components) {
     if (row?.component?.custom_id !== undefined) {
-      valuesByCustomId[row.component.custom_id] = row.component.value;
+      valuesByCustomId[row.component.custom_id] = row.component.values !== undefined
+        ? row.component.values
+        : row.component.value;
       continue;
     }
     if (Array.isArray(row?.components)) {
       for (const inner of row.components) {
         if (inner?.custom_id !== undefined) {
-          valuesByCustomId[inner.custom_id] = inner.value;
+          valuesByCustomId[inner.custom_id] = inner.values !== undefined ? inner.values : inner.value;
         }
       }
     }
@@ -106,6 +136,12 @@ function processFieldGroupSubmission(groupKey, modalData) {
 
   Object.entries(groupConfig.fields).forEach(([fieldKey, fieldConfig]) => {
     const value = valuesByCustomId[fieldKey];
+
+    if (fieldConfig.type === 'radio') {
+      const raw = Array.isArray(value) ? value[0] : value;
+      if (raw !== undefined && raw !== '') updates[fieldKey] = raw;
+      return;
+    }
 
     if (fieldConfig.type === 'boolean') {
       updates[fieldKey] = value === true;
@@ -195,10 +231,27 @@ describe('Safari Settings — real modal payloads satisfy Discord limits', () =>
 describe('Safari Settings — Field Group Definitions', () => {
   const groups = EDIT_CONFIGS[EDIT_TYPES.SAFARI_CONFIG].fieldGroups;
 
-  it('defines all five expected groups', () => {
+  it('defines all six expected groups (Currency/Inventory split 2026-08)', () => {
     assert.deepEqual(
       Object.keys(groups).sort(),
-      ['crafting', 'currency', 'events', 'location', 'rounds'].sort()
+      ['crafting', 'currency', 'events', 'inventory', 'location', 'rounds'].sort()
+    );
+  });
+
+  it('currency group holds the currencyEnabled radio; inventory group holds the moved fields', () => {
+    assert.equal(groups.currency.fields.currencyEnabled.type, 'radio');
+    assert.deepEqual(groups.currency.fields.currencyEnabled.options.map(o => o.value), ['enabled', 'disabled']);
+    assert.equal(groups.currency.fields.inventoryName, undefined, 'inventoryName moved out of currency group');
+    assert.ok(groups.inventory.fields.inventoryName);
+    assert.ok(groups.inventory.fields.inventoryEmoji);
+  });
+
+  it('location group is presented as Map and holds the navigatePaneMode radio', () => {
+    assert.equal(groups.location.label, 'Map');
+    assert.equal(groups.location.fields.navigatePaneMode.type, 'radio');
+    assert.deepEqual(
+      groups.location.fields.navigatePaneMode.options.map(o => o.value),
+      ['enabled', 'silent', 'disabled']
     );
   });
 
@@ -232,10 +285,11 @@ describe('Safari Settings — Button row split', () => {
   const groups = EDIT_CONFIGS[EDIT_TYPES.SAFARI_CONFIG].fieldGroups;
   const { mainButtons, legacyButtons } = splitFieldGroupButtons(groups);
 
-  it('main row contains currency, crafting, location (in that order)', () => {
+  it('main buttons are currency, inventory, crafting, location (in that order)', () => {
     const mainIds = mainButtons.map(b => b.custom_id);
     assert.deepEqual(mainIds, [
       'safari_config_group_currency',
+      'safari_config_group_inventory',
       'safari_config_group_crafting',
       'safari_config_group_location'
     ]);
@@ -249,10 +303,33 @@ describe('Safari Settings — Button row split', () => {
     ]);
   });
 
-  it('main row + stamina + commands fits within 5-button ActionRow limit', () => {
-    // Safari row at runtime: [...mainButtons, stamina_location_config, command_prefixes_menu]
-    assert.ok(mainButtons.length + 2 <= 5,
-      `Safari row would have ${mainButtons.length + 2} buttons, must be ≤ 5`);
+  // Replica of createSafariCustomizationUI's DYNAMIC chunking: ≤5 buttons → one Action Row,
+  // more → balanced rows (6 → 3+3, 7 → 4+3). Discord caps rows at 5 buttons.
+  function chunkSafariRows(buttonCount) {
+    const rowCount = Math.ceil(buttonCount / 5);
+    const perRow = Math.ceil(buttonCount / rowCount);
+    const rows = [];
+    for (let i = 0; i < buttonCount; i += perRow) {
+      rows.push(Math.min(perRow, buttonCount - i));
+    }
+    return rows;
+  }
+
+  it('runtime Safari section (main + stamina + commands = 6) chunks to two rows of 3', () => {
+    // mainButtons includes the stamina button at runtime; +1 for Commands
+    const runtimeCount = mainButtons.length + 1 /* stamina */ + 1 /* commands */;
+    assert.equal(runtimeCount, 6);
+    assert.deepEqual(chunkSafariRows(runtimeCount), [3, 3]);
+  });
+
+  it('chunking stays within the 5-per-row cap for any plausible count', () => {
+    for (let n = 1; n <= 12; n++) {
+      const rows = chunkSafariRows(n);
+      assert.equal(rows.reduce((a, b) => a + b, 0), n, `chunk(${n}) loses buttons`);
+      for (const size of rows) assert.ok(size >= 1 && size <= 5, `chunk(${n}) → row of ${size}`);
+    }
+    assert.deepEqual(chunkSafariRows(5), [5], '≤5 stays on a single row');
+    assert.deepEqual(chunkSafariRows(7), [4, 3]);
   });
 });
 
@@ -286,15 +363,56 @@ describe('Safari Settings — Modal generation', () => {
     assert.equal(emojiInput.component.value, '🛠️');
   });
 
-  it('location modal contains the coordinate TextInput + the require-all Checkbox', () => {
+  it('location (Map) modal contains coordinate TextInput + require-all Checkbox + navigate Radio', () => {
     const modal = buildFieldGroupModal('location', {});
-    assert.equal(modal.components.length, 2);
+    assert.equal(modal.components.length, 3);
     assert.equal(modal.components[0].type, 18);
     assert.equal(modal.components[0].component.custom_id, 'defaultStartingCoordinate');
     assert.equal(modal.components[0].component.type, 4);
     assert.equal(modal.components[1].type, 18);
     assert.equal(modal.components[1].component.custom_id, 'reverseBlacklistRequireAll');
     assert.equal(modal.components[1].component.type, 23); // Checkbox
+    assert.equal(modal.components[2].component.custom_id, 'navigatePaneMode');
+    assert.equal(modal.components[2].component.type, 21); // Radio Group
+  });
+
+  it('currency modal has 4 components incl. the currencyEnabled Radio Group', () => {
+    const modal = buildFieldGroupModal('currency', {});
+    assert.equal(modal.components.length, 4);
+    const radio = modal.components.find(r => r.component.custom_id === 'currencyEnabled');
+    assert.equal(radio.component.type, 21);
+  });
+
+  it('radio pre-selection: unset/garbage/true → Enabled; explicit false/"disabled" → Disabled', () => {
+    const defaultOf = (config) => {
+      const modal = buildFieldGroupModal('currency', config);
+      const radio = modal.components.find(r => r.component.custom_id === 'currencyEnabled').component;
+      const defaults = radio.options.filter(o => o.default === true);
+      assert.equal(defaults.length, 1, 'exactly ONE option carries default:true');
+      assert.ok(radio.options.every(o => !('default' in o) || o.default === true),
+        'no option may carry default:false — it suppresses pre-selection group-wide');
+      return defaults[0].value;
+    };
+    assert.equal(defaultOf({}), 'enabled');
+    assert.equal(defaultOf({ currencyEnabled: 'garbage' }), 'enabled');
+    assert.equal(defaultOf({ currencyEnabled: true }), 'enabled');
+    assert.equal(defaultOf({ currencyEnabled: false }), 'disabled');
+    assert.equal(defaultOf({ currencyEnabled: 'disabled' }), 'disabled');
+  });
+
+  it('navigate radio pre-selection follows normalizeNavigateMode across all stored shapes', () => {
+    const defaultOf = (config) => {
+      const modal = buildFieldGroupModal('location', config);
+      const radio = modal.components.find(r => r.component.custom_id === 'navigatePaneMode').component;
+      const defaults = radio.options.filter(o => o.default === true);
+      assert.equal(defaults.length, 1);
+      return defaults[0].value;
+    };
+    assert.equal(defaultOf({}), 'enabled');
+    assert.equal(defaultOf({ navigatePaneMode: 'silent' }), 'silent');
+    assert.equal(defaultOf({ navigatePaneMode: 'disabled' }), 'disabled');
+    assert.equal(defaultOf({ navigatePaneMode: 'ENABLED' }), 'enabled');
+    assert.equal(defaultOf({ navigatePaneMode: 42 }), 'enabled');
   });
 
   it('require-all checkbox renders unchecked when the guild never set it (legacy default)', () => {
@@ -426,6 +544,36 @@ describe('Safari Settings — Modal submission processing', () => {
     const updates = processFieldGroupSubmission('crafting', modalData);
     assert.equal(updates.craftingName, 'Gardening');
   });
+
+  it('radio: scalar .value shape passes the raw string through', () => {
+    const modalData = {
+      components: [
+        { type: 18, component: { custom_id: 'currencyEnabled', value: 'disabled' } }
+      ]
+    };
+    const updates = processFieldGroupSubmission('currency', modalData);
+    assert.equal(updates.currencyEnabled, 'disabled');
+  });
+
+  it('radio: .values[] array shape (defensive) unwraps to the first value', () => {
+    const modalData = {
+      components: [
+        { type: 18, component: { custom_id: 'navigatePaneMode', values: ['silent'] } }
+      ]
+    };
+    const updates = processFieldGroupSubmission('location', modalData);
+    assert.equal(updates.navigatePaneMode, 'silent');
+  });
+
+  it('radio: absent from payload → key absent from updates (no accidental write)', () => {
+    const modalData = {
+      components: [
+        { type: 18, component: { custom_id: 'defaultStartingCoordinate', value: 'A1' } }
+      ]
+    };
+    const updates = processFieldGroupSubmission('location', modalData);
+    assert.ok(!('navigatePaneMode' in updates));
+  });
 });
 
 describe('Safari Settings — Crafting emoji resolution (regression for interaction-failed bug)', () => {
@@ -523,7 +671,11 @@ describe('Safari Settings — Reset coverage', () => {
   // Adding to this list requires the same justification; it is not a dumping ground.
   const resetExemptFields = [
     // Flipping back to OR would silently open every multi-key door mid-game
-    'reverseBlacklistRequireAll'
+    'reverseBlacklistRequireAll',
+    // Escape-room opt-ins: a reset must not re-show currency or re-open self-navigation
+    // mid-game (same game-rule reasoning as above)
+    'currencyEnabled',
+    'navigatePaneMode'
   ];
 
   it('reset covers every UI-exposed fieldGroup field (except documented exemptions)', () => {

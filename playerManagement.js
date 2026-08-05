@@ -23,6 +23,7 @@ import { getChallengeActions, normalizeLinks, extractActionIds } from './challen
 import { formatBotEmoji } from './botEmojis.js';
 import { getCastDockConfig, buildCastDockSelectRow } from './castDock.js';
 import { CHANNEL_ADMIN_USER_IDS } from './src/channels/channelAdminConfig.js';
+import { isCurrencyEnabled, isNavigateDisabled } from './safariFeatureFlags.js';
 
 /**
  * Player management modes
@@ -64,10 +65,12 @@ export async function buildPlayerStatsLine(guildId, player, playerData) {
     const inv = sp.inventory || {};
     const itemTotal = Object.values(inv).reduce((sum, v) => sum + (typeof v === 'object' ? (v?.quantity || 0) : (v || 0)), 0);
     // Gate the currency/inventory pair on actual economy activity (Jason feedback 2026-06-18).
-    const showEconomy = currency > 0 || itemTotal > 0;
-    const parts = showEconomy
-      ? [`${ct.currencyEmoji || '🪙'} ${currency}`, `${ct.inventoryEmoji || '🧰'} ${itemTotal}`]
-      : [];
+    // When currency is disabled server-wide (escape rooms), the 🪙 segment is dropped and a
+    // hidden balance can't be what unlocks the pair — items alone decide.
+    const showEconomy = (ct.currencyEnabled && currency > 0) || itemTotal > 0;
+    const parts = [];
+    if (showEconomy && ct.currencyEnabled) parts.push(`${ct.currencyEmoji || '🪙'} ${currency}`);
+    if (showEconomy) parts.push(`${ct.inventoryEmoji || '🧰'} ${itemTotal}`);
 
     const { loadSafariContent } = await import('./safariManager.js');
     const safariData = await loadSafariContent();
@@ -539,7 +542,11 @@ async function calculateVisibility(guildId, targetUserId, playerData, safariData
   const currencyBalance = safariObj?.currency ?? 0;
   const itemTotal = Object.values(safariObj?.inventory || {})
     .reduce((sum, v) => sum + (typeof v === 'object' ? (v?.quantity || 0) : (v || 0)), 0);
-  const hasEconomyActivity = currencyBalance > 0 || itemTotal > 0;
+  // Escape-room opt-ins (safariFeatureFlags.js): absence/garbage → defaults (on/enabled)
+  const currencyOn = isCurrencyEnabled(safariConfig);
+  const navDisabled = isNavigateDisabled(safariConfig);
+  // A hidden balance must not be what unlocks the economy buttons — items alone decide then.
+  const hasEconomyActivity = (currencyOn && currencyBalance > 0) || itemTotal > 0;
 
   // Challenges — check if any have actions visible to this player
   const challenges = playerData[guildId]?.challenges || {};
@@ -604,10 +611,14 @@ async function calculateVisibility(guildId, targetUserId, playerData, safariData
   // Currency mirrors inventory's visibility (both core safari concepts), and in PLAYER mode both
   // ALSO require hasEconomyActivity (money OR items) so they hide until Safari is live for the player.
   // Admins keep the config-only gate (showInventory) so they can manage a player from zero.
-  vis.currency = { show: isAdmin ? showInventory : (showInventory && hasTarget && hasEconomyActivity), disabled: isAdmin && !hasTarget, label: customTerms.currencyName || 'Currency', emoji: customTerms.currencyEmoji || '🪙' };
+  // Currency disabled (escape rooms): players never see the button; admins KEEP it — their
+  // click is intercepted in handlePlayerButtonClick with a "currency is disabled" notice.
+  vis.currency = { show: isAdmin ? showInventory : (currencyOn && showInventory && hasTarget && hasEconomyActivity), disabled: isAdmin && !hasTarget, label: customTerms.currencyName || 'Currency', emoji: customTerms.currencyEmoji || '🪙' };
   vis.inventory = { show: isAdmin ? showInventory : (showInventory && hasTarget && hasEconomyActivity), disabled: isAdmin && !hasTarget, label: customTerms.inventoryName || 'Inventory', emoji: customTerms.inventoryEmoji || '🧰' };
   // Map: admins see it whenever a map exists (to init/manage); players only when on the map.
-  vis.map = { show: isAdmin ? !!activeMapId : (hasTarget && isInitialized && hasMapLocation), disabled: isAdmin && !hasTarget, label: 'Map', emoji: '🗺️', coordinate: currentCoordinate };
+  // Navigate disabled: hide from players entirely — 'navigate' is their only Map option, so the
+  // button would be a dead end. Admins keep it (init/move/pause still live there).
+  vis.map = { show: isAdmin ? !!activeMapId : (!navDisabled && hasTarget && isInitialized && hasMapLocation), disabled: isAdmin && !hasTarget, label: 'Map', emoji: '🗺️', coordinate: currentCoordinate };
   // Stamina (admin-only): grant/edit a player's stamina. Sits right of Safari Map; shown when a map exists.
   vis.stamina = { show: isAdmin && !!activeMapId, disabled: isAdmin && !hasTarget, label: 'Stamina', emoji: '⚡' };
   vis.challenges = { show: isAdmin ? hasChallengeActions : hasChallengeActions, disabled: isAdmin && !hasTarget, label: 'Challenges', emoji: '🏃' };
@@ -624,9 +635,9 @@ async function calculateVisibility(guildId, targetUserId, playerData, safariData
   // CastDock's compact row overrules a 'player' gate when the host explicitly ticked that
   // button on the setup screen, and never a 'config' one (castDock.js applyCastDockSelection).
   // Nothing here changes `show` — this is metadata only; the player menu itself is unaffected.
-  vis.currency.gatedBy = !showInventory ? 'config' : (vis.currency.show ? null : 'player');
+  vis.currency.gatedBy = (!showInventory || !currencyOn) ? 'config' : (vis.currency.show ? null : 'player');
   vis.inventory.gatedBy = !showInventory ? 'config' : (vis.inventory.show ? null : 'player');
-  vis.map.gatedBy = !activeMapId ? 'config' : (vis.map.show ? null : 'player');
+  vis.map.gatedBy = (!activeMapId || (!isAdmin && navDisabled)) ? 'config' : (vis.map.show ? null : 'player');
   vis.challenges.gatedBy = vis.challenges.show ? null : 'config';
   vis.crafting.gatedBy = vis.crafting.show ? null : 'config';
   vis.actions.gatedBy = vis.actions.show ? null : 'config';
@@ -639,7 +650,7 @@ async function calculateVisibility(guildId, targetUserId, playerData, safariData
   vis.alliance = { show: !isAdmin && CHANNEL_ADMIN_USER_IDS.includes(String(targetUserId)), disabled: false, label: 'Alliance', emoji: '🤐', immediate: true };
   vis.castdock = { show: true, disabled: isAdmin && !hasTarget, label: 'CastDock', emoji: formatBotEmoji('castbot_logo') };
   vis.vanity = { show: isAdmin, disabled: isAdmin && !hasTarget, label: 'Vanity Roles', emoji: '🎭' };
-  vis.navigate = { show: hasTarget && isInitialized && hasMapLocation, disabled: false, label: 'Navigate', emoji: '🗺️', immediate: true, coordinate: currentCoordinate };
+  vis.navigate = { show: !navDisabled && hasTarget && isInitialized && hasMapLocation, disabled: false, label: 'Navigate', emoji: '🗺️', immediate: true, coordinate: currentCoordinate };
 
   // Metadata for footer
   vis._meta = { isInitialized: onMap, hasTarget, isAdmin };
@@ -766,6 +777,10 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
     // ─── Currency ────────────────────────────────────────────────────────
     case 'currency': {
       const ct = await getCustomTerms(guildId);
+      // Currency disabled: no select at all. Player mode shouldn't get here (button hidden);
+      // admin clicks are intercepted in handlePlayerButtonClick — this is belt-and-braces for
+      // stale menus. Callers tolerate a falsy return (no select rendered).
+      if (ct.currencyEnabled === false) return null;
       const currencyName = ct.currencyName || 'Currency';
       const currencyEmoji = ct.currencyEmoji || '🪙';
       const balance = playerData[guildId]?.players?.[targetMember.id]?.safari?.currency ?? 0;
@@ -868,11 +883,15 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
       const isInit = mapState !== PLAYER_SAFARI_STATE.UNINITIALIZED;
       const isPaused = mapState === PLAYER_SAFARI_STATE.PAUSED;
 
-      // Option 1 (both): Show Navigate Pane.
-      const options = [{
-        label: 'Show Navigate Pane', value: 'navigate',
-        description: 'View the map movement pane', emoji: { name: '🗺️' }
-      }];
+      // Option 1 (both): Show Navigate Pane — unless self-navigation is disabled (escape rooms).
+      const navigateOff = isNavigateDisabled(safariData[guildId]?.safariConfig);
+      const options = [];
+      if (!navigateOff) {
+        options.push({
+          label: 'Show Navigate Pane', value: 'navigate',
+          description: 'View the map movement pane', emoji: { name: '🗺️' }
+        });
+      }
 
       if (isAdminMode) {
         // Init XOR De-init depending on current state.
@@ -892,6 +911,10 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
           options.push({ label: 'Reset Explored locations', value: 'reset_explored', description: 'Clear explored coordinates (keeps current)', emoji: { name: '🔄' } });
         }
       }
+
+      // Navigate disabled + player mode leaves ZERO options — an empty type-3 select is a
+      // Discord 400, so return null instead (callers tolerate falsy: no select rendered).
+      if (options.length === 0) return null;
 
       // Uninitialized + custom starting location → surface where they'll spawn in the placeholder.
       const startingLocation = pMap?.startingLocation;
@@ -1871,6 +1894,24 @@ export async function handlePlayerButtonClick(req, res, customId, playerData, cl
   } else {
     console.error('Unknown button pattern:', customId);
     return;
+  }
+
+  // Currency disabled (escape rooms): intercept BEFORE the category activates. The admin
+  // button stays visible (vis.currency), but clicking it explains instead of opening the
+  // currency select; stale player-mode buttons degrade the same way. Safe for both routes:
+  // ButtonHandlerFactory guards its own send with !res.headersSent.
+  if (buttonType === 'currency') {
+    const { loadSafariContent } = await import('./safariManager.js');
+    const safariData = await loadSafariContent(); // request-cached — no extra disk read
+    if (!isCurrencyEnabled(safariData[guildId]?.safariConfig)) {
+      return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content: '🪙 Currency is disabled on this server. Re-enable it in **Settings → 🪙 Currency** to view or edit balances.',
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
+    }
   }
 
   // Special handling for age button - show modal for custom age

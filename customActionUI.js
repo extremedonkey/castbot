@@ -2085,15 +2085,25 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
       content: `### \`\`\`🗺️ Map Locations (${coordinates.length})\`\`\``
     });
 
-    // Collapse to summary if too many total entries (budget: 3N + 3M <= 24 → N+M <= 8)
+    // Collapse if too many total entries (budget: 3N + 3M <= 24 → N+M <= 8), but NEVER
+    // truncate the coordinate list itself — hosts must see every location this action is on.
+    // Section (type 9) + Edit accessory opens a bulk-edit modal (pre-populated), since the
+    // per-coordinate Remove buttons don't exist in this mode.
     if (totalEntries > 8) {
       const sorted = [...coordinates].sort();
-      const coordStr = sorted.length <= 4
-        ? sorted.join(', ')
-        : `${sorted.slice(0, 3).join(', ')}… +${sorted.length - 3}`;
       components.push({
-        type: 10,
-        content: `📍 ${coordStr}`
+        type: 9, // Section
+        components: [{
+          type: 10, // Text Display — full list, no "… +N"
+          content: `📍 ${sorted.join(', ')}`
+        }],
+        accessory: {
+          type: 2, // Button
+          custom_id: `edit_coords_modal_${actionId}`,
+          label: 'Edit',
+          style: 2, // Secondary
+          emoji: { name: '✏️' }
+        }
       });
     } else {
       coordinates.forEach(coord => {
@@ -2225,7 +2235,7 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
     {
       type: 2,
       custom_id: `add_coord_modal_${actionId}`,
-      label: "Add Coord",
+      label: "Location",
       style: 2,
       emoji: { name: "📍" }
     },

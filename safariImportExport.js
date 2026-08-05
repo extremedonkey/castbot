@@ -753,7 +753,12 @@ function filterConfigForExport(config) {
         ...(config.craftingEmoji !== undefined && { craftingEmoji: config.craftingEmoji }),
 
         // Player Menu Settings (enableGlobalCommands is the live field — an earlier defunct name was exported here until 2026-07)
-        ...(config.enableGlobalCommands !== undefined && { enableGlobalCommands: config.enableGlobalCommands })
+        ...(config.enableGlobalCommands !== undefined && { enableGlobalCommands: config.enableGlobalCommands }),
+
+        // Escape-room opt-ins (hosts port escape-room setups; read-time normalization
+        // sanitizes any hand-edited values on import)
+        ...(config.currencyEnabled !== undefined && { currencyEnabled: config.currencyEnabled }),
+        ...(config.navigatePaneMode !== undefined && { navigatePaneMode: config.navigatePaneMode })
 
         // Exclude: currentRound, lastRoundTimestamp, safariLogChannelId (runtime/server-specific fields)
     };

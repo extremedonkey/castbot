@@ -7,6 +7,15 @@
 import { EDIT_CONFIGS, EDIT_TYPES } from './editFramework.js';
 import { loadPlayerData } from './storage.js';
 import { getBotEmoji } from './botEmojis.js';
+import { normalizeNavigateMode } from './safariFeatureFlags.js';
+
+// Map a STORED config value to the radio option value that should be pre-selected.
+// Every adapter must return a valid option value for ANY input (incl. undefined/garbage)
+// so the Radio Group always renders with exactly one `default: true`.
+const RADIO_VALUE_ADAPTERS = {
+    currencyEnabled: v => (v === false || v === 'disabled') ? 'disabled' : 'enabled',
+    navigatePaneMode: v => normalizeNavigateMode(v)
+};
 
 /**
  * Create Roles & Security configuration UI
@@ -112,6 +121,20 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
         .map(k => fieldGroupButtons.find(b => b.custom_id === `safari_config_group_${k}`))
         .filter(Boolean);
 
+    // Safari-section buttons: field groups + Stamina (already in mainButtons) + Commands.
+    // Chunked DYNAMICALLY across Action Rows (5-button Discord cap): ≤5 → one row;
+    // more → balanced rows (6 → 3+3, 7 → 4+3, …).
+    const safariButtons = [
+        ...mainButtons,
+        { type: 2, custom_id: 'command_prefixes_menu', label: 'Commands', style: 2, emoji: { name: '❗' } }
+    ];
+    const safariRowCount = Math.ceil(safariButtons.length / 5);
+    const perRow = Math.ceil(safariButtons.length / safariRowCount);
+    const safariRows = [];
+    for (let i = 0; i < safariButtons.length; i += perRow) {
+        safariRows.push({ type: 1, components: safariButtons.slice(i, i + perRow) });
+    }
+
     // Create Components V2 Container — LEAN design
     // NOTE: this screen used to dump every setting's current value as ~30 lines of text
     // above the buttons. Removed 2026-07-29 — every section duplicated the button that
@@ -131,10 +154,7 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
         ] },
         { type: 14 },
         { type: 10, content: `### \`\`\`🦁 Idol Hunts, Challenges and Safari Settings\`\`\`` },
-        { type: 1, components: [
-            ...mainButtons,
-            { type: 2, custom_id: 'command_prefixes_menu', label: 'Commands', style: 2, emoji: { name: '❗' } }
-        ] },
+        ...safariRows,
         { type: 14 },
         { type: 10, content: `### \`\`\`⚙️ Advanced\`\`\`` },
         {
@@ -207,7 +227,9 @@ export async function createFieldGroupModal(groupKey, currentConfig) {
         round3GoodProbability: 'Chance of a good event in round 3 (0-100).',
         defaultStartingCoordinate: 'Where new players spawn on the map (e.g. A1).',
         // Discord caps Label.description at 100 chars — keep it short or the modal is rejected
-        reverseBlacklistRequireAll: 'Multi-key doors: a cell unlocked by several items needs ALL of them. Off = any one unlocks it.'
+        reverseBlacklistRequireAll: 'Multi-key doors: a cell unlocked by several items needs ALL of them. Off = any one unlocks it.',
+        currencyEnabled: 'Leave Enabled unless running an escape room with no visible economy.',
+        navigatePaneMode: 'Leave Enabled unless players move via host commands only (escape rooms).'
     };
 
     const components = [];
@@ -226,6 +248,35 @@ export async function createFieldGroupModal(groupKey, currentConfig) {
         if (fieldKey === 'inventoryEmoji' && !currentValue) currentValue = '🧰';
         if (fieldKey === 'craftingEmoji' && !currentValue) currentValue = '🛠️';
         if (fieldKey === 'craftingName' && !currentValue) currentValue = 'Crafting';
+
+        // Radio fields render as a Radio Group (type 21) inside the Label. EXACTLY ONE option
+        // carries `default: true` — an explicit default:false on a sibling suppresses
+        // pre-selection for the whole group, and options take NO emoji field (ComponentsV2.md).
+        if (fieldConfig.type === 'radio') {
+            const adapt = RADIO_VALUE_ADAPTERS[fieldKey];
+            const current = adapt
+                ? adapt(currentValue)
+                : (fieldConfig.options.some(o => o.value === currentValue) ? currentValue : fieldConfig.options[0].value);
+            const label = {
+                type: 18, // Label
+                label: fieldConfig.label,
+                component: {
+                    type: 21, // Radio Group (modal-only)
+                    custom_id: fieldKey,
+                    required: true,
+                    options: fieldConfig.options.map(o => ({
+                        label: o.label,
+                        value: o.value,
+                        ...(o.description ? { description: o.description } : {}),
+                        ...(o.value === current ? { default: true } : {})
+                    }))
+                }
+            };
+            const rDesc = fieldDescriptions[fieldKey];
+            if (rDesc) label.description = rDesc;
+            components.push(label);
+            return;
+        }
 
         // Boolean fields render as a Checkbox (type 23) inside the Label, not a text input.
         // Unset/undefined must render UNCHECKED so legacy guilds see their real (legacy) state.
@@ -292,16 +343,20 @@ export function processFieldGroupSubmission(groupKey, modalData) {
     // (e.g. type 10 Text Display warnings) without index-fragility.
     const valuesByCustomId = {};
     for (const row of components) {
-        // Label-wrapped (type 18): row.component is the input
+        // Label-wrapped (type 18): row.component is the input. Radio Groups (type 21) are
+        // documented to deliver a scalar `value`, but two prior call sites defensively accept
+        // `values[]` — keep both shapes working here (the radio branch below unwraps arrays).
         if (row?.component?.custom_id !== undefined) {
-            valuesByCustomId[row.component.custom_id] = row.component.value;
+            valuesByCustomId[row.component.custom_id] = row.component.values !== undefined
+                ? row.component.values
+                : row.component.value;
             continue;
         }
         // ActionRow-wrapped (type 1, legacy): row.components[] are inputs
         if (Array.isArray(row?.components)) {
             for (const inner of row.components) {
                 if (inner?.custom_id !== undefined) {
-                    valuesByCustomId[inner.custom_id] = inner.value;
+                    valuesByCustomId[inner.custom_id] = inner.values !== undefined ? inner.values : inner.value;
                 }
             }
         }
@@ -309,6 +364,16 @@ export function processFieldGroupSubmission(groupKey, modalData) {
 
     Object.entries(groupConfig.fields).forEach(([fieldKey, fieldConfig]) => {
         const value = valuesByCustomId[fieldKey];
+
+        // Radio Groups (type 21) submit the selected option value — pass the RAW string
+        // through; normalization/coercion happens in the single setter (updateCustomTerms).
+        if (fieldConfig.type === 'radio') {
+            const raw = Array.isArray(value) ? value[0] : value;
+            if (raw !== undefined && raw !== '') {
+                updates[fieldKey] = raw;
+            }
+            return;
+        }
 
         // Checkboxes (type 23) submit a boolean. Handled before the empty-value skip below
         // because `false` is a real value — unchecking must persist, not be treated as
@@ -341,10 +406,11 @@ export function processFieldGroupSubmission(groupKey, modalData) {
 function getGroupEmoji(groupKey) {
     const emojis = {
         currency: '🪙',
+        inventory: '🎒',
         crafting: '🛠️',
         events: '☄️',
         rounds: '🎲',
-        location: '📍'
+        location: '🗺️'
     };
     return emojis[groupKey] || '⚙️';
 }
@@ -357,7 +423,7 @@ export function createResetConfirmationUI() {
     const containerComponents = [
         {
             type: 10, // Text Display component
-            content: `## ⚠️ Reset CastBot Settings\n\nAre you sure you want to reset all settings to default values?\n\n**This will reset:**\n• 🪙 Currency & Inventory (name, emoji, starting amount)\n• 🛠️ Crafting (name, emoji)\n• ☄️ Event names and emojis\n• 🎲 Round probabilities (75%, 50%, 25%)\n• 📍 Default starting coordinate (A1)\n• ⚡ Stamina settings\n• 🕹️ Player Menu visibility\n\n**Will NOT reset:**\n• 🔐 Roles & Security whitelist\n• 📊 Safari Log channel\n• ❗ Command prefixes\n• 🔑 Require ALL Key Items (would unlock multi-key doors mid-game)\n\n**This action cannot be undone.**`
+            content: `## ⚠️ Reset CastBot Settings\n\nAre you sure you want to reset all settings to default values?\n\n**This will reset:**\n• 🪙 Currency (name, emoji, starting amount)\n• 🎒 Inventory (name, emoji)\n• 🛠️ Crafting (name, emoji)\n• ☄️ Event names and emojis\n• 🎲 Round probabilities (75%, 50%, 25%)\n• 📍 Default starting coordinate (A1)\n• ⚡ Stamina settings\n• 🕹️ Player Menu visibility\n\n**Will NOT reset:**\n• 🔐 Roles & Security whitelist\n• 📊 Safari Log channel\n• ❗ Command prefixes\n• 🔑 Require ALL Key Items (would unlock multi-key doors mid-game)\n• 🪙 Currency Visibility / 🗺️ Navigate Pane (game-rule settings — a reset must not flip live rules)\n\n**This action cannot be undone.**`
         },
         {
             type: 1, // Action Row

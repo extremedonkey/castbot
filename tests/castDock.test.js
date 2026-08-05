@@ -311,8 +311,10 @@ describe('CastDock — calculateVisibility keeps tagging gatedBy (static guard)'
     it('inventory and map distinguish a player-state gate from a config gate', () => {
         assert.ok(src.includes("vis.inventory.gatedBy = !showInventory ? 'config'"),
             'Inventory must stay overridable when only the player is broke, but not when the host turned it off');
-        assert.ok(src.includes("vis.map.gatedBy = !activeMapId ? 'config'"),
-            'Map must stay overridable when the player just is not placed yet, but not when no map exists');
+        // Since 2026-08 navigate-disabled (escape rooms) is a second config-gate reason for
+        // players: CastDock must never override it — only "not placed yet" stays overridable.
+        assert.ok(src.includes("vis.map.gatedBy = (!activeMapId || (!isAdmin && navDisabled)) ? 'config'"),
+            'Map must stay overridable when the player just is not placed yet, but not when no map exists or navigation is disabled');
     });
 });
 

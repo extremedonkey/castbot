@@ -4431,12 +4431,18 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         ephemeral: true,
         handler: async (context) => {
           console.log(`🗺️ START: safari_move_${targetCoordinate} - user ${context.userId}`);
-          
+
           try {
             // Import movement functions
             const { movePlayer, getMovementDisplay, getPlayerLocation, createMovementNotification } = await import('./mapMovement.js');
             const { loadSafariContent } = await import('./safariManager.js');
-            
+
+            // Navigate disabled (escape rooms): stale compass buttons degrade politely.
+            // Placed before any state change; 'silent' mode does NOT trip this guard.
+            const { getNavigateDisabledNotice } = await import('./safariManager.js');
+            const navNotice = await getNavigateDisabledNotice(context.guildId);
+            if (navNotice) return navNotice;
+
             // Validate that user is in the correct channel for their current position
             const mapState = await getPlayerLocation(context.guildId, context.userId);
             if (mapState) {
@@ -4465,7 +4471,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               const targetChannelId = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[targetCoordinate]?.channelId;
               const sourceChannelId = context.channelId;
               
-              if (targetChannelId && targetChannelId !== sourceChannelId) {
+              // Arrival card is a public navigate pane — suppressed in 'silent'/'disabled'
+              // navigate modes (escape rooms). The ephemeral move flow below is unaffected.
+              const { shouldPostNavigatePanes } = await import('./safariFeatureFlags.js');
+              if (targetChannelId && targetChannelId !== sourceChannelId
+                  && shouldPostNavigatePanes(safariData[context.guildId]?.safariConfig)) {
                 // Post arrival message with Navigate button
                 const { buildArrivalPanelUI } = await import('./mapNavigationUI.js');
                 console.log(`🔍 DEBUG: Posting arrival message to new channel ${targetChannelId}`);
@@ -4556,10 +4566,15 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               ephemeral: true
             };
           }
-          
+
+          // Navigate disabled (escape rooms): stale panel buttons degrade politely
+          const { getNavigateDisabledNotice } = await import('./safariManager.js');
+          const navNotice = await getNavigateDisabledNotice(context.guildId);
+          if (navNotice) return navNotice;
+
           // Import movement display function
           const { getMovementDisplay } = await import('./mapMovement.js');
-          
+
           // Get and return movement display as ephemeral response
           const movementDisplay = await getMovementDisplay(context.guildId, context.userId, coordinate);
           
@@ -4594,7 +4609,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               ephemeral: true
             };
           }
-          
+
+          // Navigate disabled (escape rooms): stale compass refresh degrades politely
+          const { getNavigateDisabledNotice } = await import('./safariManager.js');
+          const navNotice = await getNavigateDisabledNotice(context.guildId);
+          if (navNotice) return navNotice;
+
           // Import movement display function
           const { getMovementDisplay, getPlayerLocation } = await import('./mapMovement.js');
           
@@ -4693,6 +4713,13 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               ephemeral: true
             };
           }
+
+          // Navigate disabled (escape rooms): the panel OWNER gets a polite notice instead of
+          // the compass. Deliberately placed AFTER the foreign-click branch so admins keep the
+          // stale-panel Delete Panel cleanup path.
+          const { getNavigateDisabledNotice } = await import('./safariManager.js');
+          const navNotice = await getNavigateDisabledNotice(context.guildId);
+          if (navNotice) return navNotice;
 
           // Import movement display function
           const { getMovementDisplay, getPlayerLocation } = await import('./mapMovement.js');
@@ -9812,9 +9839,13 @@ To fix this:
           const targetUserId = context.customId.replace('player_menu_sel_currency_', '');
           const { getCustomTerms } = await import('./safariManager.js');
           const { createCurrencyModal } = await import('./safariMapAdmin.js');
+          const customTerms = await getCustomTerms(context.guildId);
+          // Stale-select guard: currency disabled (escape rooms) → explain instead of the modal
+          if (customTerms.currencyEnabled === false) {
+            return { content: '🪙 Currency is disabled on this server. Re-enable it in **Settings → 🪙 Currency** to view or edit balances.', ephemeral: true };
+          }
           const playerData = await loadPlayerData();
           const currentAmount = playerData[context.guildId]?.players?.[targetUserId]?.safari?.currency || 0;
-          const customTerms = await getCustomTerms(context.guildId);
           const modal = await createCurrencyModal(targetUserId, currentAmount, customTerms.currencyName);
           modal.setCustomId(`spm_currency_modal_${targetUserId}`);
           return { type: 9, data: modal.toJSON() };
@@ -9827,6 +9858,10 @@ To fix this:
         const { getCustomTerms } = await import('./safariManager.js');
         const playerData = await loadPlayerData();
         const terms = await getCustomTerms(context.guildId);
+        // Stale-select guard: currency disabled (escape rooms) → explain instead of the balance
+        if (terms.currencyEnabled === false) {
+          return { content: '🪙 Currency is disabled on this server. Re-enable it in **Settings → 🪙 Currency** to view or edit balances.', ephemeral: true };
+        }
         const name = terms.currencyName || 'Currency';
         const emoji = terms.currencyEmoji || '🪙';
         const balance = playerData[context.guildId]?.players?.[targetUserId]?.safari?.currency ?? 0;
@@ -9936,6 +9971,10 @@ To fix this:
       return ButtonHandlerFactory.create({ id: 'castdock_view_navigate', security: 'public', deferred: true, handler: async (context) => {
         const entry = client.castDockChannels?.get(context.channelId);
         if (!entry) return { content: '📌 CastDock is no longer enabled in this channel.', ephemeral: true };
+        // Navigate disabled (escape rooms) — the compact Map button degrades politely
+        const { getNavigateDisabledNotice } = await import('./safariManager.js');
+        const navNotice = await getNavigateDisabledNotice(context.guildId);
+        if (navNotice) return navNotice;
         const { getPlayerLocation, getMovementDisplay } = await import('./mapMovement.js');
         const loc = await getPlayerLocation(context.guildId, entry.targetUserId);
         const coordinate = loc?.currentCoordinate;
@@ -10098,8 +10137,12 @@ To fix this:
         // Navigate pane (both player + admin) — replace menu in place, with a back button.
         if (selectedValue === 'navigate') {
           const { getMovementDisplay, getPlayerLocation } = await import('./mapMovement.js');
+          const { getNavigateDisabledNotice } = await import('./safariManager.js');
           const loc = await getPlayerLocation(context.guildId, targetUserId);
-          const coordinate = loc?.currentCoordinate;
+          // Navigate disabled (escape rooms): stale select → fall into the menu-rebuild path
+          // below (this handler is updateMessage — an ephemeral reply would clobber the menu);
+          // the rebuilt menu omits the navigate option.
+          const coordinate = (await getNavigateDisabledNotice(context.guildId)) ? null : loc?.currentCoordinate;
           if (!coordinate) {
             // Not on the map — just refresh the menu (placeholder will show Uninitialized).
             if (isAdminMode) return await buildAdminPlayerMenu(context.client, context.guildId, targetUserId, adminUserId, 'map');
@@ -17234,7 +17277,7 @@ To fix this:
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '✅ **CastBot Settings Reset!**\n\nAll customizations have been reset to default values:\n• 🪙 Currency: Gold / Inventory (start: 100)\n• 🛠️ Crafting: Crafting\n• ☄️ Events: ☀️ Clear Skies / ☄️ Meteor Strike\n• 🎲 Round probabilities: 75%, 50%, 25%\n• 📍 Starting coordinate: A1\n• ⚡ Stamina: 1 / max 10 / regen 60min\n• 🕹️ Player Menu visibility restored to defaults',
+            content: '✅ **CastBot Settings Reset!**\n\nAll customizations have been reset to default values:\n• 🪙 Currency: Gold / Inventory (start: 100)\n• 🛠️ Crafting: Crafting\n• ☄️ Events: ☀️ Clear Skies / ☄️ Meteor Strike\n• 🎲 Round probabilities: 75%, 50%, 25%\n• 📍 Starting coordinate: A1\n• ⚡ Stamina: 1 / max 10 / regen 60min\n• 🕹️ Player Menu visibility restored to defaults\n\n-# Not reset: Currency Visibility, Navigate Pane, Require ALL Key Items (game-rule settings)',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -31789,40 +31832,57 @@ To fix this:
       })(req, res, client);
 
     } else if (custom_id.startsWith('add_coord_modal_')) {
-      // Handle coordinate addition modal
+      // Location button (Action Visibility) — bulk-add locations modal (no pre-population;
+      // additive). Accepts comma/space lists and the 'all' keyword.
       return ButtonHandlerFactory.create({
         id: 'add_coord_modal',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         handler: async (context) => {
           console.log(`🔍 START: add_coord_modal - user ${context.userId}`);
-          
+
           const actionId = context.customId.replace('add_coord_modal_', '');
-          
+
           // Return modal for coordinate input
           return {
             type: InteractionResponseType.MODAL,
             data: {
               custom_id: `add_coord_submit_${actionId}`,
-              title: 'Add Coordinate',
+              title: 'Add Locations',
               components: [{
-                type: 1, // Action Row
-                components: [{
+                type: 18, // Label
+                label: 'Locations',
+                description: "Comma-separated coordinates (e.g. A1, B3, D7) — or 'all' for every map location.",
+                component: {
                   type: 4, // Text Input
                   custom_id: 'coordinate',
-                  label: 'Coordinate (e.g. A1, B3, D7)',
-                  style: 1, // Short
+                  style: 2, // Paragraph — bulk lists need room
                   required: true,
-                  placeholder: 'Enter map coordinate...',
+                  placeholder: "A1, B3, D7 — or 'all'",
                   min_length: 2,
-                  max_length: 10
-                }]
+                  max_length: 1000
+                }
               }]
             }
           };
         }
       })(req, res, client);
-      
+
+    } else if (custom_id.startsWith('edit_coords_modal_')) {
+      // Action Visibility → collapsed Map Locations → Edit: bulk-edit modal (pre-populated)
+      return ButtonHandlerFactory.create({
+        id: 'edit_coords_modal',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const actionId = context.customId.replace('edit_coords_modal_', '');
+          const { buildEditCoordsModal } = await import('./safariActionCoordinates.js');
+          const result = await buildEditCoordsModal(context.guildId, actionId);
+          if (result.error) return { content: result.error, ephemeral: true };
+          return { type: InteractionResponseType.MODAL, data: result.modal };
+        }
+      })(req, res, client);
+
     } else if (custom_id.startsWith('action_phrase_add_') && !custom_id.startsWith('action_phrase_add_modal_')) {
       // Handle Add Phrase button — opens modal with prefix select + text input
       return ButtonHandlerFactory.create({
@@ -44218,153 +44278,6 @@ To fix this:
           }
         });
       }
-    // LEGACY HANDLER - COMMENTED OUT: castbot_settings_modal
-    // This modal handler has been replaced by the new Components V2 field group interface
-    // Remove after confirming new system works properly
-    /*
-    } else if (custom_id === 'castbot_settings_modal') {
-      // Handle Safari terms customization modal - LEGACY IMPLEMENTATION
-      try {
-        const member = req.body.member;
-        const guildId = req.body.guild_id;
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to customize Safari terms.')) return;
-        
-        // Extract modal input values from comprehensive Safari settings
-        const components = req.body.data.components;
-        const gameSettings = components[0]?.components[0]?.value || '75,50,25';
-        const eventNames = components[1]?.components[0]?.value || 'Clear Skies,Meteor Strike';
-        const eventEmojis = components[2]?.components[0]?.value || '☀️,☄️';
-        const currencySettings = components[3]?.components[0]?.value || 'Gold,🪙';
-        const inventoryName = components[4]?.components[0]?.value || 'Inventory';
-        
-        // Parse comma-separated values
-        const parseCommaSeparated = (value, expectedCount, fieldName) => {
-          if (!value || value.trim() === '') return new Array(expectedCount).fill(null);
-          const parts = value.split(',').map(p => p.trim());
-          if (parts.length !== expectedCount) {
-            throw new Error(`${fieldName} must have exactly ${expectedCount} comma-separated values.`);
-          }
-          return parts;
-        };
-        
-        let round1Good = null, round2Good = null, round3Good = null;
-        let goodEventName = 'Clear Skies', badEventName = 'Meteor Strike';
-        let goodEventEmoji = '☀️', badEventEmoji = '☄️';
-        let currencyName = 'Coins', currencyEmoji = '🪙';
-        
-        try {
-          // Parse game settings (probabilities)
-          if (gameSettings && gameSettings.trim() !== '') {
-            const probabilities = parseCommaSeparated(gameSettings, 3, 'Game Settings');
-            for (let i = 0; i < 3; i++) {
-              if (probabilities[i] && probabilities[i] !== '') {
-                const num = parseInt(probabilities[i], 10);
-                if (isNaN(num) || num < 0 || num > 100) {
-                  throw new Error(`Round ${i + 1} probability must be between 0 and 100.`);
-                }
-                if (i === 0) round1Good = num;
-                if (i === 1) round2Good = num;
-                if (i === 2) round3Good = num;
-              }
-            }
-          }
-          
-          // Parse event names
-          if (eventNames && eventNames.trim() !== '') {
-            const names = parseCommaSeparated(eventNames, 2, 'Event Names');
-            goodEventName = names[0] || 'Clear Skies';
-            badEventName = names[1] || 'Meteor Strike';
-          }
-          
-          // Parse event emojis
-          if (eventEmojis && eventEmojis.trim() !== '') {
-            const emojis = parseCommaSeparated(eventEmojis, 2, 'Event Emojis');
-            goodEventEmoji = emojis[0] || '☀️';
-            badEventEmoji = emojis[1] || '☄️';
-          }
-          
-          // Parse currency settings
-          if (currencySettings && currencySettings.trim() !== '') {
-            const currency = parseCommaSeparated(currencySettings, 2, 'Currency Settings');
-            currencyName = currency[0] || 'Coins';
-            currencyEmoji = currency[1] || '🪙';
-          }
-          
-        } catch (validationError) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: `❌ Validation Error: ${validationError.message}`,
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        console.log(`⚙️ DEBUG: Customizing Safari settings for guild ${guildId}: Currency="${currencyName}:${currencyEmoji}", Events="${goodEventName}:${badEventName}", Rounds="${round1Good},${round2Good},${round3Good}"`);
-        
-        // Import Safari manager functions
-        const { updateCustomTerms } = await import('./safariManager.js');
-        
-        // Update all Safari settings
-        const updateData = {
-          currencyName: currencyName,
-          inventoryName: inventoryName,
-          currencyEmoji: currencyEmoji,
-          goodEventName: goodEventName,
-          badEventName: badEventName,
-          goodEventEmoji: goodEventEmoji,
-          badEventEmoji: badEventEmoji
-        };
-        
-        // Add round probabilities if provided
-        if (round1Good !== null) updateData.round1GoodProbability = round1Good;
-        if (round2Good !== null) updateData.round2GoodProbability = round2Good;
-        if (round3Good !== null) updateData.round3GoodProbability = round3Good;
-        
-        const success = await updateCustomTerms(guildId, updateData);
-        
-        if (!success) {
-          throw new Error('Failed to update custom terms');
-        }
-        
-        console.log(`✅ DEBUG: Safari settings updated successfully for guild ${guildId}`);
-        
-        // Build comprehensive success message
-        let successMessage = `✅ **Safari Settings Updated!**\n\n**Currency:** ${currencyEmoji} ${currencyName}\n**Inventory:** ${inventoryName}`;
-        
-        successMessage += `\n\n**Events:**\n• Good: ${goodEventEmoji} ${goodEventName}\n• Bad: ${badEventEmoji} ${badEventName}`;
-        
-        if (round1Good !== null || round2Good !== null || round3Good !== null) {
-          successMessage += `\n\n**Round Harvest Probabilities:**`;
-          if (round1Good !== null) successMessage += `\n• Round 1: ${round1Good}% good`;
-          if (round2Good !== null) successMessage += `\n• Round 2: ${round2Good}% good`;
-          if (round3Good !== null) successMessage += `\n• Round 3: ${round3Good}% good`;
-        }
-        
-        successMessage += `\n\n🎮 All settings configured for Challenge Game Logic!`;
-        
-        // Return success message
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: successMessage,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error updating Safari terms:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error updating Safari terms. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
-    */
     } else if (custom_id.startsWith('safari_config_modal_')) {
       // Handle field group modal submissions - Currency, Events, Rounds
       try {
@@ -46126,8 +46039,8 @@ To fix this:
             const effectiveCoord = actualLocation || (coord !== 'global' ? coord : null);
             const locationTitle = effectiveCoord ? safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[effectiveCoord]?.baseContent?.title : null;
             const nothingMessage = locationTitle
-              ? `## Nothing happened\n\nAttempted to \`${command}\` in ${locationTitle}. Nothing particularly exciting happened.`
-              : `## Nothing happened\n\nAttempted to \`${command}\`. Nothing particularly exciting happened.`;
+              ? `## Nothing happened\n\nAttempted command \`${command}\` in ${locationTitle}. Nothing particularly exciting happened.`
+              : `## Nothing happened\n\nAttempted command \`${command}\`. Nothing particularly exciting happened.`;
 
             // Log the failed player command
             try {
@@ -46428,8 +46341,8 @@ To fix this:
               const effectiveCoord2 = coord !== 'global' ? coord : null;
               const locationTitle2 = effectiveCoord2 ? safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[effectiveCoord2]?.baseContent?.title : null;
               const nothingMessage2 = locationTitle2
-                ? `## Nothing happened\n\nAttempted to \`${command}\` in ${locationTitle2}. Nothing particularly exciting happened.`
-                : `## Nothing happened\n\nAttempted to \`${command}\`. Nothing particularly exciting happened.`;
+                ? `## Nothing happened\n\nAttempted command \`${command}\` in ${locationTitle2}. Nothing particularly exciting happened.`
+                : `## Nothing happened\n\nAttempted command \`${command}\`. Nothing particularly exciting happened.`;
 
               return res.send({
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -47153,88 +47066,23 @@ To fix this:
         // Check admin permissions
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage coordinates.')) return;
         
-        const coordinate = components[0].components[0].value?.trim().toUpperCase();
-        
-        if (!coordinate) {
+        // Label-wrapped (type 18) with legacy ActionRow fallback (stale modals)
+        const rawInput = (components[0].component?.value ?? components[0].components?.[0]?.value ?? '').trim();
+
+        // Bulk add via shared parser module (comma/space lists, dedupe, 'all' keyword)
+        const { applyAddCoordinates } = await import('./safariActionCoordinates.js');
+        const result = await applyAddCoordinates(guildId, actionId, rawInput);
+        if (result.error) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Coordinate is required.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
+            data: { content: result.error, flags: InteractionResponseFlags.EPHEMERAL }
           });
         }
-        
-        // Validate coordinate format (e.g. A1, B3, D7)
-        if (!/^[A-Z]\d+$/.test(coordinate)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Invalid coordinate format. Use format like A1, B3, D7.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        // Load and update safari data
-        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
-        const allSafariContent = await loadSafariContent();
-        const guildData = allSafariContent[guildId] || {};
-        const action = guildData.buttons?.[actionId];
-        
-        if (!action) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Action not found.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        // Add coordinate to action
-        if (!action.coordinates) {
-          action.coordinates = [];
-        }
-        if (!action.coordinates.includes(coordinate)) {
-          action.coordinates.push(coordinate);
-        }
-        
-        // Add bidirectional sync - update coordinate's buttons array
-        const activeMapId = allSafariContent[guildId]?.maps?.active;
-        if (activeMapId && allSafariContent[guildId]?.maps?.[activeMapId]?.coordinates?.[coordinate]) {
-          const coordData = allSafariContent[guildId].maps[activeMapId].coordinates[coordinate];
-          if (!coordData.buttons) {
-            coordData.buttons = [];
-          }
-          if (!coordData.buttons.includes(actionId)) {
-            coordData.buttons.push(actionId);
-          }
-        }
-        
-        await saveSafariContent(allSafariContent);
-        
-        // Queue anchor message updates
-        try {
-          const { queueActionCoordinateUpdates } = await import('./anchorMessageManager.js');
-          await queueActionCoordinateUpdates(guildId, actionId, 'coordinate_added');
-        } catch (error) {
-          console.error('Error queueing anchor updates:', error);
-        }
-        
-        // Return updated UI
+
         const { createCoordinateManagementUI } = await import('./customActionUI.js');
-        const ui = await createCoordinateManagementUI({
-          guildId: guildId,
-          actionId
-        });
-        
-        console.log(`✅ SUCCESS: add_coord_submit - added ${coordinate} to action ${actionId}`);
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: ui
-        });
-        
+        const ui = await createCoordinateManagementUI({ guildId, actionId });
+        return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: ui });
+
       } catch (error) {
         console.error('Error adding coordinate:', error);
         return res.send({
@@ -47245,7 +47093,39 @@ To fix this:
           }
         });
       }
-      
+
+    } else if (custom_id.startsWith('edit_coords_submit_')) {
+      // Bulk-edit Map Locations (Action Visibility → collapsed list → Edit) — FULL-REPLACE,
+      // logic in safariActionCoordinates.js (app.js is a router).
+      try {
+        const guildId = req.body.guild_id;
+        const actionId = custom_id.replace('edit_coords_submit_', '');
+
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage coordinates.')) return;
+
+        const rawInput = (components[0].component?.value ?? components[0].components?.[0]?.value ?? '').trim();
+
+        const { applyEditCoordinates } = await import('./safariActionCoordinates.js');
+        const result = await applyEditCoordinates(guildId, actionId, rawInput);
+        if (result.error) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { content: result.error, flags: InteractionResponseFlags.EPHEMERAL }
+          });
+        }
+
+        const { createCoordinateManagementUI } = await import('./customActionUI.js');
+        const ui = await createCoordinateManagementUI({ guildId, actionId });
+        return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: ui });
+
+      } catch (error) {
+        console.error('Error editing coordinates:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { content: '❌ Error editing locations. Please try again.', flags: InteractionResponseFlags.EPHEMERAL }
+        });
+      }
+
     } else if (custom_id.startsWith('ca_link_item_search_')) {
       // Handle search modal for item linking — shows filtered item list
       try {
@@ -49308,8 +49188,11 @@ function getButtonStyleName(style) {
 function getFieldDisplayName(fieldKey) {
   const labels = {
     currencyName: 'Currency Name',
-    currencyEmoji: 'Currency Emoji', 
+    currencyEmoji: 'Currency Emoji',
     inventoryName: 'Inventory Name',
+    inventoryEmoji: 'Inventory Emoji',
+    currencyEnabled: 'Currency Visibility',
+    navigatePaneMode: 'Navigate Pane',
     goodEventName: 'Good Event Name',
     badEventName: 'Bad Event Name',
     goodEventEmoji: 'Good Event Emoji',

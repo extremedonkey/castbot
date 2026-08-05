@@ -726,7 +726,7 @@ export const BUTTON_REGISTRY = {
   },
   'safari_config_group_*': {
     label: 'Config Group',
-    description: 'Safari settings field group modal (Currency, Events, Rounds)',
+    description: 'Safari settings field group modal (Currency, Inventory, Crafting, Map, Events, Rounds)',
     emoji: '⚙️',
     style: 'Secondary',
     parent: 'castbot_settings',
@@ -4011,10 +4011,18 @@ export const BUTTON_REGISTRY = {
     category: 'safari_management'
   },
   'add_coord_modal_*': {
-    label: 'Add Coordinate',
-    description: 'Add coordinate assignment to action',
-    emoji: '➕',
-    style: 'Primary',
+    label: 'Location',
+    description: 'Bulk-add map locations to action (comma list or all)',
+    emoji: '📍',
+    style: 'Secondary',
+    category: 'safari_management',
+    requiresModal: true
+  },
+  'edit_coords_modal_*': {
+    label: 'Edit Locations',
+    description: 'Bulk-edit action map locations (pre-populated, full replace)',
+    emoji: '✏️',
+    style: 'Secondary',
     category: 'safari_management',
     requiresModal: true
   },

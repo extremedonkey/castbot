@@ -151,6 +151,11 @@ export async function buildLocationManagerUI({ guildId, userId, coord, member = 
         mode: 'edit'
     });
 
+    // Navigate disabled (escape rooms): the Explore screen keeps Enter Command / Whisper /
+    // Inventory but never offers the compass.
+    const { isNavigateDisabled } = await import('./safariFeatureFlags.js');
+    const navDisabled = isNavigateDisabled(safariData[guildId]?.safariConfig);
+
     // Add Navigate + Inventory buttons to the action row containing Enter Command
     console.log(`🔍 DEBUG: UI has ${ui.components?.length || 0} components`);
 
@@ -197,7 +202,7 @@ export async function buildLocationManagerUI({ guildId, userId, coord, member = 
 
                                 // Rebuild components in desired order: Navigate, Enter Command, Whisper, Inventory (last)
                                 subComponent.components = [];
-                                subComponent.components.push(navigateButton);
+                                if (!navDisabled) subComponent.components.push(navigateButton);
                                 if (enterCommandButton) subComponent.components.push(enterCommandButton);
                                 if (whisperButton) subComponent.components.push(whisperButton);
                                 subComponent.components.push(inventoryButton);
@@ -217,15 +222,17 @@ export async function buildLocationManagerUI({ guildId, userId, coord, member = 
                     foundEnterCommand = true;
                     console.log(`🔍 DEBUG: Adding Navigate button to top-level action row ${i} (before: ${component.components.length} buttons)`);
 
-                    const navigateButton = {
-                        type: 2, // Button
-                        style: 2, // Secondary (grey)
-                        label: 'Navigate',
-                        custom_id: `safari_navigate_${userId}_${coord}`,
-                        emoji: { name: '🗺️' }
-                    };
+                    if (!navDisabled) {
+                        const navigateButton = {
+                            type: 2, // Button
+                            style: 2, // Secondary (grey)
+                            label: 'Navigate',
+                            custom_id: `safari_navigate_${userId}_${coord}`,
+                            emoji: { name: '🗺️' }
+                        };
 
-                    component.components.unshift(navigateButton);
+                        component.components.unshift(navigateButton);
+                    }
                     console.log(`🔍 DEBUG: Added Navigate button (after: ${component.components.length} buttons)`);
                     break;
                 }

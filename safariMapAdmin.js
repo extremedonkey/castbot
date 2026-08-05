@@ -455,20 +455,19 @@ export async function initializePlayerOnMap(guildId, userId, coordinate = null, 
 
   // If client is provided AND map exists, initialize movement system
   if (client && activeMapId) {
-    const { initializePlayerOnMap: initMovementSystem, getMovementDisplay } = await import('./mapMovement.js');
+    const { initializePlayerOnMap: initMovementSystem } = await import('./mapMovement.js');
     const { DiscordRequest } = await import('./utils.js');
-    
+    const { shouldPostNavigatePanes } = await import('./safariFeatureFlags.js');
+
     await initMovementSystem(guildId, userId, coordinate, client);
-    
-    // Post movement interface in the channel
+
+    // Post movement interface in the channel — suppressed in 'silent'/'disabled' navigate
+    // modes (escape rooms). Plain-text placement messages (buildInitMessage) are unaffected.
     try {
       const mapData = safariData[guildId].maps[activeMapId];
       const channelId = mapData.coordinates[coordinate]?.channelId;
-      
-      if (channelId) {
-        // Get movement display for channel message (not interaction response)
-        const movementDisplay = await getMovementDisplay(guildId, userId, coordinate, false);
-        
+
+      if (channelId && shouldPostNavigatePanes(safariData[guildId]?.safariConfig)) {
         // Create welcome message with Navigate button
         const welcomeMessage = {
           flags: (1 << 15), // IS_COMPONENTS_V2
@@ -569,13 +568,16 @@ export async function movePlayerToCoordinate(guildId, userId, coordinate, client
       const mapData = safariData[guildId].maps[activeMapId];
       const newChannelId = mapData.coordinates[coordinate]?.channelId;
       
-      if (newChannelId) {        
+      if (newChannelId) {
         // Determine message based on whether this was initial placement or move
-        const messageContent = !playerMapData 
+        const messageContent = !playerMapData
           ? `🎉 **Welcome to the Map!**\n\n<@${userId}> You have been placed at coordinate **${coordinate}** by the Production team.`
           : `📍 **Admin Move**\n\n<@${userId}> You have been moved by the Production team to coordinate **${coordinate}**.`;
-        
-        // Create a notification with Navigate button
+
+        // Text notification always posts (the player must learn where they are); the Navigate
+        // button row is dropped in 'silent'/'disabled' navigate modes (escape rooms).
+        const { shouldPostNavigatePanes } = await import('./safariFeatureFlags.js');
+        const withNavigate = shouldPostNavigatePanes(safariData[guildId]?.safariConfig);
         const notificationMessage = {
           flags: (1 << 15), // IS_COMPONENTS_V2
           components: [{
@@ -586,7 +588,7 @@ export async function movePlayerToCoordinate(guildId, userId, coordinate, client
                 type: 10, // Text Display
                 content: messageContent
               },
-              {
+              ...(withNavigate ? [{
                 type: 1, // Action Row
                 components: [{
                   type: 2, // Button
@@ -595,7 +597,7 @@ export async function movePlayerToCoordinate(guildId, userId, coordinate, client
                   style: 1, // Primary
                   emoji: { name: '🗺️' }
                 }]
-              }
+              }] : [])
             ]
           }]
         };
@@ -933,12 +935,11 @@ export async function handleMapAdminBlacklistModal(context, req) {
   // Get the input value from Label component structure
   const blacklistedCoordsInput = req.body.data.components[0].component.value || '';
   
-  // Parse coordinates - split by comma and clean up
-  const coordinatesList = blacklistedCoordsInput
-    .split(',')
-    .map(coord => coord.trim().toUpperCase())
-    .filter(coord => coord.match(/^[A-Z]\d+$/)); // Validate format (e.g., A1, B2)
-  
+  // Parse coordinates — shared parser (utils/coordinateParser.js, extracted from this very
+  // handler): comma/space separated, trimmed, uppercased, format-validated, deduped.
+  const { parseCoordinateList } = await import('./utils/coordinateParser.js');
+  const coordinatesList = parseCoordinateList(blacklistedCoordsInput).coords;
+
   // Update blacklisted coordinates
   const { updateBlacklistedCoordinates } = await import('./mapExplorer.js');
   const result = await updateBlacklistedCoordinates(context.guildId, coordinatesList);

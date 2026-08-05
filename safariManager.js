@@ -39,6 +39,21 @@ import {
 } from './mapMovement.js';
 import { checkLimitGate, recordLimitClaim, formatCountdown, formatPeriod, formatPeriodVerbose, formatCountdownVerbose } from './utils/periodUtils.js';
 import { evaluateClassicGate, addClaim, clearClaim } from './claimsManager.js';
+import { normalizeNavigateMode, coerceCurrencyEnabled, isNavigateDisabled } from './safariFeatureFlags.js';
+
+/**
+ * Shared guard for every compass/navigate entry point in app.js: returns the ephemeral
+ * "navigation is disabled" notice when the guild opted out (escape rooms), null when
+ * navigation is allowed. Absence/garbage config → allowed (fail-open, safariFeatureFlags).
+ * @param {string} guildId
+ * @returns {Promise<Object|null>}
+ */
+export async function getNavigateDisabledNotice(guildId) {
+    const safariData = await loadSafariContent();
+    return isNavigateDisabled(safariData[guildId]?.safariConfig)
+        ? { content: '🗺️ Navigation is disabled on this server. An admin can re-enable it in Settings → 🗺️ Map.', ephemeral: true }
+        : null;
+}
 
 /**
  * Build an ephemeral rejection card for a blocked CUSTOM usage limit.
@@ -320,7 +335,10 @@ export async function getCoordinateFromChannelId(guildId, channelId) {
  * @param {number} price - Price (for store display, optional)
  * @returns {string} Formatted content string
  */
-function generateItemContent(item, customTerms, quantity = null, price = null, stock = undefined) {
+function generateItemContent(item, customTerms, quantity = null, price = null, stock = undefined, options = {}) {
+    // options.hideCurrency: currency disabled server-wide (escape rooms) — omit the price and
+    // yield lines WITHOUT nulling price, because the stock line is gated on price !== null.
+    const hideCurrency = options.hideCurrency === true;
     // Sanitize emoji - remove any zero-width joiners or invalid characters
     const emoji = (item.emoji || '📦').replace(/\u200d/g, '').trim();
     
@@ -367,9 +385,10 @@ function generateItemContent(item, customTerms, quantity = null, price = null, s
         // Full format for non-inventory displays
         content = `## ${emoji} ${name}\n\n${description}\n\n`;
         
-        // Add yield info if available
-        if ((item.goodOutcomeValue !== null && item.goodOutcomeValue !== undefined) || 
-            (item.badOutcomeValue !== null && item.badOutcomeValue !== undefined)) {
+        // Add yield info if available (currency earnings — hidden when currency is disabled)
+        if (!hideCurrency &&
+            ((item.goodOutcomeValue !== null && item.goodOutcomeValue !== undefined) ||
+            (item.badOutcomeValue !== null && item.badOutcomeValue !== undefined))) {
             
             content += '**Yield**\n';
             
@@ -409,11 +428,11 @@ function generateItemContent(item, customTerms, quantity = null, price = null, s
             content += '\n';
         }
         
-        // Add price info for store display
-        if (price !== null) {
+        // Add price info for store display (hidden when currency is disabled — buy logic unchanged)
+        if (price !== null && !hideCurrency) {
             content += `> ${customTerms.currencyEmoji} **Price:** ${price} ${customTerms.currencyName}`;
         }
-        
+
         // Add stock info for store display (when price is shown)
         if (price !== null) {
             let stockDisplay;
@@ -425,7 +444,8 @@ function generateItemContent(item, customTerms, quantity = null, price = null, s
             } else {
                 stockDisplay = `${stock} Available`;
             }
-            content += `\n> 📦 **Stock:** ${stockDisplay}`;
+            // No leading newline when the price line was hidden (currency disabled)
+            content += `${hideCurrency ? '' : '\n'}> 📦 **Stock:** ${stockDisplay}`;
         }
     }
     
@@ -3136,11 +3156,16 @@ async function createStoreBrowseDisplay(guildId, storeId, userId, currentPage = 
 
     const containerComponents = [];
 
+    // Currency disabled (escape rooms): no balance line, no price/yield lines — purchase
+    // logic (balance checks, deduction) is deliberately UNCHANGED to guard mispriced items.
+    const hideCurrency = customTerms.currencyEnabled === false;
+
     // Header
     const pageInfo = totalPages > 1 ? ` \`Page ${currentPage + 1}/${totalPages}\`` : '';
+    const balanceLine = hideCurrency ? '' : `\n> ${customTerms.currencyEmoji} **Your Balance:** ${playerCurrency} ${customTerms.currencyName}`;
     containerComponents.push({
         type: 10,
-        content: `## ${store.emoji || '🏪'} ${store.name}${pageInfo}\n\n${store.settings?.storeownerText || 'Welcome to the store!'}\n> ${customTerms.currencyEmoji} **Your Balance:** ${playerCurrency} ${customTerms.currencyName}`
+        content: `## ${store.emoji || '🏪'} ${store.name}${pageInfo}\n\n${store.settings?.storeownerText || 'Welcome to the store!'}${balanceLine}`
     });
 
     containerComponents.push({ type: 14 }); // Separator
@@ -3154,7 +3179,7 @@ async function createStoreBrowseDisplay(guildId, storeId, userId, currentPage = 
 
         if (item) {
             const itemStock = storeItem.stock;
-            const itemContent = generateItemContent(item, customTerms, null, price, itemStock);
+            const itemContent = generateItemContent(item, customTerms, null, price, itemStock, { hideCurrency });
             const isSoldOut = itemStock === 0;
 
             containerComponents.push({
@@ -4567,14 +4592,17 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null, curr
             content: `# ${inventoryEmoji} ${playerDisplayName}'s ${customTerms.inventoryName}${pageInfo}`
         });
         
-        // Add separator before balance
-        components.push({ type: 14 }); // Separator
-        
-        // Balance section with custom currency name
-        components.push({
-            type: 10, // Text Display
-            content: `## ${customTerms.currencyEmoji} Your Balance\n> \`${playerCurrency} ${customTerms.currencyName}\``
-        });
+        // Balance section with custom currency name — omitted entirely when currency is
+        // disabled server-wide (escape rooms); the balance still exists, just never shown.
+        if (customTerms.currencyEnabled !== false) {
+            // Add separator before balance
+            components.push({ type: 14 }); // Separator
+
+            components.push({
+                type: 10, // Text Display
+                content: `## ${customTerms.currencyEmoji} Your Balance\n> \`${playerCurrency} ${customTerms.currencyName}\``
+            });
+        }
         
         // Validate and adjust current page if needed (auto-navigate to page 1 if current page is empty)
         if (currentPage >= totalPages) {
@@ -5296,7 +5324,9 @@ async function createSimplifiedInventoryDisplay(guildId, userId, member = null) 
         
         // Build ultra-compact content
         let content = `# 🎒 Inventory Summary\n\n`;
-        content += `**${customTerms.currencyEmoji} Balance:** ${playerCurrency} ${customTerms.currencyName}\n\n`;
+        if (customTerms.currencyEnabled !== false) {
+            content += `**${customTerms.currencyEmoji} Balance:** ${playerCurrency} ${customTerms.currencyName}\n\n`;
+        }
         content += `**📊 Overview:**\n`;
         content += `Total Items: ${totalQuantity} (${Object.keys(playerInventory).length} types)\n`;
         if (attackItems > 0) content += `⚔️ Combat: ${attackItems} types\n`;
@@ -5413,6 +5443,9 @@ async function getCustomTerms(guildId) {
             // Reverse blacklist semantics — unset/false = legacy OR (any one listing item
             // unlocks the cell); true = AND (player must hold EVERY listing item)
             reverseBlacklistRequireAll: config.reverseBlacklistRequireAll === true,
+            // Escape-room opt-ins (safariFeatureFlags.js) — absence/garbage = default behavior
+            currencyEnabled: config.currencyEnabled !== false,
+            navigatePaneMode: normalizeNavigateMode(config.navigatePaneMode),
 
             // Game settings - Challenge Game Logic
             round1GoodProbability: config.round1GoodProbability || 75,
@@ -5442,6 +5475,10 @@ async function getCustomTerms(guildId) {
             inventoryEmoji: '🧰',
             craftingName: 'Crafting',
             craftingEmoji: '🛠️',
+
+            // Escape-room opt-ins — error path MUST land on defaults (currency ON, navigate ENABLED)
+            currencyEnabled: true,
+            navigatePaneMode: 'enabled',
 
             // Game settings fallbacks
             round1GoodProbability: 75,
@@ -5524,6 +5561,13 @@ async function updateCustomTerms(guildId, terms) {
         }
         if (terms.reverseBlacklistRequireAll !== undefined) {
             safariData[guildId].safariConfig.reverseBlacklistRequireAll = terms.reverseBlacklistRequireAll === true;
+        }
+        // Escape-room opt-ins: modal radios submit strings; store normalized (boolean / whitelisted enum)
+        if (terms.currencyEnabled !== undefined) {
+            safariData[guildId].safariConfig.currencyEnabled = coerceCurrencyEnabled(terms.currencyEnabled);
+        }
+        if (terms.navigatePaneMode !== undefined) {
+            safariData[guildId].safariConfig.navigatePaneMode = normalizeNavigateMode(terms.navigatePaneMode);
         }
 
         // Update game settings - Challenge Game Logic
@@ -5637,6 +5681,9 @@ async function resetCustomTerms(guildId) {
         defaultStartingCoordinate: 'A1',
         // NOT reset: reverseBlacklistRequireAll. Flipping it back to OR would silently
         // open every multi-key door in a live game — a cosmetic reset must not do that.
+        // NOT reset: currencyEnabled / navigatePaneMode. Same reasoning — these are
+        // game-rule opt-ins (escape rooms); a reset must not re-show currency or
+        // re-open self-navigation mid-game.
         // Stamina (defaults match getStaminaConfig fallbacks: 1/1, 720 min regen)
         startingStamina: 1,
         maxStamina: 1,
