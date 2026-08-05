@@ -1593,6 +1593,16 @@ client.once('ready', async () => {
     console.error('[ProdWatchdog] Failed to start:', err.message);
   }
 
+  // Discord status watchdog — TEST instance only: polls discordstatus.com for platform
+  // incidents (API/gateway/messaging) that make CastBot look broken while prod is healthy.
+  // Amber/green cards to #private-bugs; optional public mirror via DISCORD_STATUS_PUBLIC_CHANNEL_IDS.
+  try {
+    const { getDiscordStatusWatchdog } = await import('./src/monitoring/discordStatusWatchdog.js');
+    getDiscordStatusWatchdog(client).start();
+  } catch (err) {
+    console.error('[DiscordStatus] Failed to start:', err.message);
+  }
+
   // Restart scheduler — planned, cancellable heap-reset restarts (RaP 0903). Ships disabled;
   // configured via Data menu → Auto-Restart. Re-arms from playerData environmentConfig.
   try {

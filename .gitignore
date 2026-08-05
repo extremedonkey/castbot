@@ -79,3 +79,6 @@ temp/*.csv
 
 # Generated release-card images (rebuild from scripts/release/releases/ specs)
 temp/castbot-update-*.png
+
+# Discord status watchdog state (Tier 3 - ephemeral, test box only)
+discordStatusState.json
