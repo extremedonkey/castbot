@@ -1996,6 +1996,39 @@ export function buildPostToChannelUI(action, actionId, selectCustomId, backCusto
  * Create Action Visibility UI (LEAN design)
  * Shows menu visibility, map locations, linked items, and navigation
  */
+/**
+ * Reverse follow-up lookup: which actions link TO this one?
+ *
+ * Pure (plain objects in, no I/O) — the first reverse-link helper; the only prior
+ * scan with this predicate lives inline in the action-DELETE cleanup (app.js).
+ * Accepts BOTH outcome type spellings ('follow_up_button' canonical, 'follow_up'
+ * legacy) and BOTH target locations (config.buttonId canonical, buttonId legacy),
+ * matching every live reader of the link.
+ *
+ * @param {Object} guildButtons - safariData[guildId].buttons
+ * @param {string} actionId - the child action
+ * @returns {Array<{parentId: string, parent: Object, branches: string[]}>}
+ *   one entry per parent (multi-link parents deduped, executeOn branches
+ *   aggregated: 'always'|'true'|'false'), sorted by display name
+ */
+export function getFollowUpParents(guildButtons, actionId) {
+  const parents = new Map();
+  for (const [parentId, parent] of Object.entries(guildButtons || {})) {
+    for (const outcome of parent?.actions || []) {
+      const isFollowUp = outcome?.type === 'follow_up_button' || outcome?.type === 'follow_up';
+      if (!isFollowUp) continue;
+      const targetId = outcome.config?.buttonId ?? outcome.buttonId;
+      if (targetId !== actionId) continue;
+      const branch = outcome.executeOn || 'true';
+      const entry = parents.get(parentId) || { parentId, parent, branches: [] };
+      if (!entry.branches.includes(branch)) entry.branches.push(branch);
+      parents.set(parentId, entry);
+    }
+  }
+  const displayName = (e) => e.parent.name || e.parent.label || e.parentId;
+  return [...parents.values()].sort((a, b) => displayName(a).localeCompare(displayName(b)));
+}
+
 export async function createCoordinateManagementUI({ guildId, actionId }) {
   const allSafariContent = await loadSafariContent();
   const guildData = allSafariContent[guildId] || {};
@@ -2075,21 +2108,31 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
 
   components.push({ type: 14 });
 
-  // --- Map Locations section ---
-  // Count total entries to decide if we need to collapse
-  const totalEntries = coordinates.length + linkedItems.length;
+  // --- Entry budget (all four per-entry sections) ---
+  // Each expanded entry is a 3-component {Section, Text, accessory Button}. Fixed chrome is
+  // ~20-22 components with every section present, so 6×3 = 18 entries is the most that
+  // always fits the 40-component cap. The old `coords + linkedItems > 8` threshold provably
+  // overflowed (8×3 entries + expanded channels ≈ 45-52 → "This interaction failed") and
+  // counted stale item IDs; count RESOLVED items + parents + channels instead.
+  const resolvedItems = linkedItems
+    .map(itemId => ({ itemId, item: items[itemId] }))
+    .filter(({ item }) => item);
+  const postedChannels = action.postedChannels || [];
+  const linkedParents = getFollowUpParents(guildData.buttons || {}, actionId);
+  const totalEntries = coordinates.length + resolvedItems.length + linkedParents.length + postedChannels.length;
+  const collapsed = totalEntries > 6;
 
+  // --- Map Locations section ---
   if (coordinates.length > 0) {
     components.push({
       type: 10,
       content: `### \`\`\`🗺️ Map Locations (${coordinates.length})\`\`\``
     });
 
-    // Collapse if too many total entries (budget: 3N + 3M <= 24 → N+M <= 8), but NEVER
-    // truncate the coordinate list itself — hosts must see every location this action is on.
-    // Section (type 9) + Edit accessory opens a bulk-edit modal (pre-populated), since the
-    // per-coordinate Remove buttons don't exist in this mode.
-    if (totalEntries > 8) {
+    // Collapsed mode NEVER truncates the coordinate list itself — hosts must see every
+    // location this action is on. Section (type 9) + Edit accessory opens a bulk-edit
+    // modal (pre-populated), since the per-coordinate Remove buttons don't exist here.
+    if (collapsed) {
       const sorted = [...coordinates].sort();
       components.push({
         type: 9, // Section
@@ -2132,19 +2175,14 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
 
   components.push({ type: 14 });
 
-  // --- Items Using Action section ---
-  // Resolve linked items (skip stale IDs for deleted items)
-  const resolvedItems = linkedItems
-    .map(itemId => ({ itemId, item: items[itemId] }))
-    .filter(({ item }) => item);
-
+  // --- Items Using Action section (resolvedItems computed with the entry budget above) ---
   if (resolvedItems.length > 0) {
     components.push({
       type: 10,
       content: `### \`\`\`📦 Items Using Action (${resolvedItems.length})\`\`\``
     });
 
-    if (totalEntries > 8) {
+    if (collapsed) {
       // Collapsed summary
       components.push({
         type: 10,
@@ -2184,10 +2222,56 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
     });
   }
 
+  // --- Linked Actions section (parents whose follow-up outcomes target this action) ---
+  // Hidden entirely when no parents (Posted Channels precedent) — links are edited from
+  // the PARENT's editor, so there's nothing to manage from this screen.
+  if (linkedParents.length > 0) {
+    components.push({ type: 14 });
+    components.push({
+      type: 10,
+      content: `### \`\`\`🔗 Linked Actions (${linkedParents.length})\`\`\``
+    });
+
+    if (collapsed) {
+      // Name list only — no Open buttons; the host navigates to the parent manually
+      const names = linkedParents.map(({ parent, parentId }) => parent.name || parent.label || parentId).join(', ');
+      components.push({
+        type: 10,
+        content: `🔗 ${names}`
+      });
+    } else {
+      const BRANCH_LABELS = { always: '🔵 Opening', true: '🟢 Pass', false: '🔴 Fail' };
+      linkedParents.forEach(({ parentId, parent, branches }) => {
+        const name = parent.name || parent.label || parentId;
+        const details = [
+          getTriggerTypeLabel(parent.trigger?.type || 'button'),
+          branches.map(b => BRANCH_LABELS[b] || b).join(' / ')
+        ];
+        if (parent.coordinates?.length) {
+          details.push(`📍 ${parent.coordinates.length} location${parent.coordinates.length === 1 ? '' : 's'}`);
+        }
+        components.push({
+          type: 9, // Section
+          components: [{
+            type: 10,
+            content: `⚡ **${name}**\n${details.join(' • ')}`
+          }],
+          accessory: {
+            type: 2, // Button — existing custom_action_editor_* wildcard handler/registry
+            custom_id: `custom_action_editor_${parentId}`,
+            label: 'Open',
+            style: 2, // Secondary
+            emoji: { name: '⚡' }
+          }
+        });
+      });
+    }
+  }
+
   // --- Posted Channels section ---
   // Display using Discord <#id> mentions — Discord renders valid channels
   // and shows #deleted-channel for stale ones. No API validation needed on render.
-  const postedChannels = action.postedChannels || [];
+  // (postedChannels computed with the entry budget above)
   if (postedChannels.length > 0) {
     components.push({ type: 14 });
     components.push({
@@ -2195,7 +2279,7 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
       content: `### \`\`\`#️⃣ Posted Channels (${postedChannels.length})\`\`\``
     });
 
-    if (totalEntries > 8 || postedChannels.length > 4) {
+    if (collapsed || postedChannels.length > 4) {
       // Collapsed summary
       const channelList = postedChannels.map(id => `<#${id}>`).join(', ');
       components.push({

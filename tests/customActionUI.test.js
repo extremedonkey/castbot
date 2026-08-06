@@ -80,3 +80,84 @@ describe('Display Text Modal — upload mode', () => {
         assert.equal(fieldById(modal, 'action_image'), undefined);
     });
 });
+
+// ─── Linked Actions (parents) — reverse follow-up lookup + collapse budget ───
+// getFollowUpParents is pure (plain objects in), so it's real-imported.
+
+import { getFollowUpParents } from '../customActionUI.js';
+
+describe('getFollowUpParents — reverse follow-up lookup', () => {
+    const follow = (targetId, extra = {}) => ({ type: 'follow_up_button', config: { buttonId: targetId }, executeOn: 'true', ...extra });
+
+    it('finds a canonical follow_up_button parent', () => {
+        const buttons = {
+            parent_a: { name: 'Parent A', actions: [follow('child_x')] },
+            bystander: { name: 'Bystander', actions: [follow('someone_else')] }
+        };
+        const parents = getFollowUpParents(buttons, 'child_x');
+        assert.equal(parents.length, 1);
+        assert.equal(parents[0].parentId, 'parent_a');
+        assert.deepEqual(parents[0].branches, ['true']);
+    });
+
+    it('accepts the legacy follow_up type and the legacy top-level buttonId location', () => {
+        const buttons = {
+            legacy_type: { name: 'Legacy Type', actions: [{ type: 'follow_up', config: { buttonId: 'child_x' } }] },
+            legacy_loc: { name: 'Legacy Loc', actions: [{ type: 'follow_up_button', buttonId: 'child_x' }] }
+        };
+        const parents = getFollowUpParents(buttons, 'child_x');
+        assert.deepEqual(parents.map(p => p.parentId).sort(), ['legacy_loc', 'legacy_type']);
+        // missing executeOn defaults to 'true' (the engine's Pass default)
+        assert.ok(parents.every(p => p.branches.includes('true')));
+    });
+
+    it('dedupes a parent linking twice, aggregating branches', () => {
+        const buttons = {
+            parent_a: { name: 'Parent A', actions: [
+                follow('child_x', { executeOn: 'true' }),
+                follow('child_x', { executeOn: 'false' })
+            ] }
+        };
+        const parents = getFollowUpParents(buttons, 'child_x');
+        assert.equal(parents.length, 1);
+        assert.deepEqual(parents[0].branches, ['true', 'false']);
+    });
+
+    it('returns empty for unlinked actions and tolerates malformed buttons', () => {
+        const buttons = {
+            no_actions: { name: 'No Actions' },
+            null_entry: null,
+            weird: { actions: [null, { type: 'display_text', config: {} }] }
+        };
+        assert.deepEqual(getFollowUpParents(buttons, 'child_x'), []);
+        assert.deepEqual(getFollowUpParents(undefined, 'child_x'), []);
+    });
+
+    it('sorts by display name with the name→label→id fallback chain', () => {
+        const buttons = {
+            zzz_id: { label: 'Alpha Label', actions: [follow('child_x')] },
+            aaa_id: { name: 'Zulu Name', actions: [follow('child_x')] }
+        };
+        const parents = getFollowUpParents(buttons, 'child_x');
+        assert.deepEqual(parents.map(p => p.parentId), ['zzz_id', 'aaa_id']);
+    });
+});
+
+describe('Action Visibility — collapse budget replica', () => {
+    // Mirror of createCoordinateManagementUI: each expanded entry is a 3-component
+    // {Section, Text, accessory}; ~20-22 fixed chrome with all sections present, so >6
+    // entries must collapse to stay under Discord's 40-component cap. The old >8 rule
+    // provably overflowed with expanded Posted Channels.
+    const isCollapsed = (coords, items, parents, channels) => (coords + items + parents + channels) > 6;
+
+    it('6 total entries stay expanded; 7 collapse', () => {
+        assert.equal(isCollapsed(3, 2, 1, 0), false);
+        assert.equal(isCollapsed(3, 2, 1, 1), true);
+    });
+
+    it('worst expanded case fits the 40-component cap', () => {
+        const FIXED_CHROME_MAX = 22; // container+header+menu block+section headers+seps+nav (4 buttons)
+        const worst = FIXED_CHROME_MAX + 6 * 3;
+        assert.ok(worst <= 40, `worst expanded screen = ${worst} components`);
+    });
+});
