@@ -270,19 +270,19 @@ async function formatAction(action, prefix, guildId, items, playerData, client, 
       if (action.config?.buttonIds && action.config.buttonIds.length > 0) {
         result = `${prefix} 🔗 Linked Actions:\n`;
         
-        // Get follow-up button details
+        // Get linked action details
         for (let i = 0; i < action.config.buttonIds.length; i++) {
           const followUpId = action.config.buttonIds[i];
-          const followUpButton = buttons[followUpId];
+          const linkedTarget = buttons[followUpId];
           
-          if (!followUpButton) {
+          if (!linkedTarget) {
             result += `${prefix.replace('├', '│').replace('└', ' ')}    ${i === action.config.buttonIds.length - 1 ? '└─' : '├─'} ❌ Missing button: ${followUpId}\n`;
             continue;
           }
           
-          const triggerType = followUpButton.trigger?.type || 'button';
+          const triggerType = linkedTarget.trigger?.type || 'button';
           const triggerEmoji = triggerType === 'modal' ? '📝' : triggerType === 'button_modal' ? '🔐' : '🔘';
-          result += `${prefix.replace('├', '│').replace('└', ' ')}    ${i === action.config.buttonIds.length - 1 ? '└─' : '├─'} ${triggerEmoji} ${followUpButton.emoji || ''} ${followUpButton.name || followUpButton.label || 'Unnamed'}\n`;
+          result += `${prefix.replace('├', '│').replace('└', ' ')}    ${i === action.config.buttonIds.length - 1 ? '└─' : '├─'} ${triggerEmoji} ${linkedTarget.emoji || ''} ${linkedTarget.name || linkedTarget.label || 'Unnamed'}\n`;
         }
       } else {
         result = `${prefix} 🔗 Linked Action: Show additional buttons\n`;

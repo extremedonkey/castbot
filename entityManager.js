@@ -395,7 +395,7 @@ async function cleanupEntityReferences(safariData, guildId, entityType, entityId
             break;
             
         case 'safari_button':
-            // Remove button references from follow-up actions
+            // Remove button references from linked-action outcomes
             const buttons = safariData[guildId].buttons || {};
             for (const button of Object.values(buttons)) {
                 if (button.actions) {

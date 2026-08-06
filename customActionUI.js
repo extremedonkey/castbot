@@ -1190,14 +1190,14 @@ function getActionSummary(action, number, guildItems = {}, guildButtons = {}, is
       return `**\`${number}. Remove Role\`** Role ID: ${removeRoleId || 'Not selected'} (on ${onRemoveText})`;
     case 'follow_up_button':
     case 'follow_up':
-      const followUpButtonId = action.config?.buttonId || action.buttonId;
-      if (!followUpButtonId) {
+      const linkedTargetId = action.config?.buttonId || action.buttonId;
+      if (!linkedTargetId) {
         return `**\`${number}. Linked Action\`** Not configured`;
       }
       // Try to get button name from guildButtons
-      const followUpButton = guildButtons[followUpButtonId];
-      const followUpButtonName = followUpButton?.name || followUpButton?.label || followUpButtonId;
-      return `**\`${number}. Linked Action\`** ${followUpButtonName}`;
+      const linkedTarget = guildButtons[linkedTargetId];
+      const linkedTargetName = linkedTarget?.name || linkedTarget?.label || linkedTargetId;
+      return `**\`${number}. Linked Action\`** ${linkedTargetName}`;
     case 'create_button':
       return `**\`${number}. Create Button\`** ${action.buttonLabel}`;
     case 'calculate_results':

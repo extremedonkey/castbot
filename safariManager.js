@@ -811,7 +811,7 @@ async function getCustomButton(guildId, buttonId) {
         } else if (!button.id) {
             // Self-heal: actions created via the modern creation flow (app.js
             // global_create_modal) are stored WITHOUT an id property, unlike legacy
-            // createCustomButton. Consumers like executeFollowUpButton build custom_ids
+            // createCustomButton. Consumers like executeLinkedAction build custom_ids
             // from button.id — missing id produced safari_{guild}_undefined_{ts}.
             // The storage key is the authoritative id.
             button.id = buttonId;
@@ -1418,13 +1418,13 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
 }
 
 /**
- * Execute follow-up button action
+ * Execute linked action outcome (type 'follow_up_button')
  */
-async function executeFollowUpButton(config, guildId, interaction) {
-    console.log(`🔗 DEBUG: Executing follow-up button: ${config.buttonId}`);
+async function executeLinkedAction(config, guildId, interaction) {
+    console.log(`🔗 DEBUG: Executing linked action: ${config.buttonId}`);
 
-    const followUpButton = await getCustomButton(guildId, config.buttonId);
-    if (!followUpButton) {
+    const linkedTarget = await getCustomButton(guildId, config.buttonId);
+    if (!linkedTarget) {
         return {
             flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
             components: [{
@@ -1438,23 +1438,23 @@ async function executeFollowUpButton(config, guildId, interaction) {
     }
 
     // Detect if target needs a modal (modal or button_modal trigger type)
-    const isModalTriggered = followUpButton.trigger?.type === 'modal' || followUpButton.trigger?.type === 'button_modal' || followUpButton.trigger?.type === 'button_input';
-    console.log(`🎭 Follow-up target ${followUpButton.id} is modal-triggered: ${isModalTriggered}`);
+    const isModalTriggered = linkedTarget.trigger?.type === 'modal' || linkedTarget.trigger?.type === 'button_modal' || linkedTarget.trigger?.type === 'button_input';
+    console.log(`🎭 Linked action target ${linkedTarget.id} is modal-triggered: ${isModalTriggered}`);
 
     // Create appropriate custom_id based on trigger type
     const customId = isModalTriggered
-        ? `modal_launcher_${guildId}_${followUpButton.id}_${Date.now()}`
-        : generateCustomId(guildId, followUpButton.id);
+        ? `modal_launcher_${guildId}_${linkedTarget.id}_${Date.now()}`
+        : generateCustomId(guildId, linkedTarget.id);
 
-    // Create the follow-up button (label falls back to name — modern creation flow sets both,
+    // Create the linked action button (label falls back to name — modern creation flow sets both,
     // but clones/imports may only have one)
     const button = new ButtonBuilder()
         .setCustomId(customId)
-        .setLabel(followUpButton.label || followUpButton.name || 'Continue')
-        .setStyle(BUTTON_STYLES[followUpButton.style] || ButtonStyle.Secondary);
+        .setLabel(linkedTarget.label || linkedTarget.name || 'Continue')
+        .setStyle(BUTTON_STYLES[linkedTarget.style] || ButtonStyle.Secondary);
 
-    if (followUpButton.emoji) {
-        button.setEmoji(followUpButton.emoji);
+    if (linkedTarget.emoji) {
+        button.setEmoji(linkedTarget.emoji);
     }
 
     const actionRow = new ActionRowBuilder().addComponents(button);
@@ -1851,8 +1851,8 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
                 case 'display_text': // Legacy support
                     result = await executeDisplayText(action.config, interaction, button);
                     
-                    // Collect ALL consecutive follow-up buttons to bundle
-                    const followUpButtons = [];
+                    // Collect ALL consecutive linked actions to bundle
+                    const linkedActionOutcomes = [];
                     let j = i + 1;
                     
                     while (j < sortedActions.length) {
@@ -1860,16 +1860,16 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
                         if (nextAction.type === ACTION_TYPES.FOLLOW_UP_BUTTON || 
                             nextAction.type === 'follow_up_button' || 
                             nextAction.type === 'follow_up') {
-                            followUpButtons.push(nextAction);
+                            linkedActionOutcomes.push(nextAction);
                             j++;
                         } else {
                             break; // Stop when we encounter a non-follow-up action
                         }
                     }
                     
-                    // If we have follow-up buttons to bundle
-                    if (followUpButtons.length > 0) {
-                        console.log(`📎 DEBUG: Bundling ${followUpButtons.length} follow_up_button(s) with display_text`);
+                    // If we have linked actions to bundle
+                    if (linkedActionOutcomes.length > 0) {
+                        console.log(`📎 DEBUG: Bundling ${linkedActionOutcomes.length} follow_up_button(s) with display_text`);
                         
                         // Add separator before buttons
                         if (result.components?.[0]?.components) {
@@ -1880,13 +1880,13 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
                             // Create a single action row for all buttons (max 5, but we have max 4)
                             const buttonComponents = [];
                             
-                            for (const followUpAction of followUpButtons) {
-                                // Get the follow-up button component
-                                const followUpResult = await executeFollowUpButton(followUpAction.config, guildId, interaction);
+                            for (const linkedOutcome of linkedActionOutcomes) {
+                                // Get the linked action button component
+                                const linkedResult = await executeLinkedAction(linkedOutcome.config, guildId, interaction);
                                 
                                 // Extract the button from the follow-up result
-                                if (followUpResult.components?.[0]?.components) {
-                                    const followUpComponents = followUpResult.components[0].components;
+                                if (linkedResult.components?.[0]?.components) {
+                                    const followUpComponents = linkedResult.components[0].components;
                                     
                                     // Find the action row with the button
                                     const buttonRow = followUpComponents.find(comp => comp.type === 1);
@@ -1924,7 +1924,7 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
                 case 'follow_up_button': // Legacy support
                 case 'follow_up': // Legacy support for old buttons
                     // Only execute as standalone if not bundled with previous display_text
-                    result = await executeFollowUpButton(action.config, guildId, interaction);
+                    result = await executeLinkedAction(action.config, guildId, interaction);
                     responses.push(result);
                     break;
                     
@@ -3334,7 +3334,7 @@ async function executeConditionalAction(config, guildId, userId, interaction) {
                         case ACTION_TYPES.UPDATE_CURRENCY:
                             return await executeUpdateCurrency(action.config, userId, guildId, interaction);
                         case ACTION_TYPES.FOLLOW_UP_BUTTON:
-                            return await executeFollowUpButton(action.config, guildId, interaction);
+                            return await executeLinkedAction(action.config, guildId, interaction);
                     }
                 }
             }
@@ -3351,7 +3351,7 @@ async function executeConditionalAction(config, guildId, userId, interaction) {
                         case ACTION_TYPES.UPDATE_CURRENCY:
                             return await executeUpdateCurrency(action.config, userId, guildId, interaction);
                         case ACTION_TYPES.FOLLOW_UP_BUTTON:
-                            return await executeFollowUpButton(action.config, guildId, interaction);
+                            return await executeLinkedAction(action.config, guildId, interaction);
                     }
                 }
             } else {
@@ -3438,7 +3438,7 @@ async function executeRandomOutcome(config, guildId, userId, interaction) {
                     case ACTION_TYPES.UPDATE_CURRENCY:
                         return await executeUpdateCurrency(action.config, userId, guildId, interaction);
                     case ACTION_TYPES.FOLLOW_UP_BUTTON:
-                        return await executeFollowUpButton(action.config, guildId, interaction);
+                        return await executeLinkedAction(action.config, guildId, interaction);
                 }
             }
         } else {

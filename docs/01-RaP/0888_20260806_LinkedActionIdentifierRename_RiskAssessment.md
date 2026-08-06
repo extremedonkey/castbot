@@ -84,7 +84,7 @@ Function/variable renames (`executeFollowUpButton` → `executeLinkedAction`, et
 |---|---|
 | 🔴 Type string | **Never**, absent a forcing function. If one ever appears: alias-first (`linked_action` accepted everywhere, still WRITE `follow_up_button`), and only flip the write default a full release cycle later — accepting that reads keep both forever. |
 | 🟡 Custom_ids | Leave. Revisit only if the editor screens get rebuilt wholesale for another reason. |
-| 🟢 Internals | Rename opportunistically inside files already being modified. No sweep commit. |
+| 🟢 Internals | ✅ **Done 2026-08-06** (user opted for the sweep despite the opportunistic-only default): `executeLinkedAction`, `showLinkedActionConfig`, `linkedTarget*`/`linkedAction*` vars, `_linkedaction_` state key, logs/comments. Deliberately kept: `ACTION_TYPES.FOLLOW_UP_BUTTON` — the constant NAMES the wire string; renaming the key while the value stays `'follow_up_button'` would actively mislead. |
 
 The one-line translation (`'follow_up_button': 'Linked Action'` in `getFieldDisplayName` + the formatters) **is** the finished state, not technical debt. Document it, don't migrate it.
 

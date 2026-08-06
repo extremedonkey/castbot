@@ -20468,7 +20468,7 @@ To fix this:
             return {
               components: [{
                 type: 17, // Container
-                accent_color: 0x8B5CF6, // Purple accent for follow-up actions
+                accent_color: 0x8B5CF6, // Purple accent for linked actions
                 components: [
                   {
                     type: 10, // Text Display
@@ -21007,9 +21007,9 @@ To fix this:
             console.log(`🔗 NEW MODE: safari_follow_up_select - adding new action for button ${buttonId}`);
           }
           
-          const followUpButtonId = context.values?.[0];
+          const linkedActionId = context.values?.[0];
           
-          if (!followUpButtonId) {
+          if (!linkedActionId) {
             return {
               content: '❌ No linked action selected.',
               ephemeral: true
@@ -21017,7 +21017,7 @@ To fix this:
           }
           
           // Handle back to all selection
-          if (followUpButtonId === 'back_to_all_follow_up') {
+          if (linkedActionId === 'back_to_all_follow_up') {
             // Reload the follow-up selection UI
             const { loadSafariContent } = await import('./safariManager.js');
             const safariData = await loadSafariContent();
@@ -21092,7 +21092,7 @@ To fix this:
           }
           
           // Handle search selection
-          if (followUpButtonId === 'search_follow_up_actions') {
+          if (linkedActionId === 'search_follow_up_actions') {
             // Use existing custom_action_search_modal pattern with follow-up context
             const modalCustomId = actionIndex !== undefined ? 
               `custom_action_search_modal_followup_${buttonId}_${actionIndex}` : 
@@ -21119,10 +21119,10 @@ To fix this:
             };
           }
           
-          console.log(`🔗 START: safari_follow_up_select - button ${buttonId}, follow-up ${followUpButtonId}, actionIndex: ${actionIndex}`);
+          console.log(`🔗 START: safari_follow_up_select - button ${buttonId}, follow-up ${linkedActionId}, actionIndex: ${actionIndex}`);
           
           // Validate target button exists (reuse already loaded data)
-          const targetButton = await getCustomButton(context.guildId, followUpButtonId);
+          const targetButton = await getCustomButton(context.guildId, linkedActionId);
           
           if (!targetButton) {
             return {
@@ -21145,10 +21145,10 @@ To fix this:
             actionIndex = currentButton.actions?.length || 0;
           }
           
-          console.log(`✅ SUCCESS: safari_follow_up_select - showing config for follow-up ${followUpButtonId} on ${buttonId}[${actionIndex}]`);
+          console.log(`✅ SUCCESS: safari_follow_up_select - showing config for follow-up ${linkedActionId} on ${buttonId}[${actionIndex}]`);
           
           // Show the follow-up configuration UI instead of immediately adding
-          return await showFollowUpConfig(context.guildId, buttonId, followUpButtonId, actionIndex);
+          return await showLinkedActionConfig(context.guildId, buttonId, linkedActionId, actionIndex);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('safari_followup_execute_on_')) {
@@ -21196,16 +21196,16 @@ To fix this:
             };
           }
           
-          console.log(`🎯 EXECUTE ON: safari_followup_execute_on - setting to ${executeOnValue} for ${buttonId}[${actionIndex}] follow-up ${targetButtonId}`);
+          console.log(`🎯 EXECUTE ON: safari_followup_execute_on - setting to ${executeOnValue} for ${buttonId}[${actionIndex}] linked action ${targetButtonId}`);
           
           // Update state
-          const stateKey = `${context.guildId}_${buttonId}_followup_${actionIndex}`;
+          const stateKey = `${context.guildId}_${buttonId}_linkedaction_${actionIndex}`;
           const state = dropConfigState.get(stateKey) || { targetButtonId: targetButtonId, executeOn: 'true' };
           state.executeOn = executeOnValue;
           dropConfigState.set(stateKey, state);
           
           // Return updated configuration UI
-          return await showFollowUpConfig(context.guildId, buttonId, targetButtonId, actionIndex);
+          return await showLinkedActionConfig(context.guildId, buttonId, targetButtonId, actionIndex);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('safari_followup_save_')) {
@@ -21250,10 +21250,10 @@ To fix this:
             };
           }
           
-          console.log(`✅ SAVE: safari_followup_save - saving follow-up ${targetButtonId} for ${buttonId}[${actionIndex}]`);
+          console.log(`✅ SAVE: safari_followup_save - saving linked action ${targetButtonId} for ${buttonId}[${actionIndex}]`);
           
           // Get state
-          const stateKey = `${context.guildId}_${buttonId}_followup_${actionIndex}`;
+          const stateKey = `${context.guildId}_${buttonId}_linkedaction_${actionIndex}`;
           const state = dropConfigState.get(stateKey) || { targetButtonId: targetButtonId, executeOn: 'true' };
           
           // Get button (safariData already loaded above)
@@ -21271,7 +21271,7 @@ To fix this:
             button.actions = [];
           }
           
-          // Create the follow-up action
+          // Create the linked action outcome
           const action = {
             type: 'follow_up_button',
             order: actionIndex,
@@ -22772,12 +22772,12 @@ To fix this:
                 if (!targetButtonId) {
                   return { content: '❌ Linked action missing target.', ephemeral: true };
                 }
-                const stateKey = `${context.guildId}_${actionId}_followup_${actionIndex}`;
+                const stateKey = `${context.guildId}_${actionId}_linkedaction_${actionIndex}`;
                 dropConfigState.set(stateKey, {
                   targetButtonId,
                   executeOn: action.executeOn || 'true'
                 });
-                return await showFollowUpConfig(context.guildId, actionId, targetButtonId, actionIndex);
+                return await showLinkedActionConfig(context.guildId, actionId, targetButtonId, actionIndex);
               } else if (action.type === 'display_text') {
                 const { showDisplayTextConfig } = await import('./customActionUI.js');
                 return await showDisplayTextConfig(context.guildId, actionId, actionIndex);
@@ -23086,14 +23086,14 @@ To fix this:
             console.log(`✅ SUCCESS: safari_edit_action - bypassing selection, going direct to config for follow-up ${targetButtonId}`);
             
             // Pre-load the existing action configuration into state
-            const stateKey = `${context.guildId}_${actionId}_followup_${actionIndex}`;
+            const stateKey = `${context.guildId}_${actionId}_linkedaction_${actionIndex}`;
             dropConfigState.set(stateKey, {
               targetButtonId: targetButtonId,
               executeOn: action.executeOn || 'true'
             });
             
             // Go directly to the configuration UI with pre-loaded values
-            return await showFollowUpConfig(context.guildId, actionId, targetButtonId, actionIndex);
+            return await showLinkedActionConfig(context.guildId, actionId, targetButtonId, actionIndex);
             
           } else if (action.type === 'display_text') {
             // Show display text configuration entity
@@ -31501,12 +31501,12 @@ To fix this:
             }
           }
           
-          // Clean up any follow-up button references to this action
-          console.log(`🔍 Scanning for follow-up references to ${actionId}...`);
+          // Clean up any linked-action (follow_up_button) references to this action
+          console.log(`🔍 Scanning for linked-action references to ${actionId}...`);
           let cleanupCount = 0;
           const brokenReferences = [];
           
-          // Scan all buttons for follow-up actions that reference the deleted button
+          // Scan all buttons for linked actions that reference the deleted button
           const allButtons = safariData[context.guildId]?.buttons || {};
           Object.entries(allButtons).forEach(([buttonId, button]) => {
             if (button.actions && Array.isArray(button.actions)) {
@@ -49771,9 +49771,9 @@ async function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerm
 /**
  * Show configuration UI for follow_up_button action
  */
-async function showFollowUpConfig(guildId, buttonId, targetButtonId, actionIndex) {
+async function showLinkedActionConfig(guildId, buttonId, targetButtonId, actionIndex) {
   // Get or create state for this configuration
-  const stateKey = `${guildId}_${buttonId}_followup_${actionIndex}`;
+  const stateKey = `${guildId}_${buttonId}_linkedaction_${actionIndex}`;
   const state = dropConfigState.get(stateKey) || {
     targetButtonId: targetButtonId,
     executeOn: global.pendingExecuteOn?.get(`${guildId}_${buttonId}`) || 'true'
