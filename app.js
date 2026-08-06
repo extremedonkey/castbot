@@ -20434,7 +20434,7 @@ To fix this:
             
             if (availableButtons.length === 0) {
               return {
-                content: '❌ **No other buttons available**\n\nYou need to create at least one other button before adding follow-up actions. Create another button first, then come back to add the follow-up.',
+                content: '❌ **No other buttons available**\n\nYou need to create at least one other button before adding linked actions. Create another button first, then come back to add the link.',
                 ephemeral: true
               };
             }
@@ -20472,7 +20472,7 @@ To fix this:
                 components: [
                   {
                     type: 10, // Text Display
-                    content: `# Select Follow-up Action for ${button.name || 'Custom Action'}\n\nChoose which action should be triggered after this action completes.`
+                    content: `# Select Linked Action for ${button.name || 'Custom Action'}\n\nChoose which action should be triggered after this action completes.`
                   },
                   { type: 14 }, // Separator
                   {
@@ -21011,7 +21011,7 @@ To fix this:
           
           if (!followUpButtonId) {
             return {
-              content: '❌ No follow-up action selected.',
+              content: '❌ No linked action selected.',
               ephemeral: true
             };
           }
@@ -21070,7 +21070,7 @@ To fix this:
                 components: [
                   {
                     type: 10, // Text Display
-                    content: `# Select Follow-up Action for ${button.name || 'Custom Action'}\n\nChoose which action should be triggered after this action completes.`
+                    content: `# Select Linked Action for ${button.name || 'Custom Action'}\n\nChoose which action should be triggered after this action completes.`
                   },
                   { type: 14 }, // Separator
                   {
@@ -21101,7 +21101,7 @@ To fix this:
             return {
               type: InteractionResponseType.MODAL,
               data: {
-                title: 'Search Follow-up Actions',
+                title: 'Search Linked Actions',
                 custom_id: modalCustomId,
                 components: [{
                   type: 1, // ActionRow
@@ -21126,7 +21126,7 @@ To fix this:
           
           if (!targetButton) {
             return {
-              content: '❌ Target follow-up action not found.',
+              content: '❌ Target linked action not found.',
               ephemeral: true
             };
           }
@@ -22566,7 +22566,7 @@ To fix this:
                     {
                       type: 2, // Button
                       custom_id: `safari_add_action_${fullButtonId}_follow_up`,
-                      label: 'Show Follow-Up Action',
+                      label: 'Show Linked Action',
                       style: 2, // Secondary (grey)
                       emoji: { name: '🔗' }
                     },
@@ -22725,6 +22725,16 @@ To fix this:
               const { buildClaimsManagerUI } = await import('./claimsUI.js');
               return await buildClaimsManagerUI({ client: context.client, guildId: context.guildId, buttonId: actionId, actionIndex, page: 0 });
             }
+            case 'open_linked': {
+              // Linked Action outcome → jump straight into the TARGET action's editor
+              const outcome = button.actions[actionIndex];
+              const targetId = outcome.config?.buttonId ?? outcome.buttonId;
+              if (!targetId || !guildData.buttons?.[targetId]) {
+                return { content: '❌ Linked action not found — it may have been deleted.', ephemeral: true };
+              }
+              const { createCustomActionEditorUI } = await import('./customActionUI.js');
+              return await createCustomActionEditorUI({ guildId: context.guildId, actionId: targetId });
+            }
             case 'edit': {
               // Delegate to the existing safari_edit_action handler logic
               // Simulate the custom_id so the edit handler can parse it
@@ -22760,7 +22770,7 @@ To fix this:
               } else if (action.type === 'follow_up_button') {
                 const targetButtonId = action.config?.buttonId || action.buttonId;
                 if (!targetButtonId) {
-                  return { content: '❌ Follow-up action missing target.', ephemeral: true };
+                  return { content: '❌ Linked action missing target.', ephemeral: true };
                 }
                 const stateKey = `${context.guildId}_${actionId}_followup_${actionIndex}`;
                 dropConfigState.set(stateKey, {
@@ -23068,7 +23078,7 @@ To fix this:
             
             if (!targetButtonId) {
               return {
-                content: '❌ Follow-up action missing target button configuration.',
+                content: '❌ Linked action missing target button configuration.',
                 ephemeral: true
               };
             }
@@ -31519,7 +31529,7 @@ To fix this:
                     type: 'display_text',
                     config: {
                       content: `⚠️ Referenced action "${actionName}" was deleted\n\n**To fix this:**\n1. Go to 📍 Location Actions\n2. Click ⚡ Custom Actions\n3. Delete this broken action`,
-                      title: 'Broken Follow-Up - Please Delete'
+                      title: 'Broken Linked Action - Please Delete'
                     }
                   };
                   cleanupCount++;
@@ -31556,8 +31566,8 @@ To fix this:
           let successMessage = `✅ **Action Deleted Successfully!**\n\n**"${actionName}"** has been removed from all locations and deleted permanently.`;
           
           if (cleanupCount > 0) {
-            successMessage += `\n\n⚠️ **Follow-up References Found and Fixed:**\n`;
-            successMessage += `${cleanupCount} broken follow-up action${cleanupCount > 1 ? 's' : ''} ${cleanupCount > 1 ? 'have' : 'has'} been converted to warning text.\n\n`;
+            successMessage += `\n\n⚠️ **Linked Action References Found and Fixed:**\n`;
+            successMessage += `${cleanupCount} broken linked action${cleanupCount > 1 ? 's' : ''} ${cleanupCount > 1 ? 'have' : 'has'} been converted to warning text.\n\n`;
             
             // Add specific locations of broken references
             successMessage += `**To complete the cleanup:**\n`;
@@ -39275,7 +39285,7 @@ To fix this:
                   {
                     type: 2, // Button
                     custom_id: `safari_add_action_${buttonId}_follow_up`,
-                    label: 'Show Follow-Up Action',
+                    label: 'Show Linked Action',
                     style: 2, // Secondary (grey)
                     emoji: { name: '🔗' }
                   },
@@ -39590,7 +39600,7 @@ To fix this:
             return res.send({
               type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
               data: {
-                content: '❌ Target Button ID is required for follow-up actions.',
+                content: '❌ Target Button ID is required for linked actions.',
                 flags: InteractionResponseFlags.EPHEMERAL
               }
             });
@@ -47693,7 +47703,7 @@ To fix this:
           selectMenu.addOptions({
             label: '🔙 Back to all',
             value: 'back_to_all_follow_up',
-            description: 'Return to full follow-up action list'
+            description: 'Return to full linked action list'
           });
         } else {
           selectMenu.addOptions({
@@ -49171,7 +49181,7 @@ function getActionTypeName(actionType) {
     'update_currency': 'Update Currency Action',
     'give_currency': 'Give / Remove Currency Action',
     'give_item': 'Give / Remove Item Action',
-    'follow_up_button': 'Follow-up Action',
+    'follow_up_button': 'Linked Action',
     'conditional': 'Conditional Action',
     'random_outcome': 'Random Outcome Action'
   };
@@ -49789,7 +49799,7 @@ async function showFollowUpConfig(guildId, buttonId, targetButtonId, actionIndex
       components: [
           {
             type: 10, // Text Display
-            content: `## 🔗 Follow-up Action Configuration\nConfiguring follow-up action for **${targetButton.name}**`
+            content: `## 🔗 Linked Action Configuration\nConfiguring linked action for **${targetButton.name}**`
           },
           
           { type: 14 }, // Separator
@@ -49805,7 +49815,7 @@ async function showFollowUpConfig(guildId, buttonId, targetButtonId, actionIndex
           // Execute on selector
           {
             type: 10,
-            content: '### Execution Condition\nWhen should this follow-up action be triggered?'
+            content: '### Execution Condition\nWhen should this linked action be triggered?'
           },
           {
             type: 1, // Action Row

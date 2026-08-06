@@ -72,6 +72,36 @@ describe('Outcome menu — Opening / Pass / Fail consistency', () => {
   });
 });
 
+describe('Outcome menu — Open Linked Action entry', () => {
+  const linked = (over = {}) => ({ type: 'follow_up_button', executeOn: 'true', config: { buttonId: 'target_1' }, ...over });
+
+  it('is offered for a configured linked action, in every section, directly above Clone', () => {
+    for (const executeOn of ['always', 'true', 'false']) {
+      const values = stripMoves(buildOutcomeMenuOptions(linked({ executeOn }), { allActions: [] }));
+      assert.deepEqual(values, ['summary', 'edit', 'move_up', 'move_down', 'divider', 'open_linked', 'clone', 'delete']);
+    }
+  });
+
+  it('accepts the legacy follow_up type and legacy top-level buttonId location', () => {
+    const legacyType = buildOutcomeMenuOptions({ type: 'follow_up', executeOn: 'true', config: { buttonId: 'x' } });
+    const legacyLoc = buildOutcomeMenuOptions({ type: 'follow_up_button', executeOn: 'true', buttonId: 'x' });
+    assert.ok(legacyType.some(o => o.value === 'open_linked'));
+    assert.ok(legacyLoc.some(o => o.value === 'open_linked'));
+  });
+
+  it('is NOT offered when no target is configured (nothing to open)', () => {
+    const opts = buildOutcomeMenuOptions({ type: 'follow_up_button', executeOn: 'true', config: {} });
+    assert.equal(opts.some(o => o.value === 'open_linked'), false);
+  });
+
+  it('is NOT offered for non-linked outcome types', () => {
+    for (const type of ['display_text', 'give_currency', 'give_item', 'manage_player_state']) {
+      const opts = buildOutcomeMenuOptions(outcome({ type }));
+      assert.equal(opts.some(o => o.value === 'open_linked'), false, `${type} has no Open Linked Action`);
+    }
+  });
+});
+
 describe('Outcome menu — Player Claims availability', () => {
   it('is offered for every claim-capable type, in every section, at ANY limit setting', () => {
     const limits = [

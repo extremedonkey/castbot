@@ -28,7 +28,7 @@ All five can be attached to the same deployment surfaces (map coordinates, globa
 
 ## Overview
 
-Actions are dynamic, configurable workflows that can be triggered by players through buttons, text commands, select menus, or schedules. They support complex workflows including text displays, currency/item drops, follow-up actions, and conditional logic.
+Actions are dynamic, configurable workflows that can be triggered by players through buttons, text commands, select menus, or schedules. They support complex workflows including text displays, currency/item drops, linked actions, and conditional logic.
 
 ## Recent Updates (January 2026)
 
@@ -54,7 +54,7 @@ Actions now use a string select dropdown for adding outcome types, replacing the
 - **Consistent**: Matches other UI patterns in CastBot
 
 ### Button Bundling
-Follow-up buttons are now automatically bundled with preceding display_text actions:
+Linked actions (follow_up_button outcomes) are automatically bundled with preceding display_text actions:
 - **Reduces message clutter**: Combines related content
 - **Better UX**: Logical grouping of text and actions
 - **Automatic**: No configuration needed
@@ -202,7 +202,7 @@ so a `-50` outcome against a balance of 10 takes 10 and says so — see `execute
 }
 ```
 
-### 4. Follow-up Action
+### 4. Linked Action (follow_up_button)
 Triggers another Action.
 
 **Configuration:**
@@ -456,7 +456,7 @@ Items are added to `playerData.json`:
 ## Best Practices
 
 ### 1. Logical Action Order
-- Place display_text before follow-up buttons for automatic bundling
+- Place display_text before linked actions for automatic bundling
 - Put give_item/currency after explanatory text
 - Use conditional actions for branching logic
 

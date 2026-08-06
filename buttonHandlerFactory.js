@@ -4168,8 +4168,8 @@ export const BUTTON_REGISTRY = {
     category: 'safari_management'
   },
   'safari_follow_up_select': {
-    label: 'Select Follow-up Button',
-    description: 'String select menu for choosing follow-up button to chain',
+    label: 'Select Linked Action',
+    description: 'String select menu for choosing the linked action to chain',
     emoji: '🔗',
     style: 'Primary',
     category: 'safari_management',

@@ -30,7 +30,7 @@ const OUTCOME_TYPE_OPTIONS = [
   { label: 'Remove Role', value: 'remove_role', emoji: { name: '🚫' }, description: 'Remove a Discord role from the player' },
   { label: 'Modify Attribute', value: 'modify_attribute', emoji: { name: '📊' }, description: 'Change a player stat like HP, Mana, or Strength' },
   { label: 'Give / Remove Stamina', value: 'give_stamina', emoji: { name: '⚡' }, description: 'Grant or drain stamina (over max allowed) with usage limits' },
-  { label: 'Follow-up Action', value: 'follow_up_button', emoji: { name: '🔗' }, description: 'Chain into another action after this one completes' },
+  { label: 'Linked Action', value: 'follow_up_button', emoji: { name: '🔗' }, description: 'Chain into another action after this one completes' },
   { label: 'Calculate Results', value: 'calculate_results', emoji: { name: '🌾' }, description: 'Process harvest/income for all or the triggering player' },
   { label: 'Calculate Attack', value: 'calculate_attack', emoji: { name: '⚔️' }, description: 'Run combat calculations between players or vs environment' },
   { label: 'Safari Player State', value: 'manage_player_state', emoji: { name: '🚀' }, description: 'Initialize, teleport, or de-initialize the triggering player' },
@@ -946,6 +946,11 @@ export function buildOutcomeMenuOptions(action, { position = 1, allActions = nul
   // manager renders unlimited//unset outcomes perfectly well ("no restrictions").
   const claimsCapable = CLAIM_OUTCOME_TYPES.includes(action.type);
 
+  // Linked Action outcomes get a jump-to-target entry — only when a target is actually
+  // configured (per-TYPE variance like Player Claims; per-SECTION variance is forbidden).
+  const isLinkedAction = action.type === 'follow_up_button' || action.type === 'follow_up';
+  const linkedTargetId = isLinkedAction ? (action.config?.buttonId ?? action.buttonId) : null;
+
   return [
     {
       label: getActionSummaryPlain(action, position, guildItems, guildButtons, guildEnemies),
@@ -957,6 +962,7 @@ export function buildOutcomeMenuOptions(action, { position = 1, allActions = nul
     { label: 'Move Up', value: 'move_up', emoji: { name: '⬆️' }, description: 'Change execution order' },
     { label: 'Move Down', value: 'move_down', emoji: { name: '⬇️' }, description: 'Change execution order' },
     { label: '───────────────────', value: 'divider', description: ' ' },
+    ...(linkedTargetId ? [{ label: 'Open Linked Action', value: 'open_linked', emoji: { name: '⚡' }, description: 'Jump to the linked action\'s editor' }] : []),
     ...(!atMax ? [{ label: 'Clone Outcome', value: 'clone', emoji: { name: '📋' }, description: 'Duplicate this outcome' }] : []),
     ...(claimsCapable ? [{ label: 'Player Claims', value: 'player_claims', emoji: { name: '👥' }, description: 'View and manage which players have claimed this outcome already.' }] : []),
     ...MOVE_TARGETS
@@ -1030,11 +1036,11 @@ function getActionSummaryPlain(action, number, guildItems = {}, guildButtons = {
     case 'follow_up': {
       const targetId = action.config?.buttonId || action.buttonId;
       if (!targetId) {
-        summary = `${number}. Follow-up Action | Not configured`;
+        summary = `${number}. Linked Action | Not configured`;
       } else {
         const target = guildButtons[targetId];
         const targetName = target?.name || target?.label || targetId;
-        summary = `${number}. Follow-up Action | ${targetName}`;
+        summary = `${number}. Linked Action | ${targetName}`;
       }
       break;
     }
@@ -1112,7 +1118,7 @@ function getActionTypeLabel(action) {
       return 'Remove Role';
     case 'follow_up_button':
     case 'follow_up':
-      return 'Follow-up Action';
+      return 'Linked Action';
     case 'create_button':
       return 'Create Button';
     case 'calculate_results':
@@ -1186,12 +1192,12 @@ function getActionSummary(action, number, guildItems = {}, guildButtons = {}, is
     case 'follow_up':
       const followUpButtonId = action.config?.buttonId || action.buttonId;
       if (!followUpButtonId) {
-        return `**\`${number}. Follow-up Action\`** Not configured`;
+        return `**\`${number}. Linked Action\`** Not configured`;
       }
-      // Try to get button name from guildButtons 
+      // Try to get button name from guildButtons
       const followUpButton = guildButtons[followUpButtonId];
       const followUpButtonName = followUpButton?.name || followUpButton?.label || followUpButtonId;
-      return `**\`${number}. Follow-up Action\`** ${followUpButtonName}`;
+      return `**\`${number}. Linked Action\`** ${followUpButtonName}`;
     case 'create_button':
       return `**\`${number}. Create Button\`** ${action.buttonLabel}`;
     case 'calculate_results':

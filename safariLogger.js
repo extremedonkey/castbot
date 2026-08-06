@@ -763,7 +763,7 @@ async function _buildActionActivityDesc(guildId, actionType, actionId, buttonLab
       }
       case 'follow_up_button':
       case 'follow_up': {
-        details.push(`Follow-up button`);
+        details.push(`Linked action`);
         break;
       }
       case 'store_display': {

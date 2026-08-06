@@ -390,7 +390,7 @@ if (rows.length > 2) {
 - **📝 Display Text** - Show content to player (with truncated preview)
 - **🎁 Give Item** - Award items with quantity and limit info
 - **💰 Give Currency** - Award/remove currency with limit info
-- **🔗 Follow-up Button** - Trigger additional button displays
+- **🔗 Linked Action** - Trigger additional button displays
 - **🔀 Conditional** - Nested condition logic
 - **🎲 Random Outcome** - Multiple possible outcomes
 - **❓ Unknown Types** - Graceful handling of undefined action types

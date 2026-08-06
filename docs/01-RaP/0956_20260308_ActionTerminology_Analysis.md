@@ -149,7 +149,7 @@ safariData[guildId].buttons[actionId] = {
 - `"Action Info"` — button to edit entity name (ambiguous)
 
 **Select menu options (outcome types):**
-- Display Text, Give / Remove Currency, Give / Remove Item, Give Role, Remove Role, Modify Attribute, Follow-up Action, Calculate Results, Calculate Attack
+- Display Text, Give / Remove Currency, Give / Remove Item, Give Role, Remove Role, Modify Attribute, Linked Action (renamed from Follow-up Action, 2026-08-06), Calculate Results, Calculate Attack
 
 **Modal titles:**
 - `"Edit Action Info"` — editing the entity, but "Action" is ambiguous

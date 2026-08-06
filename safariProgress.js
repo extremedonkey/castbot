@@ -268,7 +268,7 @@ async function formatAction(action, prefix, guildId, items, playerData, client, 
       
     case 'follow_up_button':
       if (action.config?.buttonIds && action.config.buttonIds.length > 0) {
-        result = `${prefix} 🔗 Follow-up Actions:\n`;
+        result = `${prefix} 🔗 Linked Actions:\n`;
         
         // Get follow-up button details
         for (let i = 0; i < action.config.buttonIds.length; i++) {

@@ -118,7 +118,7 @@ function actionBullets(executedActions, resolveItem) {
       }
       case 'follow_up_button':
       case 'follow_up':
-        details.push('Follow-up button');
+        details.push('Linked action');
         break;
       case 'store_display':
         details.push(`Store: ${cfg.storeId || '?'}`);

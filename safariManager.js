@@ -1431,7 +1431,7 @@ async function executeFollowUpButton(config, guildId, interaction) {
                 type: 17, // Container
                 components: [{
                     type: 10, // Text Display
-                    content: '❌ Follow-up button not found.'
+                    content: '❌ Linked action not found.'
                 }]
             }]
         };

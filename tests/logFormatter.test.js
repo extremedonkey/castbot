@@ -162,7 +162,7 @@ describe('logFormatter — custom actions', () => {
     assert.ok(line.includes('> • Currency: +7'));
     assert.ok(line.includes('> • Stamina: +2'));
     assert.ok(line.includes('> • Move: → B3'));
-    assert.ok(line.includes('> • Follow-up button'));
+    assert.ok(line.includes('> • Linked action'));
     assert.ok(!line.includes('some_unknown_type'));
   });
 
