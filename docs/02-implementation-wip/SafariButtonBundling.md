@@ -515,7 +515,7 @@ Create test Custom Action with:
 2. Give item (once per player)
 3. Give currency (unlimited)
 4. Another display text
-5. Follow-up action
+5. Linked action
 
 **Test Scenarios**:
 - [ ] First time user - all items received

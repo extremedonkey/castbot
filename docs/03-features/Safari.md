@@ -525,7 +525,7 @@ Container Component:
 [Buttons Row 1]
   - 📄 Add Text Display
   - 💰 Add Currency Change
-  - 🔗 Add Follow-up Button
+  - 🔗 Add Linked Action
 [Buttons Row 2]  
   - ✅ Save Button
   - ❌ Cancel
@@ -544,7 +544,7 @@ Each action type has specific configuration:
 - Notification Message (max 200 chars)
 - Show Current Balance (checkbox)
 
-**Follow-up Button Select:**
+**Linked Action Select:**
 - Dropdown of existing buttons
 - Delay in seconds (0-60)
 - Replace current message (checkbox)
@@ -1467,9 +1467,9 @@ The Round Results V2 System provides a complete, scalable foundation for complex
 ### 🎨 Custom Actions Editor UI (January 2025)
 **Architecture:**
 - **String Select for Action Types**: Replaced button grid with cleaner dropdown interface
-- **Action Type Options**: Display Text, Update Currency, Follow-up Action, Conditional Action
+- **Action Type Options**: Display Text, Update Currency, Linked Action, Conditional Action
 - **UPDATE_MESSAGE Pattern**: Modal submissions refresh the editor without full recreation
-- **Button Bundling**: Automatic UI optimization when follow-up buttons follow display_text
+- **Button Bundling**: Automatic UI optimization when linked actions (`follow_up_button` outcomes) follow display_text
 
 ### 🏪 Enhanced Shop System
 **For detailed store management patterns**: → [StoreManagementArchitecture.md](StoreManagementArchitecture.md)
@@ -2119,15 +2119,15 @@ This documentation serves as the complete guide for implementing and extending C
 
 7. **Custom Actions String Select Update** (January 2025):
    - Custom Actions now use a string select dropdown instead of buttons for adding action types
-   - Options: Display Text, Update Currency, Follow-up Action, Conditional Action
+   - Options: Display Text, Update Currency, Linked Action, Conditional Action
    - Provides cleaner UI and better scalability for future action types
    - String select component replaces the previous button grid layout
 
 8. **Button Bundling Feature** (January 2025):
-   - Follow-up buttons are automatically bundled with preceding display_text actions
+   - Linked actions are automatically bundled with preceding display_text actions
    - Creates cleaner UI by combining text and button in a single message
-   - Single message contains both text display and follow-up button when bundled
-   - Standalone follow-up buttons still work independently when not preceded by display_text
+   - Single message contains both text display and linked action button when bundled
+   - Standalone linked actions still work independently when not preceded by display_text
    - Improves user experience by reducing message clutter
 
 9. **Modal Response Pattern** (January 2025):

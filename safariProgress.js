@@ -285,7 +285,7 @@ async function formatAction(action, prefix, guildId, items, playerData, client, 
           result += `${prefix.replace('├', '│').replace('└', ' ')}    ${i === action.config.buttonIds.length - 1 ? '└─' : '├─'} ${triggerEmoji} ${followUpButton.emoji || ''} ${followUpButton.name || followUpButton.label || 'Unnamed'}\n`;
         }
       } else {
-        result = `${prefix} 🔗 Follow-up Button: Show additional buttons\n`;
+        result = `${prefix} 🔗 Linked Action: Show additional buttons\n`;
       }
       break;
       

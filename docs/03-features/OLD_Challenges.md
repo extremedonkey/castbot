@@ -59,7 +59,7 @@ The existing Custom Action system provides:
 - **Give Currency** - Add/subtract currency
 - **Give Item** - Grant items to inventory
 - **Give/Remove Role** - Manage Discord roles
-- **Follow-up Action** - Chain to other Custom Actions
+- **Linked Action** - Chain to other Custom Actions
 
 ### Enhanced Button Configuration System (Implemented September 23, 2025)
 
