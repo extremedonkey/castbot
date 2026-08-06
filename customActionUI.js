@@ -2091,7 +2091,7 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
         {
           label: 'Player Menu',
           value: 'player_menu',
-          description: 'Quick access from /menu → My Profile',
+          description: 'Quick access from /menu → ⚡Actions',
           emoji: { name: '📋' },
           default: menuVisibility === 'player_menu'
         },
