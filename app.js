@@ -14883,8 +14883,14 @@ To fix this:
                 await new Promise(resolve => setTimeout(resolve, 2000));
               }
             } catch (error) {
-              errors.push(`${channel.name}: ${error.message}`);
-              console.error(`🧹 Failed to delete ${channel.name}:`, error.message);
+              // 10003 = Unknown Channel: already deleted (stale cache). Count as done, don't spam errors.
+              if (error.code === 10003) {
+                deletedCount++;
+                console.log(`🧹 Already gone: ${channel.name} (${deletedCount}/${totalToDelete})`);
+              } else {
+                errors.push(`${channel.name}: ${error.message}`);
+                console.error(`🧹 Failed to delete ${channel.name}:`, error.message);
+              }
             }
           }
 
