@@ -29,7 +29,9 @@
 
 import fs from 'fs';
 import { InteractionResponseType, InteractionResponseFlags } from 'discord-interactions';
-import { runClaudeJob, safeDeliver, formatElapsed, HARD_KILL_MS, buildModelSelectField, resolveModelChoice, modelLabel, canUseModel, DEFAULT_MODEL } from './claudeRunner.js';
+import { runClaudeJob, formatElapsed, HARD_KILL_MS, buildModelSelectField, resolveModelChoice, modelLabel, canUseModel, DEFAULT_MODEL, MAX_CHUNK, chunkResponse, resolveAskerName, createProgressReporter } from './claudeRunner.js';
+
+export { chunkResponse };
 import { hasFeatureSync, FEATURES, SEED_GUILD_IDS } from './entitlements.js';
 import { logAskEvent } from './src/analytics/askLog.js';
 
@@ -122,7 +124,6 @@ export function resolveWriteDenyRules(guildId) {
   return superRead ? [...CLI_DENY] : [...CLI_DENY, ...PLAYER_DATA_DENY];
 }
 
-const MAX_CHUNK = 3500;      // leave room for the action row in the last chunk
 export const ACCENT = 0x3498db;
 
 /**
@@ -219,27 +220,6 @@ export function hasAskCastBotAccess({ userId, guildId } = {}) {
   // Runtime-configurable: 🎟️ Entitlements (Reece's Stuff) grants/revokes guilds without
   // a deploy. SEED_GUILD_IDS only populates the registry the first time it's read.
   return hasFeatureSync(guildId, FEATURES.ASK_CASTBOT);
-}
-
-/**
- * Split a long response on newlines where possible, hard-cut where not.
- * @param {string} response
- * @returns {string[]} at least one chunk
- */
-export function chunkResponse(response) {
-  const chunks = [];
-  let remaining = response;
-  while (remaining.length > 0) {
-    if (remaining.length <= MAX_CHUNK) {
-      chunks.push(remaining);
-      break;
-    }
-    let splitAt = remaining.lastIndexOf('\n', MAX_CHUNK);
-    if (splitAt < MAX_CHUNK * 0.5) splitAt = MAX_CHUNK;
-    chunks.push(remaining.substring(0, splitAt));
-    remaining = remaining.substring(splitAt).trimStart();
-  }
-  return chunks;
 }
 
 /** Trim a string for display, appending an ellipsis when cut. */
@@ -657,10 +637,7 @@ export async function handleAskModalSubmit(req, res, client = null) {
   // The question card is the INITIAL response rather than a channel post because Discord
   // renders the interaction's own message first — a channel post would land underneath
   // the answer and read backwards.
-  const askerName = req.body.member?.nick
-    || req.body.member?.user?.global_name
-    || req.body.member?.user?.username
-    || 'Someone';
+  const askerName = resolveAskerName(req.body);
   res.send({
     type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
     data: { components: [buildQuestionContainer({ askerName, query })], flags: (1 << 15) }
@@ -679,11 +656,10 @@ export async function handleAskModalSubmit(req, res, client = null) {
   }
 
   inFlight++;
-  let progressMsgId = null;
-  // Heartbeats never fall back to a channel post — that would spam a new progress message
-  // every 20s. Only the final answer is worth a fallback message.
-  const beat = (data) => safeDeliver({ token, channelId, data, messageId: progressMsgId, userId, fallback: false });
-  const deliver = (data) => safeDeliver({ token, channelId, data, messageId: progressMsgId, userId });
+  // Owns the progress follow-up: heartbeats edit it in place (never a channel-post
+  // fallback — that would spam a new message every 20s), final delivery replaces it
+  // with the answer. Shared with the Moai via claudeRunner.
+  const reporter = createProgressReporter({ token, channelId, userId });
 
   // Hoisted so the finally block can tell a logged outcome from a silent escape.
   let terminalLogged = false;
@@ -698,8 +674,7 @@ export async function handleAskModalSubmit(req, res, client = null) {
     });
 
     // Message 2 starts as "starting up" so there's never a silent gap.
-    const progressMsg = await createFollowupMessage(token, { components: [buildProgressContainer(query)] });
-    progressMsgId = progressMsg?.id || null;
+    await reporter.start({ components: [buildProgressContainer(query)] });
 
     const guildId = req.body.guild_id;
     const superRead = !isPublicRoute && SUPER_READ_GUILD_IDS.includes(guildId);
@@ -727,7 +702,7 @@ export async function handleAskModalSubmit(req, res, client = null) {
             apiDurationMs, toolTrace, modelUsed, fellBack } = await runAskCastBot(
       buildPrompt(query, fields.askcb_prev_context, superRead, complexity, editAvailable, editSection, playerDigest),
       editSection ? resolveWriteDenyRules(guildId) : resolveDenyRules(guildId, isPublicRoute),
-      (progress) => beat({ components: [buildProgressContainer(query, progress)] }),
+      (progress) => reporter.beat({ components: [buildProgressContainer(query, progress)] }),
       model
     );
 
@@ -756,7 +731,7 @@ export async function handleAskModalSubmit(req, res, client = null) {
     const chunks = chunkResponse(publicAnswer);
     // safeDeliver's 'token'|'channel'|'failed' was discarded at every call site — it's
     // the difference between "the answer was bad" and "the user never saw it".
-    const deliveryOutcome = await deliver({
+    const deliveryOutcome = await reporter.deliver({
       components: [buildFirstContainer({ query, chunk: chunks[0], elapsed, chunkCount: chunks.length, responseId, isPublic: isPublicRoute, model, plan })]
     });
     for (let i = 1; i < chunks.length; i++) {
@@ -780,7 +755,7 @@ export async function handleAskModalSubmit(req, res, client = null) {
     console.error('👾 Ask CastBot error:', error.message);
     logAskEvent('ask.error', { ...ctx, phase: answerText ? 'deliver' : 'run', message: error.message });
     terminalLogged = true;
-    await deliver({ components: [buildErrorContainer(error.message, isPublicRoute)] });
+    await reporter.deliver({ components: [buildErrorContainer(error.message, isPublicRoute)] });
   } finally {
     // A request row with no terminal row would silently corrupt every rate metric.
     if (!terminalLogged) logAskEvent('ask.error', { ...ctx, phase: 'unknown', message: 'no terminal event' });

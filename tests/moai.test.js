@@ -12,7 +12,8 @@ import {
   isMoaiEnvironment,
   extractMessageText,
   buildContextAskModal,
-  buildPrompt
+  buildPrompt,
+  buildQuestionContainer
 } from '../moai.js';
 
 describe('Moai — isMoaiEnvironment (DEV/TEST always; PROD behind CLAUDE_PROD_FEATURES)', () => {
@@ -120,6 +121,24 @@ describe('Moai — buildContextAskModal', () => {
     const ctx = buildContextAskModal('').components[1].component;
     assert.equal('value' in ctx, false);
     assert.ok(ctx.placeholder);
+  });
+});
+
+describe('Moai — buildQuestionContainer (message 1 of the two-message flow)', () => {
+  it('shows the asker and the full question, aligned with Ask CastBot', () => {
+    const card = buildQuestionContainer({ askerName: 'Reece', query: 'why did the deploy fail?' });
+    assert.equal(card.type, 17);
+    const texts = card.components.filter(c => c.type === 10).map(c => c.content);
+    assert.ok(texts[0].includes('🗿'));
+    assert.ok(texts[0].includes('Reece'));
+    assert.equal(texts[1], 'why did the deploy fail?');
+  });
+
+  it('adds a context footnote only when message context is attached', () => {
+    const withCtx = buildQuestionContainer({ askerName: 'R', query: 'q', hasMsgContext: true });
+    assert.ok(withCtx.components.some(c => c.type === 10 && c.content.includes('📎')));
+    const without = buildQuestionContainer({ askerName: 'R', query: 'q' });
+    assert.ok(!without.components.some(c => c.type === 10 && c.content.includes('📎')));
   });
 });
 

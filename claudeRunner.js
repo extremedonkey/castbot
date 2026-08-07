@@ -121,6 +121,39 @@ export function formatElapsed(ms) {
   return m > 0 ? `${m}m ${String(s).padStart(2, '0')}s` : `${s}s`;
 }
 
+/** Answer chunk size — leaves room for the action row appended to the last chunk. */
+export const MAX_CHUNK = 3500;
+
+/**
+ * Split a long response on newlines where possible, hard-cut where not. Shared by the
+ * Moai and Ask CastBot (each used to carry an identical private copy).
+ * @param {string} response
+ * @param {number} [maxChunk]
+ * @returns {string[]} at least one chunk
+ */
+export function chunkResponse(response, maxChunk = MAX_CHUNK) {
+  const chunks = [];
+  let remaining = response;
+  while (remaining.length > 0) {
+    if (remaining.length <= maxChunk) { chunks.push(remaining); break; }
+    let splitAt = remaining.lastIndexOf('\n', maxChunk);
+    if (splitAt < maxChunk * 0.5) splitAt = maxChunk;
+    chunks.push(remaining.substring(0, splitAt));
+    remaining = remaining.substring(splitAt).trimStart();
+  }
+  return chunks;
+}
+
+/** Display name for the asker's question card: server nick → global name → username. */
+export function resolveAskerName(body) {
+  return body?.member?.nick
+    || body?.member?.user?.global_name
+    || body?.member?.user?.username
+    || body?.user?.global_name
+    || body?.user?.username
+    || 'Someone';
+}
+
 /** Just the file name from a path, for compact progress labels. */
 function baseName(p) {
   return typeof p === 'string' ? p.split('/').filter(Boolean).pop() || p : '';
@@ -383,4 +416,40 @@ export async function safeDeliver({ token, channelId, data, messageId, userId, f
     console.error('❌ Channel fallback also failed:', channelError?.message);
     return 'failed';
   }
+}
+
+/**
+ * The progress-message lifecycle shared by Ask CastBot and the Moai.
+ *
+ * The flow both features follow: the question card is the interaction's own response
+ * (message 1), then a FOLLOW-UP message carries live progress and finally becomes the
+ * answer (message 2). This owns message 2: `start()` posts it and remembers its id,
+ * `beat()` refreshes it on each heartbeat (never falling back to a channel post — that
+ * would spam a new message every 20s), and `deliver()` turns it into the final answer,
+ * with the channel-post fallback enabled because losing a 13-minute answer is not
+ * acceptable.
+ *
+ * If `start()` fails (or is never called), everything targets @original instead —
+ * degraded but never silent.
+ *
+ * @param {{token: string, channelId: string, userId?: string}} opts
+ */
+export function createProgressReporter({ token, channelId, userId }) {
+  let progressMsgId = null;
+  return {
+    /** Post the progress follow-up (message 2). Call once, before the job starts. */
+    async start(data) {
+      const { createFollowupMessage } = await import('./buttonHandlerFactory.js');
+      const msg = await createFollowupMessage(token, data);
+      progressMsgId = msg?.id || null;
+    },
+    /** Heartbeat refresh — edits message 2 in place, never posts on failure. */
+    beat(data) {
+      return safeDeliver({ token, channelId, data, messageId: progressMsgId, userId, fallback: false });
+    },
+    /** Final delivery — message 2 becomes the answer (or the error card). */
+    deliver(data) {
+      return safeDeliver({ token, channelId, data, messageId: progressMsgId, userId });
+    }
+  };
 }

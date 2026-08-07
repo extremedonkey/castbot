@@ -14,9 +14,10 @@
 
 import fs from 'fs';
 import { InteractionResponseType, InteractionResponseFlags } from 'discord-interactions';
-import { runClaudeJob, safeDeliver, formatElapsed, HARD_KILL_MS, buildModelSelectField, resolveModelChoice, modelLabel, DEFAULT_MODEL } from './claudeRunner.js';
+import { runClaudeJob, formatElapsed, HARD_KILL_MS, buildModelSelectField, resolveModelChoice, modelLabel, DEFAULT_MODEL, chunkResponse, resolveAskerName, createProgressReporter } from './claudeRunner.js';
 
-const MAX_CHUNK = 3500;
+export { chunkResponse };
+
 const ACCENT = 0x808080;
 
 // Reece + test user — same trust boundary as the reeces_stuff menu itself. Unlike Ask
@@ -124,18 +125,23 @@ export function buildContextAskModal(contextText, chosenModel = DEFAULT_MODEL) {
   };
 }
 
-/** Split a long response, preferring newline boundaries. */
-export function chunkResponse(response) {
-  const chunks = [];
-  let remaining = response;
-  while (remaining.length > 0) {
-    if (remaining.length <= MAX_CHUNK) { chunks.push(remaining); break; }
-    let splitAt = remaining.lastIndexOf('\n', MAX_CHUNK);
-    if (splitAt < MAX_CHUNK * 0.5) splitAt = MAX_CHUNK;
-    chunks.push(remaining.substring(0, splitAt));
-    remaining = remaining.substring(splitAt).trimStart();
-  }
-  return chunks;
+/**
+ * Message 1: the question, on its own card, in full — the same two-message pattern as
+ * Ask CastBot. Before this, the Moai's only record of what was asked was an 80-char
+ * footnote on the eventual answer, and the channel showed Discord's generic "thinking..."
+ * placeholder until the first progress edit landed.
+ * @param {{askerName: string, query: string, hasMsgContext?: boolean}} opts
+ */
+export function buildQuestionContainer({ askerName, query, hasMsgContext = false }) {
+  return {
+    type: 17,
+    accent_color: ACCENT,
+    components: [
+      { type: 10, content: `### 🗿 *${askerName}* asked` },
+      { type: 10, content: query },
+      ...(hasMsgContext ? [{ type: 10, content: `-# 📎 with message context attached` }] : [])
+    ]
+  };
 }
 
 /** Build the Moai prompt: essence + context + question. */
@@ -284,24 +290,40 @@ export async function handleMoaiModalSubmit(req, res) {
     });
   }
 
-  // Deferred PUBLIC — responses persist in channel history (ephemeral dies on restart).
-  res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE, data: {} });
+  // TWO MESSAGES, NOT ONE — same pattern as Ask CastBot's handleAskModalSubmit:
+  //   1. the question card as the immediate PUBLIC response, so the channel can read
+  //      what was asked (the old bare deferred left only Discord's generic placeholder,
+  //      and the question survived only as a truncated footnote on the answer);
+  //   2. a follow-up that carries live progress and then becomes the answer.
+  // Public rather than ephemeral because responses must persist in channel history
+  // (ephemeral dies on restart).
+  const askerName = resolveAskerName(req.body);
+  res.send({
+    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+    data: {
+      components: [buildQuestionContainer({ askerName, query, hasMsgContext: !!fields.moai_msg_context?.trim() })],
+      flags: (1 << 15)  // IS_COMPONENTS_V2
+    }
+  });
 
   const token = req.body.token;
   const channelId = req.body.channel_id;
   const userId = req.body.member?.user?.id;
   const { createFollowupMessage } = await import('./buttonHandlerFactory.js');
-  const deliver = (data) => safeDeliver({ token, channelId, data, userId });
+  // Heartbeats edit the progress follow-up in place and never fall back to a channel
+  // post (the old code reused the fallback-enabled deliver for heartbeats — a token
+  // hiccup could spam a new progress message every 20s).
+  const reporter = createProgressReporter({ token, channelId, userId });
 
   try {
     console.log(`🗿 Moai query from ${req.body.member?.user?.username}: "${truncate(query, 80)}"`);
-    await deliver({ components: [buildProgressContainer(query)] });
+    await reporter.start({ components: [buildProgressContainer(query)] });
 
     // No tools/deny: the Moai is allowed to change code. That's its job.
     const { text: response, durationMs } = await runClaudeJob({
       prompt: buildPrompt(query, fields.moai_prev_context, fields.moai_msg_context),
       model,
-      onHeartbeat: (progress) => deliver({ components: [buildProgressContainer(query, progress)] })
+      onHeartbeat: (progress) => reporter.beat({ components: [buildProgressContainer(query, progress)] })
     });
 
     const elapsed = formatElapsed(durationMs);
@@ -311,7 +333,7 @@ export async function handleMoaiModalSubmit(req, res) {
     rememberResponse(responseId, { response, query, elapsed, model });
 
     const chunks = chunkResponse(response);
-    await deliver({
+    await reporter.deliver({
       components: [buildFirstContainer({ query, chunk: chunks[0], elapsed, chunkCount: chunks.length, responseId, model })]
     });
     for (let i = 1; i < chunks.length; i++) {
@@ -330,6 +352,6 @@ export async function handleMoaiModalSubmit(req, res) {
     }
   } catch (error) {
     console.error('🗿 Moai error:', error.message);
-    await deliver({ components: [buildErrorContainer(error.message)] });
+    await reporter.deliver({ components: [buildErrorContainer(error.message)] });
   }
 }
