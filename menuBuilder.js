@@ -111,13 +111,12 @@ export class MenuBuilder {
     const specialFeatures = [
       { type: 2, custom_id: 'attribute_management', label: 'Attributes', style: 2, emoji: { name: '📊' } },
       { type: 2, custom_id: 'category_post', label: 'Category Post', style: 2, emoji: { name: '🖼️' } },
-      { type: 2, custom_id: 'safari_manage_enemies', label: 'Enemies', style: 2, emoji: { name: '🐙' } },
-      { type: 2, custom_id: 'tycoons_legacy', label: 'Tycoons', style: 2, emoji: { name: '💼' } }
+      { type: 2, custom_id: 'safari_manage_enemies', label: 'Enemies', style: 2, emoji: { name: '🐙' } }
     ];
     // 👾 Ask CastBot — one button for the whole feature: it answers questions AND makes
     // changes (admins in entitled guilds get a private preview + Apply). Post Ask sits
     // beside it — same feature, "put a button in a channel" instead of "use it now".
-    // OWN ROW: specialFeatures is already 4 and Discord caps an ActionRow at 5 buttons.
+    // OWN ROW: kept separate so the gated Ask pair doesn't reshuffle the Special Features row.
     const askRow = hasAskCastBotAccess({ userId: context?.userId, guildId: context?.guildId })
       ? [{ type: 1, components: [
           { type: 2, custom_id: 'askcb_ask', label: 'Ask CastBot', style: 1, emoji: { name: '👾' } },
@@ -244,8 +243,7 @@ export class MenuBuilder {
         type: 1,
         components: [
           { type: 2, custom_id: 'prod_availability', label: 'Availability', style: 2, emoji: { name: '🕐' } },
-          { type: 2, custom_id: 'emoji_editor', label: 'Emoji Editor', style: 2, emoji: { name: '🎨' } },
-          { type: 2, custom_id: 'tycoons_legacy', label: 'Tycoons', style: 2, emoji: { name: '💼' } }
+          { type: 2, custom_id: 'emoji_editor', label: 'Emoji Editor', style: 2, emoji: { name: '🎨' } }
         ]
       }
     ];
@@ -310,7 +308,8 @@ export class MenuBuilder {
         type: 1,
         components: [
           { type: 2, custom_id: 'restart_bot', label: `Restart ${envLabel}`, style: 4, emoji: { name: '🔄' } },
-          { type: 2, custom_id: 'restart_prod', label: 'Restart Prod', style: 4, emoji: { name: '🔁' } }
+          { type: 2, custom_id: 'restart_prod', label: 'Restart Prod', style: 4, emoji: { name: '🔁' } },
+          { type: 2, custom_id: 'deploy_prod', label: 'Deploy Prod', style: 4, emoji: { name: '🚀' } }
         ]
       },
       { type: 10, content: `### \`\`\`🗺️ Map Tools\`\`\`` },

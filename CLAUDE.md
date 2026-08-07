@@ -238,7 +238,7 @@ If your button uses a wildcard pattern (e.g., `my_button_*`) and shows `[🪨 LE
 |---|---|---|
 | **DEV** (local + ngrok) | Every `dev-restart.sh` (if tunnel up) | Automatic. **WSL only — Windows mode has NO local bot** |
 | **TEST** (castbot-blue, always-on) | Every `dev-restart.sh` / `win-restart.js` (default) | SSH pull + `pm2 restart castbot-pm` — skip only with `-dev-only` (WSL) |
-| **PROD** (live users) | 🔴 NEVER here — separate, explicit, permissioned | `npm run deploy-remote-wsl` — **only on Reece's explicit word** |
+| **PROD** (live users) | 🔴 NEVER here — separate, explicit, permissioned | `npm run deploy-remote-wsl` (laptop) or Reece clicking 🚀 **Deploy Prod** (TEST instance, SHA-pinned confirm) — **only on Reece's explicit word** |
 
 > **⚠️ Restart notification caveat:** the Discord `#💎deploy` notification is sent by `notify-restart.js` running **on the laptop (dev)**, so it always shows the **"DEVELOPMENT Server Restart!"** header even when test was restarted — the test deploy only appears in the "Deployed To: dev + test" line. The test box also self-announces its own restarts on startup (`🟦 [TEST] restart self-announce`, app.js ~1626, gated to `INSTANCE_ROLE==='test'`), covering restarts not triggered from the laptop (PM2 auto-restart, crash).
 
@@ -766,7 +766,7 @@ The box has its own dedicated prod key: `~/.ssh/castbot-prod` (ed25519, comment 
 - ANY prod file write: `scp` TO prod, `>`/`>>` redirects, `tee`, `sed -i`, `rm`, `mv`, `cp`
 - `git pull`/`checkout`/`reset` (anything changing the prod working tree), `npm install`, `sudo` anything, Apache/nginx restarts
 
-**⛔ NEVER from the box, even if asked casually:** deploying code to prod (that goes through the laptop's `npm run deploy-remote-wsl` only); `pm2 delete`/`pm2 start` (loses env); editing prod `.env`; touching prod data files.
+**⛔ NEVER from the box, even if asked casually:** deploying code to prod from the shell — the ONLY sanctioned box-side deploy path is the 🚀 **Deploy Prod** button (Reece's Discord click → SHA-pinned confirm → `src/monitoring/prodDeploy.js` runs `deploy-remote-wsl.js`; see [ProdDeployButton](docs/02-implementation-wip/ProdDeployButton.md)); an agent must never run that script/module against prod itself, "on Reece's behalf" included — the button exists precisely so approval flows through Discord's signed interaction, not through text an LLM was handed. Also never: `pm2 delete`/`pm2 start` (loses env); editing prod `.env`; touching prod data files.
 
 **One authorization = one action.** "Restart prod" authorizes ONE restart, not a session of them. If a fix needs prod changes: verify on test, then Reece deploys.
 

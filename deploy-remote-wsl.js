@@ -38,7 +38,11 @@ const REMOTE_USER = IS_TEST
 const REMOTE_PATH = IS_TEST
   ? (process.env.TEST_LIGHTSAIL_PATH || '/home/ubuntu/castbot')
   : (process.env.LIGHTSAIL_PATH || '/opt/bitnami/projects/castbot');
-const SSH_KEY_PATH = path.join(os.homedir(), '.ssh', IS_TEST ? 'castbot-blue-key.pem' : 'castbot-key.pem');
+// LIGHTSAIL_SSH_KEY overrides the key for the PROD target — the test box's Deploy Prod
+// button sets it to /home/ubuntu/.ssh/castbot-prod (the box has no castbot-key.pem).
+const SSH_KEY_PATH = (!IS_TEST && process.env.LIGHTSAIL_SSH_KEY)
+    ? process.env.LIGHTSAIL_SSH_KEY
+    : path.join(os.homedir(), '.ssh', IS_TEST ? 'castbot-blue-key.pem' : 'castbot-key.pem');
 const SSH_TARGET = `${REMOTE_USER}@${REMOTE_HOST}`;
 
 // Always-on TEST box (castbot-blue) — used to SEND prod deploy notifications (see
@@ -78,6 +82,13 @@ function spawnLocalNotify({ customMessage, commitMessage, filesChanged, gitStats
 // when the laptop is). Falls back to the local send (original behavior, posts as
 // CastBot-Dev) if the box is unreachable, so a notification still goes out either way.
 async function sendDeployNotification({ customMessage, commitMessage, filesChanged, gitStats }) {
+    // Running ON the test box itself (Deploy Prod button): the box IS the notify host, so
+    // spawn locally instead of SSHing to ourselves with a key that only the laptop has.
+    // The local .env here holds the CastBot Test token, so it still posts as CastBot Test.
+    if (process.env.INSTANCE_ROLE === 'test') {
+        spawnLocalNotify({ customMessage, commitMessage, filesChanged, gitStats });
+        return 'test-box';
+    }
     const remoteArgs = [customMessage, commitMessage, filesChanged, gitStats].map(shQuote).join(' ');
     const remoteCommand = `cd ${NOTIFY_PATH} && PRODUCTION=TRUE INSTANCE_ROLE= node scripts/notify-restart.js ${remoteArgs}`;
 
@@ -224,6 +235,9 @@ async function deployToProduction() {
         // Get current git info for notification
         const { execSync } = await import('child_process');
         try {
+            // Refresh origin/main first — the local tree (especially the test box's) can be
+            // behind at deploy time, and stale refs make the notification describe old commits.
+            try { execSync('git fetch origin --quiet', { encoding: 'utf8' }); } catch { /* offline is fine — use what we have */ }
             // Get the last commit message from main branch
             gitCommitMessage = execSync('git log -1 --pretty=%B origin/main', { encoding: 'utf8' }).trim();
             // Get files that would be changed
@@ -300,6 +314,18 @@ async function deployToProduction() {
                         'risk-low'
                     );
                     const gapCount = parseInt(commitGap.stdout.trim()) || 0;
+
+                    // Recompute notification content against what PROD actually moves from.
+                    // The earlier `HEAD..origin/main` capture describes the LOCAL tree's gap,
+                    // which on the laptop is usually empty (work already pushed) and on the
+                    // test box is only coincidentally the prod gap.
+                    try {
+                        const { execSync } = await import('child_process');
+                        const range = `${prodCommit}..origin/main`;
+                        gitFilesChanged = execSync(`git diff ${range} --name-only`, { encoding: 'utf8' })
+                            .split('\n').filter(f => f).join(',');
+                        gitStats = execSync(`git diff ${range} --shortstat`, { encoding: 'utf8' }).trim();
+                    } catch { /* keep the earlier local capture */ }
 
                     if (gapCount > 10 && !args.includes('--confirmed')) {
                         console.log('');

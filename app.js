@@ -8371,6 +8371,47 @@ To fix this:
           ] }] };
         }
       })(req, res, client);
+    } else if (custom_id === 'deploy_prod') {
+      // TEST-instance-only: confirm screen for deploying to prod via the sanctioned deploy-remote-wsl.js pipeline (RaP 0887: button on the trigger, Moai on review duty)
+      if (!['391415444084490240'].includes(req.body.member?.user?.id)) return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Access denied.', flags: InteractionResponseFlags.EPHEMERAL } });
+      return ButtonHandlerFactory.create({
+        id: 'deploy_prod',
+        updateMessage: true,
+        deferred: true,
+        handler: async () => {
+          if (process.env.INSTANCE_ROLE !== 'test') {
+            return { components: [{ type: 17, accent_color: 0xe74c3c, components: [
+              { type: 10, content: '⛔ **Deploy Prod** is only available on the TEST instance.' },
+              { type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: '← Back', style: 2 }] }
+            ] }] };
+          }
+          const { buildDeployConfirmScreen } = await import('./src/monitoring/prodDeploy.js');
+          return await buildDeployConfirmScreen();
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('deploy_prod_confirm_')) {
+      // TEST-instance-only: validate the SHA-pinned 60s approval, consume the confirm card, start the deploy (progress streams in a follow-up)
+      if (!['391415444084490240'].includes(req.body.member?.user?.id)) return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Access denied.', flags: InteractionResponseFlags.EPHEMERAL } });
+      return ButtonHandlerFactory.create({
+        id: 'deploy_prod_confirm',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          if (process.env.INSTANCE_ROLE !== 'test') {
+            return { components: [{ type: 17, accent_color: 0xe74c3c, components: [
+              { type: 10, content: '⛔ Only available on the TEST instance.' },
+              { type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: '← Back', style: 2 }] }
+            ] }] };
+          }
+          const { startProdDeploy } = await import('./src/monitoring/prodDeploy.js');
+          return await startProdDeploy({
+            customId: context.customId,
+            token: context.token,
+            channelId: context.channelId,
+            userId: context.userId
+          });
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('stamina_guide_') || custom_id.startsWith('safari_guide_')) {
       // Safari Guide — paginated player-friendly guide (deferred: first render per env
       // uploads the guide infographics to mint CDN URLs — see guideAssets.js)
@@ -17341,7 +17382,7 @@ To fix this:
                   { type: 14 },
                   { type: 10, content: error.message },
                   { type: 14 },
-                  { type: 1, components: [{ type: 2, custom_id: 'safari_export_data', label: 'Try Again', style: 1, emoji: { name: '🔄' } }, { type: 2, custom_id: 'castbot_settings', label: '← Settings', style: 2 }] }
+                  { type: 1, components: [{ type: 2, custom_id: 'safari_export_data', label: 'Try Again', style: 1, emoji: { name: '🔄' } }, { type: 2, custom_id: 'safari_map_explorer', label: '← Map Explorer', style: 2 }] }
                 ]
               }],
               flags: 1 << 15
@@ -17388,7 +17429,7 @@ To fix this:
                 { type: 14 },
                 { type: 1, components: [
                   { type: 2, custom_id: 'safari_export_data', label: 'Export Again', style: 2, emoji: { name: '📤' } },
-                  { type: 2, custom_id: 'castbot_settings', label: '← Settings', style: 2 }
+                  { type: 2, custom_id: 'safari_map_explorer', label: '← Map Explorer', style: 2 }
                 ] }
               ]
             }],
@@ -17706,7 +17747,7 @@ To fix this:
                 { type: 10, content: 'Click **Import** below to upload your Safari export file.' },
                 { type: 14 },
                 { type: 1, components: [
-                  { type: 2, custom_id: 'castbot_settings', label: '← Settings', style: 2 },
+                  { type: 2, custom_id: 'safari_map_explorer', label: '← Map Explorer', style: 2 },
                   { type: 2, custom_id: 'file_import_safari', label: 'Import', style: 1, emoji: { name: '📥' } }
                 ] }
               ]
@@ -17810,7 +17851,7 @@ To fix this:
                 { type: 14 },
                 { type: 1, components: [
                   { type: 2, custom_id: 'file_import_safari', label: 'Import Another File', style: 2, emoji: { name: '📥' } },
-                  { type: 2, custom_id: 'castbot_settings', label: '← Settings', style: 2 }
+                  { type: 2, custom_id: 'safari_map_explorer', label: '← Map Explorer', style: 2 }
                 ] }
               ]
             }],
@@ -49174,7 +49215,7 @@ client.on('channelDelete', (channel) => handleCastDockChannelDelete(client, chan
 function getGroupDisplayName(groupKey) {
   const names = {
     currency: 'Currency & Inventory Settings',
-    events: 'Event Customization Settings', 
+    events: 'Events Settings',
     rounds: 'Round Probability Settings'
   };
   return names[groupKey] || 'Safari Settings';

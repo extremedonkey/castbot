@@ -25,6 +25,22 @@ if [ "$INSTANCE_ROLE" != "test" ] && [ ! -d /home/ubuntu/castbot ]; then
     exit 1
 fi
 
+# Guard: never pm2-restart the box while a Deploy Prod run is in flight — the deploy
+# child (spawned by src/monitoring/prodDeploy.js, which owns this lockfile) would be
+# killed mid-pull, leaving prod half-deployed with nobody watching. A lock older than
+# 10 minutes is a crash leftover and is ignored.
+DEPLOY_LOCK="/tmp/castbot-prod-deploy.lock"
+if [ -f "$DEPLOY_LOCK" ]; then
+    LOCK_AGE=$(( $(date +%s) - $(stat -c %Y "$DEPLOY_LOCK" 2>/dev/null || echo 0) ))
+    if [ "$LOCK_AGE" -lt 600 ]; then
+        echo "⛔ A Deploy Prod run is in flight (lock: $DEPLOY_LOCK, ${LOCK_AGE}s old)."
+        echo "   Restarting the box now would kill the deploy mid-pull. Wait for the"
+        echo "   result card in Discord, then re-run. (Stale >10min locks are ignored.)"
+        exit 1
+    fi
+    echo "⚠️  Ignoring stale deploy lock (${LOCK_AGE}s old) — crash leftover."
+fi
+
 # Resolve the repo root from THIS script's location, so it works from any cwd
 # (e.g. invoked as ~/castbot/scripts/dev/box-restart.sh from /home/ubuntu).
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

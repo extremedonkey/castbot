@@ -1,8 +1,29 @@
-# 0887 — Moai Prod Deployment: Design & Implications
+# Deploy Prod Button (was RaP 0887 — Moai Prod Deployment)
 
-**Status:** Proposal (not approved, nothing built)
-**Date:** 2026-08-07
+**Status:** Built 2026-08-08 (Option 3), verifying on TEST
+**Date:** 2026-08-07 (analysis) / 2026-08-08 (implementation)
 **Verdict up front:** 🗿 **Don't put the Moai on the trigger. Put a button on the trigger and the Moai on review duty.**
+
+## ✅ What Was Built (2026-08-08)
+
+Option 3, as designed below, plus hardening found during implementation:
+
+| Piece | Where |
+|---|---|
+| Confirm card (click 1): prod HEAD vs origin/main, changelog (oldest-first, capped 12), shortstat, in-card 🗿 gate warning >10 commits | `src/monitoring/prodDeploy.js` → `buildDeployConfirmScreen()` |
+| **SHA-pinned approval**: confirm button custom_id = `deploy_prod_confirm_<mainSha>_<ts36>`; click 2 refuses if `origin/main` moved, 60s expiry | `encodeConfirmId`/`parseConfirmId` |
+| Execute: spawns `node deploy-remote-wsl.js --confirmed` with `LIGHTSAIL_SSH_KEY=~/.ssh/castbot-prod`; step banners parsed from stdout and streamed via the shared `createProgressReporter` (same lifecycle as Ask CastBot/Moai); final card includes an HTTPS health check of `/interactions` | `startProdDeploy()` → `runDeployJob()` |
+| Confirm consumed on use: click 2's UPDATE_MESSAGE replaces the confirm card *before* the deploy starts — no double-fire | fire-and-forget `runDeployJob` |
+| One deploy at a time: in-memory flag + `/tmp/castbot-prod-deploy.lock` (stale >10min ignored); `box-restart.sh` refuses to pm2-restart the box while the lock is fresh | `prodDeploy.js` + `scripts/dev/box-restart.sh` |
+| Deploy script made box-runnable: `LIGHTSAIL_SSH_KEY` env override; notification spawns locally when `INSTANCE_ROLE=test` (the box IS the notify host); local `git fetch` before reading notify content; notify diff recomputed against **prod's actual pre-pull HEAD** (the old `HEAD..origin/main` was the local tree's gap — usually empty on the laptop) | `deploy-remote-wsl.js` |
+| Auth: hard snowflake whitelist in app.js before the factory + `INSTANCE_ROLE==='test'` gate + `restrictedUser` registry entries — identical stack to Restart Prod | app.js `deploy_prod` / `deploy_prod_confirm_*` |
+| Tests: custom_id round-trip/expiry/forgery, step parsing, commit summary, lock freshness, card invariants | `tests/prodDeploy.test.js` |
+
+**Not built (by decision):** Rollback button (second RaP), auto-Moai pre-review on the card
+(ask the Moai manually before clicking — keeps LLM out of the click path). Forced-command
+deploy key rejected: it would need a prod-side script that re-derives the 8 safety steps —
+the exact anti-pattern step 5 exists to clean up after. Full-shell `castbot-prod` key stays,
+with usage narrowed to this one audited handler.
 
 ## Original Context (Trigger Prompt)
 

@@ -487,10 +487,18 @@ export const BUTTON_REGISTRY = {
   },
   'safari_import_data': {
     label: 'Import',
-    description: 'Settings → Advanced → Import — shows prep-warning screen, then opens file_import_safari modal',
+    description: 'Map Explorer → Import — shows prep-warning screen, then opens file_import_safari modal',
     emoji: '📥',
     style: 'Secondary',
-    parent: 'castbot_settings',
+    parent: 'safari_map_explorer',
+    category: 'admin'
+  },
+  'safari_export_data': {
+    label: 'Export',
+    description: 'Map Explorer → Export — opens the Safari export component-select screen',
+    emoji: '📤',
+    style: 'Secondary',
+    parent: 'safari_map_explorer',
     category: 'admin'
   },
   'safari_export_select': {
@@ -1434,6 +1442,24 @@ export const BUTTON_REGISTRY = {
     parent: 'restart_prod',
     restrictedUser: '391415444084490240'
   },
+  'deploy_prod': {
+    label: 'Deploy Prod',
+    description: 'TEST-instance only: shows the prod deploy confirm card (commit gap, changelog, shortstat) for the sanctioned deploy-remote-wsl.js pipeline. RaP 0887.',
+    emoji: '🚀',
+    style: 'Danger',
+    category: 'admin',
+    parent: 'reeces_stuff',
+    restrictedUser: '391415444084490240'
+  },
+  'deploy_prod_confirm_*': {
+    label: 'Confirm Deploy Prod',
+    description: 'TEST-instance only: SHA-pinned 60s-expiry approval — runs deploy-remote-wsl.js against prod with streamed step progress.',
+    emoji: '⚠️',
+    style: 'Danger',
+    category: 'admin',
+    parent: 'deploy_prod',
+    restrictedUser: '391415444084490240'
+  },
 
   // === PLAYER CARD ===
   'pcard_*': {
@@ -2095,7 +2121,7 @@ export const BUTTON_REGISTRY = {
     emoji: '💼',
     style: 'Secondary',
     category: 'safari',
-    parent: 'castbot_tools'
+    parent: 'castbot_settings'
   },
   // Soft-deprecation alias — keeps old custom_id resolving for one release
   'safari_rounds_menu': {

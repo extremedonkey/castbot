@@ -156,6 +156,18 @@ The deployed script is prod-owned (so its contents can't be swapped from the tes
 
 ---
 
+## Deploy Prod — Phone-Reachable Prod Deployment (2026-08-08)
+
+The sibling of Restart Prod: Reece can ship verified test-box code to prod from Discord, without the laptop. Design + full implementation notes: [ProdDeployButton](../02-implementation-wip/ProdDeployButton.md) (was RaP 0887 — verdict: *button on the trigger, Moai on review duty*).
+
+- **Custom IDs:** `deploy_prod` (confirm card) → `deploy_prod_confirm_<sha>_<ts>` (executes). Same auth stack as Restart Prod: snowflake whitelist + `INSTANCE_ROLE === 'test'` gate. Button lives next to Restart Prod in Reece's Stuff → Restart row.
+- **One authorization = one action, structurally:** the confirm button's custom_id pins the `origin/main` SHA it previewed and expires in 60s; if main moves between the two clicks, the deploy is refused and the card re-issued. The confirm card is consumed (replaced) the instant the deploy starts.
+- **Mechanism:** spawns the SAME `deploy-remote-wsl.js` the laptop uses (all 8 safety steps: backup, pull, runtime-file restore, npm install, commands, pm2 restart, verify, notify) with `LIGHTSAIL_SSH_KEY=~/.ssh/castbot-prod`. Step banners stream to a progress follow-up (shared `createProgressReporter`); the result card includes an HTTPS health check of prod's `/interactions`.
+- **Concurrency:** `/tmp/castbot-prod-deploy.lock` — one deploy at a time, and `box-restart.sh` refuses to restart the box process while the lock is fresh (a box restart would kill the deploy child mid-pull).
+- **Key hygiene:** this handler (`src/monitoring/prodDeploy.js`) is the ONLY sanctioned write path for the full-shell `castbot-prod` key. Agents never deploy prod from the box shell — approval flows through Discord's signed interaction, not through text an LLM was handed.
+
+---
+
 ## Prod Watchdog — Automated Liveness Monitor
 
 `src/monitoring/prodWatchdog.js` — an external prod liveness probe that runs *inside the test process*. Prod's own monitors can't report prod being down (a dead process writes no logs); the always-on test box probes prod from the outside.
