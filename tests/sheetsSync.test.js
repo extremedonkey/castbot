@@ -233,6 +233,20 @@ describe('Sheets — buildAnswerMessages', () => {
       assert.ok(count <= 40, `container had ${count} components`);
     }
   });
+
+  it('keeps each MESSAGE under Discord\'s 4000-char displayable-text cap (Jake Giddins regression)', () => {
+    // The cap is per message, not per Text Display — dense mid-length answers used to pack
+    // 8 blocks (~27k chars) into one container and 400 on import.
+    const dense = Array.from({ length: 30 }, (_, i) => ({ q: `Question ${i}`, a: 'j'.repeat(1500) }));
+    const msgs = buildAnswerMessages({ name: 'Jake Giddins', age: '28', pronouns: 'He/Him', pairs: dense });
+    assert.ok(msgs.length > 1, 'a long application must split across messages');
+    for (const m of msgs) {
+      const total = m.components[0].components
+        .filter(c => c.type === 10)
+        .reduce((sum, c) => sum + c.content.length, 0);
+      assert.ok(total <= 4000, `message displayable text was ${total} chars`);
+    }
+  });
 });
 
 describe('Sheets — signature verification', () => {
