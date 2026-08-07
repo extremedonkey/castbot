@@ -366,6 +366,15 @@ e.g. `❌ You have already claimed this reward!`
 > claimed" / "Claimed by [Username]". No code has ever implemented that; those strings appear
 > nowhere in the codebase. Don't build against it.
 
+### 🔴 Known issue: a blocked claim does NOT stop the rest of the outcomes
+
+The outcome loop runs top to bottom and never checks whether an earlier outcome succeeded. So a
+crafting recipe that gives a `once_globally` idol and then removes the materials **takes the
+materials from the second player anyway**, having just told them the idol was gone. 83 live
+actions across 6 guilds are shaped this way.
+
+Full analysis, options and recommendation: [RaP 0887](../01-RaP/0887_20260808_PartialOutcomeExecution_Analysis.md).
+
 ## Admin Features
 
 ### Testing Commands
