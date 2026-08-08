@@ -136,7 +136,9 @@ describe('CastBot Settings — ⚙️ Setup (same setup_castbot handler, always 
     process.env.INSTANCE_ROLE = 'test';
     try {
       for (const builder of ['buildSetupMenu', 'buildPremiumMenu']) {
-        const menu = MenuBuilder[builder]({ title: 'x' }, { userId: '391415444084490240', guildId: ALLOWED_GUILD_IDS[0] });
+        // await: buildPremiumMenu became async when it started rendering the shared Channels
+        // row (RaP 0885 stage 1). buildSetupMenu is still sync — await passes it through.
+        const menu = await MenuBuilder[builder]({ title: 'x' }, { userId: '391415444084490240', guildId: ALLOWED_GUILD_IDS[0] });
         for (const row of menu.components.filter(c => c.type === 1)) {
           assert.ok(row.components.length <= 5,
             `${builder}: ActionRow with ${row.components.length} buttons (max 5): ${row.components.map(b => b.custom_id).join(', ')}`);

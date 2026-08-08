@@ -26,6 +26,23 @@ The tab clones the Marooning tab's chrome and is expected to absorb the Maroonin
 | 🤝 **1 on 1s** | A private channel for every *pair* of players in a tribe |
 | 🤐 **Alliances** | Secret member channels via the Alliance Manager — see [RaP 0892](../01-RaP/0892_20260728_Alliances_Analysis.md). Members + hosts only (**no** Trusted Spectator), name defaults to plain `alliance`, same-tribe warn-only guard, player request flow via /menu → Advanced (whitelist v1). Code: [`alliancePlan.js`](../../src/channels/alliancePlan.js) / [`allianceView.js`](../../src/channels/allianceView.js) / [`allianceHandlers.js`](../../src/channels/allianceHandlers.js) |
 
+## 🪟 Two surfaces, one row (stage 1, 2026-08-08)
+
+The 💬 Channels row now renders in **two** places from **one** definition — `buildChannelsSection(configId)` in [`channelsView.js`](../../src/channels/channelsView.js):
+
+| Surface | Entry | How it gets a `configId` |
+|---|---|---|
+| Season Manager → 🔐 Channels | `season_channels_{configId}` | From the tab's own id |
+| ⭐ CastBot Premium | rendered inline in `MenuBuilder.buildPremiumMenu` | `mostRecentConfigId(playerData, guildId)` — **no seasons → the row is omitted**, not broken |
+
+**Nothing about the custom_ids, handlers, planners or storage changed.** That is the point of stage 1: the same five ids work from both surfaces, so there is no second code path to keep in sync. `tests/premiumMenu.test.js` fails if the Premium menu ever hardcodes one of those ids instead of calling the shared builder.
+
+**Return targets** are resolved from an in-memory `channelsOrigin` map ([`channelsHandlers.js`](../../src/channels/channelsHandlers.js)), written at render time by whichever surface drew the row and read by `backToChannelsSurface()` in [`channelsRouter.js`](../../src/channels/channelsRouter.js). Origin is **not** in the custom_id because every id already spends its budget on the configId, and the alliance parsers treat the trailing remainder *as* the configId (`alliancePlan.js:114-131`) — there is no free token. Known limitation: it tracks the *last render*, so clicking a stale Premium message after opening the Season Manager tab returns you to the tab.
+
+**Budget check**: the Premium menu is 24 components without the row, 31 with it (cap 40). The row is at Discord's hard 5-button ActionRow cap — a sixth action needs a second row.
+
+> **Stage 2** (not built): drop `configId` from the ids entirely and give the two roster-dependent modals (Confessionals/Subs `accepted` mode) their own season picker. That deletes the origin map and frees ~44 chars of custom_id. **Stage 3**: migrate `channelAdmin[configId].{confessionals,subs,categories,lastRun}` to guild scope with a dual-read shim.
+
 ## 🏛️ Two-phase: nothing happens until you confirm
 
 Every action is **plan → confirm → execute**. A modal submit never mutates Discord; it builds a preflight and shows you exact counts, guild-after totals, and an ETA. This matters because these jobs are big and irreversible.

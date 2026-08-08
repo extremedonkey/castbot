@@ -21,6 +21,22 @@ export function channelsDenied() {
 }
 
 /**
+ * Every "← Channels" / "Cancel" lands here. The Channels row now renders on TWO surfaces
+ * (Season Manager's tab and the ⭐ Premium menu) but the buttons inside it are the SAME
+ * custom_ids on both, so the return target is resolved from the recorded origin rather than
+ * from the id. Centralising it here is why no view, planner or confirm screen had to change.
+ */
+async function backToChannelsSurface({ configId, guildId, userId, client }) {
+  const { getChannelsOrigin, handleChannelsTab } = await import('./channelsHandlers.js');
+
+  if (getChannelsOrigin(userId) === 'premium') {
+    const { MenuBuilder } = await import('../../menuBuilder.js');
+    return { components: [await MenuBuilder.create('premium_menu', { userId, guildId, client })] };
+  }
+  return await handleChannelsTab({ configId, guildId, userId, client });
+}
+
+/**
  * Route a Channels button. custom_id shapes:
  *   season_channels_{configId}   → the tab
  *   channels_cancel_{configId}   → discard a plan, back to the tab
@@ -35,13 +51,11 @@ export async function routeChannelsButton({ context, req }) {
   const { guildId, userId, client, customId } = context;
 
   if (customId.startsWith('season_channels_')) {
-    const { handleChannelsTab } = await import('./channelsHandlers.js');
-    return await handleChannelsTab({ configId: customId.replace('season_channels_', ''), guildId, userId, client });
+    return await backToChannelsSurface({ configId: customId.replace('season_channels_', ''), guildId, userId, client });
   }
 
   if (customId.startsWith('channels_cancel_')) {
-    const { handleChannelsTab } = await import('./channelsHandlers.js');
-    return await handleChannelsTab({ configId: customId.replace('channels_cancel_', ''), guildId, userId, client });
+    return await backToChannelsSurface({ configId: customId.replace('channels_cancel_', ''), guildId, userId, client });
   }
 
   if (customId.startsWith('channels_exec_')) {

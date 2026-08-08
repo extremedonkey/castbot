@@ -58,6 +58,32 @@ export function takePlan(token, userId) {
   return plan;
 }
 
+/**
+ * Which surface a user last opened the Channels row from, so Cancel / ← Back returns THERE
+ * rather than always dumping them on the Season Manager tab.
+ *
+ * Recorded at RENDER time by whoever draws the row — buildChannelsView → 'season',
+ * MenuBuilder.buildPremiumMenu → 'premium'. It is a plain Map and NOT part of any custom_id
+ * because every Channels id already spends its 100-char budget on the configId, and the
+ * alliance parsers (alliancePlan.js:114-131) treat the trailing remainder AS the configId —
+ * there is nowhere to put an origin token without touching eight parse sites.
+ *
+ * Deliberate limitation: it tracks the LAST render, so clicking a button on a stale Premium
+ * message after opening the Season Manager tab returns you to the tab. It self-corrects on the
+ * next render, and Stage 2 (dropping configId from the ids) removes the need for this entirely.
+ */
+const channelsOrigin = new Map();
+
+/** @param {'season'|'premium'} origin */
+export function setChannelsOrigin(userId, origin) {
+  if (userId) channelsOrigin.set(String(userId), origin);
+}
+
+/** @returns {'season'|'premium'} defaults to 'season' — the pre-Premium behaviour */
+export function getChannelsOrigin(userId) {
+  return channelsOrigin.get(String(userId)) || 'season';
+}
+
 const err = (msg) => ({ components: [{ type: 17, accent_color: 0xe74c3c, components: [{ type: 10, content: `## ❌ ${msg}` }] }] });
 
 /** The Channels tab itself. */

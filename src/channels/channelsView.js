@@ -17,6 +17,33 @@ import { ACTIONS, CATEGORY_NAMES, BROADCAST_CHANNEL_TYPES, MAX_SELECT_TARGETS } 
 import { buildRichCardContainer, buildRichCardModal } from '../../richCardUI.js';
 
 /**
+ * The 💬 Channels heading + its 5 action buttons — THE single definition of that row.
+ *
+ * Rendered by BOTH the Season Manager Channels tab (below) and the ⭐ Premium menu
+ * (MenuBuilder.buildPremiumMenu), so the two surfaces cannot drift apart. Returns bare
+ * components, NOT a container: each host wraps it in its own chrome (Season Manager's purple
+ * container + nav/bottom rows; Premium's own container).
+ *
+ * ⚠️ The row is AT Discord's hard 5-buttons-per-ActionRow cap. A sixth action needs a second row.
+ *
+ * @param {string} configId - season key; every handler still parses it off the custom_id (Stage 1
+ *   of the migration keeps ids untouched — see RaP 0885 / ChannelAdministration.md)
+ * @returns {Array} [Text Display, ActionRow] — 7 components
+ */
+export function buildChannelsSection(configId) {
+  return [
+    { type: 10, content: '### ```💬 Channels```\n-# Bulk create / update the standard ORG channels.' },
+    { type: 1, components: [
+      { type: 2, custom_id: `channels_confessionals_${configId}`, label: 'Confessionals', style: 2, emoji: { name: '🎙️' } },
+      { type: 2, custom_id: `channels_subs_${configId}`, label: 'Subs', style: 2, emoji: { name: '🗳️' } },
+      { type: 2, custom_id: `channels_1on1s_${configId}`, label: '1 on 1s', style: 2, emoji: { name: '🤝' } },
+      { type: 2, custom_id: `channels_msg_${configId}`, label: 'Msg Category', style: 2, emoji: { name: '📨' } },
+      { type: 2, custom_id: `channels_alliances_${configId}`, label: 'Alliances', style: 2, emoji: { name: '🤐' } }
+    ]}
+  ];
+}
+
+/**
  * The Channels tab.
  * @param {Object} p - { configId, guildId, playerData, seasonName, guild, userId }
  * @returns {Promise<Object>} { components: [container] }
@@ -24,6 +51,10 @@ import { buildRichCardContainer, buildRichCardModal } from '../../richCardUI.js'
 export async function buildChannelsView({ configId, guildId, playerData, seasonName, guild, userId }) {
   const { buildSeasonNavRow, seasonManagerHeader, buildSeasonBottomRow } = await import('../../seasonSelector.js');
   const { getAcceptedCast } = await import('./channelRoster.js');
+  // Dynamic import (not top-level): channelsHandlers imports buildConfirmScreen from THIS file,
+  // so a static import here would close the cycle at module-init time.
+  const { setChannelsOrigin } = await import('./channelsHandlers.js');
+  setChannelsOrigin(userId, 'season'); // Cancel / ← Back from here returns to this tab
 
   const node = playerData?.[guildId]?.channelAdmin || {};
   const season = node[configId] || {};
@@ -70,14 +101,7 @@ export async function buildChannelsView({ configId, guildId, playerData, seasonN
         { type: 2, custom_id: `channels_playerroles_${configId}`, label: 'Player Roles', style: 2, emoji: { name: '🎭' } }
       ]},
       { type: 14 },
-      { type: 10, content: '### ```💬 Channels```\n-# Bulk create / update the standard ORG channels.' },
-      { type: 1, components: [
-        { type: 2, custom_id: `channels_confessionals_${configId}`, label: 'Confessionals', style: 2, emoji: { name: '🎙️' } },
-        { type: 2, custom_id: `channels_subs_${configId}`, label: 'Subs', style: 2, emoji: { name: '🗳️' } },
-        { type: 2, custom_id: `channels_1on1s_${configId}`, label: '1 on 1s', style: 2, emoji: { name: '🤝' } },
-        { type: 2, custom_id: `channels_msg_${configId}`, label: 'Msg Category', style: 2, emoji: { name: '📨' } },
-        { type: 2, custom_id: `channels_alliances_${configId}`, label: 'Alliances', style: 2, emoji: { name: '🤐' } }
-      ]},
+      ...buildChannelsSection(configId),
       { type: 14 },
       { type: 10, content: body + (lastRunLine ? `\n\n${lastRunLine}` : '') },
       { type: 14 },

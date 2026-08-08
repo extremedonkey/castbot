@@ -179,7 +179,7 @@ export class MenuBuilder {
    * @param {Object} context - Context object with userId
    * @returns {Object} Menu container
    */
-  static buildPremiumMenu(menuConfig, context) {
+  static async buildPremiumMenu(menuConfig, context) {
     const isTest = process.env.INSTANCE_ROLE === 'test';
 
     // 🔵 Ask CastBot — trusted super-users only, DEV/TEST only (prod has no Claude CLI).
@@ -224,6 +224,27 @@ export class MenuBuilder {
         ]
       }
     ];
+
+    // 💬 Channels — the SAME row the Season Manager Channels tab renders (RaP 0885 stage 1).
+    // Imported dynamically so this menu, built on every /menu open, doesn't drag the whole
+    // channel-admin stack (discord.js + storage + ops) into the startup import graph.
+    //
+    // Season-less surface: the buttons' handlers all parse a configId off the custom_id, so one
+    // is resolved lazily here by recency. No seasons → no configId → the section is omitted
+    // rather than rendering buttons that would fail on click.
+    const { CHANNEL_ADMIN_USER_IDS } = await import('./src/channels/channelAdminConfig.js');
+    if (CHANNEL_ADMIN_USER_IDS.includes(String(context?.userId)) && context?.guildId) {
+      const { loadPlayerData } = await import('./storage.js');
+      const { mostRecentConfigId } = await import('./src/channels/channelPlan.js');
+      const configId = mostRecentConfigId(await loadPlayerData(), context.guildId);
+
+      if (configId) {
+        const { buildChannelsSection } = await import('./src/channels/channelsView.js');
+        const { setChannelsOrigin } = await import('./src/channels/channelsHandlers.js');
+        setChannelsOrigin(context.userId, 'premium'); // Cancel / ← Back returns HERE, not to Season Manager
+        components.push(...buildChannelsSection(configId));
+      }
+    }
 
     // Navigation — Donate moved here from the main menu (2026-08-08): Premium is
     // becoming the money path; the Donate screen's copy lives on behind this button.

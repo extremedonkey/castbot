@@ -75,13 +75,17 @@ describe('Security tripwire — castbot_premium handler gate', () => {
   });
 });
 
+// `async` is optional so the anchor survives buildPremiumMenu going async (RaP 0885 stage 1 —
+// it awaits playerData to resolve a configId for the shared Channels row).
+const PREMIUM_DEF = /static\s+(?:async\s+)?buildPremiumMenu\s*\(/;
+
 describe('Premium menu clone — stays wired in menuBuilder.js', () => {
   const source = readFileSync(MENU_BUILDER_JS, 'utf8');
 
   it('premium_menu registry entry points at a defined buildPremiumMenu builder', () => {
     assert.ok(source.includes("'premium_menu'"), 'premium_menu missing from MENU_REGISTRY');
     assert.ok(/builder:\s*'buildPremiumMenu'/.test(source), 'premium_menu registry entry lost its builder');
-    assert.ok(/static buildPremiumMenu\s*\(/.test(source), 'buildPremiumMenu static not defined');
+    assert.ok(PREMIUM_DEF.test(source), 'buildPremiumMenu static not defined');
   });
 
   it('premium clone keeps its own title, distinct from Tools', () => {
@@ -92,11 +96,83 @@ describe('Premium menu clone — stays wired in menuBuilder.js', () => {
   it('Donate button is wired inside the Premium menu (moved from main menu 2026-08-08)', () => {
     // Anchor on the static method definitions, NOT the first mention — the MENU_REGISTRY
     // near the top of the file names both builders, which made the naive slice empty.
-    const premiumSection = source.slice(
-      source.indexOf('static buildPremiumMenu'),
-      source.indexOf('static buildReecesStuffMenu')
-    );
+    const premiumStart = source.search(PREMIUM_DEF);
+    assert.ok(premiumStart >= 0, 'buildPremiumMenu definition not found');
+    const premiumSection = source.slice(premiumStart, source.indexOf('static buildReecesStuffMenu'));
     assert.ok(premiumSection.includes("'prod_donate'"),
       'prod_donate missing from buildPremiumMenu — Donate has no other menu entry point');
+  });
+
+  it('renders the SHARED Channels row, never a second copy of the buttons', () => {
+    const premiumStart = source.search(PREMIUM_DEF);
+    const premiumSection = source.slice(premiumStart, source.indexOf('static buildReecesStuffMenu'));
+    assert.ok(premiumSection.includes('buildChannelsSection'),
+      'Premium menu no longer renders the shared Channels section');
+    // The whole point of stage 1: if these ids get hand-written here, the two surfaces can drift.
+    for (const id of ['channels_confessionals_', 'channels_subs_', 'channels_1on1s_', 'channels_alliances_']) {
+      assert.ok(!premiumSection.includes(id),
+        `Premium menu hardcodes ${id} — it must come from buildChannelsSection (channelsView.js)`);
+    }
+  });
+
+  it('the Channels row stays whitelist-gated on the Premium surface', () => {
+    const premiumStart = source.search(PREMIUM_DEF);
+    const premiumSection = source.slice(premiumStart, source.indexOf('static buildReecesStuffMenu'));
+    assert.ok(premiumSection.includes('CHANNEL_ADMIN_USER_IDS'),
+      'Channels row lost its whitelist gate on the Premium menu — it is still a hidden feature');
+  });
+});
+
+describe('Channels row — one definition, two surfaces (RaP 0885 stage 1)', () => {
+  it('buildChannelsSection returns the heading + a 5-button row with configId-keyed ids', async () => {
+    const { buildChannelsSection } = await import('../src/channels/channelsView.js');
+    const section = buildChannelsSection('config_123_456');
+
+    assert.equal(section.length, 2, 'section is [Text Display, ActionRow]');
+    assert.equal(section[0].type, 10);
+    assert.equal(section[1].type, 1);
+
+    const ids = section[1].components.map(b => b.custom_id);
+    assert.deepEqual(ids, [
+      'channels_confessionals_config_123_456',
+      'channels_subs_config_123_456',
+      'channels_1on1s_config_123_456',
+      'channels_msg_config_123_456',
+      'channels_alliances_config_123_456'
+    ]);
+    // Discord's hard per-ActionRow cap — a sixth action needs a second row, not a squeeze.
+    assert.ok(section[1].components.length <= 5);
+  });
+
+  it('the Season Manager tab renders the SAME builder (no forked copy)', async () => {
+    const viewSource = readFileSync(
+      path.join(__dirname, '..', 'src', 'channels', 'channelsView.js'), 'utf8');
+    assert.ok(/\.\.\.buildChannelsSection\(configId\)/.test(viewSource),
+      'buildChannelsView stopped spreading buildChannelsSection — the surfaces can now drift');
+  });
+});
+
+describe('mostRecentConfigId — the season-less surfaces resolve a season by recency', () => {
+  it('picks the most recently updated season', async () => {
+    const { mostRecentConfigId } = await import('../src/channels/channelPlan.js');
+    const playerData = { g: { applicationConfigs: {
+      old: { createdAt: 100, lastUpdated: 200 },
+      newest: { createdAt: 50, lastUpdated: 900 },
+      middle: { createdAt: 400 }
+    } } };
+    assert.equal(mostRecentConfigId(playerData, 'g'), 'newest');
+  });
+
+  it('falls back to createdAt when lastUpdated is absent', async () => {
+    const { mostRecentConfigId } = await import('../src/channels/channelPlan.js');
+    const playerData = { g: { applicationConfigs: { a: { createdAt: 1 }, b: { createdAt: 2 } } } };
+    assert.equal(mostRecentConfigId(playerData, 'g'), 'b');
+  });
+
+  it('returns null for a guild with no seasons — Premium then omits the row entirely', async () => {
+    const { mostRecentConfigId } = await import('../src/channels/channelPlan.js');
+    assert.equal(mostRecentConfigId({ g: { applicationConfigs: {} } }, 'g'), null);
+    assert.equal(mostRecentConfigId({}, 'g'), null);
+    assert.equal(mostRecentConfigId(undefined, 'g'), null);
   });
 });

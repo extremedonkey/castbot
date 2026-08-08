@@ -278,3 +278,25 @@ export function assignChannelNames(members, kind) {
   }
   return result;
 }
+
+/**
+ * The guild's most recently touched season.
+ *
+ * Season-LESS entry points need *a* configId: the ⭐ Premium menu's Channels section (which has
+ * no season context at all) and the player alliance-request flow. `activeSeason` is NOT usable
+ * for this — only 1 of 190 guilds has ever set it — so recency is the best available signal, and
+ * it's the same ordering castlistHandlers.js:98-110 already uses to pick a default season.
+ *
+ * Pure on purpose: takes the already-loaded playerData rather than loading it, so it unit-tests
+ * and so callers keep control of their own load (no hidden I/O inside a render path).
+ *
+ * @param {Object} playerData
+ * @param {string} guildId
+ * @returns {string|null} configId, or null when the guild has no seasons at all
+ */
+export function mostRecentConfigId(playerData, guildId) {
+  const configs = Object.entries(playerData?.[guildId]?.applicationConfigs || {});
+  if (!configs.length) return null;
+  configs.sort(([, a], [, b]) => (b?.lastUpdated || b?.createdAt || 0) - (a?.lastUpdated || a?.createdAt || 0));
+  return configs[0][0];
+}

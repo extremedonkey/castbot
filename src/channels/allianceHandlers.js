@@ -17,7 +17,7 @@ import {
   CHANNEL_ADMIN_USER_IDS, PLAYER_ACCESS, HOST_ACCESS,
   ALLIANCE_DEFAULTS, ALLIANCE_REQUEST_COOLDOWN_MS
 } from './channelAdminConfig.js';
-import { buildOverwrites, preflightBudget } from './channelPlan.js';
+import { buildOverwrites, preflightBudget, mostRecentConfigId } from './channelPlan.js';
 import {
   newAllianceId, allianceChannelName, assessTribeAlignment, diffMembers,
   parseAllianceCustomId, normalizeNotify
@@ -435,13 +435,6 @@ export async function execAlliance({ plan, guild, snapshot, playerData, userId, 
 
 /** v1: the request feature is whitelist-only while alliances are a hidden mockup. */
 const canRequest = (userId) => CHANNEL_ADMIN_USER_IDS.includes(String(userId));
-
-function mostRecentConfigId(playerData, guildId) {
-  const configs = Object.entries(playerData[guildId]?.applicationConfigs || {});
-  if (!configs.length) return null;
-  configs.sort(([, a], [, b]) => (b?.lastUpdated || b?.createdAt || 0) - (a?.lastUpdated || a?.createdAt || 0));
-  return configs[0][0];
-}
 
 /** Player menu → Request Alliance button. Returns the request modal (or an ephemeral denial). */
 export async function handleAllianceRequestButton({ guildId, userId }) {
