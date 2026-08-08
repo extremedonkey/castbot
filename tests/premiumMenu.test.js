@@ -74,6 +74,11 @@ describe('Paywall tripwire — entitlement lock-swap replaces the ID allowlist',
     assert.deepEqual([...PREMIUM_KEEP_IDS].sort(), ['premium_get', 'prod_donate', 'prod_menu_back']);
   });
 
+  it('Get Premium renders only for NON-entitled guilds (component-budget guard, 2026-08-08)', () => {
+    assert.ok(/\.\.\.\(!entitled \? \[\{ type: 2, custom_id: 'premium_get'/.test(menuSource),
+      'premium_get is no longer conditional on !entitled — the heaviest entitled render breaks 40/40');
+  });
+
   it('the paywall handler family is wired in app.js and serves the upsell', () => {
     assert.ok(appSource.includes("custom_id.startsWith('premium_locked_')"),
       'premium_locked_* handler branch missing');

@@ -304,22 +304,25 @@ export class MenuBuilder {
       }
     ];
 
-    // Navigation — Donate moved here from the main menu (2026-08-08): Premium is
-    // becoming the money path; ⭐ Get Premium is the upsell entry (always rendered).
-    components.push(
-      { type: 14 },
-      { type: 1, components: [
-        { type: 2, custom_id: 'prod_menu_back', label: '← Menu', style: 2 },
-        { type: 2, custom_id: 'premium_get', label: 'Get Premium', style: 3, emoji: { name: '⭐' } },
-        { type: 2, custom_id: 'prod_donate', label: 'Donate', style: 2, emoji: { name: '☕' } }
-      ] }
-    );
-
     // 💳 The paywall (2026-08-08, bandaid ripped): the menu renders for EVERYONE — but in a
     // guild without an active/grace premium tier, every control except ← Menu / Donate /
     // Get Premium is lock-swapped to premium_locked_* → one handler serves the upsell.
     // Reece bypasses everywhere (design iteration + support).
     const entitled = hasPremiumAccessSync(context?.guildId) || String(context?.userId) === REECE_ID;
+
+    // Navigation — Donate moved here from the main menu (2026-08-08): Premium is the money
+    // path. ⭐ Get Premium renders for NON-entitled guilds only (Reece 2026-08-08): paying
+    // servers don't need an upsell button, and it pushed the heaviest entitled render to
+    // 41/40. ⚠️ That render now sits at exactly 40/40 — the next addition breaks it again.
+    components.push(
+      { type: 14 },
+      { type: 1, components: [
+        { type: 2, custom_id: 'prod_menu_back', label: '← Menu', style: 2 },
+        ...(!entitled ? [{ type: 2, custom_id: 'premium_get', label: 'Get Premium', style: 3, emoji: { name: '⭐' } }] : []),
+        { type: 2, custom_id: 'prod_donate', label: 'Donate', style: 2, emoji: { name: '☕' } }
+      ] }
+    );
+
     if (!entitled) lockPremiumComponents(components);
 
     return {
