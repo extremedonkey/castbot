@@ -197,8 +197,8 @@ export class MenuBuilder {
           { type: 10, content: `### \`\`\`👾 Ask CastBot\`\`\`` },
           { type: 10, content: `Ask CastBot is like giving ChatGPT access to CastBot. You can get it to bulk create items, generate flavor text for your safari, ask which player has which items, or even just general questions about how to do things in CastBot.` },
           { type: 1, components: [
-            { type: 2, custom_id: 'askcb_post', label: 'Post Ask CastBot', style: 2, emoji: { name: '👾' } },
-            { type: 2, custom_id: 'askcb_ask', label: 'Ask CastBot', style: 1, emoji: { name: '👾' } }
+            { type: 2, custom_id: 'askcb_post', label: 'Post Ask CastBot', style: 1, emoji: { name: '👾' } },
+            { type: 2, custom_id: 'askcb_ask', label: 'Ask CastBot', style: 2, emoji: { name: '👾' } }
           ] }
         ]
       : [];
@@ -239,9 +239,9 @@ export class MenuBuilder {
     const components = [
       { type: 10, content: `## ${menuConfig.title}` },
       { type: 14 },
+      ...askSection,
       { type: 10, content: `### \`\`\`🦁 Safari Premium\`\`\`` },
       { type: 1, components: specialFeatures },
-      ...askSection,
       ...channelsSection,
       // 📢 Player Engagement — host→player broadcast tools (2026-08-08): Category Post moved
       // out of Special Features; Msg Category moved out of the shared Channels row (its slot
