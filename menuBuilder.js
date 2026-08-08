@@ -181,19 +181,26 @@ export class MenuBuilder {
   static async buildPremiumMenu(menuConfig, context) {
     const isTest = process.env.INSTANCE_ROLE === 'test';
 
-    // 🔵 Ask CastBot — trusted super-users only, DEV/TEST only (prod has no Claude CLI).
-    // Display-only gate; the handlers re-check.
     // Category Post moved to 📢 Player Engagement (2026-08-08).
+    // Import/Export moved under 🦁 Safari Premium (2026-08-08): round-tripping Safari content
+    // is a Premium data op. Retired the standalone 📦 Safari Utilities header.
     const specialFeatures = [
       { type: 2, custom_id: 'attribute_management', label: 'Attributes', style: 2, emoji: { name: '📊' } },
-      { type: 2, custom_id: 'safari_manage_enemies', label: 'Enemies', style: 2, emoji: { name: '🐙' } }
+      { type: 2, custom_id: 'safari_manage_enemies', label: 'Enemies', style: 2, emoji: { name: '🐙' } },
+      { type: 2, custom_id: 'safari_import_data', label: 'Import', style: 2, emoji: { name: '📥' } },
+      { type: 2, custom_id: 'safari_export_data', label: 'Export', style: 2, emoji: { name: '📤' } }
     ];
-    if (hasAskCastBotAccess({ userId: context?.userId, guildId: context?.guildId })) {
-      specialFeatures.unshift(
-        { type: 2, custom_id: 'askcb_ask', label: 'Ask CastBot', style: 1, emoji: { name: '👾' } },
-        { type: 2, custom_id: 'askcb_post', label: 'Post Ask CastBot', style: 2, emoji: { name: '👾' } }
-      );
-    }
+    // 👾 Ask CastBot — own header + row (Post first). Trusted super-users only, DEV/TEST only
+    // (prod has no Claude CLI). Display-only gate; the handlers re-check.
+    const askSection = hasAskCastBotAccess({ userId: context?.userId, guildId: context?.guildId })
+      ? [
+          { type: 10, content: `### \`\`\`👾 Ask CastBot\`\`\`` },
+          { type: 1, components: [
+            { type: 2, custom_id: 'askcb_post', label: 'Post Ask CastBot', style: 2, emoji: { name: '👾' } },
+            { type: 2, custom_id: 'askcb_ask', label: 'Ask CastBot', style: 1, emoji: { name: '👾' } }
+          ] }
+        ]
+      : [];
 
     // Cleanup section — admin maintenance tools. Archive Channels is ungated HERE (the
     // Premium menu) as of 2026-07-29; it stays TEST-only in the Tools menu above.
@@ -233,6 +240,7 @@ export class MenuBuilder {
       { type: 14 },
       { type: 10, content: `### \`\`\`🦁 Safari Premium\`\`\`` },
       { type: 1, components: specialFeatures },
+      ...askSection,
       ...channelsSection,
       // 📢 Player Engagement — host→player broadcast tools (2026-08-08): Category Post moved
       // out of Special Features; Msg Category moved out of the shared Channels row (its slot
@@ -246,14 +254,6 @@ export class MenuBuilder {
       ] },
       { type: 10, content: `### \`\`\`🧹 Cleanup\`\`\`` },
       { type: 1, components: cleanupButtons },
-      // Safari Utilities (2026-08-08): Import/Export moved here from the Map Explorer
-      // Utilities submenu — round-tripping Safari content is a Premium-tier data op,
-      // not a map-editing tool. Anchors + Navigate Tidy went back to Map Explorer instead.
-      { type: 10, content: `### \`\`\`📦 Safari Utilities\`\`\`` },
-      { type: 1, components: [
-        { type: 2, custom_id: 'safari_import_data', label: 'Import', style: 2, emoji: { name: '📥' } },
-        { type: 2, custom_id: 'safari_export_data', label: 'Export', style: 2, emoji: { name: '📤' } }
-      ] },
       { type: 10, content: `### \`\`\`🔮 Utilities\`\`\`` },
       {
         type: 1,
