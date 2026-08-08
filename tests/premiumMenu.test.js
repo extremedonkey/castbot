@@ -117,6 +117,16 @@ describe('lockPremiumComponents — the paywall walker', () => {
     assert.equal(components[3].components[1].custom_id, 'prod_donate');
   });
 
+  it('descends into Sections (type 9): child components AND the accessory button', async () => {
+    const components = [{
+      type: 9,
+      components: [{ type: 10, content: '## title' }],
+      accessory: { type: 2, custom_id: 'entitlements_manage', style: 2 }
+    }];
+    lockPremiumComponents(components);
+    assert.equal(components[0].accessory.custom_id, 'premium_locked_entitlements_manage');
+  });
+
   it('is idempotent — double-locking never stacks prefixes', async () => {
     const components = [{ type: 1, components: [{ type: 2, custom_id: 'archive_channel', style: 2 }] }];
     lockPremiumComponents(components);

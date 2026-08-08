@@ -167,7 +167,7 @@ Operational properties: card-post failures never fail the webhook (the billing r
 
 ---
 
-## 🎛️ Admin operations (CastBot Premium menu → Utilities → 🎟️ Entitlements, red Reece-only button)
+## 🎛️ Admin operations (CastBot Premium menu → 🎟️ Entitlements, grey Reece-only accessory on the header Section)
 
 - **Manage list**: every entitled guild with feature glyphs + tier badge — `⭐ Premium` (permanent) · `⭐ Premium until <date>` · `🕒 GRACE ends <relative>` · `💀 lapsed`.
 - **Add Guild** (v1, unchanged): permanent `ask_castbot`+`safari_edit` feature grant by ID — how the original whitelist guilds are comped.

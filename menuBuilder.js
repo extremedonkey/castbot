@@ -29,6 +29,11 @@ export function lockPremiumComponents(components, keepIds = PREMIUM_KEEP_IDS) {
   for (const node of components || []) {
     if (!node || typeof node !== 'object') continue;
     if (node.type === 1) { lockPremiumComponents(node.components, keepIds); continue; }
+    if (node.type === 9) { // Section: lock its children AND its accessory button
+      lockPremiumComponents(node.components, keepIds);
+      if (node.accessory) lockPremiumComponents([node.accessory], keepIds);
+      continue;
+    }
     const interactive = node.type === 2 ? node.style !== 5 : (node.type >= 3 && node.type <= 8);
     if (interactive && node.custom_id && !keepIds.includes(node.custom_id) && !node.custom_id.startsWith('premium_locked_')) {
       node.custom_id = `premium_locked_${node.custom_id}`;
@@ -234,13 +239,9 @@ export class MenuBuilder {
         ]
       : [];
 
-    // Cleanup section — admin maintenance tools. Archive Channels is ungated HERE (the
-    // Premium menu) as of 2026-07-29; it stays TEST-only in the Tools menu above.
-    // Clear Vanity Roles moved to CastBot Settings as Vanity Roles (2026-08-08)
-    const cleanupButtons = [
-      { type: 2, custom_id: 'archive_channel', label: 'Archiver', style: 2, emoji: { name: '🧹' } },
-      { type: 2, custom_id: 'prod_nuke_category', label: 'Nuke Category', style: 2, emoji: { name: '☢️' } }
-    ];
+    // 🧹 Cleanup section retired (2026-08-08): Nuke Category deleted from this menu (its
+    // capability lives inside the Archiver flow), Archiver moved to lead Utilities.
+    const isReece = String(context?.userId) === REECE_ID;
 
     // #️⃣ Channels — the SAME row the Season Manager Channels tab renders (RaP 0885 stage 1).
     // Resolved BEFORE assembly because the section now sits mid-menu (between Special Features
@@ -268,7 +269,13 @@ export class MenuBuilder {
     }
 
     const components = [
-      { type: 10, content: `## ${menuConfig.title}` },
+      // Title: for Reece the header nests in a Section (type 9) whose accessory is the
+      // grey 🎟️ Entitlements button (2026-08-08) — premium ops rides the header, invisible
+      // to everyone else. Display-only gate; the entitlements handlers re-check the owner ID.
+      isReece
+        ? { type: 9, components: [{ type: 10, content: `## ${menuConfig.title}` }],
+            accessory: { type: 2, custom_id: 'entitlements_manage', label: 'Entitlements', style: 2, emoji: { name: '🎟️' } } }
+        : { type: 10, content: `## ${menuConfig.title}` },
       { type: 14 },
       ...askSection,
       { type: 10, content: `### \`\`\`🦁 Safari Premium\`\`\`` },
@@ -284,22 +291,17 @@ export class MenuBuilder {
           ? [{ type: 2, custom_id: `channels_msg_${channelsConfigId}`, label: 'Msg Category', style: 2, emoji: { name: '📨' } }]
           : [])
       ] },
-      { type: 10, content: `### \`\`\`🧹 Cleanup\`\`\`` },
-      { type: 1, components: cleanupButtons },
       { type: 10, content: `### \`\`\`🔮 Utilities\`\`\`` },
       {
         type: 1,
         components: [
-          // Timers section folded in here (2026-08-08) — same ids, new labels
+          // Archiver leads (moved from the retired Cleanup section 2026-08-08);
+          // Stopwatch/Snowflake are the old Timers (same ids, new labels).
+          { type: 2, custom_id: 'archive_channel', label: 'Archiver', style: 2, emoji: { name: '🧹' } },
           { type: 2, custom_id: 'snowflake_calculator', label: 'Stopwatch', style: 2, emoji: { name: '⏱️' } },
           { type: 2, custom_id: 'snowflake_lookup', label: 'Snowflake', style: 2, emoji: { name: '❄️' } },
           { type: 2, custom_id: 'prod_availability', label: 'Availability', style: 2, emoji: { name: '🕐' } },
-          { type: 2, custom_id: 'emoji_editor', label: 'Emoji Editor', style: 2, emoji: { name: '🎨' } },
-          // 🎟️ Premium ops lives with Premium (moved from Reece's Stuff 2026-08-08).
-          // Display-only gate — the entitlements handlers re-check the owner ID.
-          ...(String(context?.userId) === '391415444084490240'
-            ? [{ type: 2, custom_id: 'entitlements_manage', label: 'Entitlements', style: 4, emoji: { name: '🎟️' } }]
-            : [])
+          { type: 2, custom_id: 'emoji_editor', label: 'Emoji Editor', style: 2, emoji: { name: '🎨' } }
         ]
       }
     ];
@@ -312,8 +314,8 @@ export class MenuBuilder {
 
     // Navigation — Donate moved here from the main menu (2026-08-08): Premium is the money
     // path. ⭐ Get Premium renders for NON-entitled guilds only (Reece 2026-08-08): paying
-    // servers don't need an upsell button, and it pushed the heaviest entitled render to
-    // 41/40. ⚠️ That render now sits at exactly 40/40 — the next addition breaks it again.
+    // servers don't need an upsell button, and it once pushed the heaviest entitled render
+    // to 41/40. After the Cleanup-section retirement + header-Section rework: ~37/40.
     components.push(
       { type: 14 },
       { type: 1, components: [

@@ -5093,9 +5093,9 @@ export const BUTTON_REGISTRY = {
   // === ENTITLEMENTS (runtime feature grants — Reece only) ===
   'entitlements_manage': {
     label: 'Entitlements',
-    description: 'View and manage per-guild feature/tier grants — the premium ops panel. Red Reece-only button in CastBot Premium → Utilities',
+    description: 'View and manage per-guild feature/tier grants — the premium ops panel. Grey Reece-only accessory button on the CastBot Premium header Section',
     emoji: '🎟️',
-    style: 'Danger',
+    style: 'Secondary',
     restrictedUser: '391415444084490240',
     category: 'admin',
     parent: 'castbot_premium'
