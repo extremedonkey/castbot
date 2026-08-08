@@ -195,6 +195,7 @@ export class MenuBuilder {
     const askSection = hasAskCastBotAccess({ userId: context?.userId, guildId: context?.guildId })
       ? [
           { type: 10, content: `### \`\`\`👾 Ask CastBot\`\`\`` },
+          { type: 10, content: `Ask CastBot is like giving ChatGPT access to CastBot. You can get it to bulk create items, generate flavor text for your safari, ask which player has which items, or even just general questions about how to do things in CastBot.` },
           { type: 1, components: [
             { type: 2, custom_id: 'askcb_post', label: 'Post Ask CastBot', style: 2, emoji: { name: '👾' } },
             { type: 2, custom_id: 'askcb_ask', label: 'Ask CastBot', style: 1, emoji: { name: '👾' } }
