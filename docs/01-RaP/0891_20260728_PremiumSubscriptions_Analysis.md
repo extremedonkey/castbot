@@ -1,6 +1,7 @@
 # 💎 Premium Subscriptions & Entitlements — Design Analysis
 
 **Status**: Phase 1 partially IMPLEMENTED (2026-08-08 — entitlements v2 + lapse enforcement + admin tier UI + test stubs, see §Implemented below); pricing/tier decisions still pending
+**Feature doc**: [CastBotPremium.md](../03-features/CastBotPremium.md) — the consolidated, operationalized reference (architecture diagrams, Ko-fi ingestion, pricing state, launch checklist). Read that first; this RaP holds the decision rationale.
 **Absorbs**: the self-contained handoff doc *"CastBot Subscriptions and Premium Entitlements"* (2026-07, Ko-fi/PayPal state, provider options, data-model sketch)
 **Builds on**: [`entitlements.js`](../../entitlements.js) (the existing entitlement registry) · the ⭐ CastBot Premium menu mockup (commit 80491fd3) · [RaP 0900](0900_20260711_SecurityArchitectureOptions_Analysis.md) (gating doctrine)
 

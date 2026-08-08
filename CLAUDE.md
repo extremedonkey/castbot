@@ -514,6 +514,7 @@ When a feature is **deployed to production and working**, move/rename its doc in
 - **📅 SEASONS** → [docs/concepts/SurvivorContext.md](docs/concepts/SurvivorContext.md) - Season lifecycle and integration
 
 - **👾 ASK CASTBOT** → [docs/03-features/AskCastBot.md](docs/03-features/AskCastBot.md) - One button that answers questions, answers *player-data* questions for admins, and **makes Safari changes** in plain English (child-proposes/parent-applies plan pipeline, runtime 🎟️ Entitlements = the premium hook, JSONL event log). Design: [RaP 0890](docs/01-RaP/0890_20260730_AskCastBotEditMode_Analysis.md)
+- **💎 CASTBOT PREMIUM** → [docs/03-features/CastBotPremium.md](docs/03-features/CastBotPremium.md) - Entitlements engine (guild tiers, `validUntil`+7d grace, lazy expiry), factory `premium:` gate ("artifacts persist, clicks gate"), Reece's Entitlements panel with expiry test-stubs, Ko-fi webhook ingestion (`POST /kofi`: dedupe, billing JSONL, Grant+Link cards, renewal auto-extend), pricing + launch-switch (`PUBLIC_ASK_REQUIRES_ENTITLEMENT`). Design: [RaP 0891](docs/01-RaP/0891_20260728_PremiumSubscriptions_Analysis.md)
 - **❄️ SNOWFLAKE TIMER** → [docs/03-features/SnowflakeTimer.md](docs/03-features/SnowflakeTimer.md) - Snowflake timing, context menus, calculator. Core: [timerUtils.js](timerUtils.js). Design: [RaP 0925](docs/01-RaP/0925_20260403_SnowflakeTimer_Analysis.md)
 
 **Safari Subsystems:**
