@@ -8235,22 +8235,6 @@ To fix this:
           return { components: [container] };
         }
       })(req, res, client);
-    } else if (custom_id === 'carlbot_test') {
-      // 🐢 Carlbot Test (PoC) — modal in, webhook-persona message out. Reece-only.
-      return ButtonHandlerFactory.create({
-        id: 'carlbot_test',
-        requiresModal: true,
-        ephemeral: true,
-        handler: async (context) => {
-          // Gate lives INSIDE the block so the security-declaration scanner can see it. Safe to
-          // return a non-modal here: the factory only short-circuits to res.send for modal results.
-          if (!['391415444084490240', '1086246253819613274'].includes(context.userId)) {
-            return { content: '❌ Access denied.', ephemeral: true };
-          }
-          const { buildPersonaModal } = await import('./src/webhooks/personaWebhook.js');
-          return { type: InteractionResponseType.MODAL, data: buildPersonaModal('carlbot_test_modal', 'Carlbot Test') };
-        }
-      })(req, res, client);
     } else if (custom_id === 'reece_uptime') {
       // Reece's Stuff → Uptime — ephemeral process stats (uptime, memory, Node, PID)
       return ButtonHandlerFactory.create({
@@ -10475,23 +10459,6 @@ To fix this:
         }
       })(req, res, client);
 
-    } else if (custom_id === 'poc_menu_button') {
-      // PoC: Menu button using bot application emoji — opens admin menu as new ephemeral message
-      return ButtonHandlerFactory.create({
-        id: 'poc_menu_button',
-        deferred: true,
-        ephemeral: true,
-        handler: async (context) => {
-          const isAdmin = hasAdminPermissions(req.body.member);
-          if (!isAdmin) {
-            return { content: '❌ You need admin permissions to use this.' };
-          }
-          const guild = await client.guilds.fetch(context.guildId);
-          const playerData = await loadPlayerData();
-          return await createProductionMenuInterface(guild, playerData, context.guildId, context.userId);
-        }
-      })(req, res, client);
-
     // ════════════════════════════════════════════
     // EMOJI EDITOR (PoC)
     // ════════════════════════════════════════════
@@ -10817,17 +10784,6 @@ To fix this:
             { type: 14 },
             { type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: "← Reece's Stuff", style: 2 }] }
           ]}]};
-        }
-      })(req, res, client);
-
-    } else if (custom_id === 'reeces_radio_mockup') {
-      // Checkbox Group PoC (Mockup) — tests Type 22 checkbox group in modal. See poc/checkboxGroupPoc.js
-      return ButtonHandlerFactory.create({
-        id: 'reeces_radio_mockup',
-        requiresModal: true,
-        handler: async () => {
-          const { buildCheckboxModal } = await import('./poc/checkboxGroupPoc.js');
-          return buildCheckboxModal();
         }
       })(req, res, client);
 
@@ -12134,37 +12090,8 @@ To fix this:
         }
       })(req, res, client);
 
-    } else if (custom_id === 'msg_test') {
-      // Test sending a message from CastBot to user (USING DISCORD MESSENGER SERVICE)
-      return ButtonHandlerFactory.create({
-        id: 'msg_test',
-        deferred: true,
-        handler: async (context) => {
-          console.log(`🔍 START: msg_test - user ${context.userId}`);
-          
-          // Security check - only allow specific Discord ID
-          if (context.userId !== '391415444084490240') {
-            console.log(`❌ ACCESS DENIED: msg_test - user ${context.userId} not authorized`);
-            return {
-              content: 'Access denied. This feature is restricted.',
-              ephemeral: true
-            };
-          }
-          
-          // Import Discord Messenger service
-          const { default: DiscordMessenger } = await import('./discordMessenger.js');
-          
-          // Use the messaging service
-          const { client, userId } = context;
-          const result = await DiscordMessenger.sendTestMessage(client, userId);
-          
-          console.log(`✅ SUCCESS: msg_test - completed`);
-          return result.response;
-        }
-      })(req, res, client);
-
     } else if (custom_id === 'prod_setup_wizard') {
-      // Setup Wizard - ephemeral channel response (shares UI with msg_test DM delivery)
+      // Setup Wizard - ephemeral channel response (shares UI with the install welcome DM)
       return ButtonHandlerFactory.create({
         id: 'prod_setup_wizard',
         requiresPermission: PermissionFlagsBits.ManageRoles | PermissionFlagsBits.ManageChannels | PermissionFlagsBits.ManageGuild,
@@ -37334,39 +37261,7 @@ To fix this:
     const { custom_id, components } = data;
     console.log(`🔍 DEBUG: MODAL_SUBMIT received - custom_id: ${custom_id}`);
 
-    if (custom_id === 'carlbot_test_modal') {
-      // 🐢 Carlbot Test (PoC) — post the typed text under an arbitrary display name via a channel
-      // webhook, giving the APP-tagged "service user" look of `CastBot Health Monitor - Test`.
-      // NOT an interaction reply: the point is a standalone message in someone else's voice.
-      return ButtonHandlerFactory.create({
-        id: 'carlbot_test_modal',
-        ephemeral: true,
-        handler: async (context) => {
-          if (!['391415444084490240', '1086246253819613274'].includes(context.userId)) {
-            return { content: '❌ Access denied.' };
-          }
-          const { validatePersonaName, postAsPersona } = await import('./src/webhooks/personaWebhook.js');
-          const fields = {};
-          for (const row of (components || [])) {
-            if (row?.type === 18 && row.component?.custom_id) fields[row.component.custom_id] = row.component.value ?? '';
-          }
-          const text = (fields.message_text || '').trim();
-          if (!text) return { content: '❌ No message text provided.' };
-
-          const named = validatePersonaName(fields.persona_name, 'CastBot');
-          if (!named.ok) return { content: `❌ ${named.error}` };
-
-          const sent = await postAsPersona({
-            client: context.client, guildId: context.guildId, channelId: context.channelId,
-            username: named.name, content: text
-          });
-          if (!sent.ok) return { content: `❌ ${sent.error}` };
-
-          console.log(`🐢 [CARLBOT PoC] ${context.userId} posted ${text.length} chars as "${named.name}" in ${context.channelId}`);
-          return { content: `✅ Posted as **${named.name}** — ${sent.url}` };
-        }
-      })(req, res, client);
-    } else if (custom_id.startsWith('casting_messages_save:')) {
+    if (custom_id.startsWith('casting_messages_save:')) {
       // Casting Invites modal submit. custom_id: casting_messages_save:{appIndex}:{configId}
       return ButtonHandlerFactory.create({
         id: 'casting_messages_save',
@@ -37688,11 +37583,6 @@ To fix this:
           };
         }
       })(req, res, client);
-
-    } else if (custom_id === 'reeces_radio_mockup_submit') {
-      // Checkbox Group PoC — See poc/checkboxGroupPoc.js
-      const { handleCheckboxSubmit } = await import('./poc/checkboxGroupPoc.js');
-      return handleCheckboxSubmit(data, res);
 
     } else if (custom_id.startsWith('library_publish_modal:')) {
       // Challenge Library — publish modal submit

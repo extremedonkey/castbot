@@ -247,30 +247,20 @@ export class MenuBuilder {
    */
   static buildReecesStuffMenu(menuConfig, context) {
     const envLabel = process.env.INSTANCE_ROLE === 'test' ? 'Test' : process.env.NODE_ENV === 'production' ? 'Prod' : 'Dev';
-    // ⚠️ THIS MENU IS AT DISCORD'S 40-COMPONENT CEILING (40/40 as of 2026-07-29 —
-    // Entitlements took the last seat). Adding ANYTHING here now requires removing
-    // something first. Verify with countComponents([menu]).
+    // ⚠️ WATCH DISCORD'S 40-COMPONENT CEILING — this menu hit 41 when Deploy Prod landed
+    // (2026-08-08); the same day's PoC purge (Menu/Msg Test/Carlbot/Radio) brought it back
+    // to 36. Verify with countComponents([menu]) before adding anything.
     const components = [
       { type: 10, content: `## ${menuConfig.title}` },
       { type: 10, content: `### \`\`\`🦠 Experimental\`\`\`` },
-      // Two rows: Discord caps an ActionRow at 5 buttons. Post Moai sits next to Moai
-      // (same family — both drive Claude). Post Ask CastBot moved to Tools → Special
-      // Features beside Ask CastBot itself when Edit Safari merged into it (2026-07-29).
+      // Post Moai sits next to Moai (same family — both drive Claude).
       {
         type: 1,
         components: [
-          { type: 2, custom_id: 'poc_menu_button', label: 'Menu', style: 1, emoji: getBotEmoji('cb_transparent') },
           { type: 2, custom_id: 'moai_ask', label: 'Moai', style: 2, emoji: { name: '🗿' } },
-          { type: 2, custom_id: 'pcard_open', label: 'Player Card', style: 2, emoji: { name: '🪪' } }
-        ]
-      },
-      {
-        type: 1,
-        components: [
-          { type: 2, custom_id: 'msg_test', label: 'Msg Test', style: 2, emoji: { name: '💬' } },
           { type: 2, custom_id: 'moai_post', label: 'Post Moai', style: 1, emoji: { name: '🗿' } },
-          { type: 2, custom_id: 'entitlements_manage', label: 'Entitlements', style: 2, emoji: { name: '🎟️' } },
-          { type: 2, custom_id: 'carlbot_test', label: 'Carlbot Test', style: 2, emoji: { name: '🐢' } }
+          { type: 2, custom_id: 'pcard_open', label: 'Player Card', style: 2, emoji: { name: '🪪' } },
+          { type: 2, custom_id: 'entitlements_manage', label: 'Entitlements', style: 2, emoji: { name: '🎟️' } }
         ]
       },
       { type: 10, content: `### \`\`\`🔧 Admin Tools\`\`\`` },
@@ -307,8 +297,7 @@ export class MenuBuilder {
           { type: 2, custom_id: 'prod_manage_tribes_legacy_debug', label: 'Tribes (Legacy)', style: 2, emoji: { name: '🔥' } },
           { type: 2, custom_id: 'safari_location_editor', label: 'Location Editor', style: 2, emoji: { name: '📍' } },
           { type: 2, custom_id: 'prod_live_analytics', label: 'Print Logs', style: 2, emoji: { name: '⚠️' } },
-          { type: 2, custom_id: 'prod_toggle_live_analytics', label: 'CastBot Logs', style: 2, emoji: getBotEmoji('castbot_logo') },
-          { type: 2, custom_id: 'reeces_radio_mockup', label: 'Radio PoC (Mockup)', style: 2, emoji: { name: '📻' } }
+          { type: 2, custom_id: 'prod_toggle_live_analytics', label: 'CastBot Logs', style: 2, emoji: getBotEmoji('castbot_logo') }
         ]
       },
       {

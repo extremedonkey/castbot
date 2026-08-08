@@ -164,7 +164,6 @@ const FEATURE_PATTERNS = {
   analytics: [
     /analytics/i,
     /reece_stuff/i,      // Reece stuff menu
-    /msg_test/i,         // Message test button
     /discordMessenger/i, // Discord messaging service
     /messaging/i,        // General messaging features
     /sendDM/i,           // DM sending functionality

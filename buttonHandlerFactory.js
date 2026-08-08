@@ -593,15 +593,6 @@ export const BUTTON_REGISTRY = {
     requiresModal: true,
     category: 'seasons'
   },
-  'carlbot_test': {
-    label: 'Carlbot Test',
-    description: 'PoC — type a message in a modal and CastBot posts it into the channel in its own voice',
-    emoji: '🐢',
-    style: 'Secondary',
-    parent: 'reeces_stuff',
-    restrictedUser: '391415444084490240',
-    category: 'admin'
-  },
 
   // === GOOGLE SHEETS SYNC (external, non-Discord applicants) ===
   'sheets_open_*': {
@@ -705,16 +696,6 @@ export const BUTTON_REGISTRY = {
     style: 'Danger',
     parent: 'bulk_rename_map_channels',
     category: 'admin'
-  },
-  'reeces_radio_mockup': {
-    label: 'Radio PoC (Mockup)',
-    description: 'UI mockup: Radio Group (Type 21) in modal with 10 options. Not a real feature.',
-    emoji: '📻',
-    style: 'Primary',
-    parent: 'reeces_stuff',
-    restrictedUser: '391415444084490240',
-    requiresModal: true,
-    category: 'legacy'
   },
   'safari_guide_*': {
     label: 'Guide',
@@ -1124,18 +1105,9 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
-  'msg_test': {
-    label: 'Msg Test',
-    description: 'Test sending a message from CastBot to user',
-    emoji: '💬',
-    style: 'Secondary',
-    parent: 'reeces_stuff',
-    restrictedUser: '391415444084490240',
-    category: 'admin'
-  },
   'prod_setup_wizard': {
     label: 'Setup Wizard',
-    description: 'Show CastBot features and setup help (ephemeral) - shares UI with msg_test DM delivery',
+    description: 'Show CastBot features and setup help (ephemeral) - shares UI with the install welcome DM',
     emoji: '🧙',
     style: 'Primary',
     parent: 'castbot_tools',
@@ -5005,16 +4977,6 @@ export const BUTTON_REGISTRY = {
   'emoji_demo_ctx_*': { label: 'Context Pick', emoji: '🎯', category: 'experimental' },
   'emoji_demo_filter': { label: 'Filter Emojis', emoji: '🔍', category: 'experimental' },
   'emoji_demo_filtered_pick': { label: 'Filtered Pick', emoji: '✅', category: 'experimental' },
-
-  // === POC / Experimental ===
-  'poc_menu_button': {
-    label: 'Menu (PoC)',
-    description: 'Opens admin production menu using bot application emoji',
-    emoji: '📋',
-    style: 'Primary',
-    category: 'experimental',
-    parent: 'reeces_stuff'
-  },
 
   // === ASK CASTBOT (trusted super-user Q&A — DEV/TEST only) ===
   'askcb_ask': {

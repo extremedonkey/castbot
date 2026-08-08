@@ -193,7 +193,6 @@
   "app.js::question_select",
   "app.js::question_special_player_setup",
   "app.js::ranking_public_warn",
-  "app.js::reeces_radio_mockup",
   "app.js::reeces_stuff",
   "app.js::restart_prod",
   "app.js::restart_prod_confirm",

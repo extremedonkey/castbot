@@ -314,7 +314,7 @@ class DiscordMessenger {
   
   /**
    * Create welcome/setup wizard UI components
-   * Reusable across DM delivery (msg_test) and ephemeral channel responses (setup_wizard)
+   * Reusable across install-welcome DM delivery and ephemeral channel responses (setup_wizard)
    *
    * @param {Object} options - Configuration options
    * @param {string} options.context - 'dm' or 'channel' - affects button visibility and messaging
@@ -393,7 +393,7 @@ class DiscordMessenger {
     // Note: Main Menu button removed from Setup Wizard - it's now on the subsequent screens
     // (setup_castbot completion, castlist_hub, etc.) to avoid redundancy
 
-    // DM content (welcome message sent on install + msg_test demo)
+    // DM content (welcome message sent on install)
     // serverName is filled when we know which guild the bot was added to; falls back to generic.
     const serverRef = options.serverName ? `**${options.serverName}**` : 'your server';
     const dmContent = {
@@ -477,7 +477,7 @@ class DiscordMessenger {
 
   /**
    * Send the Components V2 welcome message to a user's DMs.
-   * Shared by msg_test (manual) and the APPLICATION_AUTHORIZED webhook (on install).
+   * Sent by the APPLICATION_AUTHORIZED webhook (on install) — the new-server install path.
    * Uses the REST API directly (Components V2 over Discord.js).
    *
    * @param {Client} client - Discord.js client
@@ -564,43 +564,6 @@ class DiscordMessenger {
     return { success: result.success };
   }
 
-  /**
-   * Send a test message (used by Msg Test button)
-   * @param {Client} client - Discord.js client
-   * @param {string} userId - Discord user ID
-   * @returns {Object} Result with response for button interaction
-   */
-  static async sendTestMessage(client, userId) {
-    console.log(`🔍 PoC: Sending ComponentsV2 welcome DM via REST API`);
-
-    try {
-      // Delegate the actual DM send to the shared helper
-      const dmResult = await this.sendWelcomeDM(client, userId);
-      if (!dmResult.success) {
-        throw new Error(dmResult.error || 'Welcome DM failed');
-      }
-      const dmChannel = await (await client.users.fetch(userId)).createDM();
-
-      return {
-        success: true,
-        response: {
-          content: `✅ **Welcome message sent to your DMs!**\n\n**Features Demonstrated:**\n• 🎨 Components V2 Container with blue accent\n• 📝 Text Display with markdown formatting\n• ➖ Visual separators for organization\n• 🎭 CastBot-branded emojis (🎬 🏆 🦁 💚)\n• 🔘 Interactive button (green "Try Interactive Button")\n• 🔗 Link button (opens support server)\n\n**Technical Details:**\n\`\`\`\nMethod: Discord REST API (bypassed Discord.js)\nEndpoint: POST /channels/${dmChannel.id}/messages\nFlags: IS_COMPONENTS_V2 (1 << 15)\nComponents: Container → 3 Text Displays + 2 Separators + 2 Buttons\n\`\`\`\n\n💡 **Click the green button in your DM to see UPDATE_MESSAGE in action!**`,
-          ephemeral: true
-        }
-      };
-
-    } catch (error) {
-      console.error('❌ REST API PoC failed:', error);
-      return {
-        success: false,
-        response: {
-          content: `❌ REST API PoC failed: ${error.message}\n\nSee logs for details.`,
-          ephemeral: true
-        }
-      };
-    }
-  }
-  
   /**
    * Check if a user can receive DMs
    * @param {Client} client - Discord.js client
