@@ -70,7 +70,11 @@ const safariRequestCache = new Map();
 const playerNameCache = new Map();
 ```
 - **Purpose**: Consistent player names within operation
-- **Lifecycle**: Cleared per operation
+- **Key**: `guildId:userId` — display names are per-guild (nicknames), so a userId-only key
+  served one guild's nickname in another's round results. Fixed 2026-08-08 (incident 09 audit).
+- **Lifecycle**: ⚠️ NOT cleared per interaction. `clearPlayerNameCache()` has exactly ONE
+  caller (`createOrUpdateAttackUI` in safariManager.js), so outside the attack-UI flow this
+  cache is effectively process-lifetime. Names only — cosmetic staleness, not a data hazard.
 - **Size**: Small (active players only)
 - **Contents**: userId → displayName mappings
 
@@ -223,21 +227,22 @@ sequenceDiagram
 
 ### 🚨 Critical Issues to Address
 
-#### 1. Discord.js Cache Limits ✅ IMPLEMENTED (2025-01-22)
+#### 1. Discord.js Cache Limits ⚠️ PARTIALLY REVERTED — see the live code
 **Problem**: Unbounded member, role, message caches
-**Solution**: Ultra-cautious cache limits implemented in production
+**History**: member/user limits were added 2025-01-22, then **removed** — `GuildMemberManager`
+caused mid-operation evictions ("Supplied parameter is not a User nor a Role"), and
+`UserManager` was redundant with member caching. Only `MessageManager` survives.
+
+**Current live config** — [app.js](../../app.js), search `makeCache`:
 ```javascript
-const client = new Client({
-  intents: [...],
   makeCache: Options.cacheWithLimits({
-    MessageManager: 50,        // Limit message cache (messages are large objects)
-    GuildMemberManager: 1200,  // Very generous buffer for member objects (45 users * ~25x safety margin)
-    UserManager: 300           // Covers all users across multiple servers with buffer
-    // NOTE: RoleManager and ChannelManager are NOT limited per Discord.js recommendations
-    // These managers are unsupported for cache customization and will break functionality
+    MessageManager: 50        // Limit message cache (messages are large objects)
+    // GuildMemberManager: REMOVED - caused mid-operation evictions
+    // UserManager: REMOVED - redundant with member caching (6.69MB -> 0.97MB)
   })
-});
 ```
+> This doc claimed the removed limits were "IMPLEMENTED" until 2026-08-08. If you're tuning
+> memory, read `makeCache` in app.js — not this table.
 **Impact**: Prevent unbounded cache growth while maintaining performance with ultra-conservative limits
 
 #### 2. Processed Interactions Cleanup (MEDIUM PRIORITY)

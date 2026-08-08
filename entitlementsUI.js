@@ -1,9 +1,10 @@
 /**
  * 🎟️ Entitlements UI — Reece-only admin surface for the runtime feature registry.
  *
- * Lives in Reece's Stuff (menuBuilder.js). This is where "which guilds can use Ask
- * CastBot" is maintained WITHOUT a deploy — the hardcoded ALLOWED_GUILD_IDS array now
- * only seeds this registry on first run.
+ * Lives in the CastBot Premium menu → Utilities row (menuBuilder.js buildPremiumMenu),
+ * red + Reece-only (moved from Reece's Stuff 2026-08-08). This is where "which guilds can
+ * use Ask CastBot" is maintained WITHOUT a deploy — the hardcoded ALLOWED_GUILD_IDS array
+ * now only seeds this registry on first run.
  *
  * Two features per guild:
  *   👾 ask_castbot — may use Ask CastBot at all (Q&A)

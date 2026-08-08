@@ -279,9 +279,35 @@ Application emojis uploaded to CastBot can be found:
 | `handler` | function | Handler function | Yes |
 | `requiresPermission` | BigInt | Discord permission | No |
 | `permissionName` | string | Permission display name | No |
+| `security` | string | Declarative access tier — see below | No |
+| `premium` | string | Entitlement feature key | No |
 | `deferred` | boolean | Use deferred response | No |
 | `updateMessage` | boolean | Update existing message | No |
 | `ephemeral` | boolean | Response visibility | No |
+
+### 🔒 `security:` — declarative access tiers
+
+```javascript
+security: 'public'  // anyone may click — documents intent, applies no gate
+security: 'admin'   // requires Manage Roles
+security: 'owner'   // bot owner only
+```
+
+**Additive by design.** An **absent** `security` field changes nothing, so the ~100 legacy
+handlers keep their current behaviour. Default-deny would be correct in a greenfield
+codebase and an outage in this one. A tier that isn't one of the three **throws at
+`create()` time** — `security: 'banana'` must never silently behave like a real gate.
+
+**⚠️ History — do not trust old code that carries this field.** From its introduction until
+2026-08-08 the factory *never read* `security:`. Nineteen call sites declared it and got
+zero enforcement, so handlers read as deliberately gated while being wide open — it misled
+a live audit during [incident 09](../../docs/incidents/09-CastDockSharedChannelExposure.md).
+Enforcement was [incident 04](../../docs/incidents/04-AnchorMenuAdminExposure.md)
+Recommendation 3, proposed then left unbuilt for months.
+
+`security` and `requiresPermission` compose — both are checked, `security` first. Use
+`security` for the intent ("this is a player-facing surface"), `requiresPermission` when you
+need a specific non-standard permission bit.
 
 ### Context Object Properties
 

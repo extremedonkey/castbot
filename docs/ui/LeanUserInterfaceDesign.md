@@ -100,6 +100,27 @@ CastBot is full of `calculateVisibility`-style gating, so this is easy to walk i
 
 **Not a substitute**: a general disclaimer like *"selected items may not appear if requirements aren't met."* CastDock had exactly that sentence on the screen the whole time. It was true, it was ignored, and it named no specific button — per-option feedback is what actually works.
 
+### 🚫 Unquantified Warnings
+
+The same rule, one level up — and the rule CastDock broke a *second* time ([incident 09](../incidents/09-CastDockSharedChannelExposure.md), 2026-08-08).
+
+**The trap**: a screen warns about a consequence that depends on the user's specific situation, and then leaves the user to work out whether it applies to them. *"This is public — best kept to a private channel."* True, clear, well written, and read straight past by a player who then broadcast their own game state to their whole cohort for four days.
+
+A warning the reader must apply to their own situation is a **disclaimer**. Disclaimers get skimmed. What lands is a **computed fact about right now**:
+
+| ❌ Disclaimer | ✅ Computed fact |
+|---|---|
+| "Visible to everyone in this channel" | "**14 other players can see this channel.**" |
+| "This may delete a lot of data" | "**This deletes 47 items and 3 stores.**" |
+| "Make sure nobody else is using this" | "**@Mimi's dock is already live here.**" |
+
+**If your screen warns about something you can measure, measure it:**
+
+1. **Compute it at render time** from the real state — same source the live behaviour uses, so the warning can't drift from the truth.
+2. **Escalate the chrome only when the number is bad.** Orange accent + full-size text when it matters; keep the calm tier otherwise, or the warning colour stops meaning anything.
+3. **Put the consequence in the button label.** `Activate Anyway` is a different decision from `Activate CastDock`.
+4. **Degrade honestly.** If the count can't be computed (uncached members, missing channel), fall back to the generic caveat — never to a false all-clear. Wrap it in try/catch; a failed *measurement* must never block the action.
+
 ## 📏 Size Guidelines
 - **Menu height**: Aim for 5-8 visible rows without scrolling
 - **Button text**: 1-2 words ideal, 3 words maximum

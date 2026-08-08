@@ -5063,12 +5063,12 @@ export const BUTTON_REGISTRY = {
   // === ENTITLEMENTS (runtime feature grants — Reece only) ===
   'entitlements_manage': {
     label: 'Entitlements',
-    description: 'View and manage per-guild feature grants (safari_edit etc.) — the premium hook',
+    description: 'View and manage per-guild feature/tier grants — the premium ops panel. Red Reece-only button in CastBot Premium → Utilities',
     emoji: '🎟️',
-    style: 'Secondary',
+    style: 'Danger',
     restrictedUser: '391415444084490240',
     category: 'admin',
-    parent: 'reeces_stuff'
+    parent: 'castbot_premium'
   },
   'entitlements_add': {
     label: 'Add Guild',

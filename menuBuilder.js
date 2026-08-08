@@ -220,7 +220,12 @@ export class MenuBuilder {
           { type: 2, custom_id: 'snowflake_calculator', label: 'Stopwatch', style: 2, emoji: { name: '⏱️' } },
           { type: 2, custom_id: 'snowflake_lookup', label: 'Snowflake', style: 2, emoji: { name: '❄️' } },
           { type: 2, custom_id: 'prod_availability', label: 'Availability', style: 2, emoji: { name: '🕐' } },
-          { type: 2, custom_id: 'emoji_editor', label: 'Emoji Editor', style: 2, emoji: { name: '🎨' } }
+          { type: 2, custom_id: 'emoji_editor', label: 'Emoji Editor', style: 2, emoji: { name: '🎨' } },
+          // 🎟️ Premium ops lives with Premium (moved from Reece's Stuff 2026-08-08).
+          // Display-only gate — the entitlements handlers re-check the owner ID.
+          ...(String(context?.userId) === '391415444084490240'
+            ? [{ type: 2, custom_id: 'entitlements_manage', label: 'Entitlements', style: 4, emoji: { name: '🎟️' } }]
+            : [])
         ]
       }
     ];
@@ -280,8 +285,8 @@ export class MenuBuilder {
         components: [
           { type: 2, custom_id: 'moai_ask', label: 'Moai', style: 2, emoji: { name: '🗿' } },
           { type: 2, custom_id: 'moai_post', label: 'Post Moai', style: 1, emoji: { name: '🗿' } },
-          { type: 2, custom_id: 'pcard_open', label: 'Player Card', style: 2, emoji: { name: '🪪' } },
-          { type: 2, custom_id: 'entitlements_manage', label: 'Entitlements', style: 2, emoji: { name: '🎟️' } }
+          { type: 2, custom_id: 'pcard_open', label: 'Player Card', style: 2, emoji: { name: '🪪' } }
+          // Entitlements moved to the CastBot Premium menu → Utilities (2026-08-08, Reece-only)
         ]
       },
       { type: 10, content: `### \`\`\`🔧 Admin Tools\`\`\`` },
