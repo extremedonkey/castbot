@@ -22,6 +22,38 @@ import {
 const ACCENT = 0x9b59b6;
 const OWNER_ID = '391415444084490240';
 
+/** How far ahead "Expiring Soon" looks. Two weeks = enough runway to chase a renewal. */
+export const EXPIRING_SOON_MS = 14 * 24 * 60 * 60 * 1000;
+
+/**
+ * Pure — the guilds worth chasing, soonest first.
+ *
+ * Includes a dated tier expiring within `windowMs`, plus anything already in GRACE
+ * (past validUntil, still working) since that's the most urgent case of all. Excludes
+ * permanent tiers (nothing to renew) and fully-lapsed ones (nothing left to save — they
+ * already show 💀 in the main list). Unit-tested.
+ */
+export function selectExpiringSoon(guilds, now = Date.now(), windowMs = EXPIRING_SOON_MS) {
+  return (guilds || [])
+    .filter(g => {
+      const ts = g.tierState;
+      if (!ts || ts.permanent || ts.validUntil == null) return false;
+      if (ts.state === 'grace') return true;
+      return ts.state === 'active' && (ts.validUntil - now) <= windowMs;
+    })
+    .sort((a, b) => a.tierState.validUntil - b.tierState.validUntil);
+}
+
+/** One Expiring-Soon line. Pure — unit-tested. */
+export function formatExpiringLine(g) {
+  const ts = g.tierState;
+  const label = TIERS[ts.tier]?.label || ts.tier;
+  const expiry = Math.floor(ts.validUntil / 1000);
+  return ts.state === 'grace'
+    ? `🕒 **${g.displayName}** · ${label} expired <t:${expiry}:R> — grace ends <t:${Math.floor(ts.graceUntil / 1000)}:R>`
+    : `⏳ **${g.displayName}** · ${label} expires <t:${expiry}:R>`;
+}
+
 /** One list-line per guild: feature glyphs + name + tier badge. Pure — unit-tested. */
 export function formatGuildLine(g) {
   const eff = g.effectiveFeatures || g.features;
@@ -78,9 +110,23 @@ export async function buildEntitlementsManageUI(client = null) {
     { type: 10, content: `-# Names come from the bot's server list automatically. To set one by hand (or fix a server the bot has left), use Add Guild with that same guild ID and type the name.` },
     { type: 14 },
     { type: 1, components: [
-      { type: 2, custom_id: 'entitlements_add', label: 'Add Guild', style: 3, emoji: { name: '➕' } }
+      { type: 2, custom_id: 'entitlements_add', label: 'Add Guild', style: 3, emoji: { name: '➕' } },
+      // Skips the modal entirely — the guild ID is already in the interaction and the name
+      // is in the bot cache, so there is nothing left for a human to type.
+      { type: 2, custom_id: 'entitlements_add_here', label: 'This Guild', style: 2, emoji: { name: '➕' } }
     ]}
   ];
+
+  // Renewal runway, above everything else — only rendered when something actually needs
+  // chasing, so the panel doesn't grow a permanently-empty heading.
+  const expiring = selectExpiringSoon(guilds);
+  if (expiring.length) {
+    components.splice(1, 0,
+      { type: 10, content: '### ```⏳ Expiring Soon```' },
+      { type: 10, content: expiring.slice(0, 10).map(formatExpiringLine).join('\n') },
+      { type: 14 }
+    );
+  }
 
   if (guilds.length) {
     // Per-guild premium/testing surface — pick a guild, get its detail screen.
@@ -129,7 +175,10 @@ export async function buildEntitlementsManageUI(client = null) {
     });
   }
 
-  return { type: 17, accent_color: ACCENT, components };
+  const container = { type: 17, accent_color: ACCENT, components };
+  const { countComponents } = await import('./utils.js');
+  countComponents([container], { enableLogging: true, verbosity: 'summary', label: 'Entitlements Panel' });
+  return container;
 }
 
 /** The Add Guild modal (guild ID + optional display name). */
@@ -243,6 +292,16 @@ export async function handleEntitlementsButton(context) {
   const id = context.customId;
   if (id === 'entitlements_add') {
     return { type: 9, data: buildEntitlementsAddModal() }; // InteractionResponseType.MODAL
+  }
+  if (id === 'entitlements_add_here') {
+    // No modal: the guild ID comes from the interaction, the name from the bot cache.
+    const guildId = String(context.guildId || '');
+    if (!/^\d{5,}$/.test(guildId)) {
+      return { content: '🎟️ No guild in this interaction — use Add Guild instead.', ephemeral: true };
+    }
+    const name = context.client?.guilds?.cache?.get(guildId)?.name || guildId;
+    await grantFeature(guildId, [FEATURES.ASK_CASTBOT, FEATURES.SAFARI_EDIT], { name, addedBy: context.userId });
+    return { components: [await buildEntitlementsManageUI(context.client)] };
   }
   if (id === 'entitlements_revoke') {
     return handleEntitlementsRevoke(context);

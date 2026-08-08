@@ -5080,6 +5080,15 @@ export const BUTTON_REGISTRY = {
     category: 'admin',
     parent: 'entitlements_manage'
   },
+  'entitlements_add_here': {
+    label: 'This Guild',
+    description: 'Entitle the guild the panel is open in — no modal, name pulled from the bot cache',
+    emoji: '➕',
+    style: 'Secondary',
+    restrictedUser: '391415444084490240',
+    category: 'admin',
+    parent: 'entitlements_manage'
+  },
   'entitlements_revoke': {
     label: 'Revoke Guild',
     description: 'Revoke safari_edit from a guild via the select on the Entitlements panel',
