@@ -181,7 +181,7 @@ export const EDIT_CONFIGS = {
         }
       },
       events: {
-        label: 'Event Customization',
+        label: 'Events',
         description: 'Customize good and bad event names and emojis',
         fields: {
           goodEventName: { type: 'text', maxLength: 50, required: false, label: 'Good Event Name', placeholder: 'Clear Skies' },

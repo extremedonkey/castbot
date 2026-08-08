@@ -2520,10 +2520,20 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
 
     const backRow = new ActionRowBuilder().addComponents([backButton]);
 
+    // Import/Export (moved from Settings → Advanced 2026-08-08): Safari content
+    // import/export lives with the map content it round-trips. Ephemeral-only —
+    // never rendered on the public shared map.
+    const importExportRow = new ActionRowBuilder().addComponents([
+      new ButtonBuilder().setCustomId('safari_import_data').setLabel('Import').setStyle(ButtonStyle.Secondary).setEmoji('📥'),
+      new ButtonBuilder().setCustomId('safari_export_data').setLabel('Export').setStyle(ButtonStyle.Secondary).setEmoji('📤')
+    ]);
+
     // Add action row components to container
     containerComponents.push(mapButtonRow2.toJSON());
     containerComponents.push({ type: 14 }); // Separator between player lifecycle and map tools
     containerComponents.push(mapButtonRow3.toJSON());
+    containerComponents.push({ type: 14 }); // Separator
+    containerComponents.push(importExportRow.toJSON());
     containerComponents.push({ type: 14 }); // Separator
     containerComponents.push(backRow.toJSON());
   } else {

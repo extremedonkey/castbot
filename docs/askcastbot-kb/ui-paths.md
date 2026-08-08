@@ -53,7 +53,7 @@ Top-level rows:
 
 ## Tools Menu (`/menu` → `🪛 Tools`)
 
-- **Special Features**: `📊 Attributes`, `🖼️ Category Post`, `🐙 Enemies`, `💼 Tycoons`
+- **Special Features**: `📊 Attributes`, `🖼️ Category Post`, `🐙 Enemies`
 - **Ask CastBot row** (entitled servers): `👾 Ask CastBot`, `👾 Post Ask CastBot`
 - **Cleanup**: `🗺️ Navigate Tidy`, `☢️ Nuke Category`, `💅 Clear Vanity Roles`
 - **Timers (Snowflake)**: `⏱️ Calculator`, `🔍 Lookup`
@@ -66,14 +66,15 @@ Top-level rows:
   `⚙️ Setup` (re-runs setup — idempotent), `⏰ Scheduled Jobs`
 - **Idol Hunts, Challenges and Safari Settings**: `🪙 Currency`, `🛠️ Crafting`,
   `📍 Location`, `⚡ Stamina`, `❗ Commands`
-- **Advanced**: `🔐 Roles & Security`, `🪵 Logs`, `📤 Export`, `📥 Import`, `🔄 Reset`
-- **Legacy**: `☄️ Events`, `🎲 Rounds`
+- **Advanced**: `🔐 Roles & Security`, `🪵 Logs`, `🔄 Reset`
+- **Legacy**: `💼 Tycoons`, `☄️ Events`, `🎲 Rounds`
 
 ## Map Admin (`/menu` → `🗺️ Map Admin`)
 
 Map management (create/update/delete), blacklisted coordinates, player locations,
 paused players, `📍 Location Editor`, `🚀 Progress`, `🤫 Whispers`, `⚓ Anchors`
-(rebuilds every location card), `🗺️ Prod Map`.
+(rebuilds every location card), `🗺️ Prod Map`, `📥 Import` / `📤 Export`
+(Safari data import/export — moved here from Settings → Advanced).
 
 ## Things that do NOT exist (never invent these)
 

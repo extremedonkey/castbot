@@ -162,8 +162,7 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
             components: [
                 { type: 2, custom_id: 'castbot_roles_security', label: 'Roles & Security', style: 2, emoji: { name: '🔐' } },
                 { type: 2, custom_id: 'safari_configure_log', label: 'Logs', style: 2, emoji: { name: '🪵' } },
-                { type: 2, custom_id: 'safari_export_data', label: 'Export', style: 2, emoji: { name: '📤' } },
-                { type: 2, custom_id: 'safari_import_data', label: 'Import', style: 2, emoji: { name: '📥' } },
+                // Import/Export moved to Map Explorer (2026-08-08)
                 { type: 2, custom_id: 'safari_config_reset_defaults', label: 'Reset', style: 4, emoji: { name: '🔄' } }
             ]
         },
@@ -171,7 +170,11 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
         { type: 10, content: `### \`\`\`📼 Legacy\`\`\`` },
         {
             type: 1,
-            components: legacyButtons
+            components: [
+                // Tycoons lives ONLY here now (removed from Tools/Premium menus 2026-08-08)
+                { type: 2, custom_id: 'tycoons_legacy', label: 'Tycoons', style: 2, emoji: { name: '💼' } },
+                ...legacyButtons
+            ]
         },
         { type: 14 },
         {
@@ -238,7 +241,7 @@ export async function createFieldGroupModal(groupKey, currentConfig) {
     if (groupKey === 'rounds') {
         components.push({
             type: 10, // Text Display
-            content: '### ⚠️ Legacy Tycoons Feature\n\nRound probabilities power the legacy **Tycoons** simulation (💼 Tycoons in Tools). For new games, use **Challenges** instead.'
+            content: '### ⚠️ Legacy Tycoons Feature\n\nRound probabilities power the legacy **Tycoons** simulation (💼 Tycoons in Settings → Legacy). For new games, use **Challenges** instead.'
         });
     }
 
