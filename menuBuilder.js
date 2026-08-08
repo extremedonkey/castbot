@@ -226,18 +226,18 @@ export class MenuBuilder {
       { type: 2, custom_id: 'safari_import_data', label: 'Import', style: 2, emoji: { name: '📥' } },
       { type: 2, custom_id: 'safari_export_data', label: 'Export', style: 2, emoji: { name: '📤' } }
     ];
-    // 👾 Ask CastBot — own header + row (Post first). Trusted super-users only, DEV/TEST only
-    // (prod has no Claude CLI). Display-only gate; the handlers re-check.
-    const askSection = hasAskCastBotAccess({ userId: context?.userId, guildId: context?.guildId })
-      ? [
-          { type: 10, content: `### \`\`\`👾 Ask CastBot\`\`\`` },
-          { type: 10, content: `Ask CastBot is like giving ChatGPT access to CastBot. You can get it to bulk create items, generate flavor text for your safari, ask which player has which items, or even just general questions about how to do things in CastBot.` },
-          { type: 1, components: [
-            { type: 2, custom_id: 'askcb_post', label: 'Post Ask CastBot', style: 1, emoji: { name: '👾' } },
-            { type: 2, custom_id: 'askcb_ask', label: 'Ask CastBot', style: 2, emoji: { name: '👾' } }
-          ] }
-        ]
-      : [];
+    // 👾 Ask CastBot — own header + row (Post first). ALWAYS rendered here (2026-08-08):
+    // it's the flagship premium feature, so non-entitled guilds must SEE it — their clicks
+    // lock-swap to the upsell like everything else. Entitled guilds get the real buttons,
+    // whose handlers enforce the entitlement + environment gates regardless.
+    const askSection = [
+      { type: 10, content: `### \`\`\`👾 Ask CastBot\`\`\`` },
+      { type: 10, content: `Ask CastBot is like giving ChatGPT access to CastBot. You can get it to bulk create items, generate flavor text for your safari, ask which player has which items, or even just general questions about how to do things in CastBot.` },
+      { type: 1, components: [
+        { type: 2, custom_id: 'askcb_post', label: 'Post Ask CastBot', style: 1, emoji: { name: '👾' } },
+        { type: 2, custom_id: 'askcb_ask', label: 'Ask CastBot', style: 2, emoji: { name: '👾' } }
+      ] }
+    ];
 
     // 🧹 Cleanup section retired (2026-08-08): Nuke Category deleted from this menu (its
     // capability lives inside the Archiver flow), Archiver moved to lead Utilities.
