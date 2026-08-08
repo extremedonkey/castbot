@@ -103,7 +103,7 @@ export async function routeChannelsButton({ context, req }) {
     return await H.handleMsgComposer({ configId: customId.replace('channels_msg_', ''), guildId, client });
   }
 
-  // 🤐 Alliances (RaP 0892). NOTE: 'channels_alliances_' (manager) does NOT start with
+  // 🤝 Alliances (RaP 0892). NOTE: 'channels_alliances_' (manager) does NOT start with
   // 'channels_alliance_' (the actions) — both are caught by the bare prefix below.
   if (customId.startsWith('channels_alliance')) {
     const A = await import('./allianceHandlers.js');
@@ -152,7 +152,7 @@ export async function routeChannelsModalSubmit({ context, components, data }) {
     }
   }
 
-  // 🤐 Alliance modal submits — tested BEFORE the legacy regex below, which would otherwise
+  // 🤝 Alliance modal submits — tested BEFORE the legacy regex below, which would otherwise
   // silently misroute an unmatched id into planChannels as a confessionals plan.
   if (customId.startsWith('channels_alliance_modal_')) {
     const A = await import('./allianceHandlers.js');

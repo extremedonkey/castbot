@@ -184,9 +184,9 @@ export class MenuBuilder {
 
     // 🔵 Ask CastBot — trusted super-users only, DEV/TEST only (prod has no Claude CLI).
     // Display-only gate; the handlers re-check.
+    // Category Post moved to 📢 Player Engagement (2026-08-08).
     const specialFeatures = [
       { type: 2, custom_id: 'attribute_management', label: 'Attributes', style: 2, emoji: { name: '📊' } },
-      { type: 2, custom_id: 'category_post', label: 'Category Post', style: 2, emoji: { name: '🖼️' } },
       { type: 2, custom_id: 'safari_manage_enemies', label: 'Enemies', style: 2, emoji: { name: '🐙' } }
     ];
     if (hasAskCastBotAccess({ userId: context?.userId, guildId: context?.guildId })) {
@@ -205,11 +205,47 @@ export class MenuBuilder {
       { type: 2, custom_id: 'data_clear_vanity', label: 'Clear Vanity Roles', style: 2, emoji: { name: '💅' } }
     ];
 
+    // 💬 Channels — the SAME row the Season Manager Channels tab renders (RaP 0885 stage 1).
+    // Resolved BEFORE assembly because the section now sits mid-menu (between Special Features
+    // and Player Engagement), and Player Engagement's Msg Category button shares its gate.
+    // Imported dynamically so this menu, built on every /menu open, doesn't drag the whole
+    // channel-admin stack (discord.js + storage + ops) into the startup import graph.
+    //
+    // Season-less surface: the buttons' handlers all parse a configId off the custom_id, so one
+    // is resolved lazily here by recency. No seasons → no configId → the section is omitted
+    // rather than rendering buttons that would fail on click.
+    let channelsConfigId = null;
+    const { CHANNEL_ADMIN_USER_IDS } = await import('./src/channels/channelAdminConfig.js');
+    if (CHANNEL_ADMIN_USER_IDS.includes(String(context?.userId)) && context?.guildId) {
+      const { loadPlayerData } = await import('./storage.js');
+      const { mostRecentConfigId } = await import('./src/channels/channelPlan.js');
+      channelsConfigId = mostRecentConfigId(await loadPlayerData(), context.guildId);
+    }
+
+    let channelsSection = [];
+    if (channelsConfigId) {
+      const { buildChannelsSection } = await import('./src/channels/channelsView.js');
+      const { setChannelsOrigin } = await import('./src/channels/channelsHandlers.js');
+      setChannelsOrigin(context.userId, 'premium'); // Cancel / ← Back returns HERE, not to Season Manager
+      channelsSection = buildChannelsSection(channelsConfigId);
+    }
+
     const components = [
       { type: 10, content: `## ${menuConfig.title}` },
       { type: 14 },
       { type: 10, content: `### \`\`\`🐙 Special Features\`\`\`` },
       { type: 1, components: specialFeatures },
+      ...channelsSection,
+      // 📢 Player Engagement — host→player broadcast tools (2026-08-08): Category Post moved
+      // out of Special Features; Msg Category moved out of the shared Channels row (its slot
+      // went to Swap/Merge) and is whitelist-gated like the Channels section above.
+      { type: 10, content: `### \`\`\`📢 Player Engagement\`\`\`` },
+      { type: 1, components: [
+        { type: 2, custom_id: 'category_post', label: 'Category Post', style: 2, emoji: { name: '🖼️' } },
+        ...(channelsConfigId
+          ? [{ type: 2, custom_id: `channels_msg_${channelsConfigId}`, label: 'Msg Category', style: 2, emoji: { name: '📨' } }]
+          : [])
+      ] },
       { type: 10, content: `### \`\`\`🧹 Cleanup\`\`\`` },
       { type: 1, components: cleanupButtons },
       { type: 10, content: `### \`\`\`🔮 Utilities\`\`\`` },
@@ -229,27 +265,6 @@ export class MenuBuilder {
         ]
       }
     ];
-
-    // 💬 Channels — the SAME row the Season Manager Channels tab renders (RaP 0885 stage 1).
-    // Imported dynamically so this menu, built on every /menu open, doesn't drag the whole
-    // channel-admin stack (discord.js + storage + ops) into the startup import graph.
-    //
-    // Season-less surface: the buttons' handlers all parse a configId off the custom_id, so one
-    // is resolved lazily here by recency. No seasons → no configId → the section is omitted
-    // rather than rendering buttons that would fail on click.
-    const { CHANNEL_ADMIN_USER_IDS } = await import('./src/channels/channelAdminConfig.js');
-    if (CHANNEL_ADMIN_USER_IDS.includes(String(context?.userId)) && context?.guildId) {
-      const { loadPlayerData } = await import('./storage.js');
-      const { mostRecentConfigId } = await import('./src/channels/channelPlan.js');
-      const configId = mostRecentConfigId(await loadPlayerData(), context.guildId);
-
-      if (configId) {
-        const { buildChannelsSection } = await import('./src/channels/channelsView.js');
-        const { setChannelsOrigin } = await import('./src/channels/channelsHandlers.js');
-        setChannelsOrigin(context.userId, 'premium'); // Cancel / ← Back returns HERE, not to Season Manager
-        components.push(...buildChannelsSection(configId));
-      }
-    }
 
     // Navigation — Donate moved here from the main menu (2026-08-08): Premium is
     // becoming the money path; the Donate screen's copy lives on behind this button.

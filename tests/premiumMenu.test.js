@@ -124,7 +124,7 @@ describe('Premium menu clone — stays wired in menuBuilder.js', () => {
 });
 
 describe('Channels row — one definition, two surfaces (RaP 0885 stage 1)', () => {
-  it('buildChannelsSection returns the heading + a 5-button row with configId-keyed ids', async () => {
+  it('buildChannelsSection returns the heading + the 5-button row (Swap/Merge replaced Msg Category 2026-08-08)', async () => {
     const { buildChannelsSection } = await import('../src/channels/channelsView.js');
     const section = buildChannelsSection('config_123_456');
 
@@ -137,11 +137,26 @@ describe('Channels row — one definition, two surfaces (RaP 0885 stage 1)', () 
       'channels_confessionals_config_123_456',
       'channels_subs_config_123_456',
       'channels_1on1s_config_123_456',
-      'channels_msg_config_123_456',
-      'channels_alliances_config_123_456'
+      'channels_alliances_config_123_456',
+      // A straight copy of the Castlist Hub button — deliberately NOT configId-keyed.
+      'castlist_swap_merge_default'
     ]);
     // Discord's hard per-ActionRow cap — a sixth action needs a second row, not a squeeze.
     assert.ok(section[1].components.length <= 5);
+  });
+
+  it('Msg Category survives on both surfaces after leaving the shared row', () => {
+    // Season Manager tab: its own row under the shared section.
+    const viewSource = readFileSync(
+      path.join(__dirname, '..', 'src', 'channels', 'channelsView.js'), 'utf8');
+    assert.ok(/channels_msg_\$\{configId\}/.test(viewSource),
+      'the Channels tab lost its Msg Category button');
+    // Premium: hardcoded in 📢 Player Engagement, gated like the Channels section.
+    const menuSource = readFileSync(MENU_BUILDER_JS, 'utf8');
+    const premiumSection = menuSource.slice(menuSource.search(PREMIUM_DEF), menuSource.indexOf('static buildReecesStuffMenu'));
+    assert.ok(premiumSection.includes('Player Engagement'), 'Premium menu lost the 📢 Player Engagement section');
+    assert.ok(/channels_msg_\$\{channelsConfigId\}/.test(premiumSection),
+      'Premium menu lost Msg Category from Player Engagement');
   });
 
   it('the Season Manager tab renders the SAME builder (no forked copy)', async () => {

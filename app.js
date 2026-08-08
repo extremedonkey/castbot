@@ -13786,7 +13786,7 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'player_request_alliance') {
-      // 🤐 Alliance request (player /menu → Advanced). v1 whitelist enforced in the handler (RaP 0892).
+      // 🤝 Alliance request (player /menu → Advanced). v1 whitelist enforced in the handler (RaP 0892).
       return ButtonHandlerFactory.create({
         id: 'player_request_alliance',
         requiresModal: true,
@@ -37463,7 +37463,7 @@ To fix this:
       })(req, res, client);
 
     } else if (custom_id.startsWith('alliance_request_modal_')) {
-      // 🤐 Player alliance request submit — the PUBLIC deferred response IS the request card (RaP 0892).
+      // 🤝 Player alliance request submit — the PUBLIC deferred response IS the request card (RaP 0892).
       // Deliberately NOT channels_-prefixed: the block above would whitelist-deny players. v1 whitelist
       // is still enforced inside the handler.
       return ButtonHandlerFactory.create({

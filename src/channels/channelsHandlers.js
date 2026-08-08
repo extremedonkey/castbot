@@ -556,7 +556,7 @@ export async function planOneOnOnes({ mode, configId, guildId, userId, client, v
   return buildConfirmScreen({
     token,
     configId,
-    title: `⚠️ Create ${toCreate.length} 1on1 channel${toCreate.length > 1 ? 's' : ''}?`,
+    title: `❔ Create ${toCreate.length} 1on1 channel${toCreate.length > 1 ? 's' : ''}?`,
     lines: [
       // Names, not just counts: pairs are combinatorial, so one unexpected member is the
       // difference between 66 and 78 channels. Listing PLAYERS (not pairs) keeps it readable.
@@ -920,7 +920,7 @@ function planAction(plan) {
 
 function planTitle(plan) {
   if (plan.type === 'broadcast') return '📨 Posting message';
-  if (plan.type?.startsWith('alliance_')) return '🤐 Alliances';
+  if (plan.type?.startsWith('alliance_')) return '🤝 Alliances';
   if (plan.type === 'delete') return '🗑️ Deleting channels';
   if (plan.type === 'player_roles') return '🎭 Creating player roles';
   if (plan.type === 'convert') return '🗳️ Converting applications to subs';

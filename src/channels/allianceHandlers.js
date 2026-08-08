@@ -261,7 +261,7 @@ export async function planAlliance({ customId, guildId, userId, client, fields, 
   return buildConfirmScreen({
     token, configId, cancelId,
     accent: alignment.aligned ? null : 0xf39c12,
-    title: isCreate ? '🤐 Review alliance' : '🤐 Review alliance changes',
+    title: isCreate ? '🤝 Review alliance' : '🤝 Review alliance changes',
     lines,
     confirmLabel: isCreate ? 'Create Alliance' : 'Apply Changes'
   });
@@ -410,8 +410,8 @@ export async function execAlliance({ plan, guild, snapshot, playerData, userId, 
       const mentions = tagged.map((m) => `<@${m.userId}>`).join(' ')
         + (plan.members.length > tagged.length ? ` +${plan.members.length - tagged.length} more` : '');
       const content = plan.notify === 'announce_requestor' && plan.requestedBy
-        ? `## 🤐 A new alliance has formed!\n${mentions}\nWelcome to your alliance channel — requested by <@${plan.requestedBy}>.`
-        : `## 🤐 A new alliance has formed!\n${mentions}\nWelcome to your alliance channel.`;
+        ? `## 🤝 A new alliance has formed!\n${mentions}\nWelcome to your alliance channel — requested by <@${plan.requestedBy}>.`
+        : `## 🤝 A new alliance has formed!\n${mentions}\nWelcome to your alliance channel.`;
       await DiscordRequest(`channels/${channel.id}/messages`, {
         method: 'POST',
         body: {
@@ -495,6 +495,6 @@ export async function handleAllianceRequestSubmit({ customId, guildId, userId, d
     }
   }]);
 
-  console.log(`🤐 [ALLIANCE] Request ${requestId} by ${userId} in guild ${guildId} (${members.length} members)`);
+  console.log(`🤝 [ALLIANCE] Request ${requestId} by ${userId} in guild ${guildId} (${members.length} members)`);
   return buildAllianceRequestCard({ requestId, requesterId: userId, requesterName: displayName, members });
 }

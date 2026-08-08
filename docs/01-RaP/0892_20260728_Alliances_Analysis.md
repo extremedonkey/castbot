@@ -1,4 +1,4 @@
-# 🤐 Alliances — Design & Implementation Analysis
+# 🤝 Alliances — Design & Implementation Analysis
 
 **Status**: Building (v1, hidden behind the Channel Admin whitelist)
 **Builds on**: [ChannelAdministration.md](../03-features/ChannelAdministration.md) · [SurvivorContext.md](../concepts/SurvivorContext.md#-alliances)
@@ -110,7 +110,7 @@ Delta kinds added to `applyDeltas` (which silently drops unknowns — explicit b
 
 ```mermaid
 flowchart TD
-    subgraph admin["Admin (Channels tab → 🤐 Alliances)"]
+    subgraph admin["Admin (Channels tab → 🤝 Alliances)"]
         M[Alliance Manager<br/>select + disabled buttons] -->|New Alliance| C[Create modal 5/5]
         M -->|select alliance| M2[Manager w/ summary<br/>Edit · Remove · Delete enabled]
         M2 -->|Edit| E[Edit modal prefilled]
@@ -134,7 +134,7 @@ flowchart TD
     style PC fill:#f8d7da,stroke:#721c24
 ```
 
-**Exec (create)**: `alliances` job lock → `accessContext` → `ensureCategory` (name-adoption *desirable* for the shared 🤐 Alliances category) → `resolvePrincipal` per member (role-preferred XOR user, dead-role deltas) → `buildOverwrites` (**no spectator**, hosts last, `mergeOverwrites`) → `ensureChannel({ adoptByName: false })` → immediate registry flush → notify post (raw REST, `allowed_mentions`) → request marked fulfilled → manager re-render with new alliance selected. Single channel — no `runPacedJob` needed.
+**Exec (create)**: `alliances` job lock → `accessContext` → `ensureCategory` (name-adoption *desirable* for the shared 🤝 Alliances category) → `resolvePrincipal` per member (role-preferred XOR user, dead-role deltas) → `buildOverwrites` (**no spectator**, hosts last, `mergeOverwrites`) → `ensureChannel({ adoptByName: false })` → immediate registry flush → notify post (raw REST, `allowed_mentions`) → request marked fulfilled → manager re-render with new alliance selected. Single channel — no `runPacedJob` needed.
 
 **Exec (edit)**: `diffMembers` → adds via `applyAccess`, removals via **new `removeAccess`** (delete overwrite for userId ∪ live playerRoleId, minus ids still in the new set) → rename best-effort → `setParent` on category change → patch delta.
 

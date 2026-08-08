@@ -1,5 +1,5 @@
 /**
- * 🤐 Alliances (RaP 0892) — pure planning helpers, modal structure, registry deltas, and
+ * 🤝 Alliances (RaP 0892) — pure planning helpers, modal structure, registry deltas, and
  * the channelOps leak guards. Imports the REAL functions (channelPlan.test.js convention).
  */
 import { describe, it } from 'node:test';

@@ -60,9 +60,12 @@ export function rosterLines(members, { creating = null, limit = 25 } = {}) {
  * container + nav/bottom rows; Premium's own container).
  *
  * ⚠️ The row is AT Discord's hard 5-buttons-per-ActionRow cap. A sixth action needs a second row.
+ * Msg Category left this row 2026-08-08 (→ Premium's 📢 Player Engagement row; the Season tab
+ * renders its own copy below the shared section) to free the slot for Swap/Merge — a straight
+ * copy of the Castlist Hub button, so it is the one id here NOT keyed by configId.
  *
- * @param {string} configId - season key; every handler still parses it off the custom_id (Stage 1
- *   of the migration keeps ids untouched — see RaP 0885 / ChannelAdministration.md)
+ * @param {string} configId - season key; every channels_* handler still parses it off the
+ *   custom_id (Stage 1 of the migration keeps ids untouched — see RaP 0885 / ChannelAdministration.md)
  * @returns {Array} [Text Display, ActionRow] — 7 components
  */
 export function buildChannelsSection(configId) {
@@ -72,8 +75,8 @@ export function buildChannelsSection(configId) {
       { type: 2, custom_id: `channels_confessionals_${configId}`, label: 'Confessionals', style: 2, emoji: { name: '🎙️' } },
       { type: 2, custom_id: `channels_subs_${configId}`, label: 'Subs', style: 2, emoji: { name: '🗳️' } },
       { type: 2, custom_id: `channels_1on1s_${configId}`, label: '1 on 1s', style: 2, emoji: { name: '🤝' } },
-      { type: 2, custom_id: `channels_msg_${configId}`, label: 'Msg Category', style: 2, emoji: { name: '📨' } },
-      { type: 2, custom_id: `channels_alliances_${configId}`, label: 'Alliances', style: 2, emoji: { name: '🤐' } }
+      { type: 2, custom_id: `channels_alliances_${configId}`, label: 'Alliances', style: 2, emoji: { name: '🤝' } },
+      { type: 2, custom_id: 'castlist_swap_merge_default', label: 'Swap/Merge', style: 2, emoji: { name: '🔀' } }
     ]}
   ];
 }
@@ -139,6 +142,11 @@ export async function buildChannelsView({ configId, guildId, playerData, seasonN
       ]},
       { type: 14 },
       ...buildChannelsSection(configId),
+      // Msg Category kept on the tab after leaving the shared row (2026-08-08) — the shared
+      // row's slot went to Swap/Merge, and Premium renders this button in 📢 Player Engagement.
+      { type: 1, components: [
+        { type: 2, custom_id: `channels_msg_${configId}`, label: 'Msg Category', style: 2, emoji: { name: '📨' } }
+      ]},
       { type: 14 },
       { type: 10, content: body + (lastRunLine ? `\n\n${lastRunLine}` : '') },
       { type: 14 },

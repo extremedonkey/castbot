@@ -3503,7 +3503,7 @@ export const BUTTON_REGISTRY = {
   'channels_alliances_*': {
     label: 'Alliances',
     description: 'Alliance Manager — secret member channels, castlist_hub-style select + actions (RaP 0892)',
-    emoji: '🤐',
+    emoji: '🤝',
     style: 'Secondary',
     parent: 'season_channels',
     category: 'channel_admin',
@@ -3520,7 +3520,7 @@ export const BUTTON_REGISTRY = {
   'channels_alliance_new_*': {
     label: 'New Alliance',
     description: 'Opens the Create Alliance modal (members / category / name / notify)',
-    emoji: '🤐',
+    emoji: '🤝',
     style: 'Primary',
     parent: 'channels_alliances',
     category: 'channel_admin',
@@ -3565,7 +3565,7 @@ export const BUTTON_REGISTRY = {
   'player_request_alliance': {
     label: 'Alliance',
     description: 'Player /menu → Advanced: request an alliance from Production (posts a PUBLIC card in the invoking channel; v1 whitelist-gated)',
-    emoji: '🤐',
+    emoji: '🤝',
     style: 'Secondary',
     parent: 'player_menu',
     category: 'player_menu',

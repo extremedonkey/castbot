@@ -75,7 +75,7 @@ export function buildAllianceManager({ configId, seasonName, alliances = {}, req
         label: `#${a.name || ALLIANCE_DEFAULTS.channelName}`.substring(0, 100),
         value: id,
         description: memberSummary(a.members).substring(0, 100),
-        emoji: { name: '🤐' },
+        emoji: { name: '🤝' },
         ...(id === selectedId ? { default: true } : {})
       }));
     if (entries.length > 25) {
@@ -110,13 +110,13 @@ export function buildAllianceManager({ configId, seasonName, alliances = {}, req
     type: 17,
     accent_color: PURPLE,
     components: [
-      { type: 10, content: `## 🤐 Alliances\n-# ${seasonName} — channels are visible ONLY to their members and hosts. Handle with care.` },
+      { type: 10, content: `## 🤝 Alliances\n-# ${seasonName} — channels are visible ONLY to their members and hosts. Handle with care.` },
       { type: 14 },
       selectRow,
       { type: 10, content: detail },
       { type: 14 },
       { type: 1, components: [
-        { type: 2, custom_id: `channels_alliance_new_${configId}`, label: 'New Alliance', style: 1, emoji: { name: '🤐' } },
+        { type: 2, custom_id: `channels_alliance_new_${configId}`, label: 'New Alliance', style: 1, emoji: { name: '🤝' } },
         { type: 2, custom_id: `channels_alliance_edit_${idPart}_${configId}`, label: 'Edit', style: 2, emoji: { name: '✏️' }, disabled: !selected },
         { type: 2, custom_id: `channels_alliance_members_${idPart}_${configId}`, label: 'Remove Members', style: 2, emoji: { name: '➖' }, disabled: !selected },
         { type: 2, custom_id: `channels_alliance_delete_${idPart}_${configId}`, label: 'Delete', style: 4, emoji: { name: '🗑️' }, disabled: !selected }
@@ -309,7 +309,7 @@ export function buildAllianceRequestCard({ requestId, requesterId, requesterName
       accent_color: PURPLE,
       components: [
         { type: 10, content: [
-          '## 🤐 Alliance Request',
+          '## 🤝 Alliance Request',
           `**Requested by:** ${sanitizeName(requesterName) || requesterId}`,
           `**Members (${members.length}):** ${names}`,
           '-# Production: hit Review to create this alliance — you will see tribes and warnings before anything is made.'

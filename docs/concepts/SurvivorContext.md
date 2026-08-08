@@ -39,7 +39,7 @@ Private player-to-player conversation. Some servers let players use Discord DMs;
 - **Naming**: `#reece-bob`, `#reece-sarah`, `#sarah-bob`
 - ⚠️ **Combinatorial**: n players → n(n−1)/2 channels. A 12-player tribe is 66 channels; 20 players is 190 — against Discord's hard ceiling of **500 channels / 50 categories per guild**.
 
-### 🤐 Alliances
+### 🤝 Alliances
 A group of players on the same tribe who have agreed to work together. **The existence of an alliance is extremely sensitive game information** — leaking it can decide a season. Any alliance feature must be very closely guarded. CastBot deliberately does **not** model alliances yet.
 
 ### 🎭 Player Roles

@@ -102,7 +102,7 @@ export const ACTIONS = {
  */
 export const ALLIANCE_DEFAULTS = {
   channelName: 'alliance',
-  categoryName: '🤐 Alliances'
+  categoryName: '🤝 Alliances'
 };
 /** Cooldown between player alliance requests (anti-spam; in-memory, resets on restart). */
 export const ALLIANCE_REQUEST_COOLDOWN_MS = 5 * 60 * 1000;

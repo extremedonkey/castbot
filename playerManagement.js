@@ -647,7 +647,7 @@ async function calculateVisibility(guildId, targetUserId, playerData, safariData
   vis.commands = { show: enableGlobalCommands, disabled: isAdmin && !hasTarget, label: 'Commands', emoji: '🕹️', immediate: true, gatedBy: enableGlobalCommands ? null : 'config' };
   // Alliance requests (RaP 0892) — whitelist-only while the feature is a hidden mockup; the
   // handler re-checks. Player mode only: targetUserId IS the viewer there.
-  vis.alliance = { show: !isAdmin && CHANNEL_ADMIN_USER_IDS.includes(String(targetUserId)), disabled: false, label: 'Alliance', emoji: '🤐', immediate: true };
+  vis.alliance = { show: !isAdmin && CHANNEL_ADMIN_USER_IDS.includes(String(targetUserId)), disabled: false, label: 'Alliance', emoji: '🤝', immediate: true };
   vis.castdock = { show: true, disabled: isAdmin && !hasTarget, label: 'CastDock', emoji: formatBotEmoji('castbot_logo') };
   vis.vanity = { show: isAdmin, disabled: isAdmin && !hasTarget, label: 'Vanity Roles', emoji: '🎭' };
   vis.navigate = { show: !navDisabled && hasTarget && isInitialized && hasMapLocation, disabled: false, label: 'Navigate', emoji: '🗺️', immediate: true, coordinate: currentCoordinate };
