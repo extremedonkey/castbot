@@ -461,3 +461,104 @@ describe('Channels modals — Discord structural limits', () => {
     }
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Cross-season roster + the "who exactly?" confirm block (2026-08-08)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('rosterLines — every confirm screen names the players', () => {
+  const M = (o) => ({ userId: o.userId || '1', displayName: 'Alice', ...o });
+
+  it('returns nothing for an empty roster (no stray heading)', async () => {
+    const { rosterLines } = await import('../src/channels/channelsView.js');
+    assert.deepEqual(rosterLines([]), []);
+    assert.deepEqual(rosterLines(null), []);
+  });
+
+  it('marks ➕ for players being created and ✅ for ones left alone', async () => {
+    const { rosterLines } = await import('../src/channels/channelsView.js');
+    const members = [M({ userId: 'a', displayName: 'Alice' }), M({ userId: 'b', displayName: 'Bob' })];
+    const out = rosterLines(members, { creating: new Set(['a']) }).join('\n');
+    assert.match(out, /➕ Alice/);
+    assert.match(out, /✅ Bob/);
+  });
+
+  it('shows the already-made channel markers (subs are normally created first)', async () => {
+    const { rosterLines } = await import('../src/channels/channelsView.js');
+    const out = rosterLines([M({ hasSubs: true }), M({ userId: '2', displayName: 'Bo', hasConfessional: true })]).join('\n');
+    assert.match(out, /Alice 🗳️/);
+    assert.match(out, /Bo 🎙️/);
+  });
+
+  it('names the source season ONLY when it is not the current one', async () => {
+    const { rosterLines } = await import('../src/channels/channelsView.js');
+    const out = rosterLines([
+      M({ userId: 'a', displayName: 'Alice', seasonName: 'Season 14', fromCurrentSeason: true }),
+      M({ userId: 'b', displayName: 'Bob', seasonName: 'Season 12', fromCurrentSeason: false })
+    ]).join('\n');
+    assert.ok(!/Alice.*Season 14/.test(out), 'current-season players must not be labelled');
+    assert.match(out, /Bob.*Season 12/, 'cross-season players MUST be labelled — that is the safety net');
+  });
+
+  it('truncates but never silently drops', async () => {
+    const { rosterLines } = await import('../src/channels/channelsView.js');
+    const many = Array.from({ length: 40 }, (_, i) => M({ userId: String(i), displayName: `P${i}` }));
+    const out = rosterLines(many, { limit: 25 }).join('\n');
+    assert.match(out, /…and 15 more/);
+  });
+});
+
+describe('Cross-season roster — dedupe precedence', () => {
+  // Mirrors channelRoster's rule: newest SEASON wins, then stage, then record recency.
+  const ranks = new Map([['s14', 0], ['s12', 1]]);
+  const LAST = Number.MAX_SAFE_INTEGER;
+  const rankOf = (app) => (app?.configId && ranks.has(app.configId)) ? ranks.get(app.configId) : LAST;
+  const beats = (app, prev) => !prev || rankOf(app) < rankOf(prev);
+
+  it("this season's record beats last season's, whatever the status", () => {
+    assert.equal(beats({ configId: 's14' }, { configId: 's12' }), true,
+      'a Not Cast in S14 must beat a Cast in S12 — otherwise last season\'s cast gets channels');
+    assert.equal(beats({ configId: 's12' }, { configId: 's14' }), false);
+  });
+
+  it('legacy applications (no configId) sort last, never beating a real season', () => {
+    assert.equal(beats({ configId: null }, { configId: 's12' }), false);
+    assert.equal(beats({ configId: 's12' }, { configId: null }), true);
+  });
+
+  it('a legacy-only applicant is still included (the union is the point)', () => {
+    assert.equal(beats({ configId: null }, null), true);
+  });
+});
+
+describe('Empty-roster message — names offered-but-not-cast players', () => {
+  // The one silent failure: invites are out, nothing tests offerStatus, roster reads empty.
+  function emptyRosterMessage(skipped = []) {
+    const offered = skipped.filter((s) => s.offered);
+    if (!offered.length) return 'No accepted cast in this server yet. Set players to **Cast** on the Casting tab first.';
+    const names = offered.slice(0, 10).map((s) => s.displayName).join(', ');
+    return `No accepted cast yet — but **${offered.length}** player${offered.length > 1 ? 's have' : ' has'} been ` +
+      `offered a place without being marked **Cast**: ${names}` +
+      `${offered.length > 10 ? `, …and ${offered.length - 10} more` : ''}. ` +
+      'Mark them **Cast** on the Casting tab and run this again.';
+  }
+
+  it('falls back to the plain message when nobody was offered', () => {
+    assert.match(emptyRosterMessage([{ reason: 'New' }]), /Set players to \*\*Cast\*\*/);
+  });
+
+  it('names the offered players so the host knows what to fix', () => {
+    const msg = emptyRosterMessage([
+      { displayName: 'Alice', offered: true },
+      { displayName: 'Bob', offered: true },
+      { displayName: 'Zed', offered: false }
+    ]);
+    assert.match(msg, /\*\*2\*\* players have been/);
+    assert.match(msg, /Alice, Bob/);
+    assert.ok(!msg.includes('Zed'), 'non-offered skips must not be named');
+  });
+
+  it('uses singular grammar for one player', () => {
+    assert.match(emptyRosterMessage([{ displayName: 'Alice', offered: true }]), /\*\*1\*\* player has been/);
+  });
+});

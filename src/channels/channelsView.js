@@ -17,6 +17,41 @@ import { ACTIONS, CATEGORY_NAMES, BROADCAST_CHANNEL_TYPES, MAX_SELECT_TARGETS } 
 import { buildRichCardContainer, buildRichCardModal } from '../../richCardUI.js';
 
 /**
+ * "Exactly who is this about?" — the roster block every create/update confirm screen carries.
+ *
+ * Added 2026-08-08 with the cross-season roster: once the applicant pool spans every season, a
+ * bare count ("16 players") is not enough information to approve an irreversible bulk job. The
+ * host must be able to see a name they don't recognise and cancel.
+ *
+ * Per player: the ✅/➕ create marker, the name, the already-made channel markers (🎙️/🗳️ — subs
+ * are normally created first, so both are always shown), and the source season when it is NOT
+ * the season the surface is scoped to.
+ *
+ * @param {Array} members - roster entries (getAcceptedCast) or picker members (expandMentionables)
+ * @param {Object} [opts]
+ * @param {Set<string>} [opts.creating] - userIds that will actually be created (others = left alone)
+ * @param {number} [opts.limit=25] - hard cap; the remainder is summarised, never silently dropped
+ * @returns {string[]} lines for the confirm screen (empty array when there is nothing to list)
+ */
+export function rosterLines(members, { creating = null, limit = 25 } = {}) {
+  if (!members?.length) return [];
+  const lines = ['', '**Players:**'];
+
+  for (const m of members.slice(0, limit)) {
+    const mark = !creating ? '•' : (creating.has(m.userId) ? '➕' : '✅');
+    const made = [m.hasConfessional ? '🎙️' : '', m.hasSubs ? '🗳️' : ''].filter(Boolean).join('');
+    // Only call out the season when it ISN'T the one the host is looking at — that's the
+    // cross-season case they need to notice.
+    const season = (m.seasonName && !m.fromCurrentSeason) ? ` -# *${m.seasonName}*` : '';
+    lines.push(`> ${mark} ${m.displayName}${made ? ` ${made}` : ''}${season}`);
+  }
+
+  if (members.length > limit) lines.push(`> -# …and ${members.length - limit} more`);
+  if (creating) lines.push('-# ➕ will be created · ✅ already exists · 🎙️ has a confessional · 🗳️ has subs');
+  return lines;
+}
+
+/**
  * The 💬 Channels heading + its 5 action buttons — THE single definition of that row.
  *
  * Rendered by BOTH the Season Manager Channels tab (below) and the ⭐ Premium menu
@@ -78,7 +113,9 @@ export async function buildChannelsView({ configId, guildId, playerData, seasonN
   }
 
   const body = [
-    `> **Accepted cast:** ${rosterCount}${missingRoles ? ` (${missingRoles} without a player role)` : ''}`,
+    // "Accepted cast" is now guild-wide (every season, deduped) — say so, or the number looks
+    // wrong to a host who is looking at one season's tab.
+    `> **Accepted cast (all seasons):** ${rosterCount}${missingRoles ? ` (${missingRoles} without a player role)` : ''}`,
     `> **Confessionals:** ${confessionals} | **Subs:** ${subs} | **1on1s:** ${oneOnOnes} | **Alliances:** ${alliances}`,
     `> **Trusted Spectator:** ${specLine}`
   ].join('\n');

@@ -10,7 +10,7 @@
  *      (buildStatusSignals, playerStatus.js:74). deriveStatus's stage-0 withdrawn row outranks
  *      everything, so routing through it excludes withdrawn players for free.
  */
-import { loadPlayerData, getApplicationsForSeason } from '../../storage.js';
+import { loadPlayerData, getAllApplicationsFromData } from '../../storage.js';
 import { buildStatusSignals, deriveStatus } from '../../playerStatus.js';
 import { getTribesForCastlist } from '../../castlistDataAccess.js';
 import { enumeratePairs } from './channelPlan.js';
@@ -19,17 +19,48 @@ import { enumeratePairs } from './channelPlan.js';
 export const ACCEPTED_STATUS_IDS = new Set(['cast', 'accepted', 'accepted_alt']);
 
 /**
- * The accepted cast for a season.
+ * Rank each season by recency (0 = newest). Legacy apps carry no configId at all and sort LAST,
+ * so a real season's record always outranks a legacy one for the same player.
+ * @returns {Map<string, number>} configId → rank
+ */
+function seasonRanks(playerData, guildId) {
+  const configs = Object.entries(playerData?.[guildId]?.applicationConfigs || {})
+    .sort(([, a], [, b]) => (b?.lastUpdated || b?.createdAt || 0) - (a?.lastUpdated || a?.createdAt || 0));
+  return new Map(configs.map(([id], i) => [id, i]));
+}
+
+/**
+ * The accepted cast — unioned across EVERY season in the guild, one entry per player.
+ *
+ * Why not one season (changed 2026-08-08, Reece's call): the row that calls this now renders on
+ * the season-less ⭐ Premium menu too, and single-season sourcing silently dropped anyone whose
+ * accepted record lived under a different config — including the legacy apps that
+ * `getApplicationsForSeason` excludes outright (no `configId` → filtered out). Union means nobody
+ * gets "stuck" in a season the host isn't looking at.
+ *
+ * The cost is that a server reused across seasons can surface LAST season's cast. That is
+ * mitigated by visibility, not by filtering: every confirm screen lists each player by name with
+ * the season their record came from, so the host sees exactly who they're about to create for.
+ *
+ * Dedupe precedence (most→least important):
+ *   1. Newest SEASON wins — this season's "Not Cast" must beat last season's "Cast".
+ *   2. Within one season, `outranks` (withdrawn short-circuit ▸ higher stage ▸ newer record).
  *
  * @param {string} guildId
- * @param {string} configId
+ * @param {string} configId - the calling surface's season; used only to LABEL entries
+ *   (`fromCurrentSeason`), never to filter. Kept in the signature because every caller has one.
  * @param {import('discord.js').Guild} guild
  * @returns {Promise<{roster: Array, skipped: Array}>}
  */
 export async function getAcceptedCast(guildId, configId, guild) {
   const playerData = await loadPlayerData();
-  const apps = await getApplicationsForSeason(guildId, configId);
+  const apps = await getAllApplicationsFromData(guildId);
   const players = playerData[guildId]?.players || {};
+  const ranks = seasonRanks(playerData, guildId);
+  const configs = playerData[guildId]?.applicationConfigs || {};
+  const LAST = Number.MAX_SAFE_INTEGER;
+  const rankOf = (app) => (app?.configId && ranks.has(app.configId)) ? ranks.get(app.configId) : LAST;
+  const channelAdmin = playerData[guildId]?.channelAdmin || {};
 
   // ── Collapse APPLICATIONS to PLAYERS first ──
   // One user can hold SEVERAL application records in a single season (verified on the test box:
@@ -49,9 +80,11 @@ export async function getAcceptedCast(guildId, configId, guild) {
 
     const status = deriveStatus(buildStatusSignals({ app, liveChannelName }));
     const prev = byUser.get(app.userId);
-    if (!prev || outranks(status, app, prev.status, prev.app)) {
-      byUser.set(app.userId, { app, status, channelId, liveChannelName });
-    }
+    // Newest season first; only inside ONE season does the stage/recency precedence apply.
+    const beats = !prev
+      || rankOf(app) < rankOf(prev.app)
+      || (rankOf(app) === rankOf(prev.app) && outranks(status, app, prev.status, prev.app));
+    if (beats) byUser.set(app.userId, { app, status, channelId, liveChannelName });
   }
 
   const roster = [];
@@ -59,7 +92,17 @@ export async function getAcceptedCast(guildId, configId, guild) {
 
   for (const [userId, { app, status, channelId, liveChannelName }] of byUser) {
     if (!ACCEPTED_STATUS_IDS.has(status.statusId)) {
-      skipped.push({ userId, reason: status.label });
+      // `offered` carries no STATUS_REGISTRY row (nothing tests offerStatus), so an applicant the
+      // host has already INVITED reads as plain "Application Complete" and lands here. Per Reece
+      // 2026-08-08 that stays excluded — offers are expected to follow a Cast decision — but the
+      // flag rides along so the empty-roster error can name them instead of just saying "none".
+      // Name comes off the app record: fetching members for skipped applicants is wasted API.
+      skipped.push({
+        userId,
+        reason: status.label,
+        displayName: app.displayName || app.username || userId,
+        offered: app.offerStatus === 'offer' || app.offerStatus === 'offer_alternative'
+      });
       continue;
     }
 
@@ -77,11 +120,41 @@ export async function getAcceptedCast(guildId, configId, guild) {
       appChannelId: channelId,
       liveChannelName,
       playerRoleId: players[userId]?.playerRoleId || null,
-      status
+      status,
+      // Provenance — surfaced on every confirm screen so a cross-season roster is auditable.
+      configId: app.configId || null,
+      seasonName: configs[app.configId]?.seasonName || (app.configId ? 'Unknown season' : 'Legacy application'),
+      fromCurrentSeason: !!app.configId && app.configId === configId,
+      // "Already made" markers. Subs are normally created BEFORE confessionals, so the host needs
+      // to see both when planning either one.
+      hasConfessional: hasChannelOfKind(channelAdmin, 'confessionals', userId),
+      hasSubs: hasChannelOfKind(channelAdmin, 'subs', userId)
     });
   }
 
   return { roster, skipped };
+}
+
+/**
+ * Has this player a channel of this kind recorded under ANY season?
+ *
+ * The registry is season-keyed (`channelAdmin[configId].confessionals[userId]`) while the roster
+ * is now cross-season, so a season-scoped lookup would report "not created" for a channel that
+ * demonstrably exists. Presence of the registry record is the signal — liveness is re-checked by
+ * the planner against the guild snapshot, which is the thing that decides create-vs-skip.
+ *
+ * @param {Object} channelAdmin - playerData[guildId].channelAdmin
+ * @param {'confessionals'|'subs'} bucket
+ * @returns {boolean}
+ */
+function hasChannelOfKind(channelAdmin, bucket, userId) {
+  for (const [key, season] of Object.entries(channelAdmin || {})) {
+    // Guild-scoped siblings (oneOnOnes, alliances, allianceCategories…) are not season nodes.
+    if (!season || typeof season !== 'object' || Array.isArray(season)) continue;
+    if (key === 'oneOnOnes' || key === 'alliances' || key === 'allianceRequests') continue;
+    if (season[bucket]?.[userId]?.channelId) return true;
+  }
+  return false;
 }
 
 /**

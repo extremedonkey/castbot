@@ -25,7 +25,7 @@ import {
 import { runPacedJob, acquireJobLock, releaseJobLock, JobBusyError, renderProgress, patchOriginal } from './channelJob.js';
 import { makeDeltaBuffer, flushDeltas } from './channelRegistry.js';
 import { getAcceptedCast, expandMentionables, getTribePairs } from './channelRoster.js';
-import { buildConfirmScreen } from './channelsView.js';
+import { buildConfirmScreen, rosterLines } from './channelsView.js';
 
 /** Whitelist check. Mirrors seasonSelector.isChannelAdmin (display) — this one is enforcement. */
 export function isChannelAdmin(userId) {
@@ -236,6 +236,25 @@ async function resolveTargets({ mode, guild, guildId, configId, resolved, values
   return { members: roster, dropped: [], skipped };
 }
 
+/**
+ * "No accepted cast" — but say WHY, naming anyone who has been offered a place and not marked Cast.
+ *
+ * That combination is the one silent failure mode of the roster: the host has done the work
+ * (invites are out) and still sees an empty roster, because nothing in STATUS_REGISTRY tests
+ * `offerStatus`. Naming them turns a dead end into an instruction.
+ */
+function emptyRosterMessage(skipped = []) {
+  const offered = skipped.filter((s) => s.offered);
+  if (!offered.length) {
+    return 'No accepted cast in this server yet. Set players to **Cast** on the Casting tab first.';
+  }
+  const names = offered.slice(0, 10).map((s) => s.displayName).join(', ');
+  return `No accepted cast yet — but **${offered.length}** player${offered.length > 1 ? 's have' : ' has'} been ` +
+    `offered a place without being marked **Cast**: ${names}` +
+    `${offered.length > 10 ? `, …and ${offered.length - 10} more` : ''}. ` +
+    'Mark them **Cast** on the Casting tab and run this again.';
+}
+
 /** Shared: host overwrites (globalRoleAccess) + @everyone id. */
 async function accessContext(guild, playerData) {
   const roleAccessEntries = await getRoleAccessOverwrites(guild, HOST_ACCESS, { playerData, logPrefix: 'CHANNEL_ADMIN' });
@@ -325,8 +344,10 @@ export async function planChannels({ kind, mode, configId, guildId, userId, clie
         `> **${items.length}** channel${items.length > 1 ? 's' : ''} will be renamed and re-permissioned in place.`,
         `> Both the player **and** their player role get access (belt-and-braces).`,
         '',
-        ...items.slice(0, 10).map((i) => `> • #${i.appChannel.name} → #${i.targetName}`),
-        ...(items.length > 10 ? [`> -# …and ${items.length - 10} more`] : []),
+        ...items.slice(0, 25).map((i) =>
+          `> • **${i.displayName}** — #${i.appChannel.name} → #${i.targetName}` +
+          (i.fromCurrentSeason ? '' : ` -# *${i.seasonName}*`)),
+        ...(items.length > 25 ? [`> -# …and ${items.length - 25} more`] : []),
         ...(blocked.length ? ['', ...blocked.slice(0, 5).map((b) => `> ⚠️ ${b}`)] : []),
         ...(skipped.length ? ['', `-# ${skipped.length} applicant(s) skipped (not accepted / withdrawn / left).`] : []),
         '',
@@ -341,7 +362,7 @@ export async function planChannels({ kind, mode, configId, guildId, userId, clie
   if (!members.length) {
     return err(mode === 'specific'
       ? 'No valid players selected (bots and departed members are skipped).'
-      : 'No accepted cast for this season yet. Set players to **Cast** on the Casting tab first.');
+      : emptyRosterMessage(skipped));
   }
 
   const names = assignChannelNames(members, kind === 'subs' ? 'subs' : 'confessional');
@@ -350,6 +371,7 @@ export async function planChannels({ kind, mode, configId, guildId, userId, clie
     if (known && snapshot.channels.get(known)) return false;
     return !snapshot.findByName(names.get(m.userId), null) || true; // adopt-by-name is resolved at run time
   });
+  const creatingIds = new Set(toCreate.map((m) => m.userId));
 
   const existingCats = (node.categories?.[bucket] || [])
     .map((id) => snapshot.channels.get(id))
@@ -386,6 +408,7 @@ export async function planChannels({ kind, mode, configId, guildId, userId, clie
         ? ['> Player gets access via their **player role** where one exists, else directly.',
            '> Trusted Spectators can **read + react** (not post).']
         : ['> **Both** the player and their player role get access.']),
+      ...rosterLines(members, { creating: creatingIds }),
       ...(dropped.length ? ['', `-# ${dropped.length} target(s) dropped (bots / left the server).`] : []),
       ...(skipped.length ? ['', `-# ${skipped.length} applicant(s) skipped (not accepted / withdrawn).`] : [])
     ],
@@ -414,7 +437,7 @@ export async function planPlayerRoles({ mode, configId, guildId, userId, client,
   }
 
   if (!members.length) {
-    return err(mode === 'specific' ? 'No valid players selected.' : 'No accepted cast for this season yet.');
+    return err(mode === 'specific' ? 'No valid players selected.' : emptyRosterMessage(skipped));
   }
 
   // A registry pointer to a role that no longer exists must be recreated, not reused.
@@ -434,9 +457,9 @@ export async function planPlayerRoles({ mode, configId, guildId, userId, client,
     lines: [
       `> **${needing.length}** to create · **${members.length - needing.length}** already have one`,
       `> Guild after: **${budget.after.roles}/250** roles`,
-      '',
-      ...needing.slice(0, 12).map((m) => `> • ${m.displayName}`),
-      ...(needing.length > 12 ? [`> -# …and ${needing.length - 12} more`] : []),
+      // The FULL targeted set, not just `needing` — the host needs to see who is in scope, with
+      // ➕/✅ showing which of them actually get a new role.
+      ...rosterLines(members, { creating: new Set(needing.map((m) => m.userId)) }),
       '',
       '-# Roles are created uncoloured and non-mentionable; recolour them in Discord as you like.',
       ...(skipped.length ? [`-# ${skipped.length} skipped (not accepted / withdrawn / bot / left).`] : [])
@@ -535,7 +558,13 @@ export async function planOneOnOnes({ mode, configId, guildId, userId, client, v
     configId,
     title: `⚠️ Create ${toCreate.length} 1on1 channel${toCreate.length > 1 ? 's' : ''}?`,
     lines: [
-      ...tribes.map((t) => `> **${t.tribeName}** — ${t.members.length} players → ${t.pairs.length} pairs`),
+      // Names, not just counts: pairs are combinatorial, so one unexpected member is the
+      // difference between 66 and 78 channels. Listing PLAYERS (not pairs) keeps it readable.
+      ...tribes.flatMap((t) => [
+        `> **${t.tribeName}** — ${t.members.length} players → ${t.pairs.length} pairs`,
+        `> -# ${t.members.slice(0, 25).map((m) => m.displayName).join(' · ')}` +
+          (t.members.length > 25 ? ` …and ${t.members.length - 25} more` : '')
+      ]),
       '',
       `> **${toCreate.length}** to create · **${allPairs.length - toCreate.length}** already exist`,
       `> **${newCategories}** new categor${newCategories === 1 ? 'y' : 'ies'}`,
