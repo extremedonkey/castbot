@@ -5,9 +5,11 @@
  * Ask CastBot share one timing model instead of drifting apart. See claudeRunner.js for
  * why the old 2-min-nudge / 4-min-kill pair was both too short and too quiet.
  *
- * WHAT THE MOAI KEEPS THAT ASK CASTBOT DOESN'T: the full toolset. The Moai's whole job is
- * to change code when Reece asks — no `tools` allowlist, no deny rules. That asymmetry is
- * the point, and it's why the Moai stays behind the Reece-only menu.
+ * WHAT THE MOAI KEEPS THAT ASK CASTBOT DOESN'T: the full toolset — on DEV and TEST. The
+ * Moai's whole job there is to change code when Reece asks, and that asymmetry is why it
+ * stays behind the Reece-only menu. On PROD the same Moai is a READ-ONLY advisor: its cwd
+ * is the LIVE tree, so writes are hard-blocked at the CLI layer (see moaiToolset()) and
+ * change requests are routed to the TEST Moai + the 🚀 Deploy Prod button.
  *
  * @module moai
  */
@@ -51,6 +53,41 @@ function truncate(text, max) {
  */
 export function isMoaiEnvironment() {
   return process.env.PRODUCTION !== 'TRUE' || process.env.CLAUDE_PROD_FEATURES === 'TRUE';
+}
+
+/** Is THIS process the live production bot? (test box sets INSTANCE_ROLE=test, not PRODUCTION) */
+export function isProdMoai() {
+  return process.env.PRODUCTION === 'TRUE';
+}
+
+/**
+ * CLI tool allowlist per instance. On PROD the Moai is a READ-ONLY advisor — its cwd is
+ * the LIVE tree, where code edits are inert-until-restart, invisible to git, erased by
+ * the next deploy's auto-stash, and data-file writes race the live bot's own save cycles
+ * (the lost-move incident class). This is a HARD fence at the CLI layer (same mechanism
+ * as Ask CastBot's toolset), not a prompt request — rules in prompts get ignored, rules
+ * in enforcement get followed. DEV and TEST keep the full toolset: changing code there
+ * is the Moai's job.
+ * @returns {string|undefined} comma-list for `claude --tools`, or undefined for full access
+ */
+export function moaiToolset() {
+  return isProdMoai() ? 'Read,Glob,Grep' : undefined;
+}
+
+/** The IMPORTANT CONTEXT bullets that differ per instance — see moaiToolset() for why. */
+function instanceGuidance() {
+  if (isProdMoai()) {
+    return `- ⛔ YOU ARE ON THE LIVE PRODUCTION BOX. You are a READ-ONLY advisor here: your tools are Read/Glob/Grep only — you cannot edit files, run commands, or deploy, and you must never offer to.
+- Your working directory is the LIVE prod tree. This is why writes are blocked: an edit here would be inert until a restart, invisible to git, erased by the next deploy's auto-stash — and a data-file write would race the live bot and could destroy player data.
+- If Reece asks for a change: give your analysis, then tell him to ask the TEST Moai (castbot-blue) to make it, verify on CastBot Test, and ship it with the 🚀 Deploy Prod button. That is the only path from idea to prod.`;
+  }
+  if (process.env.INSTANCE_ROLE === 'test') {
+    return `- You are on the TEST box (castbot-blue), in the test working tree. If Reece asks you to make code changes, you CAN — that is your job here.
+- After editing, run ./scripts/dev/box-restart.sh "commit message" as your VERY LAST action (it commits → pushes → tests → restarts CastBot Test; the restart may cut off your own reply mid-delivery, but the work is already pushed — say goodbye before you run it). Never leave edits uncommitted.
+- NEVER deploy to prod or touch the prod box. Prod ships one way only: Reece clicks the 🚀 Deploy Prod button after verifying your change on CastBot Test.`;
+  }
+  return `- If Reece asks you to make code changes, you CAN — but tell him to click the 🔄 Restart Dev button after to apply them
+- Dev restart command: ./scripts/dev/dev-restart.sh "commit message"`;
 }
 
 /**
@@ -155,7 +192,7 @@ export function buildPrompt(query, prevContextText = '', msgContextText = '') {
   const msgSection = msgContextText?.trim()
     ? `\n\nATTACHED MESSAGE (Reece clicked "Ask Moai" on this Discord message — usually a PM2 error post or a deploy notification; treat it as the subject of the question):\n${msgContextText}\n\n---\n`
     : '';
-  return `You are the Moai 🗿 — CastBot's stone advisor. Here is your personality essence:\n\n${moaiEssence}\n\nYou are responding via Discord to Reece. Keep responses concise (Discord has character limits). Use markdown formatting.\n\nIMPORTANT CONTEXT:\n- You are running in the CastBot project directory via claude --print\n- You have access to the full codebase and can read files\n- If Reece asks you to make code changes, you CAN — but tell him to click the 🔄 Restart Dev button after to apply them\n- Dev restart command: ./scripts/dev/dev-restart.sh "commit message"\n- You are a one-shot agent (no conversation memory between queries)${prevSection ? ' BUT you have context from the previous question below' : ''}${prevSection}${msgSection}\n\nReece asks:\n${query}`;
+  return `You are the Moai 🗿 — CastBot's stone advisor. Here is your personality essence:\n\n${moaiEssence}\n\nYou are responding via Discord to Reece. Keep responses concise (Discord has character limits). Use markdown formatting.\n\nIMPORTANT CONTEXT:\n- You are running in the CastBot project directory via claude --print\n- You have access to the full codebase and can read files\n${instanceGuidance()}\n- You are a one-shot agent (no conversation memory between queries)${prevSection ? ' BUT you have context from the previous question below' : ''}${prevSection}${msgSection}\n\nReece asks:\n${query}`;
 }
 
 const actionRow = (responseId) => ({
@@ -319,9 +356,11 @@ export async function handleMoaiModalSubmit(req, res) {
     console.log(`🗿 Moai query from ${req.body.member?.user?.username}: "${truncate(query, 80)}"`);
     await reporter.start({ components: [buildProgressContainer(query)] });
 
-    // No tools/deny: the Moai is allowed to change code. That's its job.
+    // Full toolset on DEV/TEST (changing code is the Moai's job there); hard read-only
+    // allowlist on PROD (live tree — see moaiToolset()).
     const { text: response, durationMs } = await runClaudeJob({
       prompt: buildPrompt(query, fields.moai_prev_context, fields.moai_msg_context),
+      tools: moaiToolset(),
       model,
       onHeartbeat: (progress) => reporter.beat({ components: [buildProgressContainer(query, progress)] })
     });

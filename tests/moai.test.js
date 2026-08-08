@@ -10,6 +10,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   isMoaiEnvironment,
+  moaiToolset,
   extractMessageText,
   buildContextAskModal,
   buildPrompt,
@@ -159,5 +160,61 @@ describe('Moai — buildPrompt attached-message section', () => {
     const prompt = buildPrompt('q', 'Q: old\nA: answer', 'card text');
     assert.ok(prompt.includes('PREVIOUS CONVERSATION'));
     assert.ok(prompt.includes('ATTACHED MESSAGE'));
+  });
+});
+
+describe('Moai — prod instance is a read-only advisor (moaiToolset + instance-aware prompt)', () => {
+  const withEnv = (vars, fn) => {
+    const prev = {};
+    for (const [k, v] of Object.entries(vars)) {
+      prev[k] = process.env[k];
+      if (v === undefined) delete process.env[k]; else process.env[k] = v;
+    }
+    try { fn(); } finally {
+      for (const [k, v] of Object.entries(prev)) {
+        if (v === undefined) delete process.env[k]; else process.env[k] = v;
+      }
+    }
+  };
+
+  it('PROD gets the hard read-only tool allowlist; DEV and TEST get full tools', () => {
+    withEnv({ PRODUCTION: 'TRUE', INSTANCE_ROLE: undefined }, () => {
+      assert.equal(moaiToolset(), 'Read,Glob,Grep');
+    });
+    withEnv({ PRODUCTION: undefined, INSTANCE_ROLE: 'test' }, () => {
+      assert.equal(moaiToolset(), undefined);
+    });
+    withEnv({ PRODUCTION: undefined, INSTANCE_ROLE: undefined }, () => {
+      assert.equal(moaiToolset(), undefined);
+    });
+  });
+
+  it('PROD prompt forbids changes and routes to TEST Moai + Deploy Prod button', () => {
+    withEnv({ PRODUCTION: 'TRUE', INSTANCE_ROLE: undefined }, () => {
+      const prompt = buildPrompt('fix the null check');
+      assert.ok(prompt.includes('READ-ONLY advisor'));
+      assert.ok(prompt.includes('Deploy Prod button'));
+      assert.ok(!prompt.includes('you CAN'));
+      assert.ok(!prompt.includes('dev-restart.sh'));
+    });
+  });
+
+  it('TEST prompt allows changes, mandates box-restart.sh, forbids prod deploys', () => {
+    withEnv({ PRODUCTION: undefined, INSTANCE_ROLE: 'test' }, () => {
+      const prompt = buildPrompt('fix the null check');
+      assert.ok(prompt.includes('you CAN'));
+      assert.ok(prompt.includes('box-restart.sh'));
+      assert.ok(prompt.includes('NEVER deploy to prod'));
+      assert.ok(!prompt.includes('READ-ONLY advisor'));
+    });
+  });
+
+  it('DEV prompt keeps the Restart Dev guidance', () => {
+    withEnv({ PRODUCTION: undefined, INSTANCE_ROLE: undefined }, () => {
+      const prompt = buildPrompt('fix the null check');
+      assert.ok(prompt.includes('dev-restart.sh'));
+      assert.ok(!prompt.includes('READ-ONLY advisor'));
+      assert.ok(!prompt.includes('box-restart.sh'));
+    });
   });
 });
