@@ -1737,6 +1737,14 @@ app.post('/api/sheets-sync', express.raw({ type: 'application/json', limit: '2mb
   }
 });
 
+// 💰 Ko-fi payment webhook (RaP 0891 Phase 2-lite): form-urlencoded `data` JSON, so a
+// route-local parser (global middleware is JSON-only). Logic: src/kofi/kofiWebhook.js
+app.post('/kofi', express.urlencoded({ extended: false, limit: '100kb' }), (req, res) =>
+  import('./src/kofi/kofiWebhook.js').then(m => m.handleKofiWebhook(req, res)).catch(error => {
+    console.error('❌ [KOFI] Webhook route error:', error);
+    if (!res.headersSent) res.status(500).send('error');
+  }));
+
 app.post('/webhooks', express.raw({ type: 'application/json' }), async (req, res) => {
   const signature = req.get('X-Signature-Ed25519');
   const timestamp = req.get('X-Signature-Timestamp');
@@ -10795,17 +10803,7 @@ To fix this:
         permissionName: 'Manage Roles',
         premium: 'ask_castbot', // registry-gated (grace-aware); inner check is belt-and-braces
         requiresModal: true,
-        handler: async (context) => {
-          const { hasAskCastBotAccess, buildAskModal, recallResponse } = await import('./askCastBot.js');
-          if (!hasAskCastBotAccess(context)) {
-            return { content: '👾 Ask CastBot is not available here.', ephemeral: true };
-          }
-          const prevId = custom_id.startsWith('askcb_ask_ctx_') ? custom_id.replace('askcb_ask_ctx_', '') : null;
-          return {
-            type: InteractionResponseType.MODAL,
-            data: buildAskModal(recallResponse(prevId), prevId)
-          };
-        }
+        handler: async (context) => (await import('./askCastBot.js')).askEntryResponse(context, custom_id)
       })(req, res, client);
 
     } else if (custom_id === 'askcb_public_ask' || custom_id.startsWith('askcb_pub_ctx_')) {
@@ -10815,17 +10813,7 @@ To fix this:
         id: 'askcb_public_ask',
         security: 'public',
         requiresModal: true,
-        handler: async (context) => {
-          const { isAskCastBotEnvironment, buildAskModal, recallResponse } = await import('./askCastBot.js');
-          if (!isAskCastBotEnvironment()) {
-            return { content: '👾 Ask CastBot is not available here.', ephemeral: true };
-          }
-          const prevId = custom_id.startsWith('askcb_pub_ctx_') ? custom_id.replace('askcb_pub_ctx_', '') : null;
-          return {
-            type: InteractionResponseType.MODAL,
-            data: buildAskModal(recallResponse(prevId), prevId, true)
-          };
-        }
+        handler: async () => (await import('./askCastBot.js')).publicAskEntryResponse(custom_id)
       })(req, res, client);
 
     } else if (custom_id === 'askcb_post') {
@@ -10835,23 +10823,7 @@ To fix this:
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         premium: 'ask_castbot', // POSTING needs entitlement; the posted button stays open (launch switch in askCastBot.js)
-        handler: async (context) => {
-          const { hasAskCastBotAccess, buildPostedAskContainer } = await import('./askCastBot.js');
-          if (!hasAskCastBotAccess(context)) {
-            return { content: '👾 Ask CastBot is not available here.', ephemeral: true };
-          }
-          await DiscordRequest(`channels/${context.channelId}/messages`, {
-            method: 'POST',
-            body: { components: [buildPostedAskContainer()], flags: (1 << 15) }
-          });
-          return {
-            components: [{ type: 17, accent_color: 0x2ecc71, components: [
-              { type: 10, content: `✅ Ask CastBot posted to <#${context.channelId}>` },
-              { type: 10, content: `-# Anyone who can see that channel can now use it.` }
-            ]}],
-            ephemeral: true
-          };
-        }
+        handler: async (context) => (await import('./askCastBot.js')).postAskHandler(context)
       })(req, res, client);
 
     } else if (custom_id.startsWith('askcb_edit_ctx_')) {
@@ -10874,6 +10846,16 @@ To fix this:
         updateMessage: !custom_id.startsWith('askcb_plan_review_'),
         ephemeral: true,
         handler: async (context) => (await import('./askCastBotWrite.js')).handlePlanButton(context)
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('kofi_grant_')) {
+      // 💰 Ko-fi subscriber card → Grant + Link modal (Reece-only; card lives in #💎premium)
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        requiresModal: true,
+        handler: async (context) => context.userId !== '391415444084490240'
+          ? { content: '💰 Reece only.', ephemeral: true }
+          : { type: 9, data: (await import('./src/kofi/kofiWebhook.js')).buildKofiLinkModal(custom_id.replace('kofi_grant_', '')) }
       })(req, res, client);
 
     } else if (custom_id.startsWith('entitlements_')) {
@@ -37332,6 +37314,11 @@ To fix this:
       // ⭐ Entitlements tier grant — duration + reason (Reece-only gate inside the handler)
       const { handleEntitlementsTierModal } = await import('./entitlementsUI.js');
       return handleEntitlementsTierModal(req, res, client);
+
+    } else if (custom_id.startsWith('kofi_link_modal_')) {
+      // 💰 Ko-fi Grant + Link — grants premium and binds the payment email (Reece-only gate inside)
+      const { handleKofiLinkModal } = await import('./src/kofi/kofiWebhook.js');
+      return handleKofiLinkModal(req, res, client);
 
     } else if (custom_id === 'moai_ask_modal' || custom_id.startsWith('moai_ask_modal_')) {
       // 🗿 The Moai — defer, run, reply. All logic lives in moai.js.

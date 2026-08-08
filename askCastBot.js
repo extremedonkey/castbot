@@ -232,6 +232,43 @@ export function hasAskCastBotAccess({ userId, guildId } = {}) {
   return hasFeatureSync(guildId, FEATURES.ASK_CASTBOT);
 }
 
+/** askcb_ask (+ _ctx follow-up) button body — modal or denial (app.js stays a router). */
+export function askEntryResponse(context, customId) {
+  if (!hasAskCastBotAccess(context)) {
+    return { content: '👾 Ask CastBot is not available here.', ephemeral: true };
+  }
+  const prevId = customId.startsWith('askcb_ask_ctx_') ? customId.replace('askcb_ask_ctx_', '') : null;
+  return { type: InteractionResponseType.MODAL, data: buildAskModal(recallResponse(prevId), prevId) };
+}
+
+/** askcb_public_ask (+ _pub_ctx) button body — env-gated only; see PUBLIC_ASK_REQUIRES_ENTITLEMENT. */
+export function publicAskEntryResponse(customId) {
+  if (!isAskCastBotEnvironment()) {
+    return { content: '👾 Ask CastBot is not available here.', ephemeral: true };
+  }
+  const prevId = customId.startsWith('askcb_pub_ctx_') ? customId.replace('askcb_pub_ctx_', '') : null;
+  return { type: InteractionResponseType.MODAL, data: buildAskModal(recallResponse(prevId), prevId, true) };
+}
+
+/** askcb_post button body — drops the standing public Ask button into the channel. */
+export async function postAskHandler(context) {
+  if (!hasAskCastBotAccess(context)) {
+    return { content: '👾 Ask CastBot is not available here.', ephemeral: true };
+  }
+  const { DiscordRequest } = await import('./utils.js');
+  await DiscordRequest(`channels/${context.channelId}/messages`, {
+    method: 'POST',
+    body: { components: [buildPostedAskContainer()], flags: (1 << 15) }
+  });
+  return {
+    components: [{ type: 17, accent_color: 0x2ecc71, components: [
+      { type: 10, content: `✅ Ask CastBot posted to <#${context.channelId}>` },
+      { type: 10, content: `-# Anyone who can see that channel can now use it.` }
+    ]}],
+    ephemeral: true
+  };
+}
+
 /** Trim a string for display, appending an ellipsis when cut. */
 export function truncate(text, max) {
   return `${text.substring(0, max)}${text.length > max ? '...' : ''}`;

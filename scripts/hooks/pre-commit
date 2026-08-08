@@ -7,7 +7,7 @@
 # See: CLAUDE.md "Button Handler Factory" section
 
 BASELINE=99  # Legacy handler count as of 2026-07-28 (prod_setup_tycoons factory conversion). Includes completion_edit modal exception. Only goes DOWN.
-APP_JS_LINES_MAX=49778  # app.js line-count ratchet as of 2026-08-08 (actual: 49778, PoC purge removed msg_test/carlbot/radio/poc_menu handlers). Only goes DOWN. Extract more than you add.
+APP_JS_LINES_MAX=49765  # app.js line-count ratchet as of 2026-08-08 (actual: 49765, Ko-fi webhook added as thin routes + askcb handler bodies extracted to askCastBot.js). Only goes DOWN. Extract more than you add.
 
 # ── Auto-sync: keep installed hook in sync with source ──
 SOURCE_HOOK="scripts/hooks/pre-commit"

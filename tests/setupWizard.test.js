@@ -197,7 +197,7 @@ describe('Setup Wizard — channel layout uses Section + button accessory', () =
 
   it('renders one Section per task, each with a single Text child + a button accessory', () => {
     const sections = channel({ hasSetup: false, hasCastlist: false }).filter(c => c.type === 9);
-    assert.equal(sections.length, 4, 'expected 4 task sections (Setup, Season, Castlist, Display)');
+    assert.equal(sections.length, 5, 'expected 5 task sections (Setup, Season, Castlist, Display, Join)');
     for (const s of sections) {
       assert.equal(s.components.length, 1, 'Section must have EXACTLY one child (Discord limit)');
       assert.equal(s.components[0].type, 10, 'Section child must be a Text Display');
@@ -211,6 +211,11 @@ describe('Setup Wizard — channel layout uses Section + button accessory', () =
     assert.equal(sections[1].accessory.custom_id, 'season_manager_new');
     assert.equal(sections[2].accessory.custom_id, 'castlist_hub_main_new');
     assert.equal(sections[3].accessory.custom_id, 'wizard_post_castlist');
+    // Task 5 is a link button (support server invite) — no custom_id, never gated
+    assert.equal(sections[4].accessory.style, 5);
+    assert.equal(sections[4].accessory.url, 'https://discord.gg/H7MpJEjkwT');
+    assert.equal(sections[4].accessory.label, 'Join');
+    assert.equal(sections[4].accessory.disabled, undefined);
   });
 
   it('keeps Features + Help as the only action row, Features first', () => {

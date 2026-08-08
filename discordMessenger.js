@@ -13,7 +13,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { PermissionFlagsBits } from 'discord.js';
-import { expandBotEmojis } from './botEmojis.js';
+import { expandBotEmojis, getBotEmoji } from './botEmojis.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MESSAGE_HISTORY_PATH = path.join(__dirname, 'messageHistory.json');
@@ -373,6 +373,14 @@ class DiscordMessenger {
       gate: hasCastlist, done: hasPostedCastlist && hasCastlist, doneLabel: 'Castlist Posted'
     });
 
+    // Task 5 — Join the support server: link accessory (mirrors the main menu Support
+    // button — castbot-head emoji, same invite URL), never gated.
+    const joinSupportButton = {
+      type: 2, label: 'Join', style: 5, // Link
+      url: 'https://discord.gg/H7MpJEjkwT',
+      emoji: getBotEmoji('castbot_logo') ?? { name: '💬' }
+    };
+
     // Row (both contexts): Castbot Features (first) + CastBot Help Server link
     const featuresRow = [
       {
@@ -414,6 +422,8 @@ class DiscordMessenger {
       castlistBody: '-# > ⌚ Takes 2 minutes\nClick the `📋 Castlist Manager` button to the right, then under *Select a castlist to manage..* choose ✅ Active Castlist. In the \'Tribe Roles\' pop-up, select a role to add to the castlist. If you are just testing the feature out ahead of the season, choose a role like your @Production role.',
       displayHeader: '## ``` 📋 4. Display your Castlist```',
       displayBody: '-# > ⌚ Takes 5 seconds\nIn any Discord channel (including this one), type <:cb_blue> `/castlist` to display the castlist you just made. You can also click the `📃 Post Castlist` button to the right.',
+      joinHeader: '## ``` 💬 5. Join the CastBot Support Server```',
+      joinBody: '-# > ⌚ Takes 10 seconds\nThe support server is CastBot\'s home base — ✨ **new updates** drop there first, 🙏 **feature requests** get seen (and built!), and there\'s a growing stash of 💡 **tips & tricks**, 🦁 **sample Safari guides** for players and production, a 🗺️ **map gallery**, and ready-to-use **AI Safari prompts** to power up your season. Come say hi — click **Join**!',
       footer: 'To get back to CastBot, type `/menu` from any channel in your server! Once your season is up and running, use `/castlist` to summon the active castlist showing players. You can get back to this menu from `/menu` → `🪛 Tools`'
     };
 
@@ -453,12 +463,19 @@ class DiscordMessenger {
             components: [{ type: 10, content: channelContent.castlistBody }],
             accessory: castlistButton
           },
-          // Task 3 — full-width header, then Section (body + Post Castlist accessory)
+          // Task 4 — full-width header, then Section (body + Post Castlist accessory)
           { type: 10, content: channelContent.displayHeader },
           {
             type: 9, // Section
             components: [{ type: 10, content: expandBotEmojis(channelContent.displayBody) }],
             accessory: postCastlistButton
+          },
+          // Task 5 — full-width header, then Section (body + Join link accessory)
+          { type: 10, content: channelContent.joinHeader },
+          {
+            type: 9, // Section
+            components: [{ type: 10, content: channelContent.joinBody }],
+            accessory: joinSupportButton
           },
           { type: 14 },
           { type: 10, content: channelContent.footer },

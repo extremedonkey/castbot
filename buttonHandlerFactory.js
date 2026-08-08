@@ -5153,6 +5153,15 @@ export const BUTTON_REGISTRY = {
     category: 'admin',
     parent: 'entitlements_guild'
   },
+  'kofi_grant_*': {
+    label: 'Grant + Link Guild',
+    description: 'From a Ko-fi subscriber card in #💎premium: grant premium to a guild and bind the payment email for auto-renewals',
+    emoji: '⭐',
+    style: 'Success',
+    requiresModal: true,
+    restrictedUser: '391415444084490240',
+    category: 'admin'
+  },
 
   // === MOAI (Claude Code Integration) ===
   'moai_post': {

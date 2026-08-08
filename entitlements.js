@@ -130,7 +130,9 @@ function normalize(data) {
         grantedBy: entry.grantedBy || null,
         grantedAt: entry.grantedAt || null,
         ...(typeof entry.reason === 'string' && entry.reason ? { reason: entry.reason } : {})
-      } : {})
+      } : {}),
+      // Ko-fi billing link — renewals from this email auto-extend this guild's tier
+      ...(typeof entry?.kofiEmail === 'string' && entry.kofiEmail ? { kofiEmail: entry.kofiEmail.toLowerCase() } : {})
     };
   }
   return { guilds: clean };
@@ -349,6 +351,29 @@ export async function setTierValidUntil(guildId, validUntil) {
 }
 
 /**
+ * Bind a Ko-fi payment email to a guild — renewals from this email then auto-extend
+ * the guild's tier (src/kofi/kofiWebhook.js). One email per guild; latest link wins.
+ */
+export async function linkKofiEmail(guildId, email) {
+  const data = loadEntitlementsSync();
+  const entry = data.guilds[guildId];
+  if (!entry) throw new Error(`Guild ${guildId} has no entitlements entry to link`);
+  entry.kofiEmail = String(email).toLowerCase();
+  console.log(`🎟️ Entitlements: linked Ko-fi email for guild ${guildId}`);
+  return saveEntitlements(data);
+}
+
+/** @returns {string|null} guildId whose entry is linked to this Ko-fi email */
+export function findGuildByKofiEmail(email) {
+  const target = String(email || '').toLowerCase();
+  if (!target) return null;
+  for (const [guildId, entry] of Object.entries(loadEntitlementsSync().guilds)) {
+    if (entry.kofiEmail === target) return guildId;
+  }
+  return null;
+}
+
+/**
  * Remove the tier (and its metadata) from a guild; à-la-carte features stay.
  * Removes the entry entirely when nothing is left.
  */
@@ -358,6 +383,7 @@ export async function revokeTier(guildId) {
   if (!entry) return data;
   delete entry.tier; delete entry.validUntil; delete entry.source;
   delete entry.grantedBy; delete entry.grantedAt; delete entry.reason;
+  delete entry.kofiEmail; // unlink billing too — a revoked guild must not auto-re-extend on renewal
   if (entry.features.length === 0) delete data.guilds[guildId];
   console.log(`🎟️ Entitlements: revoked tier from guild ${guildId}`);
   return saveEntitlements(data);

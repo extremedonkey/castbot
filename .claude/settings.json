@@ -4,7 +4,8 @@
       "Bash(ssh -i ~/.ssh/castbot-key.pem -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new bitnami@13.238.148.170 \"cd /opt/bitnami/projects/castbot && git log --oneline -1 && git status --short | head -5\")",
       "Bash(ssh -i ~/.ssh/castbot-key.pem bitnami@13.238.148.170 'node -e \" *)",
       "PowerShell(node scripts/dev/win-restart.js \"Fix calculateComponentsForTribe estimator: tribe overhead is 2 \\(Container + header TextDisplay\\), not 3 - matches actual render since header separator removal, so 8-player page estimate is 40 not 41\")",
-      "Bash(ssh -i ~/.ssh/castbot-key.pem -o StrictHostKeyChecking=no -o ConnectTimeout=15 bitnami@13.238.148.170 'cd /opt/bitnami/projects/castbot && git log --oneline -1 && ls -la entitlements.json 2>/dev/null && node -e \"const d=JSON.parse\\(require\\(\\\\\"fs\\\\\"\\).readFileSync\\(\\\\\"entitlements.json\\\\\",\\\\\"utf8\\\\\"\\)\\); console.log\\(\\\\\"entitled guilds:\\\\\", Object.keys\\(d.guilds\\).length\\)\"')"
+      "Bash(ssh -i ~/.ssh/castbot-key.pem -o StrictHostKeyChecking=no -o ConnectTimeout=15 bitnami@13.238.148.170 'cd /opt/bitnami/projects/castbot && git log --oneline -1 && ls -la entitlements.json 2>/dev/null && node -e \"const d=JSON.parse\\(require\\(\\\\\"fs\\\\\"\\).readFileSync\\(\\\\\"entitlements.json\\\\\",\\\\\"utf8\\\\\"\\)\\); console.log\\(\\\\\"entitled guilds:\\\\\", Object.keys\\(d.guilds\\).length\\)\"')",
+      "Bash(ssh -o StrictHostKeyChecking=no -i ~/.ssh/castbot-key.pem bitnami@13.238.148.170 'ls -lh ~/castbot/logs/ 2>/dev/null; echo \"=== HEAD ===\"; head -3 ~/castbot/logs/user-analytics.log; echo \"=== TAIL ===\"; tail -3 ~/castbot/logs/user-analytics.log; echo \"=== LINES ===\"; wc -l ~/castbot/logs/user-analytics.log')"
     ]
   }
 }
