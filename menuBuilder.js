@@ -233,7 +233,7 @@ export class MenuBuilder {
     const components = [
       { type: 10, content: `## ${menuConfig.title}` },
       { type: 14 },
-      { type: 10, content: `### \`\`\`🐙 Special Features\`\`\`` },
+      { type: 10, content: `### \`\`\`🦁 Safari Premium\`\`\`` },
       { type: 1, components: specialFeatures },
       ...channelsSection,
       // 📢 Player Engagement — host→player broadcast tools (2026-08-08): Category Post moved
