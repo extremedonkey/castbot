@@ -876,9 +876,11 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // behind it lock-swaps to the upsell for guilds without an active/grace tier.
   const advancedFeaturesButtons = [
     new ButtonBuilder().setCustomId('castbot_premium').setLabel('CastBot Premium').setStyle(ButtonStyle.Primary).setEmoji('⭐'),
-    // Donate moved into the Premium menu (2026-08-08) — Premium is becoming the money path
+    // Donate moved into the Premium menu (2026-08-08) — Premium is becoming the money path.
+    // 🪛 Tools KILLED from the menu (Reece, 2026-08-08): everything it held lives in the
+    // Premium menu behind the paywall now. setup_menu + castbot_tools handler retained
+    // for in-flight ephemerals; delete after a settling period.
     new ButtonBuilder().setCustomId('castbot_settings').setLabel('Settings').setStyle(ButtonStyle.Secondary).setEmoji('⚙️'),
-    new ButtonBuilder().setCustomId('castbot_tools').setLabel('Tools').setStyle(ButtonStyle.Secondary).setEmoji('🪛'),
     new ButtonBuilder().setCustomId('prod_setup_wizard').setLabel('Setup').setStyle(setupAllComplete ? ButtonStyle.Secondary : ButtonStyle.Danger).setEmoji('🧙'),
     // Was Tools → "Need Help?" — promoted here when Donate freed the seat (2026-08-08)
     new ButtonBuilder().setLabel('Support').setStyle(ButtonStyle.Link).setEmoji(getBotEmoji('castbot_logo') ?? '❓').setURL('https://discord.gg/H7MpJEjkwT')

@@ -20,8 +20,9 @@ const MENU_BUILDER_JS = path.join(__dirname, '..', 'menuBuilder.js');
 
 // Replicated from createProductionMenuInterface (app.js) — Advanced row build.
 // 'support_link' stands in for the URL-style Support button (link buttons have no custom_id).
+// 🪛 Tools removed 2026-08-08 (Reece: "kill Tools") — its features live behind the paywall.
 function advancedRowIds() {
-  return ['castbot_premium', 'castbot_settings', 'castbot_tools', 'prod_setup_wizard', 'support_link'];
+  return ['castbot_premium', 'castbot_settings', 'prod_setup_wizard', 'support_link'];
 }
 
 describe('prod /menu Advanced row — ⭐ CastBot Premium placement (public as of 2026-08-08)', () => {
@@ -29,11 +30,17 @@ describe('prod /menu Advanced row — ⭐ CastBot Premium placement (public as o
     const row = advancedRowIds();
     assert.equal(row[0], 'castbot_premium');
     assert.equal(row[1], 'castbot_settings');
-    assert.equal(row.length, 5);
+    assert.equal(row.length, 4);
   });
 
-  it('Donate is out of the main menu row (it lives in the Premium menu now)', () => {
+  it('Donate and Tools are out of the main menu row (Donate lives in Premium; Tools is killed)', () => {
     assert.ok(!advancedRowIds().includes('prod_donate'));
+    assert.ok(!advancedRowIds().includes('castbot_tools'));
+    const source = readFileSync(APP_JS, 'utf8');
+    const rowIdx = source.indexOf('const advancedFeaturesButtons');
+    const rowBlock = source.slice(rowIdx, rowIdx + 1400);
+    assert.ok(!rowBlock.includes("setCustomId('castbot_tools')"),
+      'castbot_tools button came back to the Advanced row — Tools was killed 2026-08-08 (features live behind the paywall)');
   });
 
   it('the app.js Advanced row build no longer references the old two-ID allowlist', () => {
