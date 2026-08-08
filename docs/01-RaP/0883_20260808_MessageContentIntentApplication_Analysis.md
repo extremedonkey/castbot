@@ -1,6 +1,6 @@
 # 📜 Message Content Intent — Privileged Intent Application (prod CastBot)
 
-**Status:** 🟡 Analysis complete — pre-submission checklist below, Reece to submit
+**Status:** 📤 **SUBMITTED 2026-08-08** — awaiting Discord review. As-submitted answers recorded in [§ As Submitted](#-as-submitted-2026-08-08) below. Pre-reqs completed same day: public [PRIVACY.md](../../PRIVACY.md) (GitHub URL), in-bot policy screen corrected (commit `72877628`).
 **Trigger:** First-ever prod archive run (2026-08-08) produced `[no content]` for all 535 messages — prod CastBot lacks the Message Content Intent, and toggling it in the Developer Portal returned:
 > *"This action cannot be performed because the application is exposed to a high user count. It must be reviewed for Privileged Intents before any more can be added."*
 
@@ -127,6 +127,45 @@ flowchart LR
 3. **Capture evidence** (screenshots + short video from CastBot Test, per §9 checklist).
 4. **Fill the form** with the answers above — notably **off-platform storage = No**.
 5. Submit; expect days-to-weeks. Meanwhile the workaround stands: archive via CastBot Test (and keep the Test app small).
+
+## 📤 As Submitted (2026-08-08)
+
+Form: `https://discord.com/developers/applications/1319912453248647170/request-additional-intents`
+
+**Application Details:**
+> CastBot is a community-management bot for Online Reality Games (ORGs) — Discord communities that run Survivor/Big Brother-style social games. It manages season castlists, player profiles (pronouns, timezones), season applications, private confessional channels, and game mechanics. It is admin-driven: functionality lives behind an admin menu, and player-facing responses are ephemeral.
+>
+> ORG communities reuse one server across many seasons, creating 300+ channels per season against Discord's 500-channel cap. CastBot's Channel Archive feature lets a server administrator export a channel's message history into a self-contained, Discord-styled HTML file which is posted back into their own Discord server as a message attachment, so old channels can be cleaned up without losing the community's history.
+
+**Public Privacy Policy?** `Yes`
+
+**Where is your Privacy Policy available?**
+> Published publicly on our GitHub repository: https://github.com/extremedonkey/castbot/blob/main/PRIVACY.md. It is also displayed in full inside the bot itself — every user can open it via the bot's Settings → 📜 Policy screen, which links back to the public copy.
+
+**Privacy Policy link:** https://github.com/extremedonkey/castbot/blob/main/PRIVACY.md
+
+**Intents applied for:** Message Content Intent only (Presence left unchecked).
+
+**Can users opt-out of having their message content data tracked?** `Yes`
+**Storing message content off-platform?** `No` *(collapses the 30-day retention and encryption-at-rest sub-questions — see §5 for why No is the technically correct answer)*
+**Used to train ML/AI models?** `No`
+
+**How do users contact you to request deletion?**
+> Support server: https://discord.gg/H7MpJEjkwT (also linked inside the bot at Settings → Policy), or email extremedonkey@gmail.com. Deletion requests are actioned within 48 hours. Note that archive files live as attachments inside the customer's own Discord server — any server admin can delete them directly at any time without contacting us.
+
+**Why do you need the Message Content intent?**
+> One feature: Channel Archive. ORG communities reuse a single server for many seasons and hit Discord's 500-channel cap; admins need to preserve a channel's history before cleaning up old channels. When an admin explicitly runs Archive, CastBot fetches that channel's messages once via the REST API (GET /channels/{id}/messages), renders them into a self-contained HTML file in memory, and posts the file back into the same server as an attachment. Without the intent, content/embeds/attachments are redacted server-side and the export is empty.
+>
+> Scope: we do not subscribe to message content over the Gateway — usage is on-demand REST reads of a single channel, initiated by that server's administrators. Content is never written to our servers' disk or any database; the only storage is the resulting attachment inside the customer's own Discord server. There is no passive monitoring, no logging of content, and no AI/ML use. This usage is disclosed in our privacy policy: https://github.com/extremedonkey/castbot/blob/main/PRIVACY.md
+
+**Evidence links (Reece's text, verbatim):**
+> UI before the messsage content intent: https://cdn.discordapp.com/attachments/1480242675725897789/1535672134372823061/image.png?ex=6a789da0&is=6a774c20&hm=fc05ffd7e9ebcbfa325e27f3fbeaff8eea50743b5d76856f8ae05614ffc07cbd&
+>
+> Screenshot of the Message Content: https://cdn.discordapp.com/attachments/1480242675725897789/1535672664541106277/image.png?ex=6a789e1e&is=6a774c9e&hm=283284367aecf6d7cf818eb4c7a7011de2075c42ba9660cc24f5e06d85eeb2cc&
+>
+> For the feature, the user is explicitly the one taking action to trigger the Message Content Intent, to support their own requirements, rather than CastBot continually monitoring every channel in the server or similar.
+
+⚠️ **Known weakness of the submission:** the two evidence links are **signed Discord CDN attachment URLs, which expire (~24h)** — the same expiry problem the archive feature itself works around. If Discord's review happens after expiry, the reviewer sees dead links. If the application is denied or bounced for inaccessible evidence, re-host the screenshots somewhere permanent (imgur / GitHub repo / unlisted YouTube) and resubmit with those.
 
 ## ⚠️ Risks
 - **Denial**: no functional loss vs today — prod archives stay broken, Test-app workaround continues. Can reapply with clarifications.
