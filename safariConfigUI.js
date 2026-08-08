@@ -164,8 +164,8 @@ export async function createSafariCustomizationUI(guildId, currentConfig, userId
             components: [
                 { type: 2, custom_id: 'castbot_roles_security', label: 'Roles', style: 2, emoji: { name: '🔐' } },
                 { type: 2, custom_id: 'safari_configure_log', label: 'Logs', style: 2, emoji: { name: '🪵' } },
-                // Import/Export moved to Map Explorer (2026-08-08); Data + Reece's Stuff
-                // moved here from Tools same day (display-only gate — handlers re-check)
+                // Import/Export moved to CastBot Premium → Safari Utilities (2026-08-08);
+                // Data + Reece's Stuff moved here from Tools same day (display-only gate — handlers re-check)
                 ...(['391415444084490240', '1086246253819613274'].includes(userId) ? [
                     { type: 2, custom_id: 'data_admin', label: 'Data', style: 4, emoji: { name: '🧮' } },
                     { type: 2, custom_id: 'reeces_stuff', label: "Reece's Stuff", style: 4, emoji: { name: '🐧' } }

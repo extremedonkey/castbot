@@ -17206,7 +17206,7 @@ To fix this:
         });
       }
     } else if (custom_id === 'safari_export_data') {
-      // Settings → Advanced → Export — component selection screen (granular export).
+      // Premium → 📦 Safari Utilities → Export — component selection screen (granular export).
       // Actual generation happens in safari_export_select below.
       return ButtonHandlerFactory.create({
         id: 'safari_export_data',
@@ -17246,7 +17246,7 @@ To fix this:
                   { type: 14 },
                   { type: 10, content: error.message },
                   { type: 14 },
-                  { type: 1, components: [{ type: 2, custom_id: 'safari_export_data', label: 'Try Again', style: 1, emoji: { name: '🔄' } }, { type: 2, custom_id: 'safari_map_explorer', label: '← Map Explorer', style: 2 }] }
+                  { type: 1, components: [{ type: 2, custom_id: 'safari_export_data', label: 'Try Again', style: 1, emoji: { name: '🔄' } }, { type: 2, custom_id: 'castbot_premium', label: '← Premium', style: 2 }] }
                 ]
               }],
               flags: 1 << 15
@@ -17293,7 +17293,7 @@ To fix this:
                 { type: 14 },
                 { type: 1, components: [
                   { type: 2, custom_id: 'safari_export_data', label: 'Export Again', style: 2, emoji: { name: '📤' } },
-                  { type: 2, custom_id: 'safari_map_explorer', label: '← Map Explorer', style: 2 }
+                  { type: 2, custom_id: 'castbot_premium', label: '← Premium', style: 2 }
                 ] }
               ]
             }],
@@ -17586,8 +17586,8 @@ To fix this:
         }
       }
     } else if (custom_id === 'safari_import_data') {
-      // Settings → Advanced → Import — prep-warning screen, then the modal File Upload
-      // (file_import_safari). Replaces legacy createMessageCollector pattern. See RaP 0917.
+      // Premium → 📦 Safari Utilities → Import — prep-warning screen, then the modal File
+      // Upload (file_import_safari). Replaces legacy createMessageCollector pattern. See RaP 0917.
       return ButtonHandlerFactory.create({
         id: 'safari_import_data',
         requiresPermission: PermissionFlagsBits.ManageRoles,
@@ -17611,7 +17611,7 @@ To fix this:
                 { type: 10, content: 'Click **Import** below to upload your Safari export file.' },
                 { type: 14 },
                 { type: 1, components: [
-                  { type: 2, custom_id: 'safari_map_explorer', label: '← Map Explorer', style: 2 },
+                  { type: 2, custom_id: 'castbot_premium', label: '← Premium', style: 2 },
                   { type: 2, custom_id: 'file_import_safari', label: 'Import', style: 1, emoji: { name: '📥' } }
                 ] }
               ]
@@ -17715,7 +17715,7 @@ To fix this:
                 { type: 14 },
                 { type: 1, components: [
                   { type: 2, custom_id: 'file_import_safari', label: 'Import Another File', style: 2, emoji: { name: '📥' } },
-                  { type: 2, custom_id: 'safari_map_explorer', label: '← Map Explorer', style: 2 }
+                  { type: 2, custom_id: 'castbot_premium', label: '← Premium', style: 2 }
                 ] }
               ]
             }],
@@ -32286,19 +32286,6 @@ To fix this:
           // Use extracted function to build response (ephemeral by default)
           const { buildMapExplorerResponse } = await import('./mapExplorer.js');
           return await buildMapExplorerResponse(context.guildId, context.userId, context.client, true);
-        }
-      })(req, res, client);
-
-    } else if (custom_id === 'map_utilities') {
-      // Map Explorer → 🛠️ Utilities submenu (Import/Export, Anchors, Navigate Tidy)
-      return ButtonHandlerFactory.create({
-        id: 'map_utilities',
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        updateMessage: true,
-        handler: async (context) => {
-          const { buildMapUtilitiesMenu } = await import('./mapExplorer.js');
-          return await buildMapUtilitiesMenu(context.guildId);
         }
       })(req, res, client);
 

@@ -2505,23 +2505,32 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
 
   // Create back button (only for ephemeral messages)
   if (isEphemeral) {
-    // Utilities submenu (2026-08-08): Import/Export, Anchors and Navigate Tidy moved
-    // behind one button. NOT map-gated — Import/Export and Navigate Tidy work without
-    // an active map. Ephemeral-only — never rendered on the public shared map.
-    const utilitiesButton = new ButtonBuilder()
-      .setCustomId('map_utilities')
-      .setLabel('Utilities')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🛠️');
-
-    // Guide (moved from Settings 2026-08-08) sits beside Utilities.
+    // Guide (moved from Settings 2026-08-08) sits beside the row 3 base buttons.
     const guideButton = new ButtonBuilder()
       .setCustomId('prod_guide_0')
       .setLabel('Guide')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🦁');
 
-    const mapButtonRow3 = new ActionRowBuilder().addComponents([...row3Buttons, utilitiesButton, guideButton]);
+    // Anchors (location card rebuild) and Navigate Tidy (stale nav-panel cleanup) live
+    // directly on Map Explorer (2026-08-08) — briefly moved behind a Utilities submenu,
+    // moved back per Reece. Anchors is map-gated (meaningless without an active map);
+    // Navigate Tidy is not (works on any stale panel regardless of map state).
+    const anchorsButton = new ButtonBuilder()
+      .setCustomId('map_admin_refresh_anchors')
+      .setLabel('Anchors')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('⚓')
+      .setDisabled(!hasActiveMap);
+
+    const navTidyButton = new ButtonBuilder()
+      .setCustomId('nav_tidy_open')
+      .setLabel('Navigate Tidy')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🗺️');
+
+    const mapButtonRow3 = new ActionRowBuilder().addComponents([...row3Buttons, guideButton]);
+    const mapButtonRow3b = new ActionRowBuilder().addComponents([anchorsButton, navTidyButton]);
 
     const backButton = new ButtonBuilder()
       .setCustomId('prod_menu_back')
@@ -2534,6 +2543,7 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     containerComponents.push(mapButtonRow2.toJSON());
     containerComponents.push({ type: 14 }); // Separator between player lifecycle and map tools
     containerComponents.push(mapButtonRow3.toJSON());
+    containerComponents.push(mapButtonRow3b.toJSON());
     containerComponents.push({ type: 14 }); // Separator
     containerComponents.push(backRow.toJSON());
   } else {
@@ -2560,48 +2570,6 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
   return {
     flags: (1 << 15), // IS_COMPONENTS_V2 flag
     components: [mapExplorerContainer]
-  };
-}
-
-/**
- * Build the 🛠️ Utilities submenu (Map Explorer → Utilities).
- * Houses Import/Export (Safari content round-trip), Anchors (location card rebuild)
- * and Navigate Tidy (stale nav-panel cleanup) — moved here 2026-08-08 from the
- * Map Explorer root and Tools → Cleanup respectively.
- * Ephemeral-only; reached via the map_utilities button.
- */
-export async function buildMapUtilitiesMenu(guildId) {
-  const safariData = await loadSafariContent();
-  const guildMaps = safariData[guildId]?.maps || {};
-  const hasActiveMap = !!(guildMaps.active && guildMaps[guildMaps.active]);
-
-  const container = {
-    type: 17,
-    accent_color: 0x00AE86, // Teal — matches Map Explorer parent
-    components: [
-      { type: 10, content: '## 🛠️ Utilities | Map Explorer' },
-      { type: 14 },
-      { type: 10, content: '### ```📦 Import / Export```' },
-      { type: 1, components: [
-        { type: 2, custom_id: 'safari_import_data', label: 'Import', style: 2, emoji: { name: '📥' } },
-        { type: 2, custom_id: 'safari_export_data', label: 'Export', style: 2, emoji: { name: '📤' } }
-      ]},
-      { type: 10, content: '### ```🧹 Maintenance```' },
-      { type: 1, components: [
-        // Anchors rebuilds location cards — meaningless without an active map
-        { type: 2, custom_id: 'map_admin_refresh_anchors', label: 'Anchors', style: 2, emoji: { name: '⚓' }, disabled: !hasActiveMap },
-        { type: 2, custom_id: 'nav_tidy_open', label: 'Navigate Tidy', style: 2, emoji: { name: '🗺️' } }
-      ]},
-      { type: 14 },
-      { type: 1, components: [
-        { type: 2, custom_id: 'safari_map_explorer', label: '← Map Explorer', style: 2 }
-      ]}
-    ]
-  };
-
-  return {
-    flags: (1 << 15), // IS_COMPONENTS_V2 (stripped automatically on UPDATE_MESSAGE)
-    components: [container]
   };
 }
 

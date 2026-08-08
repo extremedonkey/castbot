@@ -487,18 +487,18 @@ export const BUTTON_REGISTRY = {
   },
   'safari_import_data': {
     label: 'Import',
-    description: 'Map Explorer → Utilities → Import — shows prep-warning screen, then opens file_import_safari modal',
+    description: 'Premium → Safari Utilities → Import — shows prep-warning screen, then opens file_import_safari modal',
     emoji: '📥',
     style: 'Secondary',
-    parent: 'map_utilities',
+    parent: 'castbot_premium',
     category: 'admin'
   },
   'safari_export_data': {
     label: 'Export',
-    description: 'Map Explorer → Utilities → Export — opens the Safari export component-select screen',
+    description: 'Premium → Safari Utilities → Export — opens the Safari export component-select screen',
     emoji: '📤',
     style: 'Secondary',
-    parent: 'map_utilities',
+    parent: 'castbot_premium',
     category: 'admin'
   },
   'safari_export_select': {
@@ -2606,14 +2606,6 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'safari'
   },
-  'map_utilities': {
-    label: 'Utilities',
-    description: 'Map Explorer → 🛠️ Utilities submenu: Import/Export, Anchors, Navigate Tidy',
-    emoji: '🛠️',
-    style: 'Secondary',
-    category: 'safari_map_admin',
-    parent: 'safari_map_explorer'
-  },
   'safari_shared_map': {
     label: 'Shared Map',
     description: 'Share map publicly in channel (non-ephemeral map view)',
@@ -2673,14 +2665,14 @@ export const BUTTON_REGISTRY = {
     category: 'safari_movement'
   },
 
-  // Navigate Tidy (Tools → Cleanup): bulk stale-panel cleanup
+  // Navigate Tidy (Map Explorer): bulk stale-panel cleanup
   'nav_tidy_open': {
     label: 'Navigate Tidy',
     description: 'Scan map channels for stale navigation panels',
     emoji: '🗺️',
     style: 'Secondary',
     category: 'safari_movement',
-    parent: 'map_utilities'
+    parent: 'safari_map_explorer'
   },
   'nav_tidy_confirm': {
     label: 'Delete Panels',
@@ -2851,11 +2843,11 @@ export const BUTTON_REGISTRY = {
   },
   'map_admin_refresh_anchors': {
     label: 'Anchors',
-    description: 'Manually refresh anchor (location card) messages for specific coordinates. Lives in Map Explorer → Utilities',
+    description: 'Manually refresh anchor (location card) messages for specific coordinates. Lives directly on Map Explorer',
     emoji: '⚓',
     style: 'Secondary',
     category: 'safari_map_admin',
-    parent: 'map_utilities',
+    parent: 'safari_map_explorer',
     requiresPermission: 'ManageRoles'
   },
   'safari_paused_players': {

@@ -246,6 +246,14 @@ export class MenuBuilder {
       ] },
       { type: 10, content: `### \`\`\`🧹 Cleanup\`\`\`` },
       { type: 1, components: cleanupButtons },
+      // Safari Utilities (2026-08-08): Import/Export moved here from the Map Explorer
+      // Utilities submenu — round-tripping Safari content is a Premium-tier data op,
+      // not a map-editing tool. Anchors + Navigate Tidy went back to Map Explorer instead.
+      { type: 10, content: `### \`\`\`📦 Safari Utilities\`\`\`` },
+      { type: 1, components: [
+        { type: 2, custom_id: 'safari_import_data', label: 'Import', style: 2, emoji: { name: '📥' } },
+        { type: 2, custom_id: 'safari_export_data', label: 'Export', style: 2, emoji: { name: '📤' } }
+      ] },
       { type: 10, content: `### \`\`\`🔮 Utilities\`\`\`` },
       {
         type: 1,
