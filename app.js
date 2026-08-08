@@ -6766,17 +6766,12 @@ To fix this:
             components: [
               {
                 type: 10, // Text Display
-                content: `## 📜 CastBot Policy`
+                content: `# 📜 Terms of Service\n-# Last Updated: November 2025\n\n**In Plain English:**\n\nCastBot is a free Discord bot for running online reality games (ORGs). By using it, you agree to:\n\n• **Use it responsibly** - Don't try to break it or abuse it\n• **No warranties** - CastBot is provided "as is" and might have bugs\n• **We can make changes** - Features and these terms may be updated\n• **Your responsibility** - How you use CastBot in your games is up to you\n\nThat's it! No hidden gotchas, no weird legal stuff. If you have questions or concerns, reach out on our support server (link below).`
               },
               { type: 14 }, // Separator
               {
                 type: 10, // Text Display
-                content: `**Terms of Service** (Last Updated: November 2025)\n\n**In Plain English:**\n\nCastBot is a free Discord bot for running online reality games (ORGs). By using it, you agree to:\n\n• **Use it responsibly** - Don't try to break it or abuse it\n• **No warranties** - CastBot is provided "as is" and might have bugs\n• **We can make changes** - Features and these terms may be updated\n• **Your responsibility** - How you use CastBot in your games is up to you\n\nThat's it! No hidden gotchas, no weird legal stuff. If you have questions or concerns, reach out on our support server (link below).`
-              },
-              { type: 14 }, // Separator
-              {
-                type: 10, // Text Display
-                content: `**Privacy Policy** (Last Updated: November 2025)\n\n## What We Collect\n\n**Server & User Identifiers:**\n• Discord Server IDs, User IDs, Role IDs, Channel IDs\n• Used for: Role assignments, castlist management, server configuration\n\n**Game Data:**\n• Castlists, tribes, season information, player placements\n• Used for: Displaying game rosters and managing ORG seasons\n\n**User Preferences:**\n• Pronouns, timezones, availability times, vanity role selections\n• Used for: Personalized player profiles and scheduling\n\n**Message Content (Application Channels Only):**\n• Messages typed in private application channels, used for season application responses\n• ONLY in channels created via the "Apply" button — never regular channels, DMs, or non-application contexts`
+                content: `# 🔒 Privacy Policy\n-# Last Updated: November 2025\n\n## What We Collect\n\n**Server & User Identifiers:**\n• Discord Server IDs, User IDs, Role IDs, Channel IDs\n• Used for: Role assignments, castlist management, server configuration\n\n**Game Data:**\n• Castlists, tribes, season information, player placements\n• Used for: Displaying game rosters and managing ORG seasons\n\n**User Preferences:**\n• Pronouns, timezones, availability times, vanity role selections\n• Used for: Personalized player profiles and scheduling\n\n**Message Content (Application Channels Only):**\n• Messages typed in private application channels, used for season application responses\n• ONLY in channels created via the "Apply" button — never regular channels, DMs, or non-application contexts`
               },
               { type: 14 }, // Separator
               {
