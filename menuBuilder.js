@@ -317,14 +317,14 @@ export class MenuBuilder {
     const entitled = hasPremiumAccessSync(context?.guildId) || String(context?.userId) === REECE_ID;
 
     // Navigation — Donate moved here from the main menu (2026-08-08): Premium is the money
-    // path. ⭐ Get Premium renders for NON-entitled guilds only (Reece 2026-08-08): paying
-    // servers don't need an upsell button, and it once pushed the heaviest entitled render
-    // to 41/40. After the Cleanup-section retirement + header-Section rework: ~37/40.
+    // path. ⭐ Get Premium is ALWAYS rendered again (Reece 2026-08-08): the conditional was
+    // a 41/40 emergency trim; the Cleanup retirement + header-Section rework refunded the
+    // space (heaviest render ~38/40 with it).
     components.push(
       { type: 14 },
       { type: 1, components: [
         { type: 2, custom_id: 'prod_menu_back', label: '← Menu', style: 2 },
-        ...(!entitled ? [{ type: 2, custom_id: 'premium_get', label: 'Get Premium', style: 3, emoji: { name: '⭐' } }] : []),
+        { type: 2, custom_id: 'premium_get', label: 'Get Premium', style: 3, emoji: { name: '⭐' } },
         { type: 2, custom_id: 'prod_donate', label: 'Donate', style: 2, emoji: { name: '☕' } }
       ] }
     );
