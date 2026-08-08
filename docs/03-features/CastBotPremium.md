@@ -122,7 +122,11 @@ Why lock-swap instead of gating the real handlers: Premium-menu buttons shared c
 
 Upsell → **🎟️ Redeem** → modal asks for the email used on Ko-fi → [src/kofi/premiumRedeem.js](../../src/kofi/premiumRedeem.js) matches it against the webhook's billing records and, if eligible, grants the tier **anchored to the latest payment** (`paidAt + 31d`, same math as renewals), binds the email (auto-renewals from then on), and posts a claim card to #💎premium with a **Reece-only ↩️ Undo** (revoke + unlink in one click).
 
-Rules (pure `evaluateRedeem`, unit-tested): run **inside the target server** with Manage Roles (redeeming IS activating — no subscriber/slot layer yet); **one guild per email**, first-come-first-served (`linked_elsewhere` denial points at concierge transfer); stale memberships (`paidAt + 31d + grace < now`) denied as inactive; a guild already premium from another source can't be claimed over; re-redeem by the same email in the same guild is an idempotent refresh. Transfers between seasons stay concierge (Entitlements panel) until the Full subscriber model.
+Rules (pure `evaluateRedeem`, unit-tested): run **inside the target server** with Manage Roles (redeeming IS activating — no subscriber/slot layer yet); **one guild per email**; stale memberships (`paidAt + 31d + grace < now`) denied as inactive; a guild already premium from another source can't be claimed over; re-redeem by the same email in the same guild is an idempotent refresh.
+
+### 🔁 Self-service Transfer (LIVE — "transfer = redeem in the new server")
+
+Redeeming with an email linked to a *different* guild no longer denies — it **offers the move**: a confirmation screen with computed facts ("currently powers **Server A** until <date>; A drops to free immediately; one move per 7 days") → confirm executes atomically (revoke+unlink old → grant new anchored to the same payment → re-link → stamp `transferLockedUntil = now + 7d` on the new entry) → transfer card in #💎premium with the same Reece ↩️ Undo. Inside the cooldown the screen names the unlock date instead. Pending offers live in a 10-min in-memory cache (the email can't ride a custom_id) and confirm **re-validates against live state** before executing. The Full model (move without re-typing the email, multi-slot Network tier) remains future work.
 
 ### 🔀 The premium launch switch
 

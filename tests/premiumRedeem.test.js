@@ -5,7 +5,7 @@
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { findLatestSubscriptionPayment, evaluateRedeem, redeemDenialMessage } from '../src/kofi/premiumRedeem.js';
+import { findLatestSubscriptionPayment, evaluateRedeem, redeemDenialMessage, TRANSFER_COOLDOWN_MS } from '../src/kofi/premiumRedeem.js';
 import { RENEWAL_EXTEND_MS } from '../src/kofi/kofiWebhook.js';
 import { GRACE_MS } from '../entitlements.js';
 
@@ -53,8 +53,28 @@ describe('Redeem — evaluateRedeem', () => {
     assert.equal(evaluateRedeem({ ...base, payment: stale }).reason, 'inactive');
   });
 
-  it('email linked to a DIFFERENT guild → linked_elsewhere (first-come-first-served)', () => {
-    assert.equal(evaluateRedeem({ ...base, linkedGuildId: 'g2' }).reason, 'linked_elsewhere');
+  it('email linked to a DIFFERENT guild → transfer OFFER, carrying the old guild + expiry', () => {
+    const v = evaluateRedeem({ ...base, linkedGuildId: 'g2' });
+    assert.equal(v.reason, 'transfer_available');
+    assert.equal(v.oldGuildId, 'g2');
+    assert.equal(v.validUntil, (NOW - 5 * 86400000) + RENEWAL_EXTEND_MS);
+  });
+
+  it('transfer inside the 7-day cooldown → transfer_cooldown with the unlock time', () => {
+    const unlockAt = NOW + 3 * 86400000;
+    const v = evaluateRedeem({ ...base, linkedGuildId: 'g2', linkedGuildTransferLockedUntil: unlockAt });
+    assert.equal(v.reason, 'transfer_cooldown');
+    assert.equal(v.unlockAt, unlockAt);
+  });
+
+  it('an EXPIRED cooldown stamp no longer blocks the move', () => {
+    const v = evaluateRedeem({ ...base, linkedGuildId: 'g2', linkedGuildTransferLockedUntil: NOW - 1000 });
+    assert.equal(v.reason, 'transfer_available');
+  });
+
+  it('target guild already premium from another source beats the transfer offer', () => {
+    const v = evaluateRedeem({ ...base, linkedGuildId: 'g2', tierState: { state: 'active' } });
+    assert.equal(v.reason, 'guild_already_premium');
   });
 
   it('re-redeem in the SAME linked guild is allowed (idempotent refresh)', () => {
@@ -67,9 +87,11 @@ describe('Redeem — evaluateRedeem', () => {
     assert.equal(evaluateRedeem({ ...base, tierState: { state: 'lapsed' } }).ok, true);
   });
 
-  it('every denial reason has player-facing copy', () => {
-    for (const reason of ['no_payment', 'inactive', 'linked_elsewhere', 'guild_already_premium', 'unknown']) {
+  it('every denial reason has player-facing copy (cooldown names its unlock date)', () => {
+    for (const reason of ['no_payment', 'inactive', 'guild_already_premium', 'unknown']) {
       assert.ok(redeemDenialMessage(reason).length > 10);
     }
+    assert.ok(redeemDenialMessage('transfer_cooldown', { unlockAt: NOW }).includes(`<t:${Math.floor(NOW / 1000)}:R>`));
+    assert.ok(TRANSFER_COOLDOWN_MS === 7 * 24 * 60 * 60 * 1000);
   });
 });

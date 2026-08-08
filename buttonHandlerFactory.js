@@ -1275,6 +1275,22 @@ export const BUTTON_REGISTRY = {
     category: 'admin',
     parent: 'premium_get'
   },
+  'premium_transfer_confirm': {
+    label: 'Move Premium Here',
+    description: 'Confirms a self-service premium transfer: old server drops to free, this server activates, 7-day move cooldown stamps',
+    emoji: '⭐',
+    style: 'Success',
+    category: 'admin',
+    parent: 'premium_redeem'
+  },
+  'premium_transfer_cancel': {
+    label: 'Cancel',
+    description: 'Abandons a pending premium transfer offer and returns to the upsell screen',
+    emoji: '❌',
+    style: 'Secondary',
+    category: 'admin',
+    parent: 'premium_redeem'
+  },
   'kofi_unlink_*': {
     label: 'Undo Claim',
     description: 'Reece-only Undo on a #💎premium claim card: revokes the tier and unbinds the Ko-fi email in one click',

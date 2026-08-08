@@ -7566,7 +7566,7 @@ To fix this:
         handler: async (context) => MenuBuilder.buildMenuResponse('premium_menu', context, 'Premium Menu (premium_menu)')
       })(req, res, client);
 
-    } else if (custom_id.startsWith('premium_locked_') || custom_id === 'premium_get' || custom_id === 'premium_redeem' || custom_id === 'premium_back') {
+    } else if (custom_id.startsWith('premium_locked_') || custom_id.startsWith('premium_transfer_') || custom_id === 'premium_get' || custom_id === 'premium_redeem' || custom_id === 'premium_back') {
       // 💳 Paywall surfaces — dispatch in MenuBuilder.handlePremiumSurface (upsell/modal/back)
       return ButtonHandlerFactory.create({
         id: custom_id.startsWith('premium_locked_') ? 'premium_locked' : custom_id,

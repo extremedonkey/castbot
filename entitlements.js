@@ -132,7 +132,9 @@ function normalize(data) {
         ...(typeof entry.reason === 'string' && entry.reason ? { reason: entry.reason } : {})
       } : {}),
       // Ko-fi billing link — renewals from this email auto-extend this guild's tier
-      ...(typeof entry?.kofiEmail === 'string' && entry.kofiEmail ? { kofiEmail: entry.kofiEmail.toLowerCase() } : {})
+      ...(typeof entry?.kofiEmail === 'string' && entry.kofiEmail ? { kofiEmail: entry.kofiEmail.toLowerCase() } : {}),
+      // Self-service transfer cooldown (7d after a move — RaP 0891 anti-slot-sharing)
+      ...(Number.isFinite(entry?.transferLockedUntil) ? { transferLockedUntil: entry.transferLockedUntil } : {})
     };
   }
   return { guilds: clean };
@@ -270,7 +272,8 @@ export function getGuildEntitlement(guildId) {
     effectiveFeatures: [...new Set([...entry.features, ...tierFeatures])],
     source: entry.source || null,
     grantedBy: entry.grantedBy || null,
-    reason: entry.reason || null
+    reason: entry.reason || null,
+    transferLockedUntil: Number.isFinite(entry.transferLockedUntil) ? entry.transferLockedUntil : null
   };
 }
 
@@ -316,7 +319,7 @@ export async function revokeFeature(guildId, features) {
  * both null = permanent. Creates the guild entry if new.
  * @returns {Promise<{guilds: Object}>}
  */
-export async function grantTier(guildId, tier, { name, addedBy, durationMs = null, validUntil, reason, source } = {}) {
+export async function grantTier(guildId, tier, { name, addedBy, durationMs = null, validUntil, reason, source, transferLockedUntil } = {}) {
   if (!/^\d{5,}$/.test(String(guildId))) throw new Error(`Invalid guild ID: ${guildId}`);
   if (!TIERS[tier]) throw new Error(`Unknown tier: ${tier}`);
   const data = loadEntitlementsSync();
@@ -328,6 +331,7 @@ export async function grantTier(guildId, tier, { name, addedBy, durationMs = nul
   entry.grantedBy = addedBy || null;
   entry.grantedAt = Date.now();
   if (reason) entry.reason = reason;
+  if (Number.isFinite(transferLockedUntil)) entry.transferLockedUntil = transferLockedUntil;
   data.guilds[guildId] = entry;
   console.log(`🎟️ Entitlements: granted tier ${tier} to guild ${guildId} (${entry.name}) ` +
     `${entry.validUntil ? `until ${new Date(entry.validUntil).toISOString()}` : 'permanently'} by ${addedBy || 'unknown'}`);
@@ -399,6 +403,7 @@ export async function revokeTier(guildId) {
   delete entry.tier; delete entry.validUntil; delete entry.source;
   delete entry.grantedBy; delete entry.grantedAt; delete entry.reason;
   delete entry.kofiEmail; // unlink billing too — a revoked guild must not auto-re-extend on renewal
+  delete entry.transferLockedUntil;
   if (entry.features.length === 0) delete data.guilds[guildId];
   console.log(`🎟️ Entitlements: revoked tier from guild ${guildId}`);
   return saveEntitlements(data);

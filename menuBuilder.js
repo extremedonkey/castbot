@@ -396,6 +396,9 @@ export class MenuBuilder {
       const { buildRedeemModal } = await import('./src/kofi/premiumRedeem.js');
       return { type: 9, data: buildRedeemModal() };
     }
+    if (customId.startsWith('premium_transfer_')) {
+      return (await import('./src/kofi/premiumRedeem.js')).handleTransferButton(context, customId);
+    }
     if (customId === 'premium_back') {
       return { components: [await MenuBuilder.create('premium_menu', context)] };
     }
