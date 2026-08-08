@@ -311,19 +311,20 @@ export async function revokeFeature(guildId, features) {
 }
 
 /**
- * Grant (or update) a tier on a guild. `durationMs` null = permanent; otherwise
- * validUntil = now + durationMs. Creates the guild entry if new.
+ * Grant (or update) a tier on a guild. Expiry: explicit `validUntil` (ms) wins when
+ * given (payment-anchored grants — redeem/webhook); else `durationMs` from now;
+ * both null = permanent. Creates the guild entry if new.
  * @returns {Promise<{guilds: Object}>}
  */
-export async function grantTier(guildId, tier, { name, addedBy, durationMs = null, reason } = {}) {
+export async function grantTier(guildId, tier, { name, addedBy, durationMs = null, validUntil, reason, source } = {}) {
   if (!/^\d{5,}$/.test(String(guildId))) throw new Error(`Invalid guild ID: ${guildId}`);
   if (!TIERS[tier]) throw new Error(`Unknown tier: ${tier}`);
   const data = loadEntitlementsSync();
   const entry = data.guilds[guildId] || { name: name || guildId, features: [], addedBy: addedBy || null, addedAt: Date.now() };
   if (name) entry.name = name;
   entry.tier = tier;
-  entry.validUntil = durationMs == null ? null : Date.now() + durationMs;
-  entry.source = 'manual';
+  entry.validUntil = validUntil !== undefined ? validUntil : (durationMs == null ? null : Date.now() + durationMs);
+  entry.source = source === 'subscription' ? 'subscription' : 'manual';
   entry.grantedBy = addedBy || null;
   entry.grantedAt = Date.now();
   if (reason) entry.reason = reason;

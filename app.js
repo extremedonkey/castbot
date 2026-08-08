@@ -876,10 +876,8 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // behind it lock-swaps to the upsell for guilds without an active/grace tier.
   const advancedFeaturesButtons = [
     new ButtonBuilder().setCustomId('castbot_premium').setLabel('CastBot Premium').setStyle(ButtonStyle.Primary).setEmoji('⭐'),
-    // Donate moved into the Premium menu (2026-08-08) — Premium is becoming the money path.
-    // 🪛 Tools KILLED from the menu (Reece, 2026-08-08): everything it held lives in the
-    // Premium menu behind the paywall now. setup_menu + castbot_tools handler retained
-    // for in-flight ephemerals; delete after a settling period.
+    // Donate moved into Premium (2026-08-08); 🪛 Tools KILLED same day (features live
+    // behind the paywall; setup_menu handler retained for in-flight ephemerals).
     new ButtonBuilder().setCustomId('castbot_settings').setLabel('Settings').setStyle(ButtonStyle.Secondary).setEmoji('⚙️'),
     new ButtonBuilder().setCustomId('prod_setup_wizard').setLabel('Setup').setStyle(setupAllComplete ? ButtonStyle.Secondary : ButtonStyle.Danger).setEmoji('🧙'),
     // Was Tools → "Need Help?" — promoted here when Donate freed the seat (2026-08-08)
@@ -7568,19 +7566,25 @@ To fix this:
         handler: async (context) => MenuBuilder.buildMenuResponse('premium_menu', context, 'Premium Menu (premium_menu)')
       })(req, res, client);
 
-    } else if (custom_id.startsWith('premium_locked_') || custom_id === 'premium_get' || custom_id === 'premium_redeem_stub' || custom_id === 'premium_back') {
-      // 💳 Premium paywall surfaces: locked-button clicks + Get Premium → upsell screen;
-      // Redeem → stub; ← Premium → back to the (re-locked-as-needed) premium menu.
+    } else if (custom_id.startsWith('premium_locked_') || custom_id === 'premium_get' || custom_id === 'premium_redeem' || custom_id === 'premium_back') {
+      // 💳 Paywall surfaces — dispatch in MenuBuilder.handlePremiumSurface (upsell/modal/back)
       return ButtonHandlerFactory.create({
         id: custom_id.startsWith('premium_locked_') ? 'premium_locked' : custom_id,
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        requiresModal: custom_id === 'premium_redeem',
+        updateMessage: custom_id !== 'premium_redeem',
+        handler: async (context) => MenuBuilder.handlePremiumSurface(context, custom_id)
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('kofi_unlink_')) {
+      // ↩️ Undo a premium claim from the #💎premium card (Reece-only, re-checked in handler)
+      return ButtonHandlerFactory.create({
+        id: 'kofi_unlink',
         updateMessage: true,
-        handler: async (context) => {
-          if (custom_id === 'premium_redeem_stub') return { components: [MenuBuilder.buildPremiumRedeemStub()] };
-          if (custom_id === 'premium_back') return { components: [await MenuBuilder.create('premium_menu', context)] };
-          return { components: [MenuBuilder.buildPremiumUpsell(context, custom_id.startsWith('premium_locked_'))] };
-        }
+        handler: async (context) => context.userId !== '391415444084490240'
+          ? { content: '💰 Reece only.', ephemeral: true }
+          : (await import('./src/kofi/premiumRedeem.js')).handleKofiUnlink(context, custom_id)
       })(req, res, client);
     } else if (custom_id === 'scheduled_jobs_dashboard') {
       // Guild-wide scheduled jobs dashboard (Tools → Utilities)
@@ -10884,23 +10888,7 @@ To fix this:
         id: 'moai_post',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
-        handler: async (context) => {
-          const { isMoaiEnvironment, buildPostedMoaiContainer } = await import('./moai.js');
-          if (!isMoaiEnvironment()) {
-            return { content: '🗿 The Moai does not dwell in production.', ephemeral: true };
-          }
-          await DiscordRequest(`channels/${context.channelId}/messages`, {
-            method: 'POST',
-            body: { components: [buildPostedMoaiContainer()], flags: (1 << 15) }
-          });
-          return {
-            components: [{ type: 17, accent_color: 0x2ecc71, components: [
-              { type: 10, content: `✅ Moai posted to <#${context.channelId}>` },
-              { type: 10, content: `-# Still keeper-only — everyone else who clicks it gets turned away.` }
-            ]}],
-            ephemeral: true
-          };
-        }
+        handler: async (context) => (await import('./moai.js')).postMoaiHandler(context)
       })(req, res, client);
 
     } else if (custom_id === 'moai_ask' || custom_id.startsWith('moai_ask_ctx_')) {
@@ -37326,6 +37314,11 @@ To fix this:
       // 💰 Ko-fi Grant + Link — grants premium and binds the payment email (Reece-only gate inside)
       const { handleKofiLinkModal } = await import('./src/kofi/kofiWebhook.js');
       return handleKofiLinkModal(req, res, client);
+
+    } else if (custom_id === 'premium_redeem_modal') {
+      // 🎟️ Self-service premium redeem — email claim (ManageRoles gate inside the handler)
+      const { handleRedeemModal } = await import('./src/kofi/premiumRedeem.js');
+      return handleRedeemModal(req, res, client);
 
     } else if (custom_id === 'moai_ask_modal' || custom_id.startsWith('moai_ask_modal_')) {
       // 🗿 The Moai — defer, run, reply. All logic lives in moai.js.

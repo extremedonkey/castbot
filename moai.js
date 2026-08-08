@@ -283,6 +283,25 @@ export function buildPostedMoaiContainer() {
 }
 
 /** Response cache for the Ask Another button (last 10). */
+/** moai_post button body — drops the standing Moai button into the channel (app.js stays a router). */
+export async function postMoaiHandler(context) {
+  if (!isMoaiEnvironment()) {
+    return { content: '🗿 The Moai does not dwell in production.', ephemeral: true };
+  }
+  const { DiscordRequest } = await import('./utils.js');
+  await DiscordRequest(`channels/${context.channelId}/messages`, {
+    method: 'POST',
+    body: { components: [buildPostedMoaiContainer()], flags: (1 << 15) }
+  });
+  return {
+    components: [{ type: 17, accent_color: 0x2ecc71, components: [
+      { type: 10, content: `✅ Moai posted to <#${context.channelId}>` },
+      { type: 10, content: `-# Still keeper-only — everyone else who clicks it gets turned away.` }
+    ]}],
+    ephemeral: true
+  };
+}
+
 export function rememberResponse(responseId, payload) {
   if (!global.moaiResponses) global.moaiResponses = new Map();
   global.moaiResponses.set(responseId, payload);

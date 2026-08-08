@@ -89,8 +89,9 @@ describe('Paywall tripwire — entitlement lock-swap replaces the ID allowlist',
   it('the paywall handler family is wired in app.js and serves the upsell', () => {
     assert.ok(appSource.includes("custom_id.startsWith('premium_locked_')"),
       'premium_locked_* handler branch missing');
-    assert.ok(appSource.includes('buildPremiumUpsell'), 'upsell builder not referenced by the handler');
-    assert.ok(menuSource.includes('ko-fi.com/CastBot'), 'upsell lost the Ko-fi purchase link');
+    assert.ok(appSource.includes('handlePremiumSurface'), 'paywall dispatch not referenced by the app.js handler');
+    assert.ok(menuSource.includes('buildPremiumUpsell') && menuSource.includes('ko-fi.com/CastBot'),
+      'upsell builder or its Ko-fi purchase link missing from menuBuilder');
   });
 });
 

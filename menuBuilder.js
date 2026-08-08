@@ -277,6 +277,10 @@ export class MenuBuilder {
             accessory: { type: 2, custom_id: 'entitlements_manage', label: 'Entitlements', style: 2, emoji: { name: '🎟️' } } }
         : { type: 10, content: `## ${menuConfig.title}` },
       { type: 14 },
+      // 🕒 Grace nag — computed fact, only rendered when true (LeanUI: no permanent chrome)
+      ...(hasPremiumAccessSync(context?.guildId) && getGuildEntitlement(context.guildId).tierState.state === 'grace'
+        ? [{ type: 10, content: `-# 🕒 **Premium expired <t:${Math.floor(getGuildEntitlement(context.guildId).tierState.validUntil / 1000)}:R>** — everything still works during grace. Renew at [ko-fi.com/CastBot](https://ko-fi.com/CastBot) to keep it.` }]
+        : []),
       ...askSection,
       { type: 10, content: `### \`\`\`🦁 Safari Premium\`\`\`` },
       { type: 1, components: specialFeatures },
@@ -373,36 +377,29 @@ export class MenuBuilder {
       { type: 14 },
       { type: 1, components: [
         { type: 2, custom_id: 'premium_back', label: '← Premium', style: 2 },
-        { type: 2, custom_id: 'premium_redeem_stub', label: 'Redeem', style: 3, emoji: { name: '🎟️' } },
+        // 🎟️ REAL self-service redeem (2026-08-08): opens the email-claim modal —
+        // src/kofi/premiumRedeem.js. Runs in the target server; redeeming IS activating.
+        { type: 2, custom_id: 'premium_redeem', label: 'Redeem', style: 3, emoji: { name: '🎟️' } },
         { type: 2, style: 5, label: 'ko-fi.com/CastBot', url: 'https://ko-fi.com/CastBot', emoji: { name: '☕' } }
       ] }
     ];
     return { type: 17, accent_color: 0xf39c12, components };
   }
 
-  /** 🎟️ Redeem — honest placeholder until the self-service linking flow ships. */
-  static buildPremiumRedeemStub() {
-    return {
-      type: 17,
-      accent_color: 0xf39c12,
-      components: [
-        { type: 10, content: `## 🎟️ Redeem Premium` },
-        { type: 14 },
-        {
-          type: 10,
-          content: `Self-service redemption is nearly ready. Right now, premium is activated for you:\n` +
-            `1. Subscribe at [ko-fi.com/CastBot](https://ko-fi.com/CastBot) (if you haven't yet)\n` +
-            `2. Your subscription is picked up automatically and activated within a few hours\n` +
-            `3. Need it sooner — or want it on a different server? Ask in the [CastBot server](https://discord.gg/H7MpJEjkwT)\n` +
-            `-# Soon this button will link your subscription and activate instantly, right here.`
-        },
-        { type: 14 },
-        { type: 1, components: [
-          { type: 2, custom_id: 'premium_get', label: '← Back', style: 2 },
-          { type: 2, style: 5, label: 'ko-fi.com/CastBot', url: 'https://ko-fi.com/CastBot', emoji: { name: '☕' } }
-        ] }
-      ]
-    };
+  /**
+   * Dispatcher for the paywall surface family (app.js stays a router):
+   * premium_redeem → email-claim modal · premium_back → rebuild the menu ·
+   * premium_get / premium_locked_* → the upsell screen.
+   */
+  static async handlePremiumSurface(context, customId) {
+    if (customId === 'premium_redeem') {
+      const { buildRedeemModal } = await import('./src/kofi/premiumRedeem.js');
+      return { type: 9, data: buildRedeemModal() };
+    }
+    if (customId === 'premium_back') {
+      return { components: [await MenuBuilder.create('premium_menu', context)] };
+    }
+    return { components: [MenuBuilder.buildPremiumUpsell(context, customId.startsWith('premium_locked_'))] };
   }
 
   /**

@@ -1266,13 +1266,22 @@ export const BUTTON_REGISTRY = {
     category: 'admin',
     parent: 'castbot_premium'
   },
-  'premium_redeem_stub': {
+  'premium_redeem': {
     label: 'Redeem',
-    description: 'Placeholder redemption screen — names the interim activation path until self-service linking ships',
+    description: 'Self-service premium redeem: email-claim modal, run inside the target server — grants tier anchored to the latest Ko-fi payment and binds the email for auto-renewals',
     emoji: '🎟️',
     style: 'Success',
+    requiresModal: true,
     category: 'admin',
     parent: 'premium_get'
+  },
+  'kofi_unlink_*': {
+    label: 'Undo Claim',
+    description: 'Reece-only Undo on a #💎premium claim card: revokes the tier and unbinds the Ko-fi email in one click',
+    emoji: '↩️',
+    style: 'Danger',
+    restrictedUser: '391415444084490240',
+    category: 'admin'
   },
   'premium_back': {
     label: '← Premium',
