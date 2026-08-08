@@ -30,7 +30,7 @@ export const BUTTON_REGISTRY = {
     emoji: '🧮',
     style: 'Danger',
     menu: 'data_admin',
-    parent: 'castbot_tools',
+    parent: 'castbot_settings',
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
@@ -1428,7 +1428,7 @@ export const BUTTON_REGISTRY = {
     emoji: '🐧',
     style: 'Danger',
     category: 'admin',
-    parent: 'castbot_tools',
+    parent: 'castbot_settings',
     restrictedUser: '391415444084490240'
   },
   'restart_prod': {
@@ -2344,7 +2344,7 @@ export const BUTTON_REGISTRY = {
     requiresModal: true
   },
   'castbot_roles_security': {
-    label: 'Roles & Security',
+    label: 'Roles',
     description: 'Configure which roles have full CastBot access',
     emoji: '🔐',
     style: 'Secondary',
@@ -5126,6 +5126,70 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'admin',
     parent: 'entitlements_manage'
+  },
+  'entitlements_guild': {
+    label: 'Manage Guild Premium',
+    description: 'Open a guild\'s premium detail screen: tier state, expiry, grant/extend/revoke, test stubs',
+    emoji: '⭐',
+    style: 'Secondary',
+    restrictedUser: '391415444084490240',
+    category: 'admin',
+    parent: 'entitlements_manage'
+  },
+  'entitlements_tier_grant_*': {
+    label: 'Grant/Update Premium',
+    description: 'Grant or update the premium tier for a guild — duration modal (blank = permanent)',
+    emoji: '⭐',
+    style: 'Success',
+    requiresModal: true,
+    restrictedUser: '391415444084490240',
+    category: 'admin',
+    parent: 'entitlements_guild'
+  },
+  'entitlements_tier_extend_*': {
+    label: 'Extend Premium +30d',
+    description: 'Push a guild\'s premium expiry 30 days forward (from expiry or now, whichever is later)',
+    emoji: '⏳',
+    style: 'Secondary',
+    restrictedUser: '391415444084490240',
+    category: 'admin',
+    parent: 'entitlements_guild'
+  },
+  'entitlements_tier_expire_*': {
+    label: 'Expire Now (test stub)',
+    description: 'Set premium validUntil to 1s ago — guild enters the GRACE window, for lapse testing',
+    emoji: '🧪',
+    style: 'Secondary',
+    restrictedUser: '391415444084490240',
+    category: 'admin',
+    parent: 'entitlements_guild'
+  },
+  'entitlements_tier_lapse_*': {
+    label: 'Lapse Now (test stub)',
+    description: 'Set premium validUntil past the grace window — guild fully lapses, for lapse testing',
+    emoji: '💀',
+    style: 'Secondary',
+    restrictedUser: '391415444084490240',
+    category: 'admin',
+    parent: 'entitlements_guild'
+  },
+  'entitlements_tier_revoke_*': {
+    label: 'Revoke Tier',
+    description: 'Remove the premium tier from a guild (its à-la-carte feature grants stay)',
+    emoji: '🗑️',
+    style: 'Danger',
+    restrictedUser: '391415444084490240',
+    category: 'admin',
+    parent: 'entitlements_guild'
+  },
+  'entitlements_back': {
+    label: 'Back',
+    description: 'Return from a guild premium detail screen to the Entitlements panel',
+    emoji: '⬅️',
+    style: 'Secondary',
+    restrictedUser: '391415444084490240',
+    category: 'admin',
+    parent: 'entitlements_guild'
   },
 
   // === MOAI (Claude Code Integration) ===

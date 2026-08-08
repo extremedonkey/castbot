@@ -93,6 +93,7 @@ import {
 import { MenuBuilder } from './menuBuilder.js';
 import { scheduler } from './scheduler.js';
 import { createBackButton } from './src/ui/backButtonFactory.js';
+import { getBotEmoji } from './botEmojis.js';
 import {
   PlayerManagementMode,
   PlayerButtonType,
@@ -876,7 +877,9 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     // Donate moved into the Premium menu (2026-08-08) — Premium is becoming the money path
     new ButtonBuilder().setCustomId('castbot_settings').setLabel('Settings').setStyle(ButtonStyle.Secondary).setEmoji('⚙️'),
     new ButtonBuilder().setCustomId('castbot_tools').setLabel('Tools').setStyle(ButtonStyle.Secondary).setEmoji('🪛'),
-    new ButtonBuilder().setCustomId('prod_setup_wizard').setLabel('Setup').setStyle(setupAllComplete ? ButtonStyle.Secondary : ButtonStyle.Danger).setEmoji('🧙')
+    new ButtonBuilder().setCustomId('prod_setup_wizard').setLabel('Setup').setStyle(setupAllComplete ? ButtonStyle.Secondary : ButtonStyle.Danger).setEmoji('🧙'),
+    // Was Tools → "Need Help?" — promoted here when Donate freed the seat (2026-08-08)
+    new ButtonBuilder().setLabel('Support').setStyle(ButtonStyle.Link).setEmoji(getBotEmoji('castbot_logo') ?? '❓').setURL('https://discord.gg/H7MpJEjkwT')
   ];
   const advancedFeaturesRow = new ActionRowBuilder().addComponents(advancedFeaturesButtons);
   
@@ -10917,12 +10920,13 @@ To fix this:
         handler: async (context) => (await import('./askCastBotWrite.js')).handlePlanButton(context)
       })(req, res, client);
 
-    } else if (custom_id === 'entitlements_manage' || custom_id === 'entitlements_add' || custom_id === 'entitlements_revoke') {
-      // 🎟️ Entitlements — runtime feature grants (Reece's Stuff). Logic: entitlementsUI.js
+    } else if (custom_id.startsWith('entitlements_')) {
+      // 🎟️ Entitlements (Reece's Stuff) — runtime feature/tier grants; logic in entitlementsUI.js
+      const entIsModal = custom_id === 'entitlements_add' || custom_id.startsWith('entitlements_tier_grant_');
       return ButtonHandlerFactory.create({
         id: custom_id,
-        requiresModal: custom_id === 'entitlements_add',
-        updateMessage: custom_id === 'entitlements_revoke',
+        requiresModal: entIsModal,
+        updateMessage: !entIsModal && custom_id !== 'entitlements_manage',
         handler: async (context) => {
           if (context.userId !== '391415444084490240') {
             return { components: [{ type: 17, components: [{ type: 10, content: '🎟️ Reece only.' }] }], ephemeral: true };
@@ -16282,7 +16286,7 @@ To fix this:
           
           // Create new Components V2 Safari customization interface
           const { createSafariCustomizationUI } = await import('./safariConfigUI.js');
-          const interfaceData = await createSafariCustomizationUI(context.guildId, currentTerms);
+          const interfaceData = await createSafariCustomizationUI(context.guildId, currentTerms, context.userId);
 
           // Count and validate components
           const { countComponents } = await import('./utils.js');
@@ -16552,7 +16556,7 @@ To fix this:
           const { getCustomTerms } = await import('./safariManager.js');
           const currentTerms = await getCustomTerms(context.guildId);
           const { createSafariCustomizationUI } = await import('./safariConfigUI.js');
-          return await createSafariCustomizationUI(context.guildId, currentTerms);
+          return await createSafariCustomizationUI(context.guildId, currentTerms, context.userId);
         }
       })(req, res, client);
     } else if (custom_id === 'command_prefix_add') {
@@ -37429,6 +37433,11 @@ To fix this:
       const { handleEntitlementsAddModal } = await import('./entitlementsUI.js');
       return handleEntitlementsAddModal(req, res, client);
 
+    } else if (custom_id.startsWith('entitlements_tier_modal_')) {
+      // ⭐ Entitlements tier grant — duration + reason (Reece-only gate inside the handler)
+      const { handleEntitlementsTierModal } = await import('./entitlementsUI.js');
+      return handleEntitlementsTierModal(req, res, client);
+
     } else if (custom_id === 'moai_ask_modal' || custom_id.startsWith('moai_ask_modal_')) {
       // 🗿 The Moai — defer, run, reply. All logic lives in moai.js.
       const { handleMoaiModalSubmit } = await import('./moai.js');
@@ -44439,7 +44448,7 @@ To fix this:
         
         // Create updated Safari customization interface
         const { createSafariCustomizationUI } = await import('./safariConfigUI.js');
-        const interfaceData = await createSafariCustomizationUI(guildId, updatedTerms);
+        const interfaceData = await createSafariCustomizationUI(guildId, updatedTerms, req.body.member?.user?.id);
         
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
@@ -44559,7 +44568,7 @@ To fix this:
         const updatedConfig = await getCustomTerms(guildId);
 
         const { createSafariCustomizationUI } = await import('./safariConfigUI.js');
-        const customizationUI = await createSafariCustomizationUI(guildId, updatedConfig);
+        const customizationUI = await createSafariCustomizationUI(guildId, updatedConfig, req.body.member?.user?.id);
 
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
@@ -44581,7 +44590,7 @@ To fix this:
       try {
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to change CastBot settings.')) return;
         const { handleGeneralSettingsSubmit } = await import('./src/settings/generalSettings.js');
-        const customizationUI = await handleGeneralSettingsSubmit(req.body.guild_id, req.body.data.components);
+        const customizationUI = await handleGeneralSettingsSubmit(req.body.guild_id, req.body.data.components, req.body.member?.user?.id);
         return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: customizationUI });
       } catch (error) {
         console.error('Error updating general settings:', error);
@@ -44666,7 +44675,7 @@ To fix this:
 
         // Refresh customization UI with updated config (consistent with other field group modals)
         const { createSafariCustomizationUI } = await import('./safariConfigUI.js');
-        const customizationUI = await createSafariCustomizationUI(guildId, updatedConfig);
+        const customizationUI = await createSafariCustomizationUI(guildId, updatedConfig, req.body.member?.user?.id);
 
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,

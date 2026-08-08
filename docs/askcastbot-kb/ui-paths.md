@@ -27,6 +27,8 @@ Top-level rows:
    `💰 Currency`, `⚙️ Settings`
 3. **Advanced Features**: `🗺️ Map Admin`, `⚡ Actions`, `🧮 Analytics` (Reece only),
    `🪛 Tools`
+4. **Bottom row**: `⚙️ Settings`, `🪛 Tools`, `🧙 Setup`, `Support` (link to the
+   CastBot support Discord server)
 
 ## Common Safari tasks — exact paths
 
@@ -58,8 +60,10 @@ Top-level rows:
 - **Cleanup**: `🗺️ Navigate Tidy`, `☢️ Nuke Category`, `💅 Clear Vanity Roles`
 - **Utilities**: `⏱️ Stopwatch` (time between two message IDs), `❄️ Snowflake`
   (decode a snowflake ID), `🕐 Availability`, `🎨 Emoji Editor`
-- **Info & Support**: Need Help? (support server). Terms of Service + Privacy Policy
-  merged into the `📜 Policy` button in `⚙️ Settings` (bottom row).
+
+There is no Info & Support section anymore: Terms of Service + Privacy Policy merged
+into the `📜 Policy` button in `⚙️ Settings` (bottom row), and the support-server link
+is now the `Support` button on the main Production Menu's bottom row.
 
 ## CastBot Settings (`/menu` → `⚙️ Settings`)
 
@@ -67,7 +71,7 @@ Top-level rows:
   `⚙️ Setup` (re-runs setup — idempotent), `⏰ Scheduled Jobs`
 - **Idol Hunts, Challenges and Safari Settings**: `🪙 Currency`, `🛠️ Crafting`,
   `📍 Location`, `⚡ Stamina`, `❗ Commands`
-- **Advanced**: `🔐 Roles & Security`, `🪵 Logs`, `🔄 Reset`
+- **Advanced**: `🔐 Roles` (role access whitelist), `🪵 Logs`, `🔄 Reset`
 - **Legacy**: `💼 Tycoons`, `☄️ Events`, `🎲 Rounds`
 - **Bottom row**: `← Back`, `📜 Policy` (merged Terms of Service + Privacy Policy)
 

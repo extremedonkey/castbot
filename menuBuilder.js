@@ -102,7 +102,6 @@ export class MenuBuilder {
    * @returns {Object} Menu container
    */
   static buildSetupMenu(menuConfig, context) {
-    const isReece = ['391415444084490240', '1086246253819613274'].includes(context?.userId);
     const isTest = process.env.INSTANCE_ROLE === 'test';
 
     // 🔵 Ask CastBot — trusted super-users only, DEV/TEST only (prod has no Claude CLI).
@@ -154,22 +153,10 @@ export class MenuBuilder {
           { type: 2, custom_id: 'prod_availability', label: 'Availability', style: 2, emoji: { name: '🕐' } },
           { type: 2, custom_id: 'emoji_editor', label: 'Emoji Editor', style: 2, emoji: { name: '🎨' } }
         ]
-      },
-      { type: 10, content: `### \`\`\`📜 Info & Support\`\`\`` }
+      }
     ];
-
-    const infoRow = [];
-    if (isReece) {
-      infoRow.push(
-        { type: 2, custom_id: 'data_admin', label: 'Data', style: 4, emoji: { name: '🧮' } },
-        { type: 2, custom_id: 'reeces_stuff', label: "Reece's Stuff", style: 4, emoji: { name: '🐧' } }
-      );
-    }
-    // ToS + Privacy merged into the Policy button in CastBot Settings (2026-08-08)
-    infoRow.push(
-      { type: 2, label: 'Need Help?', style: 5, emoji: { name: '❓' }, url: 'https://discord.gg/H7MpJEjkwT' }
-    );
-    components.push({ type: 1, components: infoRow });
+    // Info & Support section retired (2026-08-08): ToS+Privacy → Settings Policy button,
+    // Data/Reece's Stuff → Settings Advanced, Need Help → main menu Support link.
 
     // Navigation
     components.push(

@@ -209,6 +209,16 @@ export function isAskCastBotEnvironment() {
 }
 
 /**
+ * 🔀 PREMIUM LAUNCH SWITCH (RaP 0891). While false, the POSTED Ask button's modal
+ * route bypasses the guild entitlement — a posted button keeps working even in a
+ * guild whose access lapsed (Reece-accepted: posting itself IS entitlement-gated,
+ * and Reece places posted buttons deliberately). Flip to true at premium launch so
+ * lapsed guilds stop burning Claude tokens through old posted buttons.
+ * Guarded by tests/premiumDeclarations.test.js — don't rename without updating it.
+ */
+export const PUBLIC_ASK_REQUIRES_ENTITLEMENT = false;
+
+/**
  * Access gate. Callers must ALSO be admins — the Tools menu enforces Manage Roles,
  * and the handlers re-declare it, so this only answers "which admins, where".
  * @param {{userId?: string, guildId?: string}} ctx
@@ -594,6 +604,7 @@ export async function handleAskModalSubmit(req, res, client = null) {
   // Tools-menu route. The env gate applies to both — see isAskCastBotEnvironment.
   const modalId = String(req.body.data.custom_id || '');
   const isPublicRoute = modalId.startsWith('askcb_pub_modal');
+  const publicRouteBypassesEntitlement = !PUBLIC_ASK_REQUIRES_ENTITLEMENT;
   // A Follow Up carries the parent answer's id in the modal custom_id — the conversation
   // tree is already in the payload and was being thrown away. Recovering it here is what
   // lets multi-turn exchanges be reconstructed offline.
@@ -620,7 +631,7 @@ export async function handleAskModalSubmit(req, res, client = null) {
   if (!isAskCastBotEnvironment()) {
     return deny('env', '👾 Ask CastBot is not available here.');
   }
-  if (!isPublicRoute && !hasAskCastBotAccess({ userId, guildId: req.body.guild_id })) {
+  if ((!isPublicRoute || !publicRouteBypassesEntitlement) && !hasAskCastBotAccess({ userId, guildId: req.body.guild_id })) {
     return deny('access', '👾 Ask CastBot is not available here.');
   }
   if (!query?.trim()) {

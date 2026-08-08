@@ -21,10 +21,11 @@ const MENU_BUILDER_JS = path.join(__dirname, '..', 'menuBuilder.js');
 const GATED_IDS = ['391415444084490240', '1086246253819613274'];
 
 // Replicated from createProductionMenuInterface (app.js) — Advanced row build.
+// 'support_link' stands in for the URL-style Support button (link buttons have no custom_id).
 function advancedRowIds(userId) {
   return [
     ...(GATED_IDS.includes(userId) ? ['castbot_premium'] : []),
-    'castbot_settings', 'castbot_tools', 'prod_setup_wizard'
+    'castbot_settings', 'castbot_tools', 'prod_setup_wizard', 'support_link'
   ];
 }
 
@@ -34,7 +35,7 @@ describe('prod /menu Advanced row — ⭐ CastBot Premium placement', () => {
       const row = advancedRowIds(id);
       assert.equal(row[0], 'castbot_premium', `gated ID ${id} → Premium at index 0`);
       assert.equal(row[1], 'castbot_settings', 'Settings immediately after Premium');
-      assert.equal(row.length, 4);
+      assert.equal(row.length, 5);
     }
   });
 
@@ -43,7 +44,7 @@ describe('prod /menu Advanced row — ⭐ CastBot Premium placement', () => {
       const row = advancedRowIds(userId);
       assert.ok(!row.includes('castbot_premium'), `userId ${userId} must not see Premium`);
       assert.equal(row[0], 'castbot_settings');
-      assert.equal(row.length, 3);
+      assert.equal(row.length, 4);
     }
   });
 
@@ -89,7 +90,12 @@ describe('Premium menu clone — stays wired in menuBuilder.js', () => {
   });
 
   it('Donate button is wired inside the Premium menu (moved from main menu 2026-08-08)', () => {
-    const premiumSection = source.slice(source.indexOf('buildPremiumMenu'), source.indexOf('buildReecesStuffMenu'));
+    // Anchor on the static method definitions, NOT the first mention — the MENU_REGISTRY
+    // near the top of the file names both builders, which made the naive slice empty.
+    const premiumSection = source.slice(
+      source.indexOf('static buildPremiumMenu'),
+      source.indexOf('static buildReecesStuffMenu')
+    );
     assert.ok(premiumSection.includes("'prod_donate'"),
       'prod_donate missing from buildPremiumMenu — Donate has no other menu entry point');
   });

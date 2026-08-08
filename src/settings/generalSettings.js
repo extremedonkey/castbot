@@ -135,12 +135,13 @@ export function parseGeneralSettingsSubmit(components) {
  * cycle (safariConfigUI imports getImageUploadMode from this module for display).
  * @param {string} guildId
  * @param {Array} components - modal submit data.components
+ * @param {string} [userId] - Viewer's user ID (gates Reece-only Settings buttons)
  * @returns {Promise<Object>} createSafariCustomizationUI data for UPDATE_MESSAGE
  */
-export async function handleGeneralSettingsSubmit(guildId, components) {
+export async function handleGeneralSettingsSubmit(guildId, components, userId = null) {
     const mode = parseGeneralSettingsSubmit(components);
     await setImageUploadMode(guildId, mode);
     const { getCustomTerms } = await import('../../safariManager.js');
     const { createSafariCustomizationUI } = await import('../../safariConfigUI.js');
-    return createSafariCustomizationUI(guildId, await getCustomTerms(guildId));
+    return createSafariCustomizationUI(guildId, await getCustomTerms(guildId), userId);
 }

@@ -155,17 +155,162 @@ export function buildEntitlementsAddModal() {
 }
 
 /**
- * Button dispatcher for the three entitlements custom_ids. The app.js branch already
- * hard-gates to Reece; this only picks the response shape per button.
+ * Per-guild detail screen: full tier state + grant/extend/revoke + the expiry TEST
+ * STUBS (Expire Now → grace, Lapse Now → past grace). The stubs are real validUntil
+ * writes through the real save path — what expires here is what expires at scale.
+ */
+export async function buildEntitlementsGuildUI(guildId, client = null) {
+  const e = getGuildEntitlement(guildId);
+  const displayName = client?.guilds?.cache?.get(guildId)?.name || e.name || guildId;
+  if (!e.exists) {
+    return { type: 17, accent_color: ACCENT, components: [
+      { type: 10, content: `## 🎟️ ${displayName}\nNo entitlements entry for \`${guildId}\` (it may have just been fully revoked).` },
+      { type: 14 },
+      { type: 1, components: [{ type: 2, custom_id: 'entitlements_back', label: 'Back', style: 2, emoji: { name: '⬅️' } }] }
+    ]};
+  }
+
+  const ts = e.tierState;
+  const lines = [`## 🎟️ ${displayName}`, `\`${guildId}\``, ''];
+  lines.push(`**Direct feature grants (never expire):** ${e.features.length ? e.features.join(', ') : '*none*'}`);
+  if (ts.state === 'none') {
+    lines.push(`**Tier:** *none*`);
+  } else {
+    const t = TIERS[ts.tier];
+    const stateLabel = { active: '🟢 active', grace: '🕒 IN GRACE', lapsed: '💀 LAPSED' }[ts.state];
+    lines.push(`**Tier:** ${t.emoji} ${t.label} — ${stateLabel}${ts.permanent ? ' (permanent)' : ''}`);
+    if (!ts.permanent) {
+      lines.push(`**Expires:** <t:${Math.floor(ts.validUntil / 1000)}:F> (<t:${Math.floor(ts.validUntil / 1000)}:R>)`);
+      lines.push(`**Grace ends:** <t:${Math.floor(ts.graceUntil / 1000)}:F> (<t:${Math.floor(ts.graceUntil / 1000)}:R>)`);
+    }
+    if (e.grantedBy) lines.push(`-# granted by <@${e.grantedBy}>${e.reason ? ` — ${e.reason}` : ''}`);
+  }
+  lines.push(`**Effective features right now:** ${e.effectiveFeatures.length ? e.effectiveFeatures.join(', ') : '*none*'}`);
+
+  const rows = [];
+  const tierRow = [
+    { type: 2, custom_id: `entitlements_tier_grant_${guildId}`, label: ts.state === 'none' ? 'Grant Premium' : 'Update Premium', style: 3, emoji: { name: '⭐' } }
+  ];
+  if (ts.state !== 'none' && !ts.permanent) {
+    tierRow.push({ type: 2, custom_id: `entitlements_tier_extend_${guildId}`, label: '+30 days', style: 2, emoji: { name: '⏳' } });
+  }
+  if (ts.state !== 'none') {
+    tierRow.push({ type: 2, custom_id: `entitlements_tier_revoke_${guildId}`, label: 'Revoke Tier', style: 4, emoji: { name: '🗑️' } });
+  }
+  rows.push({ type: 1, components: tierRow });
+  if (ts.state !== 'none') {
+    rows.push({ type: 1, components: [
+      { type: 2, custom_id: `entitlements_tier_expire_${guildId}`, label: 'Expire Now (→ grace)', style: 2, emoji: { name: '🧪' } },
+      { type: 2, custom_id: `entitlements_tier_lapse_${guildId}`, label: 'Lapse Now (past grace)', style: 2, emoji: { name: '💀' } }
+    ]});
+  }
+  rows.push({ type: 1, components: [{ type: 2, custom_id: 'entitlements_back', label: 'Back', style: 2, emoji: { name: '⬅️' } }] });
+
+  return { type: 17, accent_color: ACCENT, components: [
+    { type: 10, content: lines.join('\n') },
+    { type: 14 },
+    ...rows
+  ]};
+}
+
+/** The Grant/Update Premium modal (duration + optional reason). */
+export function buildEntitlementsTierModal(guildId) {
+  return {
+    custom_id: `entitlements_tier_modal_${guildId}`,
+    title: '⭐ Grant / Update Premium',
+    components: [
+      {
+        type: 18,
+        label: 'Duration',
+        description: 'e.g. 30d · 12h · 45min · 2w · 3mo — blank = permanent',
+        component: { type: 4, custom_id: 'ent_tier_duration', style: 1, required: false, max_length: 20, placeholder: '30d' }
+      },
+      {
+        type: 18,
+        label: 'Reason (optional)',
+        description: 'Audit note — e.g. "beta tester", "comp for S14"',
+        component: { type: 4, custom_id: 'ent_tier_reason', style: 1, required: false, max_length: 100 }
+      }
+    ]
+  };
+}
+
+/**
+ * Button/select dispatcher for all entitlements_* custom_ids. The app.js branch already
+ * hard-gates to Reece; this only picks the response shape per control.
  */
 export async function handleEntitlementsButton(context) {
-  if (context.customId === 'entitlements_add') {
+  const id = context.customId;
+  if (id === 'entitlements_add') {
     return { type: 9, data: buildEntitlementsAddModal() }; // InteractionResponseType.MODAL
   }
-  if (context.customId === 'entitlements_revoke') {
+  if (id === 'entitlements_revoke') {
     return handleEntitlementsRevoke(context);
   }
+  if (id === 'entitlements_guild') {
+    return { components: [await buildEntitlementsGuildUI(String(context.values?.[0] || ''), context.client)] };
+  }
+  if (id.startsWith('entitlements_tier_grant_')) {
+    return { type: 9, data: buildEntitlementsTierModal(id.replace('entitlements_tier_grant_', '')) };
+  }
+  if (id.startsWith('entitlements_tier_extend_')) {
+    const guildId = id.replace('entitlements_tier_extend_', '');
+    await extendTier(guildId, 30 * 24 * 60 * 60 * 1000);
+    return { components: [await buildEntitlementsGuildUI(guildId, context.client)] };
+  }
+  if (id.startsWith('entitlements_tier_expire_')) {
+    const guildId = id.replace('entitlements_tier_expire_', '');
+    await setTierValidUntil(guildId, Date.now() - 1000); // 1s in the past → grace
+    return { components: [await buildEntitlementsGuildUI(guildId, context.client)] };
+  }
+  if (id.startsWith('entitlements_tier_lapse_')) {
+    const guildId = id.replace('entitlements_tier_lapse_', '');
+    await setTierValidUntil(guildId, Date.now() - GRACE_MS - 1000); // past grace → lapsed
+    return { components: [await buildEntitlementsGuildUI(guildId, context.client)] };
+  }
+  if (id.startsWith('entitlements_tier_revoke_')) {
+    const guildId = id.replace('entitlements_tier_revoke_', '');
+    await revokeTier(guildId);
+    return { components: [await buildEntitlementsGuildUI(guildId, context.client)] };
+  }
+  if (id === 'entitlements_back') {
+    return { components: [await buildEntitlementsManageUI(context.client)] };
+  }
   return { components: [await buildEntitlementsManageUI(context.client)], ephemeral: true };
+}
+
+/** Tier modal submit (dispatched from app.js MODAL_SUBMIT; owner gate lives HERE). */
+export async function handleEntitlementsTierModal(req, res, client) {
+  const userId = req.body.member?.user?.id || req.body.user?.id;
+  if (userId !== OWNER_ID) {
+    return res.send({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: { content: '🎟️ Reece only.', flags: InteractionResponseFlags.EPHEMERAL }
+    });
+  }
+  const guildId = String(req.body.data.custom_id || '').replace('entitlements_tier_modal_', '');
+  const fields = {};
+  for (const comp of (req.body.data.components || [])) {
+    const inner = comp?.component || comp?.components?.[0];
+    if (inner?.custom_id) fields[inner.custom_id] = inner.value ?? inner.values?.[0];
+  }
+  const dur = parseDuration(fields.ent_tier_duration);
+  if (!dur.ok) {
+    return res.send({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: { content: `🎟️ ${dur.error}`, flags: InteractionResponseFlags.EPHEMERAL }
+    });
+  }
+  await grantTier(guildId, 'premium', {
+    addedBy: userId,
+    durationMs: dur.ms,
+    reason: fields.ent_tier_reason?.trim() || undefined,
+    name: client?.guilds?.cache?.get(guildId)?.name
+  });
+  return res.send({
+    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+    data: { components: [await buildEntitlementsGuildUI(guildId, client)], flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL }
+  });
 }
 
 /** Modal-submit handler (dispatched from app.js MODAL_SUBMIT; owner gate lives HERE). */

@@ -85,9 +85,11 @@ export async function createRolesSecurityUI(guildId) {
  * Create Safari customization interface using Components V2
  * @param {string} guildId - Discord guild ID
  * @param {Object} currentConfig - Current safari configuration
+ * @param {string} [userId] - Viewer's user ID — gates the Reece-only Advanced buttons
+ *   (display-only: data_admin/reeces_stuff handlers re-check restrictedUser)
  * @returns {Object} Discord Components V2 interface
  */
-export async function createSafariCustomizationUI(guildId, currentConfig) {
+export async function createSafariCustomizationUI(guildId, currentConfig, userId = null) {
     const config = EDIT_CONFIGS[EDIT_TYPES.SAFARI_CONFIG];
     
     // Create field group buttons
@@ -160,9 +162,14 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
         {
             type: 1,
             components: [
-                { type: 2, custom_id: 'castbot_roles_security', label: 'Roles & Security', style: 2, emoji: { name: '🔐' } },
+                { type: 2, custom_id: 'castbot_roles_security', label: 'Roles', style: 2, emoji: { name: '🔐' } },
                 { type: 2, custom_id: 'safari_configure_log', label: 'Logs', style: 2, emoji: { name: '🪵' } },
-                // Import/Export moved to Map Explorer (2026-08-08)
+                // Import/Export moved to Map Explorer (2026-08-08); Data + Reece's Stuff
+                // moved here from Tools same day (display-only gate — handlers re-check)
+                ...(['391415444084490240', '1086246253819613274'].includes(userId) ? [
+                    { type: 2, custom_id: 'data_admin', label: 'Data', style: 4, emoji: { name: '🧮' } },
+                    { type: 2, custom_id: 'reeces_stuff', label: "Reece's Stuff", style: 4, emoji: { name: '🐧' } }
+                ] : []),
                 { type: 2, custom_id: 'safari_config_reset_defaults', label: 'Reset', style: 4, emoji: { name: '🔄' } }
             ]
         },

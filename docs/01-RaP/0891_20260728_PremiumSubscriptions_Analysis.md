@@ -1,6 +1,6 @@
 # 💎 Premium Subscriptions & Entitlements — Design Analysis
 
-**Status**: Design — decisions pending (pricing, tier count, grace periods)
+**Status**: Phase 1 partially IMPLEMENTED (2026-08-08 — entitlements v2 + lapse enforcement + admin tier UI + test stubs, see §Implemented below); pricing/tier decisions still pending
 **Absorbs**: the self-contained handoff doc *"CastBot Subscriptions and Premium Entitlements"* (2026-07, Ko-fi/PayPal state, provider options, data-model sketch)
 **Builds on**: [`entitlements.js`](../../entitlements.js) (the existing entitlement registry) · the ⭐ CastBot Premium menu mockup (commit 80491fd3) · [RaP 0900](0900_20260711_SecurityArchitectureOptions_Analysis.md) (gating doctrine)
 
@@ -256,6 +256,29 @@ flowchart LR
 4. **Transfer cooldown** — default: 7 days.
 5. **Launch premium shelf** — default: Channel Admin bulk tools + Alliances + Archive + raised Safari limits + early-access flag. (Requires promoting those whitelisted features to shippable state.)
 6. **Ko-fi Contributor 5% opt-in** — default: accept (needed for Memberships/webhooks; it's the no-code-billing tax).
+
+## ✅ Implemented 2026-08-08 — entitlements v2 + lapse enforcement architecture
+
+What shipped (commit refs in git):
+
+- **entitlements.js v2**: `TIERS` (single `premium` bundle = ask_castbot + safari_edit), `GRACE_MS` (7d), `resolveTierState()` (pure lazy-expiry state machine: active → grace → lapsed), tier-aware `hasFeatureSync` (à-la-carte `features` grants stay permanent/v1), `grantTier`/`extendTier`/`setTierValidUntil`/`revokeTier`, `parseDuration` ("30d/12h/45min/2w/3mo", bare "m" rejected as ambiguous; **minutes exist so expiry is testable in real time**).
+- **Factory `premium:` declaration** (buttonHandlerFactory.js): checked centrally after `requiresPermission`, standard denial with two audiences — admin surfaces (those with requiresPermission) get the ⭐ premium message, player surfaces get a neutral "isn't available". Doctrine: **artifacts persist, clicks gate** — no artifact sweeps on lapse; renewal revives everything instantly. First declared: `askcb_ask`, `askcb_post`.
+- **Premium ratchet** (tests/premiumDeclarations.test.js, securityDeclarations mold): premium keys must be real FEATURES; REQUIRED_PREMIUM_IDS can't silently lose their gate; factory gate presence asserted.
+- **🔀 PREMIUM LAUNCH SWITCH**: `PUBLIC_ASK_REQUIRES_ENTITLEMENT = false` in askCastBot.js. The POSTED Ask button's modal route deliberately still bypasses the guild entitlement (Reece 2026-08-08: stays open until premium launches). Flip to `true` at launch = lapsed guilds stop burning Claude tokens via old posted buttons. One-word diff, ratchet-guarded.
+- **Admin UI** (entitlementsUI.js): manage list gains tier badges (⭐ active / 🕒 grace / 💀 lapsed) + a per-guild detail screen — Grant/Update Premium (duration modal, blank = permanent), +30d extend, Revoke Tier, and the **expiry TEST STUBS**: `Expire Now` (validUntil = now−1s → grace) and `Lapse Now` (past grace). Stubs are real validUntil writes through the real save path — no mock rails.
+- **Ops CLI**: scripts/entitlements-cli.js (list/show/grant/extend/expire/lapse/revoke-tier) — reads always safe; writes only with the bot stopped (forever-cache is single-writer).
+
+Still unbuilt from Phase 1/2: `subscribers` block + activate/transfer, the ⭐ Premium subscriber menu, redeem/linking, `POST /kofi`, renewal-nag job, launch-shelf feature conversion.
+
+## 🔍 Ko-fi verification findings 2026-08-08 (supersedes the Phase-2 redeem-mint sketch)
+
+Verified against Ko-fi docs (help.ko-fi.com):
+
+1. **Ko-fi has NO outbound API** — the webhook is the entire API. The original Phase-2 sketch ("mint a redeem code, DM it via Ko-fi") is **not possible**; messaging supporters is manual-only. The one automated touchpoint is the static per-tier **Welcome Message** (on-screen after first payment) — carries instructions/links, never per-user codes.
+2. **No cancellation/refund/expiry webhook events exist** (confirmed) — the absence-based `validUntil` + grace model is the only correct design; refunds/chargebacks = manual revoke.
+3. **Ko-fi's Discord integration is stronger than assumed**: Ko-fi Bot grants a per-tier Discord role automatically (supporter links Discord + joins the creator's server) and **removes it automatically when the membership ends** — a machine-readable lapse signal the webhook lacks. Revised linking recommendation: **primary = role bridge** (CastBot watches GuildMemberUpdate in its home/support server → real Discord user ID, zero typing), **fallback = email-claim Redeem** (Welcome Message instructs `/menu → Premium → Redeem`, bot matches webhook-seen emails), **manual = Entitlements panel** (built). Role events are *inputs* that write entitlements.json — never the truth (D2 doctrine unchanged).
+4. **Membership checkout has no supporter message field** (only tips do) — "type your Discord username at checkout" cannot be primary.
+5. **Discord native Premium Apps: ruled out for now** — payout eligibility is US/UK/EU only; Australia unsupported. Re-check periodically (15% cut, would dissolve identity linking entirely).
 
 ## 📎 Related
 
