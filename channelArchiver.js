@@ -226,6 +226,11 @@ function buildContainer(displayName, count, cbEmojiStr, filename, nowUnix, first
 export function estimateMessageBytes(msg, imageData = null) {
   let n = 600; // markup/header/avatar overhead
   n += (msg.content?.length || 0) * 1.2;
+  // Emoji/mention/timestamp tokens render 4-6× their source length (e.g. <:name:id> → a ~140-char
+  // <img> tag) — a token-dense channel measured 3.1× under the plain 1.2× estimate, blowing the
+  // 10 MiB cap on split parts. +120 bytes per token keeps the estimate conservative.
+  const tokens = msg.content?.match(/<a?:\w+:\d+>|<@[!&]?\d+>|<#\d+>|<t:\d+(?::\w)?>/g);
+  if (tokens) n += tokens.length * 120;
   if (msg.components?.length) n += 400;
   for (const e of (msg.embeds || [])) n += (e.title?.length || 0) + (e.description?.length || 0) + 100;
   for (const a of (msg.attachments || [])) n += imageData?.[a.url] ? imageData[a.url].length : 300;
@@ -260,7 +265,9 @@ async function postOneArchive(post, channelName, msgs, cbEmojiStr, partLabel, pr
     attachments: [{ id: 0, filename }]
   }));
 
-  const fileRes = await post({ body: form, headers: form.getHeaders() });
+  // getBuffer(), not the stream: a form-data stream is single-use, so the poster's 429
+  // retry would re-send an already-drained body and hang. A Buffer is re-sendable.
+  const fileRes = await post({ body: form.getBuffer(), headers: form.getHeaders() });
   if (!fileRes.ok) {
     const errText = await fileRes.text();
     // 413 = this part still exceeded Discord's upload cap (rare after byte-split: a single message
@@ -482,26 +489,29 @@ export async function archiveChannels(channels, invokedChannelId, { interactionT
   // (cross-server retrieval). Pointers only (source guild + per-channel file-message ids).
   if (userId && runChannels.length) {
     try {
-      const { loadPlayerData, savePlayerData } = await import('./storage.js');
-      const data = await loadPlayerData();
-      const g = data[guildId] = data[guildId] || {};
-      g.players = g.players || {};
-      const p = g.players[userId] = g.players[userId] || {};
-      p.archives = Array.isArray(p.archives) ? p.archives : [];
+      const { withStorageLock, loadPlayerData, savePlayerData } = await import('./storage.js');
       const cats = new Set(runChannels.map(c => c.category).filter(Boolean));
       const label = cats.size === 1 ? [...cats][0]
         : (runChannels.length === 1 ? runChannels[0].name : `${runChannels.length} channels`);
-      p.archives.push({
-        id: `${Date.now()}`,
-        label,
-        sourceGuildId: guildId,
-        sourceGuildName: guild?.name || guildId,
-        archiveChannelId: invokedChannelId,
-        createdAt: new Date().toISOString(),
-        channels: runChannels,
+      const sourceGuildName = guild?.name || guildId;
+      await withStorageLock(async () => {
+        const data = await loadPlayerData();
+        const g = data[guildId] = data[guildId] || {};
+        g.players = g.players || {};
+        const p = g.players[userId] = g.players[userId] || {};
+        p.archives = Array.isArray(p.archives) ? p.archives : [];
+        p.archives.push({
+          id: `${Date.now()}`,
+          label,
+          sourceGuildId: guildId,
+          sourceGuildName,
+          archiveChannelId: invokedChannelId,
+          createdAt: new Date().toISOString(),
+          channels: runChannels,
+        });
+        if (p.archives.length > 50) p.archives = p.archives.slice(-50); // keep it lightweight
+        await savePlayerData(data);
       });
-      if (p.archives.length > 50) p.archives = p.archives.slice(-50); // keep it lightweight
-      await savePlayerData(data);
       console.log(`🗂️ Registered archive run "${label}" (${runChannels.length} channels) for user ${userId}`);
     } catch (e) {
       console.error(`⚠️ Archive registry write failed: ${e.message}`);
@@ -600,13 +610,15 @@ export async function repostArchiveRun(run, destChannelId) {
         const url = getArchiveFileUrl(src);
         const filename = src.attachments?.[0]?.filename || `${ch.name}-archive.html`;
         if (!url) { failed++; continue; }
-        const buf = Buffer.from(await (await fetch(url)).arrayBuffer());
+        const dlRes = await fetch(url);
+        if (!dlRes.ok) { failed++; console.warn(`⚠️ Retrieve: HTML download failed for #${ch.name} (${dlRes.status})`); continue; }
+        const buf = Buffer.from(await dlRes.arrayBuffer());
         const container = JSON.parse(JSON.stringify(src.components?.[0] || { type: 17, components: [] }));
         setType13Attachment(container.components, filename); // re-point the file component for re-upload
         const form = new FormData();
         form.append('files[0]', buf, { filename, contentType: 'text/html' });
         form.append('payload_json', JSON.stringify({ flags: IS_CV2, components: [container], attachments: [{ id: 0, filename }] }));
-        const res = await post({ body: form, headers: form.getHeaders() });
+        const res = await post({ body: form.getBuffer(), headers: form.getHeaders() });
         if (!res.ok) { failed++; console.error(`⚠️ Retrieve: re-post failed for #${ch.name}: ${res.status}`); continue; }
         const newId = (await res.json()).id;
         if (newId) await post({ body: JSON.stringify({ flags: IS_CV2, components: [buildArchiveButtons(newId)] }), headers: { 'Content-Type': 'application/json' } });

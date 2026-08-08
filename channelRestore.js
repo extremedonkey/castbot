@@ -137,14 +137,16 @@ const botPost = (channelId, container) =>
  * @param {string} args.guildId
  * @param {string} args.archiveChannelId - channel the archive lives in (to GET the file message)
  * @param {string} args.fileMessageId - the type-13 file message id
- * @returns {Promise<{channelId, channelName, posted, failed, truncated}>}
+ * @returns {Promise<{channelId, channelName, posted, failed}>}
  */
 export async function restoreFromArchiveMessage({ client, guildId, archiveChannelId, fileMessageId }) {
   // 1. Re-fetch the archive file message → fresh HTML URL → download the HTML
   const fileMsg = await DiscordRequest(`channels/${archiveChannelId}/messages/${fileMessageId}`, { method: 'GET' });
   const htmlUrl = getArchiveFileUrl(fileMsg);
   if (!htmlUrl) throw new Error('Archive file not found (the file message may have been deleted).');
-  const htmlText = await (await fetch(htmlUrl)).text();
+  const htmlRes = await fetch(htmlUrl);
+  if (!htmlRes.ok) throw new Error(`Archive HTML download failed (${htmlRes.status}) — try again shortly.`);
+  const htmlText = await htmlRes.text();
 
   // 2. Parse the embedded restore payload
   const data = extractArchiveData(htmlText);
@@ -198,5 +200,5 @@ export async function restoreFromArchiveMessage({ client, guildId, archiveChanne
     components: [{ type: 10, content: `## ✅ Restore complete\n-# ${posted} message${posted !== 1 ? 's' : ''} reconstructed${failed ? `, ${failed} skipped` : ''}.` }],
   });
   console.log(`♻️ Restore done: #${newChannel.name} — ${posted} posted, ${failed} skipped`);
-  return { channelId: newChannel.id, channelName: newChannel.name, posted, failed, truncated };
+  return { channelId: newChannel.id, channelName: newChannel.name, posted, failed };
 }

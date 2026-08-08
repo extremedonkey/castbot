@@ -183,3 +183,31 @@ describe('channelArchiver — retrieve list (cross-server)', () => {
     assert.equal(pickRecent(runs).length, 25);
   });
 });
+
+// Keep in sync with channelArchiver.js → estimateMessageBytes (token-aware split estimate).
+function estimateMessageBytes(msg, imageData = null) {
+  let n = 600;
+  n += (msg.content?.length || 0) * 1.2;
+  const tokens = msg.content?.match(/<a?:\w+:\d+>|<@[!&]?\d+>|<#\d+>|<t:\d+(?::\w)?>/g);
+  if (tokens) n += tokens.length * 120;
+  if (msg.components?.length) n += 400;
+  for (const e of (msg.embeds || [])) n += (e.title?.length || 0) + (e.description?.length || 0) + 100;
+  for (const a of (msg.attachments || [])) n += imageData?.[a.url] ? imageData[a.url].length : 300;
+  return Math.ceil(n);
+}
+
+describe('channelArchiver — estimateMessageBytes (token-aware)', () => {
+  it('plain text uses the 1.2x multiplier only', () => {
+    assert.equal(estimateMessageBytes({ content: 'x'.repeat(100) }), 600 + 120);
+  });
+  it('custom emoji, mentions and timestamps add 120 bytes each (they render 4-6x larger)', () => {
+    const content = '<a:party:123456789012345678> <@&123456789012345678> <#123456789012345678> <@!123456789012345678> <t:1700000000:F>';
+    const plain = Math.ceil(600 + content.length * 1.2);
+    assert.equal(estimateMessageBytes({ content }), plain + 5 * 120);
+  });
+  it('embedded image data-URI lengths are exact', () => {
+    const uri = 'data:image/webp;base64,' + 'A'.repeat(1000);
+    const est = estimateMessageBytes({ content: '', attachments: [{ url: 'u' }] }, { u: uri });
+    assert.equal(est, 600 + uri.length);
+  });
+});

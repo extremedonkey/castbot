@@ -152,7 +152,8 @@ export async function fetchAllChannelMessages(channelId, { onProgress, maxConsec
     // --- 429 backstop (header-pacing should prevent this, but never throw on it) ---
     if (res.status === 429) {
       const body = await res.json().catch(() => ({}));
-      const retryAfter = body.retry_after ?? parseFloat(res.headers.get('retry-after')) ?? 1;
+      const headerRetry = parseFloat(res.headers.get('retry-after'));
+      const retryAfter = body.retry_after ?? (Number.isFinite(headerRetry) ? headerRetry : 1);
       total429++;
       consecutive429++;
       if (consecutive429 > maxConsecutive429) {
@@ -188,7 +189,9 @@ export async function fetchAllChannelMessages(channelId, { onProgress, maxConsec
     if (delay > 0) await sleep(delay);
   }
 
-  all.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  // Sort by snowflake id (creation order), not timestamp — same-millisecond bursts
+  // (webhooks/bots) would otherwise keep their newest-first page order.
+  all.sort((a, b) => (BigInt(a.id) < BigInt(b.id) ? -1 : 1));
   return { messages: all, total429, batches };
 }
 
@@ -271,18 +274,23 @@ export async function fetchChannelThreads(channelId, { activeThreads = [] } = {}
  * @param {number} [opts.concurrency]
  * @returns {Promise<Object>} { [url]: dataUri }
  */
-export async function fetchImageData(allMessages, { maxWidth = 1280, quality = 72, maxBytes = 2 * 1024 * 1024, concurrency = 4 } = {}) {
+export async function fetchImageData(allMessages, { maxWidth = 1280, quality = 72, maxBytes = 2 * 1024 * 1024, maxSourceBytes = 20 * 1024 * 1024, maxTotalBytes = 150 * 1024 * 1024, concurrency = 4 } = {}) {
   const urls = [];
   const seen = new Set();
   for (const m of (allMessages || [])) {
     for (const a of (m.attachments || [])) {
+      // maxSourceBytes: skip giant originals BEFORE downloading (a.size is Discord metadata) —
+      // each worker buffers the full file into memory, and Nitro uploads can be hundreds of MB.
+      if (a.size > maxSourceBytes) continue;
       if (a.content_type?.startsWith('image/') && a.url && !seen.has(a.url)) { seen.add(a.url); urls.push(a.url); }
     }
   }
   const map = {};
   let idx = 0;
+  let totalBytes = 0; // soft per-channel budget — a monster image channel must not OOM the 2GB box
   const worker = async () => {
     while (idx < urls.length) {
+      if (totalBytes >= maxTotalBytes) return;
       const url = urls[idx++];
       try {
         const res = await fetch(url);
@@ -300,9 +308,13 @@ export async function fetchImageData(allMessages, { maxWidth = 1280, quality = 7
         }
         if (out.length > maxBytes) continue; // still too big → leave as a link
         map[url] = `data:${mime};base64,${out.toString('base64')}`;
+        totalBytes += map[url].length;
       } catch { /* skip on error → falls back to link */ }
     }
   };
   await Promise.all(Array.from({ length: Math.min(concurrency, urls.length) }, worker));
+  if (totalBytes >= maxTotalBytes) {
+    console.warn(`⚠️ fetchImageData: ${Math.round(maxTotalBytes / 1048576)}MB embed budget reached — ${urls.length - idx} image(s) left as links`);
+  }
   return map;
 }
