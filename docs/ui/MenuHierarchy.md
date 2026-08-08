@@ -2,159 +2,116 @@
 
 > **Open this file when** you need to understand where a feature sits in the user-facing navigation, or decide where a new button should live in the menu tree. This is a snapshot — verify against the actual code if the tree looks wrong.
 
-**Last Updated**: 2026-07-30
+**Last Updated**: 2026-08-08 — **full recompute from source** (app.js `createProductionMenuInterface`, menuBuilder.js `buildSetupMenu`/`buildPremiumMenu`, safariConfigUI.js `createSafariCustomizationUI`, mapExplorer.js `buildMapExplorerResponse`, castlistHub.js, seasonSelector.js, playerManagement.js). The previous tree had drifted badly — it still listed Analytics/Tribes/Donate/Player Admin in places they left months ago.
 
-> ⚠️ **2026-07-29/30 menu moves** — the tree below predates these; trust this list where they conflict, and see [docs/askcastbot-kb/ui-paths.md](../askcastbot-kb/ui-paths.md), which is the source Ask CastBot itself uses for navigation answers:
-> - `⚙️ Setup` (was Tools → "Re-Run Setup") and `⏰ Scheduled Jobs` → **CastBot Settings → CastBot-Wide Settings**
-> - `⚓ Anchors` (was Tools → "Refresh Anchors") → **Map Explorer**, right of Whispers
-> - `🚀 Progress` — Map Explorer label shortened from "Safari Progress"
-> - `👾 Ask CastBot` + `👾 Post Ask CastBot` share their own row in **Tools**; Post Ask left Reece's Stuff. The short-lived `🛠️ Edit Safari` / `Post Edit Card` buttons were **merged into Ask CastBot and deleted** — see [AskCastBot.md](../03-features/AskCastBot.md)
-> - `🎟️ Entitlements` added to **Reece's Stuff** (runtime per-guild feature grants)
-> - `🧹 Archive Channels` is no longer TEST-gated in the **Premium** menu
-> - The CastBot Settings screen no longer prints a ~30-line dump of every setting value above its buttons
+> 📖 **User-facing version**: [docs/CastBotUserGuide.md](../CastBotUserGuide.md) — the same tree written for hosts, Discord-paste formatted.
+> 🤖 Ask CastBot answers navigation questions from [docs/askcastbot-kb/ui-paths.md](../askcastbot-kb/ui-paths.md) — update that too when menus move.
 
 ---
 
 ## Visual Menu Tree
 
 ```
-/menu (Slash Command)
+/menu (one of only TWO slash commands; the other is /castlist)
 │
-├─ Has Admin Permissions? (ManageChannels OR ManageRoles)
+├─ Admin? (ManageChannels OR ManageRoles) ─→ 📋 Production Menu [EPHEMERAL]
+│  │   (first run instead: 🧙 Setup Wizard — DiscordMessenger.createWelcomeComponents)
 │  │
-│  YES ─→ 📋 Production Menu [EPHEMERAL]
-│  │      │
-│  │      ├─ ✏️ Castlists, Applications and Season Management
-│  │      │  ├─ 📋 Castlist Manager
-│  │      │  ├─ 📝 Apps [Secondary]
-│  │      │  ├─ 🧑‍🤝‍🧑 Players
-│  │      │  ├─ 🏃‍♀️ Challenges (formerly Rounds)
-│  │      │  └─ ☕ Donate
-│  │      │
-│  │      ├─ 🦁 Idol Hunts, Challenges and Safari
-│  │      │  ├─ 🏪 Stores
-│  │      │  ├─ 📦 Items
-│  │      │  ├─ 🧭 Player Admin
-│  │      │  ├─ 💰 Currency
-│  │      │  └─ ⚙️ Settings
-│  │      │
-│  │      ├─ 🚀 Advanced Features
-│  │      │  ├─ 🗺️ Map Admin → 🗺️ Map Explorer Menu
-│  │      │  ├─ ⚡ Actions (Custom Action Editor)
-│  │      │  ├─ 🧮 Analytics [Reece Only]
-│  │      │  └─ 🪛 Tools → 🪛 Tools Menu
-│  │      │
-│  │      └─ ← Menu [Back]
+│  ├─ Title Section, accessory → 🪪 Player Menu (prod_player_menu)
+│  ├─ Feature ticker Section, accessory → ✨ New Features (dm_view_tips)
 │  │
-│  NO ──→ 🪪 Player Menu [EPHEMERAL]
-│         │
-│         ├─ View Profile
-│         ├─ Edit Profile
-│         ├─ Vanity Roles
-│         └─ (Global Stores if configured)
+│  ├─ 📍 Post Castlists        one button per castlist, paginated across rows
+│  │
+│  ├─ ✏️ Castlists, Applications and Season Management
+│  │  ├─ 📋 Castlist Manager   castlist_hub_main   [Primary]
+│  │  ├─ 📅 Season Manager     season_manager
+│  │  ├─ 🧑‍🤝‍🧑 Players          admin_manage_player
+│  │  └─ 🏃‍♀️ Challenges        challenge_screen
+│  │
+│  ├─ 🦁 Idol Hunts, Challenges and Safari
+│  │  ├─ 🏪 Stores             safari_store_manage_items  [Primary]
+│  │  ├─ 📦 Items              safari_manage_items
+│  │  ├─ 💰 Currency           safari_manage_currency
+│  │  ├─ ⚡ Actions            action_manager
+│  │  └─ 🗺️ Map               safari_map_explorer
+│  │
+│  └─ 💎 Advanced              ⚠️ 5/5 buttons, menu 40/40 worst case — next addition THROWS
+│     ├─ ⭐ CastBot Premium    castbot_premium  🔒 [Reece + 1086246253819613274]
+│     ├─ ⚙️ Settings           castbot_settings
+│     ├─ 🪛 Tools              castbot_tools
+│     ├─ 🧙 Setup              prod_setup_wizard  [Danger until onboarding complete]
+│     └─ ❓ Support            [Link] discord.gg/H7MpJEjkwT
 │
-│
-├─ 🧮 Analytics Menu [Reece Only, EPHEMERAL]
-│  │
-│  ├─ 📊 Analytics
-│  │  ├─ Server List
-│  │  ├─ Print Logs
-│  │  ├─ Server Stats
-│  │  └─ 🌈 Ultramonitor
-│  │
-│  ├─ 🔧 Admin Tools
-│  │  ├─ Toggle Channel Logs
-│  │  ├─ Test Role Hierarchy
-│  │  └─ 💬 Msg Test
-│  │
-│  ├─ ☢️ Danger Zone
-│  │  ├─ 🚨 Emergency Re-Init
-│  │  ├─ ☢️ Nuke playerData
-│  │  └─ ☢️ Nuke safariContent
-│  │
-│  └─ ← Menu [Back]
-│
-│
-├─ 🪛 Tools Menu [EPHEMERAL]
-│  │
-│  ├─ 🪛 Re-Run Setup (same setup_castbot handler as the Setup Wizard's Run Setup; always enabled here)
-│  ├─ 🎯 Reaction Roles → 🎯 Reaction Roles Menu
-│  ├─ 🔥 Tribes (Legacy)
-│  ├─ 🕐 Availability → 🕐 Availability Menu
-│  ├─ ❓ Need Help? [Link]
-│  ├─ 📜 Terms of Service
-│  ├─ 🔒 Privacy Policy
-│  └─ ← Menu [Back to Production Menu]
-│
-│
-├─ 🎯 Reaction Roles Menu [EPHEMERAL]
-│  │
-│  ├─ 🌍 Timezone Management
-│  │  ├─ 🌍 View Timezones
-│  │  ├─ ⏲️ Bulk Modify (no offset)
-│  │  ├─ 🗺️ Custom Timezone
-│  │  └─ 👍 Post React for Timezones
-│  │
-│  ├─ 💜 Pronoun Management
-│  │  ├─ 💜 View Pronouns
-│  │  ├─ 💙 Edit Pronouns
-│  │  └─ 👍 Post React for Pronouns
-│  │
-│  └─ ← Tools [Back to Tools Menu]
-│
-│
-├─ 🕐 Availability Menu [EPHEMERAL]
-│  │
-│  ├─ 📅 Post Availability Times
-│  ├─ 👥 View Availability Groups
-│  ├─ 🗑️ Clear My Availability
-│  └─ ← Tools [Back to Tools Menu]
-│
-│
-├─ 🗺️ Map Explorer Menu [EPHEMERAL]
-│  │
-│  ├─ 🗺️ Map Management
-│  │  ├─ Create / Update Map
-│  │  ├─ Delete Map
-│  │  └─ Refresh Anchors
-│  │
-│  ├─ 🧭 Map Administration
-│  │  ├─ Blacklisted Coords
-│  │  ├─ Player Locations
-│  │  └─ Paused Players
-│  │
-│  ├─ 🛠️ Map Configuration (moved from Safari Menu)
-│  │  ├─ 📍 Location Editor
-│  │  └─ 🚀 Safari Progress
-│  │
-│  └─ ← Menu [Back to Production Menu]
-│
-│
-├─ 📋 Castlist Hub [EPHEMERAL]
-│  │
-│  ├─ Select Castlist (dropdown)
-│  ├─ 👁️ View
-│  ├─ ✏️ Edit Info
-│  ├─ 🏕️ Add Tribe
-│  ├─ 🔄 Order
-│  └─ ← Menu [Back]
-│
-│
-├─ 📝 Season Applications [EPHEMERAL]
-│  │
-│  ├─ Select Season (dropdown)
-│  ├─ ✨ New Question
-│  ├─ 📤 Post Apps Button
-│  ├─ 🏆 Casting
-│  ├─ ✏️ Edit Season
-│  ├─ 🗑️ Delete Season
-│  └─ ← Menu [Back]
-│
-│
-└─ 🏪 Stores/Items/Currency/Rounds [EPHEMERAL]
-   │
-   ├─ (Feature-specific buttons)
-   └─ ← Menu [Back to Production Menu]
+└─ Non-admin ─→ 🪪 Player Menu [EPHEMERAL]  (playerManagement.js, visibility-driven)
+   ├─ Profile:  📋 Castlists · 💜 Pronouns · 🌍 Timezone · 🎂 Age
+   ├─ Safari:   🪙 Currency · 🧰 Inventory · 🗺️ Map · ⚡ Stamina[admin] ·
+   │            🏃 Challenges · 🛠️ Crafting · ⚡ Actions · 🏪 Stores
+   └─ Advanced: 📊 Stats · 🕹️ Commands · 🤝 Alliance 🔒 · CastDock ·
+                🎭 Vanity Roles[admin] · 🗺️ Navigate
+   -# Currency/Inventory/Crafting labels come from the guild's custom terms.
+   -# Every entry is gated by `show` in calculateVisibility() — 'config' vs 'player' gates.
+
+
+⚙️ CastBot Settings  (safariConfigUI.js createSafariCustomizationUI, purple 0x9b59b6)
+├─ 🎛️ CastBot-Wide Settings
+│  └─ ⚙️ General · 🕹️ Player Menu · 💜 Reaction Roles · ⚙️ Setup · ⏰ Scheduled Jobs
+├─ 🦁 Idol Hunts, Challenges and Safari Settings   (rows chunk dynamically, ≤5/row)
+│  └─ 💰 Currency · 🧰 Inventory · 🛠️ Crafting · 📍 Location · ⚡ Stamina · ❗ Commands
+├─ ⚙️ Advanced
+│  └─ 🔐 Roles · 🪵 Logs · 🧮 Data 🔒 · 🐧 Reece's Stuff 🔒 · 🔄 Reset [Danger]
+├─ 📼 Legacy
+│  └─ 💼 Tycoons · 🎲 Events · ⏳ Rounds
+└─ ← Back (prod_production_menu) · 📜 Policy (merged ToS + Privacy)
+
+
+🪛 CastBot | Tools  (MENU_REGISTRY['setup_menu'] → buildSetupMenu)
+├─ 🐙 Special Features   📊 Attributes · 🖼️ Category Post · 🐙 Enemies
+├─ [own row, gated]      👾 Ask CastBot · 👾 Post Ask CastBot   🔒 hasAskCastBotAccess
+├─ 🧹 Cleanup            🧹 Archiver [TEST only] · 🗺️ Navigate Tidy · ☢️ Nuke Category · 💅 Clear Vanity Roles
+├─ 🔮 Utilities          ⏱️ Stopwatch · ❄️ Snowflake · 🕐 Availability · 🎨 Emoji Editor
+└─ Menu (prod_menu_back) [Primary]
+-# Info & Support section RETIRED 2026-08-08: ToS+Privacy → Settings Policy,
+-# Data/Reece's Stuff → Settings Advanced, Need Help → main-menu Support link.
+
+
+⭐ CastBot | Premium  (MENU_REGISTRY['premium_menu'] → buildPremiumMenu, ASYNC)
+├─ 🐙 Special Features   👾 Ask CastBot 🔒 · 👾 Post Ask CastBot 🔒 · 📊 Attributes · 🐙 Enemies
+├─ 💬 Channels 🔒        buildChannelsSection(configId) — SHARED with Season Manager's tab
+│  └─ 🎙️ Confessionals · 🗳️ Subs · 🤝 1 on 1s · 🤐 Alliances · 🔀 Swap/Merge
+├─ 📢 Player Engagement  🖼️ Category Post · 📨 Msg Category 🔒
+├─ 🧹 Cleanup            🧹 Archiver · 🗺️ Navigate Tidy · ☢️ Nuke Category · 💅 Clear Vanity Roles
+├─ 🔮 Utilities          ⏱️ Stopwatch · ❄️ Snowflake · 🕐 Availability · 🎨 Emoji Editor · 🎟️ Entitlements 🔒
+└─ ← Menu · ☕ Donate
+-# configId resolved lazily via mostRecentConfigId() — no seasons → Channels + Msg Category omitted.
+
+
+🗺️ Map Explorer  (mapExplorer.js buildMapExplorerResponse)
+├─ [header: active map, grid size, status, source-images channel]
+├─ [Media Gallery: map image with blacklist / per-item unlock overlays]
+├─ 🗺️ Update Map · 🗑️ Delete Map [Danger] · 🚫 Blacklist
+├─ 🦁 Start Safari · ⏸️ Paused Players (n) · 🚪 Remove Players · 🔄 Reset Safari
+├─ 🗺️ Prod Map · 🚀 Progress · 🤫 Whispers · ⚓ Anchors
+├─ 📥 Import · 📤 Export · 🦁 Guide
+└─ ← Menu
+-# No active map → a single 🗺️ Create Map button replaces the gallery + management row.
+
+
+📋 Castlist Hub  (castlistHub.js)
+├─ [dropdown] Active Castlist · …others… · Create New Castlist
+├─ 🏕️ Tribes on Castlist  (Section accessory → 🏕️ New Tribe; each tribe → Edit)
+├─ Post Castlist · ✏️ Edit · Placements · 🔀 Swap/Merge · 🍒 Compact
+├─ [dropdown] castlist actions (disabled until a castlist is selected)
+└─ ← Menu · 🗑️ Delete [Danger, disabled on default]
+
+
+📅 Season Manager  (seasonSelector.js buildSeasonNavRow + buildSeasonBottomRow)
+├─ 📝 Apps        planner_apps_{configId}
+├─ 📅 Planner     apps_planner_{configId}
+├─ 🏆 Casting     season_app_ranking_{configId}
+├─ 🚣 Marooning   season_marooning_{configId}
+├─ 🔐 Channels    season_channels_{configId}   🔒 CHANNEL_ADMIN_USER_IDS only
+└─ ← Seasons · ✏️ Edit
+-# Active tab renders [Primary]; nav row is at the hard 5-button cap — no room for a 6th tab.
 ```
 
 ---
