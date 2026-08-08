@@ -9,7 +9,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildSeasonNavRow, seasonManagerHeader, isChannelAdmin } from '../seasonSelector.js';
 import { buildStatusSignals, deriveStatus } from '../playerStatus.js';
-import { ACCEPTED_STATUS_IDS } from '../src/channels/channelRoster.js';
+import { ACCEPTED_STATUS_IDS, expandMentionables } from '../src/channels/channelRoster.js';
 import { CHANNEL_ADMIN_USER_IDS } from '../src/channels/channelAdminConfig.js';
 
 const REECE = '391415444084490240';
@@ -560,5 +560,42 @@ describe('Empty-roster message — names offered-but-not-cast players', () => {
 
   it('uses singular grammar for one player', () => {
     assert.match(emptyRosterMessage([{ displayName: 'Alice', offered: true }]), /\*\*1\*\* player has been/);
+  });
+});
+
+describe('expandMentionables — bots are valid targets (decision 2026-08-08)', () => {
+  // Bots used to be dropped, which read as "channels silently not created" when a host
+  // selected a role held by bot test accounts. Only departed members are dropped now.
+  function fakeGuild(membersById, rolesById = {}) {
+    const cache = new Map(Object.entries(membersById));
+    return {
+      id: 'guild-expand-test',
+      memberCount: cache.size,
+      members: { cache, fetch: async () => { throw new Error('unknown member'); } },
+      roles: { cache: new Map(Object.entries(rolesById)), fetch: async () => null }
+    };
+  }
+  const bot = (id, displayName) => ({ id, displayName, user: { bot: true } });
+
+  it('keeps a directly-selected bot', async () => {
+    const guild = fakeGuild({ b1: bot('b1', 'R2-D2') });
+    const { members, dropped } = await expandMentionables(guild, { users: { b1: {} } }, ['b1']);
+    assert.deepEqual(members.map((m) => m.displayName), ['R2-D2']);
+    assert.equal(dropped.length, 0);
+  });
+
+  it('keeps bots that arrive via role expansion (the Galactic Empire repro)', async () => {
+    const troops = { t1: bot('t1', 'Vader'), t2: bot('t2', 'Tarkin'), t3: bot('t3', 'Palpatine') };
+    const guild = fakeGuild(troops, { empire: { members: new Map(Object.entries(troops)) } });
+    const { members, dropped } = await expandMentionables(guild, { roles: { empire: {} } }, ['empire']);
+    assert.equal(members.length, 3, 'all three bot role-holders must get channels');
+    assert.equal(dropped.length, 0);
+  });
+
+  it('still drops members who left the server, with the reason recorded', async () => {
+    const guild = fakeGuild({ b1: bot('b1', 'R2-D2') });
+    const { members, dropped } = await expandMentionables(guild, { users: { b1: {}, gone: {} } }, ['b1', 'gone']);
+    assert.equal(members.length, 1);
+    assert.deepEqual(dropped, [{ userId: 'gone', reason: 'Left the server' }]);
   });
 });

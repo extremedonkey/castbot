@@ -210,7 +210,9 @@ const SAFARI_CONTENT_FILE = path.join(__dirname, 'safariContent.json');
 // Discord has a 40-component limit — every 5 stores = 1 action row + 5 buttons)
 export const MAX_GLOBAL_STORES = 5;
 
-// Player name cache to ensure consistency within the same request
+// Player name cache to ensure consistency within the same request.
+// Keyed `guildId:userId` — display names are per-guild (nicknames), so a userId-only key
+// served one guild's nickname in another's round results.
 const playerNameCache = new Map();
 
 // Request-scoped cache for safari content
@@ -6307,7 +6309,8 @@ async function getEligiblePlayersFixed(guildId, client = null) {
             // All safari-initialized players are eligible for round results
             if (true) { // Include all safari-initialized players
                 // Check cache first for consistent player names within the same request
-                let playerName = playerNameCache.get(userId);
+                const nameCacheKey = `${guildId}:${userId}`;
+                let playerName = playerNameCache.get(nameCacheKey);
                 
                 if (!playerName) {
                     // Get player name from Discord client if available - use multiple fallback strategies
@@ -6332,7 +6335,7 @@ async function getEligiblePlayersFixed(guildId, client = null) {
                     }
                     
                     // Cache the result for consistency
-                    playerNameCache.set(userId, playerName);
+                    playerNameCache.set(nameCacheKey, playerName);
                     console.log(`💾 DEBUG: Cached player name for ${userId}: ${playerName}`);
                 } else {
                     console.log(`📋 DEBUG: Using cached name for ${userId}: ${playerName}`);

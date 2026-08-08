@@ -1774,9 +1774,12 @@ export async function createPlayerManagementUI(options) {
       });
     }
 
-    // CastDock: collapse toggle — always last/rightmost in the bottom row, in any
-    // channel where the sticky menu is active (channel-scoped, not mode-scoped).
-    if (client?.castDockChannels?.has(channelId)) {
+    // CastDock: collapse toggle — last/rightmost in the bottom row, but ONLY on the dock
+    // owner's own menu. This used to be gated on channelId alone, so any player running
+    // /menu in a CastDock channel got a '⌄' in their PRIVATE menu that swapped in the dock
+    // target's data (EpochORG S14, 2026-08-08). A private menu must never render someone else.
+    const castDockEntry = client?.castDockChannels?.get(channelId);
+    if (castDockEntry && String(castDockEntry.targetUserId) === String(targetUserId)) {
       footerButtons.push({ type: 2, style: 2, custom_id: 'castdock_collapse', label: '⌄' });
     }
 

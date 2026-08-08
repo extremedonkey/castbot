@@ -238,16 +238,16 @@ export function askEntryResponse(context, customId) {
     return { content: '👾 Ask CastBot is not available here.', ephemeral: true };
   }
   const prevId = customId.startsWith('askcb_ask_ctx_') ? customId.replace('askcb_ask_ctx_', '') : null;
-  return { type: InteractionResponseType.MODAL, data: buildAskModal(recallResponse(prevId), prevId) };
+  return { type: InteractionResponseType.MODAL, data: buildAskModal(recallResponse(prevId, context.userId), prevId) };
 }
 
 /** askcb_public_ask (+ _pub_ctx) button body — env-gated only; see PUBLIC_ASK_REQUIRES_ENTITLEMENT. */
-export function publicAskEntryResponse(customId) {
+export function publicAskEntryResponse(customId, askerUserId) {
   if (!isAskCastBotEnvironment()) {
     return { content: '👾 Ask CastBot is not available here.', ephemeral: true };
   }
   const prevId = customId.startsWith('askcb_pub_ctx_') ? customId.replace('askcb_pub_ctx_', '') : null;
-  return { type: InteractionResponseType.MODAL, data: buildAskModal(recallResponse(prevId), prevId, true) };
+  return { type: InteractionResponseType.MODAL, data: buildAskModal(recallResponse(prevId, askerUserId), prevId, true) };
 }
 
 /** askcb_post button body — drops the standing public Ask button into the channel. */
@@ -604,9 +604,19 @@ export function rememberResponse(responseId, payload) {
   }
 }
 
-/** @returns {{query: string, response: string, elapsed: string}|null} */
-export function recallResponse(responseId) {
-  return (responseId && global.askCastBotResponses?.get(responseId)) || null;
+/**
+ * @param {string} responseId
+ * @param {string} [askerUserId] - when given, the entry is only returned to whoever asked it
+ * @returns {{query: string, response: string, elapsed: string}|null}
+ */
+export function recallResponse(responseId, askerUserId) {
+  const entry = (responseId && global.askCastBotResponses?.get(responseId)) || null;
+  if (!entry) return null;
+  // Follow Up sits on a PUBLIC answer card, so anyone can click it. Without this check the
+  // prior Q&A gets pre-loaded into a stranger's modal — the ids are bare millisecond
+  // timestamps, so they're guessable too. Entries predating this field stay recallable.
+  if (askerUserId != null && entry.uid != null && String(entry.uid) !== String(askerUserId)) return null;
+  return entry;
 }
 
 /** Reject a modal submit with an ephemeral note. */
@@ -773,7 +783,7 @@ export async function handleAskModalSubmit(req, res, client = null) {
 
     const responseId = Date.now().toString(36);
     // cid rides along so a Follow Up inherits the conversation id (see ctx above).
-    rememberResponse(responseId, { response: publicAnswer, query, elapsed, complexity, model, cid: ctx.cid });
+    rememberResponse(responseId, { response: publicAnswer, query, elapsed, complexity, model, cid: ctx.cid, uid: userId });
 
     answerText = publicAnswer;
     const chunks = chunkResponse(publicAnswer);

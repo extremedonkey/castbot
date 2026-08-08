@@ -361,7 +361,7 @@ export async function planChannels({ kind, mode, configId, guildId, userId, clie
   const { members, dropped, skipped } = await resolveTargets({ mode, guild, guildId, configId, resolved, values });
   if (!members.length) {
     return err(mode === 'specific'
-      ? 'No valid players selected (bots and departed members are skipped).'
+      ? 'No valid players selected — everyone you picked has left the server.'
       : emptyRosterMessage(skipped));
   }
 
@@ -409,7 +409,7 @@ export async function planChannels({ kind, mode, configId, guildId, userId, clie
            '> Trusted Spectators can **read + react** (not post).']
         : ['> **Both** the player and their player role get access.']),
       ...rosterLines(members, { creating: creatingIds }),
-      ...(dropped.length ? ['', `-# ${dropped.length} target(s) dropped (bots / left the server).`] : []),
+      ...(dropped.length ? ['', `-# Dropped (left the server): ${dropped.slice(0, 10).map((d) => `<@${d.userId}>`).join(', ')}${dropped.length > 10 ? ` …and ${dropped.length - 10} more` : ''}`] : []),
       ...(skipped.length ? ['', `-# ${skipped.length} applicant(s) skipped (not accepted / withdrawn).`] : [])
     ],
     confirmLabel: toCreate.length ? `Create ${toCreate.length} channel${toCreate.length > 1 ? 's' : ''}` : 'Re-apply permissions'
@@ -462,7 +462,7 @@ export async function planPlayerRoles({ mode, configId, guildId, userId, client,
       ...rosterLines(members, { creating: new Set(needing.map((m) => m.userId)) }),
       '',
       '-# Roles are created uncoloured and non-mentionable; recolour them in Discord as you like.',
-      ...(skipped.length ? [`-# ${skipped.length} skipped (not accepted / withdrawn / bot / left).`] : [])
+      ...(skipped.length ? [`-# ${skipped.length} skipped (not accepted / withdrawn / left).`] : [])
     ],
     confirmLabel: `Create ${needing.length} role${needing.length > 1 ? 's' : ''}`
   });

@@ -165,7 +165,7 @@ export async function planAlliance({ customId, guildId, userId, client, fields, 
     return err('Select at least one member.');
   }
   const { members, dropped } = expansion;
-  if (!members.length && mode !== 'members') return err('No valid members — bots and users who left the server are dropped.');
+  if (!members.length && mode !== 'members') return err('No valid members — everyone selected has left the server.');
 
   // ── Tribe alignment (warn, never enforce) ─────────────────────────────────
   const tribeMap = await tribeNamesByUser(guildId, client);
@@ -251,7 +251,7 @@ export async function planAlliance({ customId, guildId, userId, client, fields, 
     ...(memberLines.length > 15 ? [`> -# …and ${memberLines.length - 15} more`] : []),
     ...(diff.removed.length ? ['', `**➖ Removing (${diff.removed.length}):**`, ...removedPrincipals.slice(0, 10).map((m) => `> <@${m.userId}>`)] : []),
     ...(!isCreate && diff.added.length ? ['', `-# ➕ ${diff.added.length} newly added member${diff.added.length === 1 ? '' : 's'} will gain access${notify !== 'silent' ? ' (no announcement on edits)' : ''}.`] : []),
-    ...(dropped?.length ? ['', `-# ${dropped.length} selection${dropped.length === 1 ? '' : 's'} dropped (bots / left the server).`] : []),
+    ...(dropped?.length ? ['', `-# ${dropped.length} selection${dropped.length === 1 ? '' : 's'} dropped (left the server).`] : []),
     ...(!alignment.aligned ? ['', `> ⚠️ **Cross-tribe warning** — alliances are usually same-tribe. Spanning: ${alignment.tribesSpanned.join(' + ') || 'no tribes found'}. You can still proceed.`] : []),
     ...(members.length === 0 ? ['', '> ⚠️ This removes **every** member — only hosts will see the channel.'] : []),
     '',
@@ -472,7 +472,7 @@ export async function handleAllianceRequestSubmit({ customId, guildId, userId, d
 
   const guild = await client.guilds.fetch(guildId);
   const { members } = await expandMentionables(guild, resolved, fields.members || []);
-  if (!members.length) return err('No valid members — bots and users who left the server are dropped.');
+  if (!members.length) return err('No valid members — everyone selected has left the server.');
 
   requestCooldowns.set(userId, Date.now());
   const requestId = newAllianceId();

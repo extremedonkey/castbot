@@ -5600,6 +5600,44 @@ export function extractButtonContext(req) {
  * @param {BigInt} permission - Discord permission flag
  * @returns {boolean} Whether member has permission
  */
+/**
+ * Declarative security tiers for `security:` on a handler config.
+ *
+ * Until 2026-08-08 `security:` was inert decoration — the factory never read it, so 19
+ * call sites carried it as if it were enforcement (incident 04 Recommendation 3, proposed
+ * but never built). It read as "someone considered access here", which is a bad signal to
+ * leave in code that leaked a player's menu. This makes it real.
+ *
+ * ADDITIVE BY DESIGN: an ABSENT `security` field changes nothing, so the ~100 legacy
+ * handlers keep their current behaviour. Default-deny would be correct in a greenfield
+ * codebase and a mass outage in this one. Only an explicit tier is enforced.
+ *
+ * A tier that isn't in this map THROWS at create() time rather than silently passing —
+ * `security: 'banana'` must never again behave identically to a real gate.
+ */
+export const SECURITY_TIERS = {
+  public: null,                              // anyone may click — documents intent, no gate
+  admin: PermissionFlagsBits.ManageRoles,    // host-level surfaces
+  owner: 'owner'                             // bot owner only
+};
+
+const OWNER_USER_ID = '391415444084490240';
+
+/** Resolves a `security:` tier against the clicker. Pure-ish — unit-tested via evaluateSecurityTier. */
+export function evaluateSecurityTier(tier, { member, userId }) {
+  if (tier == null) return { allowed: true, reason: 'no_tier' };
+  if (!(tier in SECURITY_TIERS)) return { allowed: false, reason: 'unknown_tier' };
+  if (tier === 'public') return { allowed: true, reason: 'public' };
+  if (tier === 'owner') {
+    return userId === OWNER_USER_ID
+      ? { allowed: true, reason: 'owner' }
+      : { allowed: false, reason: 'not_owner', permissionName: 'Bot Owner' };
+  }
+  return hasPermission(member, SECURITY_TIERS[tier])
+    ? { allowed: true, reason: 'has_permission' }
+    : { allowed: false, reason: 'missing_permission', permissionName: 'Manage Roles' };
+}
+
 export function hasPermission(member, permission) {
   if (!member?.permissions) return false;
   return (BigInt(member.permissions) & permission) !== 0n;
@@ -5918,6 +5956,15 @@ export class ButtonHandlerFactory {
    * @returns {Function} Handler function
    */
   static create(config) {
+    // Fail loudly on a typo'd tier at wiring time — a silently-ignored `security:` value is
+    // exactly the trap this field used to be.
+    if (config.security != null && !(config.security in SECURITY_TIERS)) {
+      throw new Error(
+        `ButtonHandlerFactory: unknown security tier '${config.security}' on '${config.id}'. ` +
+        `Valid tiers: ${Object.keys(SECURITY_TIERS).join(', ')}.`
+      );
+    }
+
     // followUp: true is an alias for deferred + new follow-up message (not PATCH @original)
     if (config.followUp) {
       config.deferred = true;
@@ -5954,6 +6001,15 @@ export class ButtonHandlerFactory {
         if (config.requiresPermission) {
           if (!hasPermission(context.member, config.requiresPermission)) {
             return sendPermissionDenied(res, config.permissionName || 'required permissions');
+          }
+        }
+
+        // 3a. Declarative security tier (see SECURITY_TIERS). Absent = unchanged behaviour.
+        if (config.security != null) {
+          const verdict = evaluateSecurityTier(config.security, context);
+          if (!verdict.allowed) {
+            console.log(`🔒 [SECURITY DENIED] ${config.id} tier='${config.security}' reason=${verdict.reason} user=${context.userId}`);
+            return sendPermissionDenied(res, verdict.permissionName || 'required permissions');
           }
         }
 

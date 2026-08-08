@@ -3922,7 +3922,28 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     let { custom_id } = data;
     console.log('Processing MESSAGE_COMPONENT with custom_id:', custom_id);
     console.log('Component type:', data.component_type, 'Values:', data.values);
-    
+
+    // A self-scoped player_* control clicked on ANOTHER player's public CastDock sticky
+    // resolves to the CLICKER and then UPDATE_MESSAGEs their own menu into the channel for
+    // everyone to read (EpochORG S14, 2026-08-08). The dock's own castdock_* buttons are
+    // deliberately exempt: they're target-scoped by design, and a host reading a subs-channel
+    // dock is the whole point of the feature.
+    if (custom_id.startsWith('player_')) {
+      const { isForeignCastDockSticky } = await import('./castDock.js');
+      if (isForeignCastDockSticky({
+        entry: client.castDockChannels?.get(req.body.channel_id),
+        messageId: req.body.message?.id,
+        clickerUserId: req.body.member?.user?.id || req.body.user?.id
+      })) {
+        console.log(`📌 CastDock: blocked ${custom_id} by ${req.body.member?.user?.id} on another player's sticky`);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { content: '📌 That\'s someone else\'s CastDock. Use `/menu` to open your own.', flags: InteractionResponseFlags.EPHEMERAL }
+        });
+      }
+    }
+
+
     // Check if button uses new factory pattern or old pattern
     // Check exact match first, then check dynamic patterns
     let isFactoryButton = BUTTON_REGISTRY[custom_id];
@@ -6774,6 +6795,10 @@ To fix this:
     } else if (custom_id.startsWith('pcard_')) {
       return ButtonHandlerFactory.create({
         id: custom_id,
+        // Target comes straight out of the custom_id, so without a gate a forged/stale
+        // interaction reads any member's card. Entry point is Reece's Stuff; admin is the
+        // floor, not the ceiling.
+        security: 'admin',
         updateMessage: true,
         handler: async (context) => {
           const { handlePlayerCardInteraction } = await import('./playerCardMenu.js');
@@ -9824,7 +9849,7 @@ To fix this:
         const action = parseCastDockAction(req.body.data.values);
         if (action === 'enable') {
           const { buildCastDockSetupScreen } = await import('./castDock.js');
-          return await buildCastDockSetupScreen(context.guildId, context.channelId, false, context.userId);
+          return await buildCastDockSetupScreen(context.guildId, context.channelId, false, context.userId, context.client);
         }
         await applyCastDockToggle(client, context.guildId, context.channelId, context.userId, action, context.userId);
         const guild = await context.client.guilds.fetch(context.guildId);
@@ -9840,9 +9865,9 @@ To fix this:
         const action = parseCastDockAction(req.body.data.values);
         if (action === 'enable') {
           const { buildCastDockSetupScreen } = await import('./castDock.js');
-          return await buildCastDockSetupScreen(context.guildId, context.channelId, true, targetUserId);
+          return await buildCastDockSetupScreen(context.guildId, context.channelId, true, targetUserId, context.client);
         }
-        await applyCastDockToggle(client, context.guildId, context.channelId, targetUserId, action, context.userId);
+        await applyCastDockToggle(client, context.guildId, context.channelId, targetUserId, action, context.userId, { allowRetarget: true });
         const { buildAdminPlayerMenu } = await import('./playerManagement.js');
         return await buildAdminPlayerMenu(context.client, context.guildId, targetUserId, context.userId, 'castdock');
       }})(req, res, client);
@@ -9852,7 +9877,7 @@ To fix this:
       return ButtonHandlerFactory.create({ id: 'castdock_select_buttons', security: 'public', updateMessage: true, handler: async (context) => {
         const { setCastDockButtonSelection, buildCastDockSetupScreen } = await import('./castDock.js');
         await setCastDockButtonSelection(context.guildId, context.channelId, context.userId, req.body.data.values || []);
-        return await buildCastDockSetupScreen(context.guildId, context.channelId, false, context.userId);
+        return await buildCastDockSetupScreen(context.guildId, context.channelId, false, context.userId, context.client);
       }})(req, res, client);
 
     } else if (custom_id.startsWith('castdock_select_buttons_')) {
@@ -9861,7 +9886,7 @@ To fix this:
         const targetUserId = custom_id.replace('castdock_select_buttons_', '');
         const { setCastDockButtonSelection, buildCastDockSetupScreen } = await import('./castDock.js');
         await setCastDockButtonSelection(context.guildId, context.channelId, targetUserId, req.body.data.values || []);
-        return await buildCastDockSetupScreen(context.guildId, context.channelId, true, targetUserId);
+        return await buildCastDockSetupScreen(context.guildId, context.channelId, true, targetUserId, context.client);
       }})(req, res, client);
 
     } else if (custom_id === 'castdock_activate' || custom_id.startsWith('castdock_activate_')) {
@@ -9869,7 +9894,20 @@ To fix this:
       return ButtonHandlerFactory.create({ id: 'castdock_activate', security: 'public', updateMessage: true, handler: async (context) => {
         const isAdminMode = custom_id.startsWith('castdock_activate_');
         const targetUserId = isAdminMode ? custom_id.replace('castdock_activate_', '') : context.userId;
-        await applyCastDockToggle(client, context.guildId, context.channelId, targetUserId, 'enable', context.userId);
+        const toggled = await applyCastDockToggle(client, context.guildId, context.channelId, targetUserId, 'enable', context.userId, { allowRetarget: isAdminMode });
+        if (toggled?.ok === false && toggled.reason === 'occupied') {
+          // Container, not bare content — this handler is updateMessage, and Discord drops
+          // `content` on UPDATE_MESSAGE (the class-A silent-rejection trap). The setup screen
+          // it replaces is already ephemeral, so the notice inherits that.
+          return {
+            flags: (1 << 15),
+            components: [{
+              type: 17,
+              accent_color: 0xf39c12,
+              components: [{ type: 10, content: `📌 **CastDock is already active here** — it belongs to <@${toggled.existingTargetUserId}>.\n\nThey (or a host) need to turn it off before this channel can host a different dock.` }]
+            }]
+          };
+        }
         if (isAdminMode) {
           const { buildAdminPlayerMenu } = await import('./playerManagement.js');
           return await buildAdminPlayerMenu(context.client, context.guildId, targetUserId, context.userId, 'castdock');
@@ -10759,7 +10797,7 @@ To fix this:
         id: 'askcb_public_ask',
         security: 'public',
         requiresModal: true,
-        handler: async () => (await import('./askCastBot.js')).publicAskEntryResponse(custom_id)
+        handler: async (context) => (await import('./askCastBot.js')).publicAskEntryResponse(custom_id, context.userId)
       })(req, res, client);
 
     } else if (custom_id === 'askcb_post') {
@@ -26202,6 +26240,10 @@ To fix this:
       // 🔘 Convert to ButtonHandlerFactory
       return ButtonHandlerFactory.create({
         id: custom_id,
+        // These carry the TARGET's id in the custom_id and render/mutate that player's
+        // admin card. The surface was ungated — reachable only by forging an interaction,
+        // but that's a control, not an accident waiting to be re-exposed.
+        security: 'admin',
         updateMessage: true, // Update existing message
         handler: async (context) => {
           const playerData = await loadPlayerData();

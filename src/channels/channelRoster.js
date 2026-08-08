@@ -177,8 +177,9 @@ function outranks(status, app, prevStatus, prevApp) {
 
 /**
  * Expand a Mentionable Select's resolved payload (users and/or roles) into members.
- * Drops bots and departed members — a spectator bot sitting in a tribe role would otherwise
- * generate n-1 useless 1on1 channels.
+ * Drops departed members only. Bots are valid targets — the host picked them explicitly,
+ * and test servers use bot accounts as stand-in players (decision 2026-08-08; bots were
+ * dropped before that and it read as channels silently not being created).
  *
  * @param {import('discord.js').Guild} guild
  * @param {{users?: Object, roles?: Object}} resolved - interaction data.resolved
@@ -208,10 +209,6 @@ export async function expandMentionables(guild, resolved, values) {
     const member = guild.members.cache.get(id) || (await guild.members.fetch(id).catch(() => null));
     if (!member) {
       dropped.push({ userId: id, reason: 'Left the server' });
-      continue;
-    }
-    if (member.user?.bot) {
-      dropped.push({ userId: id, reason: 'Bot' });
       continue;
     }
     members.push({
@@ -244,7 +241,7 @@ async function ensureMembersFetched(guild) {
  * @param {string[]|null} tribeRoleIds - null/empty → all tribes in the default castlist
  * @param {import('discord.js').Client} client
  * @param {import('discord.js').Guild} guild
- * @returns {Promise<Array<{tribeRoleId, tribeName, members, pairs, dropped}>>}
+ * @returns {Promise<Array<{tribeRoleId, tribeName, members, pairs}>>}
  */
 export async function getTribePairs(guildId, tribeRoleIds, client, guild) {
   const tribes = await getTribesForCastlist(guildId, 'default', client);
@@ -256,13 +253,8 @@ export async function getTribePairs(guildId, tribeRoleIds, client, guild) {
   for (const tribe of tribes || []) {
     if (wanted && !wanted.has(tribe.roleId)) continue;
 
-    const dropped = [];
     const members = [];
     for (const m of tribe.members || []) {
-      if (m.user?.bot) {
-        dropped.push({ userId: m.id, reason: 'Bot' });
-        continue;
-      }
       members.push({
         userId: m.id,
         displayName: m.displayName,
@@ -282,8 +274,7 @@ export async function getTribePairs(guildId, tribeRoleIds, client, guild) {
       tribeRoleId: tribe.roleId,
       tribeName: tribe.name || guild?.roles.cache.get(tribe.roleId)?.name || 'Tribe',
       members,
-      pairs, // n<2 → [] (enumeratePairs guards this)
-      dropped
+      pairs // n<2 → [] (enumeratePairs guards this)
     });
   }
 

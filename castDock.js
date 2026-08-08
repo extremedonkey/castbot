@@ -262,7 +262,54 @@ export function buildCastDockButtonSelectRow(customId, selectedButtons, blocked 
  * @param {boolean} isAdminMode
  * @param {string} [targetUserId] - required when isAdminMode, to build custom_ids
  */
-export async function buildCastDockSetupScreen(guildId, channelId, isAdminMode, targetUserId = null) {
+/**
+ * Pure — turns a raw "other players who can see this" count into the screen's verdict.
+ *
+ * `null` count = we couldn't work it out (uncached members, missing channel, no client);
+ * the screen then falls back to the old generic caveat rather than asserting something
+ * false. Unit-tested.
+ */
+export function assessCastDockAudience(otherPlayerCount) {
+  if (otherPlayerCount == null) return { level: 'unknown' };
+  return otherPlayerCount === 0
+    ? { level: 'private', otherPlayerCount: 0 }
+    : { level: 'shared', otherPlayerCount };
+}
+
+/**
+ * Counts NON-ADMIN, non-bot members (other than the dock's target) who can see the channel.
+ *
+ * Admins are deliberately excluded: CastDock's designed home is a subs channel where the
+ * player and their hosts are both present, and hosts seeing the dock is the entire point.
+ * What makes a channel wrong for CastDock is *other players* being able to read it — which
+ * is exactly what happened in EpochORG S14 on 2026-08-04, where a player self-activated in
+ * a shared map channel and their menu sat publicly readable for four days.
+ *
+ * Best-effort: returns null on any failure so setup is never blocked by a failed count.
+ */
+export async function countCastDockAudience(client, guildId, channelId, targetUserId) {
+  try {
+    if (!client) return null;
+    const { PermissionFlagsBits } = await import('discord.js');
+    const guild = await client.guilds.fetch(guildId);
+    const channel = await guild.channels.fetch(channelId);
+    if (!channel?.members) return null; // not a guild text channel, or members uncached
+    const names = [];
+    let others = 0;
+    for (const [, m] of channel.members) {
+      if (m.user?.bot || m.id === targetUserId) continue;
+      if (m.permissions?.has(PermissionFlagsBits.ManageRoles)) continue; // host — intended viewer
+      others++;
+      if (names.length < 3) names.push(m.displayName);
+    }
+    return { others, names };
+  } catch (e) {
+    console.warn(`CastDock: could not compute audience for ${guildId}/${channelId}: ${e.message}`);
+    return null;
+  }
+}
+
+export async function buildCastDockSetupScreen(guildId, channelId, isAdminMode, targetUserId = null, client = null) {
   const { countComponents } = await import('./utils.js');
   const { getBotEmoji } = await import('./botEmojis.js');
   const { loadPlayerData } = await import('./storage.js');
@@ -287,24 +334,47 @@ export async function buildCastDockSetupScreen(guildId, channelId, isAdminMode, 
   const selectedIds = new Set(resolveCompactRowIds(config.selectedButtons));
   const blockedAndSelected = blocked.filter(b => selectedIds.has(b.id));
 
+  // Count the real audience rather than asking the reader to assess their own channel.
+  // The prose version of this warning has been on this screen the whole time and was read
+  // past twice (2026-08-01 button selection, 2026-08-04 shared-channel activation); per
+  // LeanUserInterfaceDesign.md the thing that actually lands is a computed, specific fact.
+  const audience = assessCastDockAudience((await countCastDockAudience(client, guildId, channelId, targetUserId))?.others ?? null);
+  const isShared = audience.level === 'shared';
+
+  const audienceBlock = isShared
+    ? {
+      type: 10,
+      content: `**${audience.otherPlayerCount} other player${audience.otherPlayerCount === 1 ? '' : 's'} can see this channel.**\n` +
+        `All of them will see this dock's currency, item counts, safari stats and map position — ` +
+        `and it stays there, reposting itself, until it's turned off.\n\n` +
+        `CastDock is meant for a player's own subs/submission channel. This doesn't look like one.`
+    }
+    : audience.level === 'private'
+      ? { type: 10, content: '-# No other players can see this channel — only hosts. That\'s exactly where CastDock belongs.' }
+      : { type: 10, content: '-# Since it\'s public now, whatever shows on it — currency, item counts, safari stats — is visible to everyone in this channel. Best kept to a private submission/subs channel, not anywhere spectators or other players can see it.' };
+
   const container = {
     type: 17, // Container
-    accent_color: 0x9b59b6, // Purple — info/prep tier, not a warning/danger color
+    // Orange only when the count says this is the wrong kind of channel; the calm purple
+    // info tier otherwise, so the warning colour keeps meaning something.
+    accent_color: isShared ? 0xf39c12 : 0x9b59b6,
     components: [
       { type: 10, content: '## 📌 Set Up CastDock' },
       { type: 14 },
       { type: 10, content: '### ```📌 What is CastDock?```' },
       { type: 10, content: 'CastDock pins this menu as a **public** message in this channel — it\'s always the newest message here, automatically reposting itself whenever anyone sends a new message.' },
       { type: 14 },
-      { type: 10, content: '### ```👀 Who can see this```' },
-      { type: 10, content: '-# Since it\'s public now, whatever shows on it — currency, item counts, safari stats — is visible to everyone in this channel. Best kept to a private submission/subs channel, not anywhere spectators or other players can see it.' },
+      { type: 10, content: isShared ? '### ```⚠️ Who can see this```' : '### ```👀 Who can see this```' },
+      audienceBlock,
       { type: 14 },
       { type: 10, content: '### ```🔘 Select CastDock buttons```' },
       { type: 10, content: '-# Choose which buttons appear on CastDock (shown in this order: Commands, Inventory, Actions, Challenges, Crafting, Map). The default five fit neatly on one row — Map is off by default, as a sixth button wraps onto a second row. Anything you tick shows even if the player has nothing yet — the only exception is a feature this server hasn\'t set up at all, which is flagged with a ⚠️ below.' },
       buildCastDockButtonSelectRow(selectButtonsId, config.selectedButtons, blocked),
       { type: 14 },
       { type: 1, components: [
-        { type: 2, custom_id: activateId, label: 'Activate CastDock', style: 1, emoji: getBotEmoji('castbot_logo') }
+        // "Activate Anyway" makes the informed-consent step explicit when the count says
+        // this is a shared channel — the label itself carries the warning to the click.
+        { type: 2, custom_id: activateId, label: isShared ? 'Activate Anyway' : 'Activate CastDock', style: isShared ? 2 : 1, emoji: getBotEmoji('castbot_logo') }
       ]}
     ]
   };
@@ -338,6 +408,17 @@ export function evaluateCastDockTrigger({ entry, authorIsBot, now = Date.now(), 
   if (authorIsBot) return { action: 'skip', reason: 'bot_author' }; // stops the bot's own repost from re-triggering itself
   if (entry.lastRepostAt && (now - entry.lastRepostAt) < cooldownMs) return { action: 'skip', reason: 'cooldown' };
   return { action: 'repost', reason: 'ok' };
+}
+
+/**
+ * Pure — is this interaction a self-scoped control being clicked on SOMEONE ELSE'S public
+ * CastDock sticky? Those controls resolve to the clicker, so letting them through would
+ * publish the clicker's own menu into a channel they don't own. Unit-tested.
+ */
+export function isForeignCastDockSticky({ entry, messageId, clickerUserId }) {
+  if (!entry?.enabled || !entry.lastMessageId || !messageId) return false;
+  if (String(entry.lastMessageId) !== String(messageId)) return false;
+  return String(entry.targetUserId) !== String(clickerUserId);
 }
 
 // ── In-memory boot cache (client.castDockChannels, keyed by channelId) ──────
@@ -548,9 +629,18 @@ export async function handleCastDockChannelDeleted(client, guildId, channelId) {
 // ── Router-facing wrappers (keep app.js a thin dispatcher — CLAUDE.md golden rule) ──
 
 /** Applies an Enable/Disable select choice — shared by both the player and admin handlers. */
-export async function applyCastDockToggle(client, guildId, channelId, targetUserId, action, actorUserId) {
+export async function applyCastDockToggle(client, guildId, channelId, targetUserId, action, actorUserId, { allowRetarget = false } = {}) {
   if (!client.castDockChannels) client.castDockChannels = new Map();
   if (action === 'enable') {
+    // setCastDockButtonSelection has refused cross-player retargeting since day one; this
+    // path never did, so a player could silently take over a channel another player's dock
+    // was live in (leaving the old sticky orphaned). Hosts activating in admin mode pass
+    // allowRetarget — reassigning a dock is a legitimate thing for them to do.
+    const live = client.castDockChannels.get(channelId);
+    if (!allowRetarget && live?.enabled && live.targetUserId && live.targetUserId !== targetUserId) {
+      console.log(`📌 CastDock: refused retarget of ${channelId} (live for ${live.targetUserId}, ${actorUserId} tried to claim it)`);
+      return { ok: false, reason: 'occupied', existingTargetUserId: live.targetUserId };
+    }
     await setCastDockConfig(guildId, channelId, { enabled: true, targetUserId, enabledBy: actorUserId });
     // Carry over the previous sticky's id — re-activating an already-active dock (the
     // reconfigure flow) must delete the old message on first post, not orphan it forever.
@@ -561,6 +651,7 @@ export async function applyCastDockToggle(client, guildId, channelId, targetUser
   } else {
     await handleCastDockDisable(client, guildId, channelId, actorUserId);
   }
+  return { ok: true };
 }
 
 /** Full messageCreate gateway listener body (app.js only wires the client.on(...) call). */

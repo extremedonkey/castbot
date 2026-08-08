@@ -263,7 +263,7 @@ Note the *two different 50s*: 50 categories per guild, and 50 channels per categ
 - **Renames: 2 per 10 minutes, per channel.** Renaming is best-effort and never fails a job — the channel is still permissioned and registered, and reported as `renamePending`.
 - **Concurrency**: an in-memory `jobLocks` map keyed `${guildId}:${action}` refuses a second simultaneous run. `withStorageLock` can't help here — a bulk run spans Discord calls, so its read-then-create is TOCTOU.
 - **Delete never name-matches guild-wide.** It only touches registry entries and children of CastBot's own categories, and lists every channel by name on the confirm screen.
-- **Bots and departed members are dropped** — a spectator bot in a tribe role would otherwise generate n−1 useless channels.
+- **Departed members are dropped; bots are NOT** (changed 2026-08-08). Bots were originally dropped to stop a spectator bot in a tribe role generating n−1 useless 1on1 channels — but in practice tribe roles are never assigned to bots, and bot accounts are needed as stand-in players on test servers. The confirm screen now names anyone dropped.
 - **Progress rides the webhook token**, not channel posts, so it survives deleting the channel you ran the job from. A 401 (expired token) is swallowed; the registry and the tab's `lastRun` line are the durable record.
 
 ## 🔒 Gating

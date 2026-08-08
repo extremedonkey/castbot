@@ -53,7 +53,7 @@ ORG hosts create secret alliance channels by hand — pick the members, build th
 ## 🗝️ Key design points
 
 ### The "combo user/role select" exists
-The user wished for a combined user+role picker — Discord's **Mentionable Select (type 7)** is exactly that, already used by the Confessionals/Subs modals. Roles expand to members via `expandMentionables` (bots/departed dropped); `data.resolved.roles` disambiguates.
+The user wished for a combined user+role picker — Discord's **Mentionable Select (type 7)** is exactly that, already used by the Confessionals/Subs modals. Roles expand to members via `expandMentionables` (departed members dropped; bots allowed since 2026-08-08); `data.resolved.roles` disambiguates.
 
 ### The adoption hazard (the one real landmine)
 `ensureChannel` resolves identity registryId → **adopt-by-name** → create. Alliances *deliberately* share the generic name `alliance`, so a second alliance in the same category would **adopt the first alliance's channel and merge memberships — a catastrophic leak**. Fix: `ensureChannel` gains an `adoptByName = true` opt-out; alliances pass `false` (create-when-no-registryId). The orphan-on-interrupt window that adoption covered is closed by flushing the registry delta immediately after the single-channel create.
