@@ -265,7 +265,7 @@ describe('PM2ErrorLogger — buildErrorLogContainer (Components V2 card)', () =>
     assert.equal(buildErrorLogContainer({ ...base, env: 'mystery', askEnabled: false }).accent_color, 0x95a5a6);
   });
 
-  it('appends the Ask Moai row only when askEnabled (DEV/TEST — no Claude in prod)', () => {
+  it('appends the Ask Moai row only when askEnabled', () => {
     const withAsk = buildErrorLogContainer({ ...base, askEnabled: true });
     const row = withAsk.components.find(c => c.type === 1);
     assert.ok(row, 'expected an Action Row');
@@ -275,6 +275,25 @@ describe('PM2ErrorLogger — buildErrorLogContainer (Components V2 card)', () =>
     const withoutAsk = buildErrorLogContainer({ ...base, askEnabled: false });
     assert.equal(withoutAsk.components.some(c => c.type === 1), false);
     assert.equal(withoutAsk.components.some(c => c.type === 14), false); // no orphan separator
+  });
+
+  it('askEnabled default mirrors isMoaiEnvironment: on in prod only with CLAUDE_PROD_FEATURES', () => {
+    const prevProd = process.env.PRODUCTION;
+    const prevFeat = process.env.CLAUDE_PROD_FEATURES;
+    try {
+      process.env.PRODUCTION = 'TRUE';
+      delete process.env.CLAUDE_PROD_FEATURES;
+      assert.equal(buildErrorLogContainer({ ...base }).components.some(c => c.type === 1), false, 'prod without opt-in: no button');
+      process.env.CLAUDE_PROD_FEATURES = 'TRUE';
+      assert.equal(buildErrorLogContainer({ ...base }).components.some(c => c.type === 1), true, 'prod with opt-in: button');
+      // warnings-severity cards get it too (severity only changes the card skin)
+      assert.equal(buildErrorLogContainer({ ...base, severity: 'warn' }).components.some(c => c.type === 1), true, 'warn cards: button');
+      delete process.env.PRODUCTION;
+      assert.equal(buildErrorLogContainer({ ...base }).components.some(c => c.type === 1), true, 'dev/test: button');
+    } finally {
+      if (prevProd === undefined) delete process.env.PRODUCTION; else process.env.PRODUCTION = prevProd;
+      if (prevFeat === undefined) delete process.env.CLAUDE_PROD_FEATURES; else process.env.CLAUDE_PROD_FEATURES = prevFeat;
+    }
   });
 
   it('caps the log body inside the 4000-char total Text Display budget', () => {

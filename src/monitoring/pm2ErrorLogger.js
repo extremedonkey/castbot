@@ -153,14 +153,16 @@ const LOG_CONTENT_CAP = 3500;
  * @param {'dev'|'test'|'prod'} opts.env
  * @param {string} opts.timeString - preformatted local time
  * @param {string} opts.logContent - joined log lines
- * @param {boolean} [opts.askEnabled] - append the Ask Moai button (DEV/TEST only —
- *   prod has no Claude CLI; the container itself renders everywhere)
+ * @param {boolean} [opts.askEnabled] - append the Ask Moai button. Default mirrors
+ *   isMoaiEnvironment() in moai.js (inlined — this module must stay dependency-free):
+ *   everywhere except prod-without-CLAUDE_PROD_FEATURES. Prod's Moai is a read-only
+ *   advisor (Read/Glob/Grep), installed with the 2026-07-28 2GB migration.
  * @param {'error'|'warn'} [opts.severity] - warn-only batches get a muted card so
  *   the channel scans at a glance (the channel is @mentions-only notify)
  * @param {boolean} [opts.mention] - prepend Reece's mention (battle stations)
  * @returns {Object} type-17 Container
  */
-export function buildErrorLogContainer({ env, timeString, logContent, askEnabled = process.env.PRODUCTION !== 'TRUE', severity = 'error', mention = false }) {
+export function buildErrorLogContainer({ env, timeString, logContent, askEnabled = process.env.PRODUCTION !== 'TRUE' || process.env.CLAUDE_PROD_FEATURES === 'TRUE', severity = 'error', mention = false }) {
   const meta = severity === 'warn'
     ? { tag: `🟡 PM2 Warnings · ${String(env).toUpperCase()}`, accent: 0x95a5a6 }
     : ENV_CARD_META[env] || { tag: `PM2 Errors · ${String(env).toUpperCase()}`, accent: 0x95a5a6 };
