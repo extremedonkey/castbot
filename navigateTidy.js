@@ -1,5 +1,5 @@
 /**
- * navigateTidy.js - Bulk cleanup of stale Safari navigation panels (Tools → 🧹 Cleanup → Navigate Tidy)
+ * navigateTidy.js - Bulk cleanup of stale Safari navigation panels (Map Explorer → 🛠️ Utilities → Navigate Tidy)
  *
  * Stale panel = a bot-posted "has arrived" / "admin move" card whose owner no longer has
  * VIEW_CHANNEL on that map-cell channel (they moved on, were de-initialized, or left the guild).

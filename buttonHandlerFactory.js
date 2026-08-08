@@ -487,18 +487,18 @@ export const BUTTON_REGISTRY = {
   },
   'safari_import_data': {
     label: 'Import',
-    description: 'Map Explorer → Import — shows prep-warning screen, then opens file_import_safari modal',
+    description: 'Map Explorer → Utilities → Import — shows prep-warning screen, then opens file_import_safari modal',
     emoji: '📥',
     style: 'Secondary',
-    parent: 'safari_map_explorer',
+    parent: 'map_utilities',
     category: 'admin'
   },
   'safari_export_data': {
     label: 'Export',
-    description: 'Map Explorer → Export — opens the Safari export component-select screen',
+    description: 'Map Explorer → Utilities → Export — opens the Safari export component-select screen',
     emoji: '📤',
     style: 'Secondary',
-    parent: 'safari_map_explorer',
+    parent: 'map_utilities',
     category: 'admin'
   },
   'safari_export_select': {
@@ -2606,6 +2606,14 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'safari'
   },
+  'map_utilities': {
+    label: 'Utilities',
+    description: 'Map Explorer → 🛠️ Utilities submenu: Import/Export, Anchors, Navigate Tidy',
+    emoji: '🛠️',
+    style: 'Secondary',
+    category: 'safari_map_admin',
+    parent: 'safari_map_explorer'
+  },
   'safari_shared_map': {
     label: 'Shared Map',
     description: 'Share map publicly in channel (non-ephemeral map view)',
@@ -2672,7 +2680,7 @@ export const BUTTON_REGISTRY = {
     emoji: '🗺️',
     style: 'Secondary',
     category: 'safari_movement',
-    parent: 'setup_menu'
+    parent: 'map_utilities'
   },
   'nav_tidy_confirm': {
     label: 'Delete Panels',
@@ -2843,11 +2851,11 @@ export const BUTTON_REGISTRY = {
   },
   'map_admin_refresh_anchors': {
     label: 'Anchors',
-    description: 'Manually refresh anchor (location card) messages for specific coordinates. Lives in Map Explorer, right of Whispers',
+    description: 'Manually refresh anchor (location card) messages for specific coordinates. Lives in Map Explorer → Utilities',
     emoji: '⚓',
     style: 'Secondary',
     category: 'safari_map_admin',
-    parent: 'safari_map_explorer',
+    parent: 'map_utilities',
     requiresPermission: 'ManageRoles'
   },
   'safari_paused_players': {

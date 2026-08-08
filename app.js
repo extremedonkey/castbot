@@ -4671,7 +4671,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       })(req, res, client);
     }
     
-    // === NAVIGATE TIDY (Tools → Cleanup): bulk-delete stale navigation panels ===
+    // === NAVIGATE TIDY (Map Explorer → Utilities): bulk-delete stale navigation panels ===
     if (custom_id === 'nav_tidy_open') {
       return ButtonHandlerFactory.create({
         id: 'nav_tidy_open',
@@ -32286,6 +32286,19 @@ To fix this:
           // Use extracted function to build response (ephemeral by default)
           const { buildMapExplorerResponse } = await import('./mapExplorer.js');
           return await buildMapExplorerResponse(context.guildId, context.userId, context.client, true);
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'map_utilities') {
+      // Map Explorer → 🛠️ Utilities submenu (Import/Export, Anchors, Navigate Tidy)
+      return ButtonHandlerFactory.create({
+        id: 'map_utilities',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const { buildMapUtilitiesMenu } = await import('./mapExplorer.js');
+          return await buildMapUtilitiesMenu(context.guildId);
         }
       })(req, res, client);
 

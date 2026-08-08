@@ -2500,19 +2500,29 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     .setStyle(ButtonStyle.Secondary)
     .setEmoji('🤫');
 
-  // Anchors (moved from Tools 2026-07-29): rebuilds every location card. Lives here
-  // because that's where the map content it re-renders is edited.
-  const anchorsButton = new ButtonBuilder()
-    .setCustomId('map_admin_refresh_anchors')
-    .setLabel('Anchors')
-    .setStyle(ButtonStyle.Secondary)
-    .setEmoji('⚓')
-    .setDisabled(!hasActiveMap);
-
-  const mapButtonRow3 = new ActionRowBuilder().addComponents([sharedMapButton, safariProgressButton, whispersButton, anchorsButton]);
+  // Row 3 base buttons — shared between ephemeral and public renders
+  const row3Buttons = [sharedMapButton, safariProgressButton, whispersButton];
 
   // Create back button (only for ephemeral messages)
   if (isEphemeral) {
+    // Utilities submenu (2026-08-08): Import/Export, Anchors and Navigate Tidy moved
+    // behind one button. NOT map-gated — Import/Export and Navigate Tidy work without
+    // an active map. Ephemeral-only — never rendered on the public shared map.
+    const utilitiesButton = new ButtonBuilder()
+      .setCustomId('map_utilities')
+      .setLabel('Utilities')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🛠️');
+
+    // Guide (moved from Settings 2026-08-08) sits beside Utilities.
+    const guideButton = new ButtonBuilder()
+      .setCustomId('prod_guide_0')
+      .setLabel('Guide')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🦁');
+
+    const mapButtonRow3 = new ActionRowBuilder().addComponents([...row3Buttons, utilitiesButton, guideButton]);
+
     const backButton = new ButtonBuilder()
       .setCustomId('prod_menu_back')
       .setLabel('← Menu')
@@ -2520,26 +2530,15 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
 
     const backRow = new ActionRowBuilder().addComponents([backButton]);
 
-    // Import/Export (moved from Settings → Advanced 2026-08-08): Safari content
-    // import/export lives with the map content it round-trips. Guide (moved from
-    // Settings same day) sits beside them. Ephemeral-only — never rendered on the
-    // public shared map.
-    const importExportRow = new ActionRowBuilder().addComponents([
-      new ButtonBuilder().setCustomId('safari_import_data').setLabel('Import').setStyle(ButtonStyle.Secondary).setEmoji('📥'),
-      new ButtonBuilder().setCustomId('safari_export_data').setLabel('Export').setStyle(ButtonStyle.Secondary).setEmoji('📤'),
-      new ButtonBuilder().setCustomId('prod_guide_0').setLabel('Guide').setStyle(ButtonStyle.Secondary).setEmoji('🦁')
-    ]);
-
     // Add action row components to container
     containerComponents.push(mapButtonRow2.toJSON());
     containerComponents.push({ type: 14 }); // Separator between player lifecycle and map tools
     containerComponents.push(mapButtonRow3.toJSON());
     containerComponents.push({ type: 14 }); // Separator
-    containerComponents.push(importExportRow.toJSON());
-    containerComponents.push({ type: 14 }); // Separator
     containerComponents.push(backRow.toJSON());
   } else {
-    // For non-ephemeral (shared) maps, no back button
+    // For non-ephemeral (shared) maps, no back button and no admin utilities
+    const mapButtonRow3 = new ActionRowBuilder().addComponents(row3Buttons);
     containerComponents.push(mapButtonRow2.toJSON());
     containerComponents.push({ type: 14 });
     containerComponents.push(mapButtonRow3.toJSON());
@@ -2561,6 +2560,48 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
   return {
     flags: (1 << 15), // IS_COMPONENTS_V2 flag
     components: [mapExplorerContainer]
+  };
+}
+
+/**
+ * Build the 🛠️ Utilities submenu (Map Explorer → Utilities).
+ * Houses Import/Export (Safari content round-trip), Anchors (location card rebuild)
+ * and Navigate Tidy (stale nav-panel cleanup) — moved here 2026-08-08 from the
+ * Map Explorer root and Tools → Cleanup respectively.
+ * Ephemeral-only; reached via the map_utilities button.
+ */
+export async function buildMapUtilitiesMenu(guildId) {
+  const safariData = await loadSafariContent();
+  const guildMaps = safariData[guildId]?.maps || {};
+  const hasActiveMap = !!(guildMaps.active && guildMaps[guildMaps.active]);
+
+  const container = {
+    type: 17,
+    accent_color: 0x00AE86, // Teal — matches Map Explorer parent
+    components: [
+      { type: 10, content: '## 🛠️ Utilities | Map Explorer' },
+      { type: 14 },
+      { type: 10, content: '### ```📦 Import / Export```' },
+      { type: 1, components: [
+        { type: 2, custom_id: 'safari_import_data', label: 'Import', style: 2, emoji: { name: '📥' } },
+        { type: 2, custom_id: 'safari_export_data', label: 'Export', style: 2, emoji: { name: '📤' } }
+      ]},
+      { type: 10, content: '### ```🧹 Maintenance```' },
+      { type: 1, components: [
+        // Anchors rebuilds location cards — meaningless without an active map
+        { type: 2, custom_id: 'map_admin_refresh_anchors', label: 'Anchors', style: 2, emoji: { name: '⚓' }, disabled: !hasActiveMap },
+        { type: 2, custom_id: 'nav_tidy_open', label: 'Navigate Tidy', style: 2, emoji: { name: '🗺️' } }
+      ]},
+      { type: 14 },
+      { type: 1, components: [
+        { type: 2, custom_id: 'safari_map_explorer', label: '← Map Explorer', style: 2 }
+      ]}
+    ]
+  };
+
+  return {
+    flags: (1 << 15), // IS_COMPONENTS_V2 (stripped automatically on UPDATE_MESSAGE)
+    components: [container]
   };
 }
 
