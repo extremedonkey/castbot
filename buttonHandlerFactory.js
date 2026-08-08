@@ -36,7 +36,7 @@ export const BUTTON_REGISTRY = {
   },
   
   'data_clear_vanity': {
-    label: 'Vanity Roles',
+    label: 'Vanity',
     description: 'Explain vanity roles + bulk cleanup: pick a role, wipe all vanity roles from every member who has it',
     emoji: '💅',
     style: 'Secondary',

@@ -149,7 +149,7 @@ export async function createSafariCustomizationUI(guildId, currentConfig, userId
         { type: 2, custom_id: 'castbot_general', label: 'General', style: 2, emoji: getBotEmoji('castbot_logo') || { name: '⚙️' } },
         { type: 2, custom_id: 'safari_player_menu_config', label: 'Player Menu', style: 2, emoji: { name: '🕹️' } },
         { type: 2, custom_id: 'prod_manage_pronouns_timezones', label: 'Reaction Roles', style: 2, emoji: { name: '💜' } },
-        { type: 2, custom_id: 'data_clear_vanity', label: 'Vanity Roles', style: 2, emoji: { name: '💅' } },
+        { type: 2, custom_id: 'data_clear_vanity', label: 'Vanity', style: 2, emoji: { name: '💅' } },
         // Same handler as the Setup Wizard's Run Setup — idempotent, so it doubles as
         // "re-run setup" (e.g. to refresh old timezone roles). Moved here from Tools.
         { type: 2, custom_id: 'setup_castbot', label: 'Setup', style: 2, emoji: { name: '⚙️' } },
