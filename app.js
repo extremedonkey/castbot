@@ -871,9 +871,11 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   const safariFeatureRow = new ActionRowBuilder().addComponents(safariFeatureButtons);
 
   // 💎 Advanced row (+ Setup, moved from Tools menu — red until onboarding complete, else grey)
-  // ⚠️ Premium (Reece-only mockup) fills the row to 5/5 and the menu to 40/40 components worst-case — the next addition throws for Reece first
+  // ⚠️ Premium fills the row to 5/5 and the menu to 40/40 components worst-case — the next addition throws
+  // ⭐ Premium is PUBLIC as of 2026-08-08 (bandaid ripped): everyone sees it; the menu
+  // behind it lock-swaps to the upsell for guilds without an active/grace tier.
   const advancedFeaturesButtons = [
-    ...(['391415444084490240', '1086246253819613274'].includes(userId) ? [new ButtonBuilder().setCustomId('castbot_premium').setLabel('CastBot Premium').setStyle(ButtonStyle.Primary).setEmoji('⭐')] : []),
+    new ButtonBuilder().setCustomId('castbot_premium').setLabel('CastBot Premium').setStyle(ButtonStyle.Primary).setEmoji('⭐'),
     // Donate moved into the Premium menu (2026-08-08) — Premium is becoming the money path
     new ButtonBuilder().setCustomId('castbot_settings').setLabel('Settings').setStyle(ButtonStyle.Secondary).setEmoji('⚙️'),
     new ButtonBuilder().setCustomId('castbot_tools').setLabel('Tools').setStyle(ButtonStyle.Secondary).setEmoji('🪛'),
@@ -7554,14 +7556,29 @@ To fix this:
         handler: async (context) => MenuBuilder.buildMenuResponse('setup_menu', context, 'Tools Menu (setup_menu)')
       })(req, res, client);
     } else if (custom_id === 'castbot_premium') {
-      // ⭐ Premium mockup (Reece-only Tools clone) — gate BEFORE factory (see reeces_stuff): prod menu can be public via viral_menu
-      if (!['391415444084490240', '1086246253819613274'].includes(req.body.member?.user?.id)) return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Access denied.', flags: InteractionResponseFlags.EPHEMERAL } });
+      // ⭐ CastBot Premium — PUBLIC entry (2026-08-08): any admin opens it; non-entitled
+      // guilds get the lock-swapped menu (buildPremiumMenu) whose buttons serve the upsell.
       return ButtonHandlerFactory.create({
         id: 'castbot_premium',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         ephemeral: true,
         handler: async (context) => MenuBuilder.buildMenuResponse('premium_menu', context, 'Premium Menu (premium_menu)')
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('premium_locked_') || custom_id === 'premium_get' || custom_id === 'premium_redeem_stub' || custom_id === 'premium_back') {
+      // 💳 Premium paywall surfaces: locked-button clicks + Get Premium → upsell screen;
+      // Redeem → stub; ← Premium → back to the (re-locked-as-needed) premium menu.
+      return ButtonHandlerFactory.create({
+        id: custom_id.startsWith('premium_locked_') ? 'premium_locked' : custom_id,
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          if (custom_id === 'premium_redeem_stub') return { components: [MenuBuilder.buildPremiumRedeemStub()] };
+          if (custom_id === 'premium_back') return { components: [await MenuBuilder.create('premium_menu', context)] };
+          return { components: [MenuBuilder.buildPremiumUpsell(context, custom_id.startsWith('premium_locked_'))] };
+        }
       })(req, res, client);
     } else if (custom_id === 'scheduled_jobs_dashboard') {
       // Guild-wide scheduled jobs dashboard (Tools → Utilities)

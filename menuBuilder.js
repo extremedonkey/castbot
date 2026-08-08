@@ -5,6 +5,37 @@
 import { InteractionResponseFlags } from 'discord-interactions';
 import { getBotEmoji } from './botEmojis.js';
 import { hasAskCastBotAccess } from './askCastBot.js';
+import { hasPremiumAccessSync, getGuildEntitlement } from './entitlements.js';
+
+const REECE_ID = '391415444084490240';
+
+/**
+ * Buttons/selects inside the Premium menu that stay LIVE for non-entitled guilds:
+ * navigation, Donate (money path stays open, obviously), and the upsell entry itself.
+ */
+export const PREMIUM_KEEP_IDS = ['prod_menu_back', 'prod_donate', 'premium_get'];
+
+/**
+ * Pure — the Premium paywall lock-swap (RaP 0891 "rip the bandaid" 2026-08-08).
+ *
+ * Rewrites every interactive component's custom_id to `premium_locked_<original>` so ONE
+ * handler serves the upsell screen, except keep-listed ids and Link buttons (style 5 —
+ * no custom_id to rewrite). This is a COMMERCIAL gate, not a security boundary: the
+ * underlying features stay reachable via their own surfaces/gates (Tools menu today),
+ * and a hand-crafted click of a real id grants nothing those surfaces don't. Mutates
+ * and returns `components`. Unit-tested.
+ */
+export function lockPremiumComponents(components, keepIds = PREMIUM_KEEP_IDS) {
+  for (const node of components || []) {
+    if (!node || typeof node !== 'object') continue;
+    if (node.type === 1) { lockPremiumComponents(node.components, keepIds); continue; }
+    const interactive = node.type === 2 ? node.style !== 5 : (node.type >= 3 && node.type <= 8);
+    if (interactive && node.custom_id && !keepIds.includes(node.custom_id) && !node.custom_id.startsWith('premium_locked_')) {
+      node.custom_id = `premium_locked_${node.custom_id}`;
+    }
+  }
+  return components;
+}
 
 /**
  * Menu Registry - Central source of truth for all menus
@@ -274,19 +305,98 @@ export class MenuBuilder {
     ];
 
     // Navigation — Donate moved here from the main menu (2026-08-08): Premium is
-    // becoming the money path; the Donate screen's copy lives on behind this button.
+    // becoming the money path; ⭐ Get Premium is the upsell entry (always rendered).
     components.push(
       { type: 14 },
       { type: 1, components: [
         { type: 2, custom_id: 'prod_menu_back', label: '← Menu', style: 2 },
+        { type: 2, custom_id: 'premium_get', label: 'Get Premium', style: 3, emoji: { name: '⭐' } },
         { type: 2, custom_id: 'prod_donate', label: 'Donate', style: 2, emoji: { name: '☕' } }
       ] }
     );
+
+    // 💳 The paywall (2026-08-08, bandaid ripped): the menu renders for EVERYONE — but in a
+    // guild without an active/grace premium tier, every control except ← Menu / Donate /
+    // Get Premium is lock-swapped to premium_locked_* → one handler serves the upsell.
+    // Reece bypasses everywhere (design iteration + support).
+    const entitled = hasPremiumAccessSync(context?.guildId) || String(context?.userId) === REECE_ID;
+    if (!entitled) lockPremiumComponents(components);
 
     return {
       type: 17,
       accent_color: menuConfig.accent || 0x3498DB,
       components
+    };
+  }
+
+  /**
+   * ⭐ The Premium upsell/paywall screen — served by premium_get and every
+   * premium_locked_* click. LEAN: computed entitlement state, numbered path to
+   * purchase, Ko-fi link button. Redemption is a stub for now (see buildPremiumRedeemStub).
+   * @param {Object} context - { guildId, userId }
+   * @param {boolean} fromLock - true when the user clicked a locked feature button
+   */
+  static buildPremiumUpsell(context, fromLock = false) {
+    // Computed fact, not a disclaimer (LeanUserInterfaceDesign): name THIS server's state.
+    const ent = context?.guildId ? getGuildEntitlement(context.guildId) : { exists: false };
+    const ts = ent.exists ? ent.tierState : null;
+    let stateLine = `**This server doesn't have CastBot Premium yet.**`;
+    if (ts?.state === 'lapsed') stateLine = `**This server's premium lapsed <t:${Math.floor(ts.graceUntil / 1000)}:R>** — renew to pick up where you left off.`;
+    else if (ts?.state === 'grace') stateLine = `**This server's premium expired <t:${Math.floor(ts.validUntil / 1000)}:R>** — still working during grace, renew to keep it.`;
+    else if (ts?.state === 'active') stateLine = `**This server has CastBot Premium** ${ts.permanent ? '(permanent)' : `until <t:${Math.floor(ts.validUntil / 1000)}:D>`}.`;
+
+    const components = [
+      { type: 10, content: `## ⭐ CastBot Premium` },
+      { type: 14 },
+      {
+        type: 10,
+        content: `${fromLock ? `-# 🔒 That's a Premium feature.\n` : ''}${stateLine}\n\n` +
+          `**CastBot Premium** unlocks the full host toolkit for this server:\n` +
+          `• 👾 **Ask CastBot** — ChatGPT-style help that can bulk-build Safari content for you\n` +
+          `• 🧹 **Bulk tools** — channel archiving, cleanup, category messaging\n` +
+          `• 🦁 **Safari power ops** — attributes, enemies, import/export\n` +
+          `• 🚀 **Early access** to new features as they land`
+      },
+      {
+        type: 10,
+        content: `**How to get it**\n` +
+          `1. Join the **CastBot Premium** membership at [ko-fi.com/CastBot](https://ko-fi.com/CastBot)\n` +
+          `2. Come back here and tap **🎟️ Redeem** to link your subscription\n` +
+          `3. Premium activates for this server — features unlock instantly\n` +
+          `-# One subscription covers one server, and you can move it when a new season means a new server.`
+      },
+      { type: 14 },
+      { type: 1, components: [
+        { type: 2, custom_id: 'premium_back', label: '← Premium', style: 2 },
+        { type: 2, custom_id: 'premium_redeem_stub', label: 'Redeem', style: 3, emoji: { name: '🎟️' } },
+        { type: 2, style: 5, label: 'ko-fi.com/CastBot', url: 'https://ko-fi.com/CastBot', emoji: { name: '☕' } }
+      ] }
+    ];
+    return { type: 17, accent_color: 0xf39c12, components };
+  }
+
+  /** 🎟️ Redeem — honest placeholder until the self-service linking flow ships. */
+  static buildPremiumRedeemStub() {
+    return {
+      type: 17,
+      accent_color: 0xf39c12,
+      components: [
+        { type: 10, content: `## 🎟️ Redeem Premium` },
+        { type: 14 },
+        {
+          type: 10,
+          content: `Self-service redemption is nearly ready. Right now, premium is activated for you:\n` +
+            `1. Subscribe at [ko-fi.com/CastBot](https://ko-fi.com/CastBot) (if you haven't yet)\n` +
+            `2. Your subscription is picked up automatically and activated within a few hours\n` +
+            `3. Need it sooner — or want it on a different server? Ask in the [CastBot server](https://discord.gg/H7MpJEjkwT)\n` +
+            `-# Soon this button will link your subscription and activate instantly, right here.`
+        },
+        { type: 14 },
+        { type: 1, components: [
+          { type: 2, custom_id: 'premium_get', label: '← Back', style: 2 },
+          { type: 2, style: 5, label: 'ko-fi.com/CastBot', url: 'https://ko-fi.com/CastBot', emoji: { name: '☕' } }
+        ] }
+      ]
     };
   }
 

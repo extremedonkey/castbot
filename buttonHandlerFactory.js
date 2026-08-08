@@ -1244,12 +1244,42 @@ export const BUTTON_REGISTRY = {
   },
   'castbot_premium': {
     label: 'CastBot Premium',
-    description: 'Premium menu mockup — Reece-only clone of Tools for independent iteration',
+    description: 'Premium menu — PUBLIC entry (2026-08-08); non-entitled guilds get the lock-swapped menu whose buttons serve the upsell screen',
     emoji: '⭐',
     style: 'Primary',
     category: 'admin',
-    menu: 'premium_menu',
-    restrictedUser: '391415444084490240' // documentation-only (RaP 0900) — real gate is pre-factory in app.js
+    menu: 'premium_menu'
+  },
+  'premium_locked_*': {
+    label: 'Premium Locked Feature',
+    description: 'Lock-swapped Premium menu control in a non-entitled guild — every click serves the ⭐ upsell screen',
+    emoji: '🔒',
+    style: 'Secondary',
+    category: 'admin',
+    parent: 'castbot_premium'
+  },
+  'premium_get': {
+    label: 'Get Premium',
+    description: 'Opens the ⭐ CastBot Premium upsell: what it is, server entitlement state, Ko-fi purchase path, Redeem stub',
+    emoji: '⭐',
+    style: 'Success',
+    category: 'admin',
+    parent: 'castbot_premium'
+  },
+  'premium_redeem_stub': {
+    label: 'Redeem',
+    description: 'Placeholder redemption screen — names the interim activation path until self-service linking ships',
+    emoji: '🎟️',
+    style: 'Success',
+    category: 'admin',
+    parent: 'premium_get'
+  },
+  'premium_back': {
+    label: '← Premium',
+    description: 'Return from the upsell screen to the (re-locked-as-needed) Premium menu',
+    style: 'Secondary',
+    category: 'admin',
+    parent: 'premium_get'
   },
   'setup_castbot': {
     label: 'Run Setup',

@@ -236,6 +236,20 @@ export function hasFeatureSync(guildId, feature) {
 }
 
 /**
+ * Does this guild hold CastBot Premium right now? True while the tier is active OR in
+ * grace (RaP 0891: grace keeps working). This is the PREMIUM MENU gate — deliberately
+ * tier-only: à-la-carte feature grants (the comp'd Ask CastBot guilds) unlock their
+ * specific features via `premium:` declarations, not the whole premium surface.
+ * @param {string} guildId
+ * @returns {boolean}
+ */
+export function hasPremiumAccessSync(guildId) {
+  if (!guildId) return false;
+  const ts = resolveTierState(loadEntitlementsSync().guilds[guildId]);
+  return ts.state === 'active' || ts.state === 'grace';
+}
+
+/**
  * Full resolved view of one guild's entitlement — the admin-UI read model.
  * @returns {{guildId: string, exists: boolean, name?: string, features?: string[],
  *            tierState?: ReturnType<typeof resolveTierState>, effectiveFeatures?: string[],

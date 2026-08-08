@@ -107,6 +107,15 @@ flowchart TD
 - **The ratchet** (`tests/premiumDeclarations.test.js`, securityDeclarations mold): every `premium:` value must be a real `FEATURES` key (a typo would fail-closed *forever*); `REQUIRED_PREMIUM_IDS` (`askcb_ask`, `askcb_post`) can't silently lose their gates; the factory gate's existence is asserted.
 - **Non-factory surfaces** (modal submits, background jobs) check `hasFeatureSync` directly at execution time — for Ask CastBot that's the **money boundary**: deny before the Claude CLI ever spawns.
 
+### 💳 The Premium menu paywall (public entry, 2026-08-08)
+
+The ⭐ CastBot Premium button is **public** — always first in `/menu`'s Advanced row, for every admin (the old two-ID allowlist is gone; `tests/premiumMenu.test.js` now *fails if it comes back*). What the menu does depends on the guild:
+
+- **Entitled guild** (`hasPremiumAccessSync`: tier active or grace) **or Reece**: the real menu, unchanged.
+- **Everyone else**: the *same-looking* menu, but `buildPremiumMenu` **lock-swaps** every control's custom_id to `premium_locked_<original>` (`lockPremiumComponents`, pure + unit-tested) except `← Menu`, `Donate`, and `⭐ Get Premium`. One handler serves every locked click: the **upsell screen** — computed entitlement state for *this* server (none / lapsed <t:R> / grace), what Premium includes, the numbered Ko-fi purchase path, a `ko-fi.com/CastBot` link button, and a **🎟️ Redeem stub** (honest placeholder naming the interim activated-for-you path until self-service linking ships).
+
+Why lock-swap instead of gating the real handlers: most Premium-menu buttons share custom_ids with the free Tools menu — handler-level gates would paywall Tools too. The swap is a **commercial** gate, not a security boundary (the features stay reachable via their own surfaces and gates); it's applied server-side at render, and the deliberately-open money path (`Donate`, `Get Premium`) never locks. Note `hasPremiumAccessSync` is **tier-only**: à-la-carte feature grants unlock their features (via `premium:` declarations) but not the premium menu surface.
+
 ### 🔀 The premium launch switch
 
 `PUBLIC_ASK_REQUIRES_ENTITLEMENT = false` ([askCastBot.js](../../askCastBot.js)). While false, the **posted** Ask button's modal route deliberately bypasses the guild entitlement (Reece 2026-08-08: posted buttons stay open until premium launches; posting itself IS gated). **Flip to `true` on launch day** — lapsed guilds then stop burning Claude tokens through old posted buttons. One-word diff; the ratchet asserts the constant exists.
@@ -191,7 +200,7 @@ Operational properties: card-post failures never fail the webhook (the billing r
 | Prod rollout of v2+Ko-fi | Deploy (Reece's word) · token into prod `.env` (Reece) · flip Ko-fi webhook URL to prod | ⏳ |
 | Launch flip | `PUBLIC_ASK_REQUIRES_ENTITLEMENT = true` (one word, ratchet-guarded) | ⏳ launch day |
 | Launch shelf | Convert chosen features/limits to `FEATURES` keys + `TIERS.premium` | ⏳ decision #5 |
-| Subscriber self-service | `subscribers` block, ⭐ Premium menu (Status/Activate/Transfer, 7d cooldown), Redeem | ⏳ Phase 2 full |
+| Subscriber self-service | `subscribers` block, Status/Activate/Transfer (7d cooldown), real Redeem behind the shipped 🎟️ stub | ⏳ Phase 2 full |
 | Identity bridge | Ko-fi Discord role sync watcher (`GuildMemberUpdate` in home server) — primary linking + push lapse signal | ⏳ Phase 2 full |
 | Renewal nag | Grace is currently silent to the guild — decide surface/tone | ⏳ decision |
 

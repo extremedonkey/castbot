@@ -1,12 +1,12 @@
 /**
- * ⭐ CastBot Premium mockup — gating and placement tests.
+ * ⭐ CastBot Premium — placement, paywall, and lock-swap tests.
  *
- * The Premium button is a Reece-only entry point in the Production Menu's
- * Advanced row (in front of Settings; Donate moved INTO the Premium menu
- * 2026-08-08). Because the Production Menu can be posted
- * PUBLICLY via viral_menu, render-time hiding is not security: the handler in
- * app.js must keep its ID-array gate BEFORE ButtonHandlerFactory.create (same
- * pattern as reeces_stuff). The tripwire below fails if that gate is removed.
+ * 2026-08-08 (bandaid ripped): the Premium button is PUBLIC — always first in the
+ * Production Menu's Advanced row, for everyone. Access control moved from a two-ID
+ * allowlist to the entitlements engine: buildPremiumMenu lock-swaps every control
+ * (except ← Menu / Donate / Get Premium) to premium_locked_* for guilds without an
+ * active/grace tier, and ONE handler serves the ⭐ upsell screen. Reece bypasses.
+ * The old "keep the pre-factory ID gate" tripwire is deliberately INVERTED below.
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -18,60 +18,110 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const APP_JS = path.join(__dirname, '..', 'app.js');
 const MENU_BUILDER_JS = path.join(__dirname, '..', 'menuBuilder.js');
 
-const GATED_IDS = ['391415444084490240', '1086246253819613274'];
-
 // Replicated from createProductionMenuInterface (app.js) — Advanced row build.
 // 'support_link' stands in for the URL-style Support button (link buttons have no custom_id).
-function advancedRowIds(userId) {
-  return [
-    ...(GATED_IDS.includes(userId) ? ['castbot_premium'] : []),
-    'castbot_settings', 'castbot_tools', 'prod_setup_wizard', 'support_link'
-  ];
+function advancedRowIds() {
+  return ['castbot_premium', 'castbot_settings', 'castbot_tools', 'prod_setup_wizard', 'support_link'];
 }
 
-describe('prod /menu Advanced row — ⭐ CastBot Premium placement', () => {
-  it('Premium is first (in front of Settings) for both gated IDs', () => {
-    for (const id of GATED_IDS) {
-      const row = advancedRowIds(id);
-      assert.equal(row[0], 'castbot_premium', `gated ID ${id} → Premium at index 0`);
-      assert.equal(row[1], 'castbot_settings', 'Settings immediately after Premium');
-      assert.equal(row.length, 5);
-    }
-  });
-
-  it('Premium is absent for everyone else', () => {
-    for (const userId of ['123456789012345678', undefined, null, '']) {
-      const row = advancedRowIds(userId);
-      assert.ok(!row.includes('castbot_premium'), `userId ${userId} must not see Premium`);
-      assert.equal(row[0], 'castbot_settings');
-      assert.equal(row.length, 4);
-    }
+describe('prod /menu Advanced row — ⭐ CastBot Premium placement (public as of 2026-08-08)', () => {
+  it('Premium is first (in front of Settings) for EVERYONE — no user gating', () => {
+    const row = advancedRowIds();
+    assert.equal(row[0], 'castbot_premium');
+    assert.equal(row[1], 'castbot_settings');
+    assert.equal(row.length, 5);
   });
 
   it('Donate is out of the main menu row (it lives in the Premium menu now)', () => {
-    assert.ok(!advancedRowIds(GATED_IDS[0]).includes('prod_donate'));
-    assert.ok(!advancedRowIds('someone-else').includes('prod_donate'));
+    assert.ok(!advancedRowIds().includes('prod_donate'));
   });
 
-  it('row never exceeds the Discord 5-button ActionRow cap', () => {
-    assert.ok(advancedRowIds(GATED_IDS[0]).length <= 5);
-    assert.ok(advancedRowIds('someone-else').length <= 5);
+  it('the app.js Advanced row build no longer references the old two-ID allowlist', () => {
+    const source = readFileSync(APP_JS, 'utf8');
+    const rowIdx = source.indexOf('const advancedFeaturesButtons');
+    assert.ok(rowIdx >= 0, 'advancedFeaturesButtons not found');
+    const rowBlock = source.slice(rowIdx, rowIdx + 1200);
+    assert.ok(!rowBlock.includes('1086246253819613274'),
+      'Advanced row still gates ⭐ Premium behind the two-ID allowlist — it must render for everyone');
+    assert.ok(rowBlock.includes("setCustomId('castbot_premium')"), 'Premium button missing from Advanced row');
   });
 });
 
-describe('Security tripwire — castbot_premium handler gate', () => {
-  const source = readFileSync(APP_JS, 'utf8');
+describe('Paywall tripwire — entitlement lock-swap replaces the ID allowlist', () => {
+  const appSource = readFileSync(APP_JS, 'utf8');
+  const menuSource = readFileSync(MENU_BUILDER_JS, 'utf8');
 
-  it('handler keeps the ID-array gate BEFORE ButtonHandlerFactory.create', () => {
-    const lines = source.split('\n');
+  it('castbot_premium handler has NO pre-factory ID gate and keeps Manage Roles', () => {
+    const lines = appSource.split('\n');
     const handlerIdx = lines.findIndex(l => l.includes("custom_id === 'castbot_premium'"));
     assert.ok(handlerIdx >= 0, 'castbot_premium handler not found in app.js');
     const factoryOffset = lines.slice(handlerIdx).findIndex(l => l.includes('ButtonHandlerFactory.create'));
-    assert.ok(factoryOffset > 0, 'castbot_premium handler no longer uses ButtonHandlerFactory');
-    const beforeFactory = lines.slice(handlerIdx, handlerIdx + factoryOffset).join('\n');
-    assert.ok(GATED_IDS.every(id => beforeFactory.includes(id)),
-      'castbot_premium lost its pre-factory ID gate — the prod menu can be PUBLIC via viral_menu, ' +
-      'so anyone could open Premium. Restore the reeces_stuff-style gate before ButtonHandlerFactory.create.');
+    const block = lines.slice(handlerIdx, handlerIdx + factoryOffset + 8).join('\n');
+    assert.ok(!block.includes('1086246253819613274'),
+      'castbot_premium regained the old two-ID pre-gate — Premium is public now; gating is the lock-swap');
+    assert.ok(block.includes('requiresPermission'), 'castbot_premium lost its Manage Roles requirement');
+  });
+
+  it('buildPremiumMenu wires the lock-swap: entitlement check + lockPremiumComponents', () => {
+    assert.ok(menuSource.includes('hasPremiumAccessSync'),
+      'buildPremiumMenu no longer consults the entitlements engine');
+    assert.ok(/if \(!entitled\) lockPremiumComponents\(components\)/.test(menuSource),
+      'the lock-swap call is gone — non-entitled guilds would get the real menu');
+  });
+
+  it('keep-list stays exactly nav + Donate + Get Premium', async () => {
+    const { PREMIUM_KEEP_IDS } = await import('../menuBuilder.js');
+    assert.deepEqual([...PREMIUM_KEEP_IDS].sort(), ['premium_get', 'prod_donate', 'prod_menu_back']);
+  });
+
+  it('the paywall handler family is wired in app.js and serves the upsell', () => {
+    assert.ok(appSource.includes("custom_id.startsWith('premium_locked_')"),
+      'premium_locked_* handler branch missing');
+    assert.ok(appSource.includes('buildPremiumUpsell'), 'upsell builder not referenced by the handler');
+    assert.ok(menuSource.includes('ko-fi.com/CastBot'), 'upsell lost the Ko-fi purchase link');
+  });
+});
+
+describe('lockPremiumComponents — the paywall walker', () => {
+  let lockPremiumComponents, PREMIUM_KEEP_IDS;
+  it('imports as pure exports', async () => {
+    ({ lockPremiumComponents, PREMIUM_KEEP_IDS } = await import('../menuBuilder.js'));
+    assert.equal(typeof lockPremiumComponents, 'function');
+  });
+
+  it('locks feature buttons and selects; keeps nav, Donate, Get Premium, and Link buttons', async () => {
+    const components = [
+      { type: 10, content: 'text' },
+      { type: 1, components: [
+        { type: 2, custom_id: 'attribute_management', style: 2 },
+        { type: 2, custom_id: 'prod_menu_back', style: 2 },
+        { type: 2, style: 5, url: 'https://x' }
+      ] },
+      { type: 1, components: [{ type: 3, custom_id: 'entitlements_guild' }] },
+      { type: 1, components: [
+        { type: 2, custom_id: 'premium_get', style: 3 },
+        { type: 2, custom_id: 'prod_donate', style: 2 }
+      ] }
+    ];
+    lockPremiumComponents(components, PREMIUM_KEEP_IDS);
+    assert.equal(components[1].components[0].custom_id, 'premium_locked_attribute_management');
+    assert.equal(components[1].components[1].custom_id, 'prod_menu_back');
+    assert.equal(components[1].components[2].custom_id, undefined);
+    assert.equal(components[2].components[0].custom_id, 'premium_locked_entitlements_guild');
+    assert.equal(components[3].components[0].custom_id, 'premium_get');
+    assert.equal(components[3].components[1].custom_id, 'prod_donate');
+  });
+
+  it('is idempotent — double-locking never stacks prefixes', async () => {
+    const components = [{ type: 1, components: [{ type: 2, custom_id: 'archive_channel', style: 2 }] }];
+    lockPremiumComponents(components);
+    lockPremiumComponents(components);
+    assert.equal(components[0].components[0].custom_id, 'premium_locked_archive_channel');
+  });
+
+  it('tolerates junk nodes without throwing', async () => {
+    assert.doesNotThrow(() => lockPremiumComponents([null, undefined, { type: 1 }, { type: 14 }]));
+    assert.doesNotThrow(() => lockPremiumComponents(undefined));
   });
 });
 
