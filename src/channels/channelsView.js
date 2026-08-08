@@ -52,7 +52,7 @@ export function rosterLines(members, { creating = null, limit = 25 } = {}) {
 }
 
 /**
- * The 💬 Channels heading + its 5 action buttons — THE single definition of that row.
+ * The #️⃣ Channels heading + its 5 action buttons — THE single definition of that row.
  *
  * Rendered by BOTH the Season Manager Channels tab (below) and the ⭐ Premium menu
  * (MenuBuilder.buildPremiumMenu), so the two surfaces cannot drift apart. Returns bare
@@ -70,7 +70,7 @@ export function rosterLines(members, { creating = null, limit = 25 } = {}) {
  */
 export function buildChannelsSection(configId) {
   return [
-    { type: 10, content: '### ```💬 Channels```\n-# Bulk create / update the standard ORG channels.' },
+    { type: 10, content: '### ```#️⃣ Channels```\n-# Bulk create / update the standard ORG channels.' },
     { type: 1, components: [
       { type: 2, custom_id: `channels_confessionals_${configId}`, label: 'Confessionals', style: 2, emoji: { name: '🎙️' } },
       { type: 2, custom_id: `channels_subs_${configId}`, label: 'Subs', style: 2, emoji: { name: '🗳️' } },

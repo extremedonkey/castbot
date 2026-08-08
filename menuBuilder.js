@@ -205,7 +205,7 @@ export class MenuBuilder {
       { type: 2, custom_id: 'data_clear_vanity', label: 'Clear Vanity Roles', style: 2, emoji: { name: '💅' } }
     ];
 
-    // 💬 Channels — the SAME row the Season Manager Channels tab renders (RaP 0885 stage 1).
+    // #️⃣ Channels — the SAME row the Season Manager Channels tab renders (RaP 0885 stage 1).
     // Resolved BEFORE assembly because the section now sits mid-menu (between Special Features
     // and Player Engagement), and Player Engagement's Msg Category button shares its gate.
     // Imported dynamically so this menu, built on every /menu open, doesn't drag the whole
