@@ -4744,10 +4744,11 @@ export const BUTTON_REGISTRY = {
   },
   'prod_donate': {
     label: 'Donate',
-    description: 'Support CastBot development with a donation',
+    description: 'Support CastBot development with a donation (Ko-fi)',
     emoji: '☕',
     style: 'Secondary',
-    category: 'production_admin'
+    category: 'production_admin',
+    parent: 'castbot_premium'
   },
   'admin_player_select_update': {
     label: 'Player Select (Admin)',
@@ -5325,8 +5326,8 @@ export const BUTTON_REGISTRY = {
   'panel_name_*': { label: 'Panel Name', emoji: '🏷️', category: 'panel' },
 
   // Snowflake Timer
-  'snowflake_calculator': { label: 'Calculator', description: 'Calculate time between two message IDs', emoji: '⏱️', style: 'Secondary', category: 'timers', parent: 'setup_menu', requiresModal: true },
-  'snowflake_lookup': { label: 'Lookup', description: 'Decode a message snowflake ID', emoji: '🔍', style: 'Secondary', category: 'timers', parent: 'setup_menu', requiresModal: true },
+  'snowflake_calculator': { label: 'Stopwatch', description: 'Calculate time between two message IDs', emoji: '⏱️', style: 'Secondary', category: 'timers', parent: 'setup_menu', requiresModal: true },
+  'snowflake_lookup': { label: 'Snowflake', description: 'Decode a message snowflake ID', emoji: '❄️', style: 'Secondary', category: 'timers', parent: 'setup_menu', requiresModal: true },
   'timer_post_*': { label: 'Post Publicly', description: 'Post timer result as a public message', emoji: '📢', style: 'Secondary', category: 'timers' }
 };
 
@@ -5592,6 +5593,23 @@ export function sendPermissionDenied(res, permissionName) {
 }
 
 /**
+ * Standard denial for the `premium:` config gate. Two audiences (RaP 0891):
+ * admin surfaces (anything that also declares requiresPermission) name the reason;
+ * player surfaces get a neutral unavailable — players never see the billing pitch.
+ */
+export function sendPremiumDenied(res, isAdminSurface) {
+  return res.send({
+    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+    data: {
+      content: isAdminSurface
+        ? `⭐ This is a CastBot Premium feature and this server doesn't currently have access. Ask in the CastBot server about access.`
+        : `This feature isn't available on this server right now.`,
+      flags: InteractionResponseFlags.EPHEMERAL
+    }
+  });
+}
+
+/**
  * Send response with proper type detection
  * @param {Object} res - Express response object
  * @param {Object} data - Response data
@@ -5848,6 +5866,8 @@ export class ButtonHandlerFactory {
    * @param {string} config.id - Handler ID for logging
    * @param {BigInt} config.requiresPermission - Required Discord permission
    * @param {string} config.permissionName - Human-readable permission name
+   * @param {string} config.premium - Entitlements FEATURES key this handler requires
+   *   (guild-scoped, grace-aware; denial is standard — see sendPremiumDenied)
    * @param {Function} config.handler - Handler function
    * @param {boolean} config.deferred - Whether to use deferred response
    * @param {boolean} config.updateMessage - Whether to update existing message
@@ -5892,7 +5912,19 @@ export class ButtonHandlerFactory {
             return sendPermissionDenied(res, config.permissionName || 'required permissions');
           }
         }
-        
+
+        // 3b. Premium entitlement gate — declared like requiresPermission, enforced
+        // centrally (RaP 0891 lapse architecture: artifacts persist, clicks gate).
+        // `premium: 'feature_key'` — checked against the guild's entitlements registry;
+        // grace-period guilds still pass (resolution lives in hasFeatureSync).
+        if (config.premium) {
+          const { hasFeatureSync } = await import('./entitlements.js');
+          if (!context.guildId || !hasFeatureSync(context.guildId, config.premium)) {
+            console.log(`⭐ [PREMIUM DENIED] ${config.id} (${config.premium}) guild=${context.guildId || 'none'} user=${context.userId}`);
+            return sendPremiumDenied(res, !!config.requiresPermission);
+          }
+        }
+
         // 4. Handle deferred response (skip if requiresModal — modals must be immediate)
         if (config.deferred && !config.requiresModal) {
           await sendDeferredResponse(res, config.ephemeral !== false, config.updateMessage);

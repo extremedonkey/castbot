@@ -22,7 +22,7 @@ Everything starts with the `/menu` slash command.
 Top-level rows:
 
 1. **Castlists, Applications and Season Management**: `📋 Castlist Manager`, `📝 Apps`,
-   `🧑‍🤝‍🧑 Players`, `🏃‍♀️ Challenges`, `☕ Donate`
+   `🧑‍🤝‍🧑 Players`, `🏃‍♀️ Challenges`
 2. **Idol Hunts, Challenges and Safari**: `🏪 Stores`, `📦 Items`, `🧭 Player Admin`,
    `💰 Currency`, `⚙️ Settings`
 3. **Advanced Features**: `🗺️ Map Admin`, `⚡ Actions`, `🧮 Analytics` (Reece only),
@@ -56,8 +56,8 @@ Top-level rows:
 - **Special Features**: `📊 Attributes`, `🖼️ Category Post`, `🐙 Enemies`
 - **Ask CastBot row** (entitled servers): `👾 Ask CastBot`, `👾 Post Ask CastBot`
 - **Cleanup**: `🗺️ Navigate Tidy`, `☢️ Nuke Category`, `💅 Clear Vanity Roles`
-- **Timers (Snowflake)**: `⏱️ Calculator`, `🔍 Lookup`
-- **Utilities**: `🕐 Availability`, `🎨 Emoji Editor`
+- **Utilities**: `⏱️ Stopwatch` (time between two message IDs), `❄️ Snowflake`
+  (decode a snowflake ID), `🕐 Availability`, `🎨 Emoji Editor`
 - **Info & Support**: Need Help? (support server). Terms of Service + Privacy Policy
   merged into the `📜 Policy` button in `⚙️ Settings` (bottom row).
 

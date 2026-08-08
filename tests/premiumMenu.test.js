@@ -2,7 +2,8 @@
  * ⭐ CastBot Premium mockup — gating and placement tests.
  *
  * The Premium button is a Reece-only entry point in the Production Menu's
- * Advanced row (in front of Donate). Because the Production Menu can be posted
+ * Advanced row (in front of Settings; Donate moved INTO the Premium menu
+ * 2026-08-08). Because the Production Menu can be posted
  * PUBLICLY via viral_menu, render-time hiding is not security: the handler in
  * app.js must keep its ID-array gate BEFORE ButtonHandlerFactory.create (same
  * pattern as reeces_stuff). The tripwire below fails if that gate is removed.
@@ -23,17 +24,17 @@ const GATED_IDS = ['391415444084490240', '1086246253819613274'];
 function advancedRowIds(userId) {
   return [
     ...(GATED_IDS.includes(userId) ? ['castbot_premium'] : []),
-    'prod_donate', 'castbot_settings', 'castbot_tools', 'prod_setup_wizard'
+    'castbot_settings', 'castbot_tools', 'prod_setup_wizard'
   ];
 }
 
 describe('prod /menu Advanced row — ⭐ CastBot Premium placement', () => {
-  it('Premium is first (in front of Donate) for both gated IDs', () => {
+  it('Premium is first (in front of Settings) for both gated IDs', () => {
     for (const id of GATED_IDS) {
       const row = advancedRowIds(id);
       assert.equal(row[0], 'castbot_premium', `gated ID ${id} → Premium at index 0`);
-      assert.equal(row[1], 'prod_donate', 'Donate immediately after Premium');
-      assert.equal(row.length, 5);
+      assert.equal(row[1], 'castbot_settings', 'Settings immediately after Premium');
+      assert.equal(row.length, 4);
     }
   });
 
@@ -41,9 +42,14 @@ describe('prod /menu Advanced row — ⭐ CastBot Premium placement', () => {
     for (const userId of ['123456789012345678', undefined, null, '']) {
       const row = advancedRowIds(userId);
       assert.ok(!row.includes('castbot_premium'), `userId ${userId} must not see Premium`);
-      assert.equal(row[0], 'prod_donate');
-      assert.equal(row.length, 4);
+      assert.equal(row[0], 'castbot_settings');
+      assert.equal(row.length, 3);
     }
+  });
+
+  it('Donate is out of the main menu row (it lives in the Premium menu now)', () => {
+    assert.ok(!advancedRowIds(GATED_IDS[0]).includes('prod_donate'));
+    assert.ok(!advancedRowIds('someone-else').includes('prod_donate'));
   });
 
   it('row never exceeds the Discord 5-button ActionRow cap', () => {
@@ -80,5 +86,11 @@ describe('Premium menu clone — stays wired in menuBuilder.js', () => {
   it('premium clone keeps its own title, distinct from Tools', () => {
     assert.ok(source.includes('⭐ CastBot | Premium'), 'premium title changed/missing');
     assert.ok(source.includes('🪛 CastBot | Tools'), 'tools title changed/missing — clone test assumptions stale');
+  });
+
+  it('Donate button is wired inside the Premium menu (moved from main menu 2026-08-08)', () => {
+    const premiumSection = source.slice(source.indexOf('buildPremiumMenu'), source.indexOf('buildReecesStuffMenu'));
+    assert.ok(premiumSection.includes("'prod_donate'"),
+      'prod_donate missing from buildPremiumMenu — Donate has no other menu entry point');
   });
 });

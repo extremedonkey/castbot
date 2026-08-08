@@ -14,10 +14,31 @@
  */
 
 import { InteractionResponseType, InteractionResponseFlags } from 'discord-interactions';
-import { FEATURES, grantFeature, revokeFeature, listEntitledGuilds } from './entitlements.js';
+import {
+  FEATURES, TIERS, GRACE_MS, grantFeature, revokeFeature, listEntitledGuilds,
+  getGuildEntitlement, grantTier, extendTier, setTierValidUntil, revokeTier, parseDuration
+} from './entitlements.js';
 
 const ACCENT = 0x9b59b6;
 const OWNER_ID = '391415444084490240';
+
+/** One list-line per guild: feature glyphs + name + tier badge. Pure — unit-tested. */
+export function formatGuildLine(g) {
+  const eff = g.effectiveFeatures || g.features;
+  const ask = eff.includes(FEATURES.ASK_CASTBOT) ? '👾' : '➖';
+  const edit = eff.includes(FEATURES.SAFARI_EDIT) ? '🛠️' : '➖';
+  const ts = g.tierState;
+  let tierBadge = '';
+  if (ts && ts.state !== 'none') {
+    const t = TIERS[ts.tier];
+    if (ts.state === 'active' && ts.permanent) tierBadge = ` · ${t.emoji} ${t.label}`;
+    else if (ts.state === 'active') tierBadge = ` · ${t.emoji} ${t.label} until <t:${Math.floor(ts.validUntil / 1000)}:d>`;
+    else if (ts.state === 'grace') tierBadge = ` · 🕒 ${t.label} GRACE ends <t:${Math.floor(ts.graceUntil / 1000)}:R>`;
+    else tierBadge = ` · 💀 ${t.label} lapsed`;
+  }
+  const unknown = g.displayName === g.guildId ? ' *(bot not in this server)*' : '';
+  return `${ask}${edit} **${g.displayName}**${tierBadge}${unknown} · \`${g.guildId}\``;
+}
 
 /**
  * Resolve display names from the bot's own guild cache and persist any it learns.
@@ -49,14 +70,7 @@ async function resolveGuildNames(guilds, client) {
 /** The management container: entitled-guild list + Add button + per-guild toggle select. */
 export async function buildEntitlementsManageUI(client = null) {
   const guilds = await resolveGuildNames(await listEntitledGuilds(), client);
-  const lines = guilds.length
-    ? guilds.map(g => {
-        const ask = g.features.includes(FEATURES.ASK_CASTBOT) ? '👾' : '➖';
-        const edit = g.features.includes(FEATURES.SAFARI_EDIT) ? '🛠️' : '➖';
-        const unknown = g.displayName === g.guildId ? ' *(bot not in this server)*' : '';
-        return `${ask}${edit} **${g.displayName}**${unknown} · \`${g.guildId}\``;
-      })
-    : ['*No guilds entitled yet.*'];
+  const lines = guilds.length ? guilds.map(formatGuildLine) : ['*No guilds entitled yet.*'];
 
   const components = [
     { type: 10, content: `## 🎟️ Entitlements\n${guilds.length} guild${guilds.length === 1 ? '' : 's'} · 👾 = Ask CastBot · 🛠️ = Safari editing` },
@@ -69,6 +83,23 @@ export async function buildEntitlementsManageUI(client = null) {
   ];
 
   if (guilds.length) {
+    // Per-guild premium/testing surface — pick a guild, get its detail screen.
+    components.push({
+      type: 1,
+      components: [{
+        type: 3,
+        custom_id: 'entitlements_guild',
+        placeholder: '⭐ Premium & expiry testing — pick a guild...',
+        options: guilds.slice(0, 25).map(g => ({
+          label: g.displayName.substring(0, 100),
+          value: g.guildId,
+          description: (g.tierState?.state !== 'none'
+            ? `${g.tierState.tier} · ${g.tierState.state}${g.tierState.permanent ? ' (permanent)' : ''}`
+            : 'no tier — feature grants only').substring(0, 100),
+          emoji: { name: g.tierState?.state === 'grace' ? '🕒' : g.tierState?.state === 'lapsed' ? '💀' : '⭐' }
+        }))
+      }]
+    });
     // One row per action: Discord selects can't mix "which guild" with "which change",
     // so the value encodes both — `<action>:<guildId>`.
     components.push({

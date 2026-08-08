@@ -141,20 +141,16 @@ export class MenuBuilder {
       ...askRow,
       { type: 10, content: `### \`\`\`🧹 Cleanup\`\`\`` },
       { type: 1, components: cleanupButtons },
-      { type: 10, content: `### \`\`\`❄️ Timers (Snowflake)\`\`\`` },
-      {
-        type: 1,
-        components: [
-          { type: 2, custom_id: 'snowflake_calculator', label: 'Calculator', style: 2, emoji: { name: '⏱️' } },
-          { type: 2, custom_id: 'snowflake_lookup', label: 'Lookup', style: 2, emoji: { name: '🔍' } }
-        ]
-      },
       { type: 10, content: `### \`\`\`🔮 Utilities\`\`\`` },
       {
         type: 1,
         components: [
           // Setup + Scheduled Jobs moved to CastBot Settings (2026-07-29); Refresh Anchors
           // moved to Map Explorer as ⚓ Anchors — each now sits with the things it affects.
+          // Timers section folded in here (2026-08-08): Stopwatch/Snowflake = the old
+          // snowflake Calculator/Lookup, custom_ids unchanged.
+          { type: 2, custom_id: 'snowflake_calculator', label: 'Stopwatch', style: 2, emoji: { name: '⏱️' } },
+          { type: 2, custom_id: 'snowflake_lookup', label: 'Snowflake', style: 2, emoji: { name: '❄️' } },
           { type: 2, custom_id: 'prod_availability', label: 'Availability', style: 2, emoji: { name: '🕐' } },
           { type: 2, custom_id: 'emoji_editor', label: 'Emoji Editor', style: 2, emoji: { name: '🎨' } }
         ]
@@ -229,28 +225,27 @@ export class MenuBuilder {
       { type: 1, components: specialFeatures },
       { type: 10, content: `### \`\`\`🧹 Cleanup\`\`\`` },
       { type: 1, components: cleanupButtons },
-      { type: 10, content: `### \`\`\`❄️ Timers (Snowflake)\`\`\`` },
-      {
-        type: 1,
-        components: [
-          { type: 2, custom_id: 'snowflake_calculator', label: 'Calculator', style: 2, emoji: { name: '⏱️' } },
-          { type: 2, custom_id: 'snowflake_lookup', label: 'Lookup', style: 2, emoji: { name: '🔍' } }
-        ]
-      },
       { type: 10, content: `### \`\`\`🔮 Utilities\`\`\`` },
       {
         type: 1,
         components: [
+          // Timers section folded in here (2026-08-08) — same ids, new labels
+          { type: 2, custom_id: 'snowflake_calculator', label: 'Stopwatch', style: 2, emoji: { name: '⏱️' } },
+          { type: 2, custom_id: 'snowflake_lookup', label: 'Snowflake', style: 2, emoji: { name: '❄️' } },
           { type: 2, custom_id: 'prod_availability', label: 'Availability', style: 2, emoji: { name: '🕐' } },
           { type: 2, custom_id: 'emoji_editor', label: 'Emoji Editor', style: 2, emoji: { name: '🎨' } }
         ]
       }
     ];
 
-    // Navigation
+    // Navigation — Donate moved here from the main menu (2026-08-08): Premium is
+    // becoming the money path; the Donate screen's copy lives on behind this button.
     components.push(
       { type: 14 },
-      { type: 1, components: [{ type: 2, custom_id: 'prod_menu_back', label: '← Menu', style: 2 }] }
+      { type: 1, components: [
+        { type: 2, custom_id: 'prod_menu_back', label: '← Menu', style: 2 },
+        { type: 2, custom_id: 'prod_donate', label: 'Donate', style: 2, emoji: { name: '☕' } }
+      ] }
     );
 
     return {

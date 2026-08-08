@@ -873,7 +873,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // ⚠️ Premium (Reece-only mockup) fills the row to 5/5 and the menu to 40/40 components worst-case — the next addition throws for Reece first
   const advancedFeaturesButtons = [
     ...(['391415444084490240', '1086246253819613274'].includes(userId) ? [new ButtonBuilder().setCustomId('castbot_premium').setLabel('CastBot Premium').setStyle(ButtonStyle.Primary).setEmoji('⭐')] : []),
-    new ButtonBuilder().setCustomId('prod_donate').setLabel('Donate').setStyle(ButtonStyle.Secondary).setEmoji('☕'),
+    // Donate moved into the Premium menu (2026-08-08) — Premium is becoming the money path
     new ButtonBuilder().setCustomId('castbot_settings').setLabel('Settings').setStyle(ButtonStyle.Secondary).setEmoji('⚙️'),
     new ButtonBuilder().setCustomId('castbot_tools').setLabel('Tools').setStyle(ButtonStyle.Secondary).setEmoji('🪛'),
     new ButtonBuilder().setCustomId('prod_setup_wizard').setLabel('Setup').setStyle(setupAllComplete ? ButtonStyle.Secondary : ButtonStyle.Danger).setEmoji('🧙')
@@ -6730,8 +6730,8 @@ To fix this:
                   {
                     type: 2, // Button
                     style: 2, // Secondary
-                    custom_id: 'prod_menu_back',
-                    label: '← Menu'
+                    custom_id: 'castbot_premium',
+                    label: '← Premium'
                     // NO emoji - back buttons never have emojis
                   },
                   {
@@ -10834,6 +10834,7 @@ To fix this:
         id: 'askcb_ask',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        premium: 'ask_castbot', // registry-gated (grace-aware); inner check is belt-and-braces
         requiresModal: true,
         handler: async (context) => {
           const { hasAskCastBotAccess, buildAskModal, recallResponse } = await import('./askCastBot.js');
@@ -10874,6 +10875,7 @@ To fix this:
         id: 'askcb_post',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        premium: 'ask_castbot', // POSTING needs entitlement; the posted button stays open (launch switch in askCastBot.js)
         handler: async (context) => {
           const { hasAskCastBotAccess, buildPostedAskContainer } = await import('./askCastBot.js');
           if (!hasAskCastBotAccess(context)) {
