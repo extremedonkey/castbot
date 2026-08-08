@@ -181,7 +181,8 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
             type: 1,
             components: [
                 { type: 2, custom_id: 'prod_production_menu', label: '← Back', style: 2 },
-                { type: 2, custom_id: 'prod_guide_0', label: 'Guide', style: 2, emoji: { name: '🦁' } }
+                // Guide moved to Map Explorer; Policy = merged ToS + Privacy (2026-08-08)
+                { type: 2, custom_id: 'castbot_policy', label: 'Policy', style: 2, emoji: { name: '📜' } }
             ]
         }
     ];

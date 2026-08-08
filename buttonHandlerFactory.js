@@ -746,7 +746,7 @@ export const BUTTON_REGISTRY = {
     description: 'Host-facing production guide (stamina config, logging, admin tools)',
     emoji: '🦁',
     style: 'Secondary',
-    parent: 'castbot_settings',
+    parent: 'safari_map_explorer',
     category: 'safari'
   },
   'category_post': {
@@ -1287,21 +1287,28 @@ export const BUTTON_REGISTRY = {
     category: 'admin',
     parent: 'castbot_settings'
   },
-  'prod_terms_of_service': {
-    label: 'Terms of Service',
-    description: 'View CastBot Terms of Service',
+  'castbot_policy': {
+    label: 'Policy',
+    description: 'Merged Terms of Service + Privacy Policy screen',
     emoji: '📜',
     style: 'Secondary',
     category: 'legal',
-    parent: 'castbot_tools'
+    parent: 'castbot_settings'
+  },
+  // Legacy alias ids for castbot_policy — kept registered for stale messages
+  'prod_terms_of_service': {
+    label: 'Terms of Service (legacy id)',
+    description: 'Alias — routes to the merged castbot_policy screen',
+    emoji: '📜',
+    style: 'Secondary',
+    category: 'legal'
   },
   'prod_privacy_policy': {
-    label: 'Privacy Policy',
-    description: 'View CastBot Privacy Policy',
+    label: 'Privacy Policy (legacy id)',
+    description: 'Alias — routes to the merged castbot_policy screen',
     emoji: '🔒',
     style: 'Secondary',
-    category: 'legal',
-    parent: 'castbot_tools'
+    category: 'legal'
   },
 
   // === ATTRIBUTE SYSTEM ===
@@ -4903,8 +4910,8 @@ export const BUTTON_REGISTRY = {
     parent: 'reeces_stuff'
   },
   'archive_channel': {
-    label: 'Archive Channels',
-    description: 'Archive all messages from a channel as a styled HTML file (TEST-only)',
+    label: 'Archiver',
+    description: 'Archive all messages from a channel as a styled HTML file (TEST-only in Tools; ungated in Premium)',
     emoji: '🧹',
     style: 'Secondary',
     category: 'admin',

@@ -126,7 +126,7 @@ export class MenuBuilder {
 
     // Cleanup section — admin maintenance tools. Archive Channels is TEST-only for now.
     const cleanupButtons = [];
-    if (isTest) cleanupButtons.push({ type: 2, custom_id: 'archive_channel', label: 'Archive Channels', style: 2, emoji: { name: '🧹' } });
+    if (isTest) cleanupButtons.push({ type: 2, custom_id: 'archive_channel', label: 'Archiver', style: 2, emoji: { name: '🧹' } });
     cleanupButtons.push(
       { type: 2, custom_id: 'nav_tidy_open', label: 'Navigate Tidy', style: 2, emoji: { name: '🗺️' } },
       { type: 2, custom_id: 'prod_nuke_category', label: 'Nuke Category', style: 2, emoji: { name: '☢️' } },
@@ -169,9 +169,8 @@ export class MenuBuilder {
         { type: 2, custom_id: 'reeces_stuff', label: "Reece's Stuff", style: 4, emoji: { name: '🐧' } }
       );
     }
+    // ToS + Privacy merged into the Policy button in CastBot Settings (2026-08-08)
     infoRow.push(
-      { type: 2, custom_id: 'prod_terms_of_service', label: 'Terms of Service', style: 2, emoji: { name: '📜' } },
-      { type: 2, custom_id: 'prod_privacy_policy', label: 'Privacy Policy', style: 2, emoji: { name: '🔒' } },
       { type: 2, label: 'Need Help?', style: 5, emoji: { name: '❓' }, url: 'https://discord.gg/H7MpJEjkwT' }
     );
     components.push({ type: 1, components: infoRow });
@@ -217,7 +216,7 @@ export class MenuBuilder {
     // Cleanup section — admin maintenance tools. Archive Channels is ungated HERE (the
     // Premium menu) as of 2026-07-29; it stays TEST-only in the Tools menu above.
     const cleanupButtons = [
-      { type: 2, custom_id: 'archive_channel', label: 'Archive Channels', style: 2, emoji: { name: '🧹' } },
+      { type: 2, custom_id: 'archive_channel', label: 'Archiver', style: 2, emoji: { name: '🧹' } },
       { type: 2, custom_id: 'nav_tidy_open', label: 'Navigate Tidy', style: 2, emoji: { name: '🗺️' } },
       { type: 2, custom_id: 'prod_nuke_category', label: 'Nuke Category', style: 2, emoji: { name: '☢️' } },
       { type: 2, custom_id: 'data_clear_vanity', label: 'Clear Vanity Roles', style: 2, emoji: { name: '💅' } }

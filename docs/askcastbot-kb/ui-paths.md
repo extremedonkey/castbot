@@ -58,7 +58,8 @@ Top-level rows:
 - **Cleanup**: `🗺️ Navigate Tidy`, `☢️ Nuke Category`, `💅 Clear Vanity Roles`
 - **Timers (Snowflake)**: `⏱️ Calculator`, `🔍 Lookup`
 - **Utilities**: `🕐 Availability`, `🎨 Emoji Editor`
-- **Info & Support**: Terms of Service, Privacy Policy, Need Help? (support server)
+- **Info & Support**: Need Help? (support server). Terms of Service + Privacy Policy
+  merged into the `📜 Policy` button in `⚙️ Settings` (bottom row).
 
 ## CastBot Settings (`/menu` → `⚙️ Settings`)
 
@@ -68,13 +69,15 @@ Top-level rows:
   `📍 Location`, `⚡ Stamina`, `❗ Commands`
 - **Advanced**: `🔐 Roles & Security`, `🪵 Logs`, `🔄 Reset`
 - **Legacy**: `💼 Tycoons`, `☄️ Events`, `🎲 Rounds`
+- **Bottom row**: `← Back`, `📜 Policy` (merged Terms of Service + Privacy Policy)
 
 ## Map Admin (`/menu` → `🗺️ Map Admin`)
 
 Map management (create/update/delete), blacklisted coordinates, player locations,
 paused players, `📍 Location Editor`, `🚀 Progress`, `🤫 Whispers`, `⚓ Anchors`
 (rebuilds every location card), `🗺️ Prod Map`, `📥 Import` / `📤 Export`
-(Safari data import/export — moved here from Settings → Advanced).
+(Safari data import/export — moved here from Settings → Advanced), `🦁 Guide`
+(host guide — moved here from Settings).
 
 ## Things that do NOT exist (never invent these)
 

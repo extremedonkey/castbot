@@ -184,8 +184,6 @@
   "app.js::prod_manage_pronouns_timezones",
   "app.js::prod_manage_tribes_legacy_debug",
   "app.js::prod_player_menu",
-  "app.js::prod_privacy_policy",
-  "app.js::prod_terms_of_service",
   "app.js::prod_view_pronouns",
   "app.js::prod_view_timezones",
   "app.js::prod_view_tribes",
