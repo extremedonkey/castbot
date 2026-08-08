@@ -36,11 +36,11 @@ export const BUTTON_REGISTRY = {
   },
   
   'data_clear_vanity': {
-    label: 'Clear Vanity Roles',
-    description: 'Pick a role; wipe all vanity roles from every member who has it',
+    label: 'Vanity Roles',
+    description: 'Explain vanity roles + bulk cleanup: pick a role, wipe all vanity roles from every member who has it',
     emoji: '💅',
     style: 'Secondary',
-    parent: 'castbot_tools',
+    parent: 'castbot_settings',
     category: 'admin'
   },
   'data_clear_vanity_select': {

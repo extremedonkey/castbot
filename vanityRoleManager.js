@@ -4,7 +4,8 @@
  * Admin cleanup tool for "vanity roles" — the cosmetic extra tribe roles stored at
  * playerData[guildId].players[playerId].vanityRoles[] and rendered as role mentions
  * on castlists (see castlistV2.js). They accumulate via the Tribe Swap/Merge feature
- * and have no removal path, so this tool wipes them in bulk.
+ * (and per-player via Manage Players) with no bulk removal path, so this wipes them.
+ * Entry point: CastBot Settings → 💅 Vanity Roles (moved from Tools/Premium Cleanup 2026-08-08).
  *
  * Flow (mirrors dataNuker.js):
  *   1. data_clear_vanity              → role-select screen (buildClearVanityUI)
@@ -65,12 +66,18 @@ export function buildClearVanityUI() {
       type: 17, // Container
       accent_color: ACCENT_RED,
       components: [
-        { type: 10, content: '## 🧹 Clear Vanity Roles' },
+        { type: 10, content: '## 💅 Vanity Roles' },
         { type: 14 },
         {
           type: 10,
-          content: 'Select a role below. **Every member who has that role** will have all of their ' +
-            'vanity roles (the extra tribe roles shown on castlists) cleared.\n\n' +
+          content: '**Vanity roles** are cosmetic extra roles displayed under a player on castlists — ' +
+            'for example old tribe roles kept after a swap or merge, or flair like a Winner title. ' +
+            'They\'re castlist display data only; they don\'t grant anything in Discord.\n\n' +
+            '**Where they come from:**\n' +
+            '• **Tribe Swap / Merge** — choose to keep old tribe roles as vanity indicators\n' +
+            '• **Manage Players** (Production Menu) — admins can add vanity roles to individual players\n\n' +
+            '**This screen tidies them up in bulk.** Select a role below — **every member who has that ' +
+            'role** will have *all* of their vanity roles cleared from the castlist.\n\n' +
             '-# This only clears the cosmetic castlist data — the Discord role itself is left on members.'
         },
         {
@@ -87,7 +94,7 @@ export function buildClearVanityUI() {
         {
           type: 1,
           components: [
-            { type: 2, custom_id: 'data_admin', label: '← Data Menu', style: 2 }
+            { type: 2, custom_id: 'castbot_settings', label: '← Settings', style: 2 }
           ]
         }
       ]
@@ -117,14 +124,14 @@ export async function handleVanityRoleSelect(context) {
   // Nothing to clear — short-circuit with an informational screen.
   if (idsToClear.length === 0) {
     return { components: [{ type: 17, accent_color: ACCENT_RED, components: [
-      { type: 10, content: '## 🧹 Clear Vanity Roles' },
+      { type: 10, content: '## 💅 Vanity Roles' },
       { type: 14 },
       { type: 10, content: `<@&${roleId}> has **${memberIds.length}** member(s), but **none** of them have ` +
         `any vanity roles. Nothing to clear.` },
       { type: 14 },
       { type: 1, components: [
         { type: 2, custom_id: 'data_clear_vanity', label: '← Pick Another Role', style: 2 },
-        { type: 2, custom_id: 'data_admin', label: 'Data Menu', style: 2 }
+        { type: 2, custom_id: 'castbot_settings', label: 'Settings', style: 2 }
       ] }
     ] }] };
   }
@@ -176,7 +183,7 @@ export async function handleVanityClearConfirm(context) {
     { type: 14 },
     { type: 1, components: [
       { type: 2, custom_id: 'data_clear_vanity', label: '← Clear Another', style: 2 },
-      { type: 2, custom_id: 'data_admin', label: 'Data Menu', style: 2 }
+      { type: 2, custom_id: 'castbot_settings', label: 'Settings', style: 2 }
     ] }
   ] }] };
 }

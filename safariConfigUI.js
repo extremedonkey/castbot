@@ -142,18 +142,30 @@ export async function createSafariCustomizationUI(guildId, currentConfig, userId
     // above the buttons. Removed 2026-07-29 — every section duplicated the button that
     // edits it (each editor shows its own current values), so it was a wall of text
     // pushing the actual controls off-screen.
+    // CastBot-Wide buttons — 6 now, so chunked across rows like the Safari section below.
+    // Vanity Roles moved here from Tools/Premium Cleanup (2026-08-08), renamed from Clear
+    // Vanity Roles — it sits beside Reaction Roles since both are role-flavoured display config.
+    const wideButtons = [
+        { type: 2, custom_id: 'castbot_general', label: 'General', style: 2, emoji: getBotEmoji('castbot_logo') || { name: '⚙️' } },
+        { type: 2, custom_id: 'safari_player_menu_config', label: 'Player Menu', style: 2, emoji: { name: '🕹️' } },
+        { type: 2, custom_id: 'prod_manage_pronouns_timezones', label: 'Reaction Roles', style: 2, emoji: { name: '💜' } },
+        { type: 2, custom_id: 'data_clear_vanity', label: 'Vanity Roles', style: 2, emoji: { name: '💅' } },
+        // Same handler as the Setup Wizard's Run Setup — idempotent, so it doubles as
+        // "re-run setup" (e.g. to refresh old timezone roles). Moved here from Tools.
+        { type: 2, custom_id: 'setup_castbot', label: 'Setup', style: 2, emoji: { name: '⚙️' } },
+        { type: 2, custom_id: 'scheduled_jobs_dashboard', label: 'Scheduled Jobs', style: 2, emoji: { name: '⏰' } }
+    ];
+    const wideRowCount = Math.ceil(wideButtons.length / 5);
+    const widePerRow = Math.ceil(wideButtons.length / wideRowCount);
+    const wideRows = [];
+    for (let i = 0; i < wideButtons.length; i += widePerRow) {
+        wideRows.push({ type: 1, components: wideButtons.slice(i, i + widePerRow) });
+    }
+
     const containerComponents = [
         { type: 10, content: `## ⚙️ CastBot Settings` },
         { type: 10, content: `### \`\`\`🎛️ CastBot-Wide Settings\`\`\`` },
-        { type: 1, components: [
-            { type: 2, custom_id: 'castbot_general', label: 'General', style: 2, emoji: getBotEmoji('castbot_logo') || { name: '⚙️' } },
-            { type: 2, custom_id: 'safari_player_menu_config', label: 'Player Menu', style: 2, emoji: { name: '🕹️' } },
-            { type: 2, custom_id: 'prod_manage_pronouns_timezones', label: 'Reaction Roles', style: 2, emoji: { name: '💜' } },
-            // Same handler as the Setup Wizard's Run Setup — idempotent, so it doubles as
-            // "re-run setup" (e.g. to refresh old timezone roles). Moved here from Tools.
-            { type: 2, custom_id: 'setup_castbot', label: 'Setup', style: 2, emoji: { name: '⚙️' } },
-            { type: 2, custom_id: 'scheduled_jobs_dashboard', label: 'Scheduled Jobs', style: 2, emoji: { name: '⏰' } }
-        ] },
+        ...wideRows,
         { type: 14 },
         { type: 10, content: `### \`\`\`🦁 Idol Hunts, Challenges and Safari Settings\`\`\`` },
         ...safariRows,

@@ -126,9 +126,9 @@ export class MenuBuilder {
     // Cleanup section — admin maintenance tools. Archive Channels is TEST-only for now.
     const cleanupButtons = [];
     if (isTest) cleanupButtons.push({ type: 2, custom_id: 'archive_channel', label: 'Archiver', style: 2, emoji: { name: '🧹' } });
+    // Clear Vanity Roles moved to CastBot Settings as Vanity Roles (2026-08-08)
     cleanupButtons.push(
-      { type: 2, custom_id: 'prod_nuke_category', label: 'Nuke Category', style: 2, emoji: { name: '☢️' } },
-      { type: 2, custom_id: 'data_clear_vanity', label: 'Clear Vanity Roles', style: 2, emoji: { name: '💅' } }
+      { type: 2, custom_id: 'prod_nuke_category', label: 'Nuke Category', style: 2, emoji: { name: '☢️' } }
     );
 
     const components = [
@@ -197,10 +197,10 @@ export class MenuBuilder {
 
     // Cleanup section — admin maintenance tools. Archive Channels is ungated HERE (the
     // Premium menu) as of 2026-07-29; it stays TEST-only in the Tools menu above.
+    // Clear Vanity Roles moved to CastBot Settings as Vanity Roles (2026-08-08)
     const cleanupButtons = [
       { type: 2, custom_id: 'archive_channel', label: 'Archiver', style: 2, emoji: { name: '🧹' } },
-      { type: 2, custom_id: 'prod_nuke_category', label: 'Nuke Category', style: 2, emoji: { name: '☢️' } },
-      { type: 2, custom_id: 'data_clear_vanity', label: 'Clear Vanity Roles', style: 2, emoji: { name: '💅' } }
+      { type: 2, custom_id: 'prod_nuke_category', label: 'Nuke Category', style: 2, emoji: { name: '☢️' } }
     ];
 
     // #️⃣ Channels — the SAME row the Season Manager Channels tab renders (RaP 0885 stage 1).
