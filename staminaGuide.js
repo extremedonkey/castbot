@@ -3,7 +3,7 @@
  * Accessible from player menu (🦁 Guide button next to 📜 Logs).
  *
  * Prod Guide — Host-facing guide (configuration, logging, admin tools).
- * Accessible from Settings menu (🦁 Guide button next to ← Back).
+ * Accessible from Map Explorer (🦁 Guide button beside Import/Export).
  *
  * Pages support:
  *  - content entries that are strings (static) OR functions (cfg) => string, resolved
@@ -264,7 +264,7 @@ export async function buildProdGuidePage(page = 0, options = {}) {
   const { contentBlocks, gallery } = await resolvePage(current, options);
 
   const navButtons = [
-    { type: 2, custom_id: 'castbot_settings', label: '← Settings', style: 2 },
+    { type: 2, custom_id: 'safari_map_explorer', label: '← Map Explorer', style: 2 },
     { type: 2, custom_id: `prod_guide_${page - 1}`, label: '◀', style: 2, disabled: page === 0 },
     { type: 2, custom_id: 'prod_guide_counter', label: `${page + 1} / ${PROD_PAGES.length}`, style: 2, disabled: true },
     { type: 2, custom_id: `prod_guide_${page + 1}`, label: '▶', style: 2, disabled: page >= PROD_PAGES.length - 1 }

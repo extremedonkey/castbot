@@ -33543,14 +33543,14 @@ To fix this:
           
           const additionalRow = new ActionRowBuilder().addComponents(additionalButtons);
           
-          // Back button
+          // Back button — Tycoons lives in Settings → Legacy (moved 2026-08-08)
           const backButton = new ButtonBuilder()
-            .setCustomId('prod_menu_back')
-            .setLabel('← Menu')
+            .setCustomId('castbot_settings')
+            .setLabel('← Settings')
             .setStyle(ButtonStyle.Secondary);
-          
+
           const backRow = new ActionRowBuilder().addComponents([backButton]);
-          
+
           // Build Components V2 response
           const containerComponents = [
             {
