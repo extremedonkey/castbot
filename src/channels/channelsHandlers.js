@@ -924,7 +924,7 @@ function planTitle(plan) {
   if (plan.type === 'delete') return '🗑️ Deleting channels';
   if (plan.type === 'player_roles') return '🎭 Creating player roles';
   if (plan.type === 'convert') return '🗳️ Converting applications to subs';
-  if (plan.type === 'oneonone') return '🤝 Creating 1on1 channels';
+  if (plan.type === 'oneonone') return '👥 Creating 1on1 channels';
   return plan.kind === 'subs' ? '🗳️ Creating subs channels' : '🎙️ Creating confessionals';
 }
 

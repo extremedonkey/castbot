@@ -74,7 +74,7 @@ export function buildChannelsSection(configId) {
     { type: 1, components: [
       { type: 2, custom_id: `channels_confessionals_${configId}`, label: 'Confessionals', style: 2, emoji: { name: '🎙️' } },
       { type: 2, custom_id: `channels_subs_${configId}`, label: 'Subs', style: 2, emoji: { name: '🗳️' } },
-      { type: 2, custom_id: `channels_1on1s_${configId}`, label: '1 on 1s', style: 2, emoji: { name: '🤝' } },
+      { type: 2, custom_id: `channels_1on1s_${configId}`, label: '1 on 1s', style: 2, emoji: { name: '👥' } },
       { type: 2, custom_id: `channels_alliances_${configId}`, label: 'Alliances', style: 2, emoji: { name: '🤝' } },
       { type: 2, custom_id: 'castlist_swap_merge_default', label: 'Swap/Merge', style: 2, emoji: { name: '🔀' } }
     ]}

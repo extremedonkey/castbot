@@ -3440,7 +3440,7 @@ export const BUTTON_REGISTRY = {
   'channels_1on1s_*': {
     label: '1 on 1s',
     description: 'Bulk create/delete a private channel for every pair of players in a tribe',
-    emoji: '🤝',
+    emoji: '👥',
     style: 'Secondary',
     parent: 'season_channels',
     category: 'channel_admin',
