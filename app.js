@@ -8378,10 +8378,11 @@ To fix this:
         id: 'deploy_prod',
         updateMessage: true,
         deferred: true,
-        handler: async () => {
-          if (process.env.INSTANCE_ROLE !== 'test') {
+        handler: async (context) => {
+          // Owner-ID gate repeated inside the block (security ratchet + defense in depth)
+          if (!['391415444084490240'].includes(context.userId) || process.env.INSTANCE_ROLE !== 'test') {
             return { components: [{ type: 17, accent_color: 0xe74c3c, components: [
-              { type: 10, content: '⛔ **Deploy Prod** is only available on the TEST instance.' },
+              { type: 10, content: '⛔ **Deploy Prod** is only available to Reece on the TEST instance.' },
               { type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: '← Back', style: 2 }] }
             ] }] };
           }
@@ -8397,9 +8398,10 @@ To fix this:
         updateMessage: true,
         deferred: true,
         handler: async (context) => {
-          if (process.env.INSTANCE_ROLE !== 'test') {
+          // Owner-ID gate repeated inside the block (security ratchet + defense in depth)
+          if (!['391415444084490240'].includes(context.userId) || process.env.INSTANCE_ROLE !== 'test') {
             return { components: [{ type: 17, accent_color: 0xe74c3c, components: [
-              { type: 10, content: '⛔ Only available on the TEST instance.' },
+              { type: 10, content: '⛔ Only available to Reece on the TEST instance.' },
               { type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: '← Back', style: 2 }] }
             ] }] };
           }
