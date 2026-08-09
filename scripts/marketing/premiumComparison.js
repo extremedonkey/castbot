@@ -175,7 +175,7 @@ export function buildComparisonSvg() {
   p.push(text(CARD_X + 26, cardY + 92, '$0', { size: 46, weight: 'bold' }));
   p.push(text(CARD_X + 92, cardY + 92, 'for everything below', { size: 17, fill: TEXT_SEC }));
   p.push(text(CARD_X + 26, cardY + 122, 'Every row marked ✓ — free, in every server.', { size: 15, fill: TEXT_PRI }));
-  p.push(text(CARD_X + 26, cardY + 146, 'Premium ($7/mo) adds the three starred rows.', { size: 13.5, fill: TEXT_MUT }));
+  p.push(text(CARD_X + 26, cardY + 146, 'Premium ($2.50/mo) adds the three starred rows.', { size: 13.5, fill: TEXT_MUT }));
 
   const kx = CARD_X + cardW + gap;
   p.push(`<rect x="${kx}" y="${cardY}" width="${cardW}" height="${cardH}" rx="10" fill="${CARD_BG}" stroke="${RULE}" stroke-width="1.5"/>`);
