@@ -1,0 +1,83 @@
+{
+  "pill": "NEW IN CASTBOT",
+  "title": "The Marooning Planner",
+  "subtitle": "Build your tribes in secret. Reveal them when you're ready.",
+  "accent": "#9b59b6",
+  "stepsTitle": "HOW IT WORKS",
+  "steps": [
+    {
+      "n": "1",
+      "title": "Draft",
+      "color": "#9b59b6",
+      "desc": [
+        "Drop your cast into tribes and move",
+        "them around until the balance feels",
+        "right. No Discord roles are assigned.",
+        "Nothing is posted. Nobody is pinged."
+      ]
+    },
+    {
+      "n": "2",
+      "title": "Confirm",
+      "color": "#f1c40f",
+      "desc": [
+        "Every player who still needs something",
+        "is flagged: no offer sent, no reply yet,",
+        "or declined. Accepted players stay",
+        "unmarked, so the gaps jump out."
+      ]
+    },
+    {
+      "n": "3",
+      "title": "Maroon",
+      "color": "#2ecc71",
+      "desc": [
+        "Happy with it? Add the tribe to a",
+        "castlist. That is the moment it becomes",
+        "public — and the only moment. Marooning",
+        "day stays a surprise until you say so."
+      ]
+    }
+  ],
+  "mock": {
+    "header": "Marooning Planner",
+    "subheader": "Cast Players (7/18) — grouped by draft tribe, one line per player",
+    "blocks": [
+      {
+        "title": "The Pacific Warriors",
+        "count": "(4 players)",
+        "color": "#3498db",
+        "rows": [
+          { "text": "1. Internet Crybaby - 24yo | She/Her | AEST" },
+          { "text": "2. Benja Man - 31yo | He/Him | GMT" },
+          { "text": "3. Mimi - 27yo | They/Them | EST", "badge": "NO REPLY", "badgeColor": "#f1c40f" },
+          { "text": "4. Andrew - 22yo | He/Him | PST", "badge": "NO OFFER", "badgeColor": "#e67e22" }
+        ]
+      },
+      {
+        "title": "East Siders",
+        "count": "(3 players)",
+        "color": "#e74c3c",
+        "rows": [
+          { "text": "5. Reece - 33yo | He/Him | AWST" },
+          { "text": "6. Q - 29yo | She/Her | CST", "badge": "DECLINED", "badgeColor": "#e74c3c" },
+          { "text": "7. Serviver - 26yo | He/Him | GMT+8", "badge": "NO OFFER", "badgeColor": "#e67e22" }
+        ]
+      }
+    ]
+  },
+  "keyTitle": "WHAT THE FLAGS MEAN",
+  "key": [
+    { "label": "NO OFFER", "color": "#e67e22", "text": "They have not been told they are in. Send it with Bulk Offers." },
+    { "label": "NO REPLY", "color": "#f1c40f", "text": "The offer went out. They have not accepted or declined yet." },
+    { "label": "DECLINED", "color": "#e74c3c", "text": "They turned the spot down. Time to go to your alternates." },
+    { "label": "NO FLAG", "color": "#2ecc71", "text": "Accepted and locked in. If a row is bare, there is nothing to chase." }
+  ],
+  "banner": {
+    "title": "Only production can see any of this",
+    "text": "Draft tribes live in CastBot, not on Discord. No roles, no channels, no notifications.",
+    "color": "#2ecc71"
+  },
+  "footer": "/menu  ->  Season Manager  ->  Marooning",
+  "footnote": "Add Cast brings in anyone who never applied. Available now on CastBot."
+}
