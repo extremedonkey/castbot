@@ -26,7 +26,7 @@ Two things you must never do, both of which shipped bugs on 2026-08-09 ([RaP 088
 
 Both are enforced at zero by `tests/permissionSources.test.js`. Exemptions exist only where no interaction payload exists (the bot checking its own permissions, gateway reaction events, admin enumeration).
 
-Also: `PermissionsBitField.has(A | B)` demands **both** bits. `memberHasAnyPermission` tests each separately — use it rather than hand-rolling.
+**Do not hand-roll the check either way.** `PermissionsBitField.has(A | B)` is **all-of** (`(bits & x) === x`), so using it on a combined mask silently requires *every* bit — that broke 9 handlers declaring `ManageRoles | ManageChannels | ManageGuild` (meaning "any of these three") and locked out every host holding only Manage Roles. A raw `&` is any-of but skips the Administrator override. `memberHasAnyPermission` does both correctly: Administrator short-circuit, then `&` per argument.
 
 ---
 
@@ -157,7 +157,7 @@ REST `GET /guilds/{id}/members/{id}` returns **no** `permissions` field — the 
 
 > **Rule**: gate on `context.member`. A permission read off a fetched `GuildMember` is not Discord's answer — it's a local recomputation that silently omits the Administrator override.
 >
-> Use `PermissionsBitField.has()`, never a raw `&`. `has()` applies the Administrator override structurally. Note it must be called **once per permission**: `has(A | B)` demands *both* bits.
+> Use `memberHasAnyPermission()`. Neither raw primitive is safe alone: a bare `&` drops the Administrator override, and `.has()` on a combined mask is all-of rather than any-of.
 
 **Enforced by** `tests/castRankingPermissions.test.js` — a ratchet at zero fails the build if any gate is fed something other than `context.member`, or if a `members.fetch()` result reaches a casting gate. Negative-tested (both guards confirmed to fire).
 
