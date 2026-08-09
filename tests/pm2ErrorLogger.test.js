@@ -190,6 +190,31 @@ describe('PM2ErrorLogger — classifyStderr (ping-worthy vs quiet warnings)', ()
     const { severe } = classifyStderr('ℹ️ [2026-08-03T14:18:51.276Z] [SYNC] 3 failed rows skipped\n');
     assert.equal(severe.length, 0);
   });
+
+  it('🛡️ SHAPE-GUARD repairs are quiet — the interaction SUCCEEDED', () => {
+    // 2026-08-09: extending SHAPE-GUARD to the deferred webhook-PATCH path made it fire on every
+    // non-recipient whisper click in a live Safari game. 🛡️ wasn't a quiet marker, so a
+    // self-healed response paged Reece once a minute. It is a nag to fix a handler, not an incident.
+    const { severe, warn } = classifyStderr(
+      '🛡️ [SHAPE-GUARD] content-only webhook PATCH onto V2 message — auto-wrapped into container. Fix the handler to return a V2 container.\n');
+    assert.equal(severe.length, 0, 'must never page');
+    assert.equal(warn.length, 1, 'but must still be visible — it flags a handler that needs fixing');
+  });
+
+  it('🛡️ stays quiet on the immediate UPDATE_MESSAGE path too, and with a PM2 timestamp', () => {
+    const { severe, warn } = classifyStderr(
+      '2026-08-09T14:21:03: 🛡️ [SHAPE-GUARD] content-only UPDATE_MESSAGE onto V2 message — auto-wrapped into container.\n');
+    assert.equal(severe.length, 0);
+    assert.equal(warn.length, 1);
+  });
+
+  it('a genuine error in the same batch still pages, and the two are bucketed apart', () => {
+    const { severe, warn } = classifyStderr(
+      '🛡️ [SHAPE-GUARD] content-only webhook PATCH onto V2 message — auto-wrapped into container.\n' +
+      'TypeError: Cannot read properties of undefined\n');
+    assert.equal(severe.length, 1, 'the TypeError must not be silenced by its quiet neighbour');
+    assert.equal(warn.length, 1);
+  });
 });
 
 describe('PM2ErrorLogger — isQuietStdoutLine', () => {

@@ -84,7 +84,11 @@ export function isBenignStderrLine(line) {
 // problem. Anything on stderr that doesn't start with a quiet marker (raw stack
 // traces, unhandled rejections, PM2 crash output, ❌ logger.error) defaults to
 // SEVERE — an unknown format must page, never slip through silent.
-const QUIET_MARKERS = ['⚠️', 'ℹ️', '🔍', '⏱️'];
+// 🛡️ is SHAPE-GUARD (buttonHandlerFactory.js wrapBareContentForV2) — a console.warn announcing that
+// it just REPAIRED a handler's response shape. The interaction succeeded; it is a nag to fix the
+// handler, not an incident. It landed here on 2026-08-09 when the guard was extended to the deferred
+// webhook-PATCH path, and immediately began paging Reece once a minute off a live Safari game.
+const QUIET_MARKERS = ['⚠️', 'ℹ️', '🔍', '⏱️', '🛡️'];
 
 // PM2 can prefix each line it writes with its own timestamp (log_date_format) —
 // e.g. "2026-07-08T03:53:52: ⚠️ DEPRECATED ..." — strip it so marker matching

@@ -508,9 +508,13 @@ export async function handleReadWhisper(context, whisperId, targetUserId, client
     // shared-channel notifications invite other players' clicks, log them)
     if (context.userId !== targetUserId) {
       logger.warn('WHISPER', 'Read clicked by non-recipient', { clickerId: context.userId, whisperId, targetUserId });
+      // V2 container, not bare `content` — whisper buttons live on a Components V2 card, and a
+      // content-only reply onto a V2 parent is exactly what SHAPE-GUARD has to repair (and warn
+      // about) on every click. Whisper cards sit in shared channels, so non-recipients click them
+      // constantly: this was the single loudest source of guard warnings on prod.
       return {
-        content: '❌ This whisper is not for you.',
-        flags: InteractionResponseFlags.EPHEMERAL
+        flags: InteractionResponseFlags.EPHEMERAL,
+        components: [{ type: 17, components: [{ type: 10, content: '❌ This whisper is not for you.' }] }]
       };
     }
 
@@ -522,8 +526,8 @@ export async function handleReadWhisper(context, whisperId, targetUserId, client
     if (claim.status === 'missing') {
       logger.warn('WHISPER', 'Read clicked for unknown whisperId (pruned or lost)', { whisperId, targetUserId });
       return {
-        content: '❌ This whisper has expired. If a whisper log is configured, the message is preserved there.',
-        flags: InteractionResponseFlags.EPHEMERAL
+        flags: InteractionResponseFlags.EPHEMERAL,
+        components: [{ type: 17, components: [{ type: 10, content: '❌ This whisper has expired. If a whisper log is configured, the message is preserved there.' }] }]
       };
     }
     const whisperData = claim.data;
