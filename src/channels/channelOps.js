@@ -164,6 +164,26 @@ export async function ensureChannel(guild, {
 }
 
 /**
+ * Reparent a channel WITHOUT syncing category permissions.
+ *
+ * ⚠️ `lockPermissions: false` is the whole point (RaP 0881): a plain setParent can copy the
+ * category's overwrites over the channel's, wiping the player/host access the job just built.
+ * Best-effort like renames — a failed move never fails the job.
+ *
+ * @returns {Promise<{moved: boolean, error?: string}>}
+ */
+export async function moveChannelSafe(channel, parentId, { reason = 'CastBot channel admin' } = {}) {
+  if (!parentId || channel.parentId === parentId) return { moved: false };
+  try {
+    await channel.setParent(parentId, { lockPermissions: false, reason });
+    return { moved: true };
+  } catch (e) {
+    console.warn(`⚠️ [CHANNEL_ADMIN] Move failed for #${channel.name} → ${parentId}: ${e.message}`);
+    return { moved: false, error: e.message };
+  }
+}
+
+/**
  * Apply permission overwrites to an EXISTING channel, one principal at a time.
  *
  * Uses .edit() per principal, never .set() — .set() would wipe overwrites this framework

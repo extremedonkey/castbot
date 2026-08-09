@@ -249,6 +249,114 @@ export function planCategoryBuckets(items, { baseName, capacity = MAX_CHANNELS_P
 }
 
 /**
+ * Category base name from the modal's free-text input. Categories allow spaces/caps/emoji, so
+ * this is NOT channel-slugging — just whitespace collapse + a length cap that leaves room for
+ * overflow suffixes (' 2') and tribe-name prefixes under Discord's 100-char channel-name limit.
+ */
+export function sanitizeCategoryBase(input, fallback = 'Subs') {
+  const s = String(input || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+  return s || fallback;
+}
+
+/**
+ * Subs category placement (RaP 0881): where do subs channels live?
+ *
+ *   keep      — today's behaviour: default buckets via planCategoryBuckets, NEVER moves anything
+ *   single    — one category tree named `baseName`; existing channels elsewhere are MOVED in
+ *   per_tribe — one category per draft tribe (`{Tribe} {baseName}`); tribe-less players fall
+ *               back to the single-category tree; existing channels are MOVED to match
+ *
+ * Pure — carries the unit-test surface. Movement here is a PLAN (for the confirm screen);
+ * exec re-checks the live parent before actually moving.
+ *
+ * Tribe buckets are keyed by tribeRoleId, never name: duplicate tribe names are legal in
+ * Discord and name-keying could merge two tribes' categories (RaP 0892 adopt-by-name hazard).
+ *
+ * @param {Array<{userId: string}>} items - members (or convert items) being planned
+ * @param {Object} p
+ * @param {'keep'|'single'|'per_tribe'} [p.placement]
+ * @param {string} [p.baseName] - already-sanitized category base (callers pass the default for 'keep')
+ * @param {Map<string, Array<{roleId: string, name: string}>>} [p.tribesByUser] - draft tribes per user
+ * @param {Object<string, {id: string, childCount: number}>} [p.tribeCategories] - live registry categories per tribeRoleId
+ * @param {Array<{id: string, name: string, childCount: number}>} [p.existing] - live default-tree categories
+ * @param {Map<string, {channelId: string, parentId: string|null}>} [p.channelsByUser] - live existing channels
+ * @param {number} [p.capacity]
+ * @returns {{buckets: Array<{categoryName, categoryId, tribeRoleId, items}>,
+ *            moves: Array<{userId, channelId, fromParentId, toName}>,
+ *            tribeless: Array, multiTribe: Array<{userId, displayName, tribes}>}}
+ */
+export function planSubsPlacement(items, {
+  placement = 'keep',
+  baseName = 'Subs',
+  tribesByUser = new Map(),
+  tribeCategories = {},
+  existing = [],
+  channelsByUser = new Map(),
+  capacity = MAX_CHANNELS_PER_CATEGORY
+} = {}) {
+  const list = items || [];
+  const tagged = (buckets, tribeRoleId = null) => buckets.map((b) => ({ ...b, tribeRoleId }));
+
+  if (placement === 'keep' || !list.length) {
+    return {
+      buckets: tagged(planCategoryBuckets(list, { baseName, existing, capacity })),
+      moves: [], tribeless: [], multiTribe: []
+    };
+  }
+
+  // A custom name must not top up categories from a DIFFERENT tree — only the exact name and
+  // its numeric overflow buckets ('Subs 2') count. A bare startsWith would swallow siblings
+  // like 'Subs HQ Notes'.
+  const isOverflow = (n) => n.startsWith(`${baseName} `) && /^\d+$/.test(n.slice(baseName.length + 1));
+  const matched = existing.filter((c) => c.name === baseName || isOverflow(c.name));
+
+  let buckets;
+  let tribeless = [];
+  const multiTribe = [];
+
+  if (placement === 'single') {
+    buckets = tagged(planCategoryBuckets(list, { baseName, existing: matched, capacity }));
+  } else {
+    // per_tribe — group by FIRST draft tribe; collect the ambiguous and the tribe-less.
+    const byTribe = new Map(); // roleId → { name, items }
+    for (const m of list) {
+      const tribes = tribesByUser.get(m.userId) || [];
+      if (!tribes.length) {
+        tribeless.push(m);
+        continue;
+      }
+      if (tribes.length > 1) multiTribe.push({ userId: m.userId, displayName: m.displayName, tribes: tribes.map((t) => t.name) });
+      const t = tribes[0];
+      if (!byTribe.has(t.roleId)) byTribe.set(t.roleId, { name: t.name, items: [] });
+      byTribe.get(t.roleId).items.push(m);
+    }
+
+    buckets = [...byTribe.entries()].map(([roleId, t]) => ({
+      categoryName: `${t.name} ${baseName}`.slice(0, 100),
+      categoryId: tribeCategories[roleId]?.id || null,
+      tribeRoleId: roleId,
+      items: t.items
+    }));
+    buckets.push(...tagged(planCategoryBuckets(tribeless, { baseName, existing: matched, capacity })));
+  }
+
+  // Existing channels not already under their planned category get moved (null categoryId =
+  // the category doesn't exist yet, so an existing channel can't be in it).
+  const moves = [];
+  for (const b of buckets) {
+    for (const m of b.items) {
+      const ch = channelsByUser.get(m.userId);
+      if (!ch) continue;
+      if (!b.categoryId || ch.parentId !== b.categoryId) {
+        moves.push({ userId: m.userId, channelId: ch.channelId, fromParentId: ch.parentId || null, toName: b.categoryName });
+      }
+    }
+  }
+
+  return { buckets, moves, tribeless, multiTribe };
+}
+
+/**
  * Assign collision discriminators so no two members in one batch produce the same channel name.
  * Deterministic: ties are broken by userId order, so re-runs derive identical names.
  *

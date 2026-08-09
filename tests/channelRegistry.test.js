@@ -67,6 +67,14 @@ function applyDeltas(playerData, guildId, deltas) {
         applied++;
         break;
       }
+      case 'tribeCategory': {
+        // Per-tribe subs categories (RaP 0881), keyed by tribeRoleId, never name.
+        const season = ensureSeason(node, d.configId);
+        const map = (season.categories.subsByTribe ||= {});
+        map[d.tribeRoleId] = d.categoryId;
+        applied++;
+        break;
+      }
       case 'playerRole': {
         const players = ((playerData[guildId].players ||= {}));
         const p = (players[d.userId] ||= {});
@@ -358,5 +366,34 @@ describe('channelRegistry — lastRun', () => {
     const pd = {};
     applyDeltas(pd, G, [{ kind: 'lastRun', configId: C, action: 'confessionals', summary: { created: 9, skipped: 1, failed: 0 } }]);
     assert.deepEqual(pd[G].channelAdmin[C].lastRun.confessionals, { created: 9, skipped: 1, failed: 0 });
+  });
+});
+
+describe('channelRegistry — tribeCategory (per-tribe subs, RaP 0881)', () => {
+  it('maps tribeRoleId → categoryId under the season, beside the flat category list', () => {
+    const pd = {};
+    applyDeltas(pd, G, [
+      { kind: 'category', bucket: 'subs', configId: C, categoryId: 'catFallback' },
+      { kind: 'tribeCategory', configId: C, tribeRoleId: 'roleBalboa', categoryId: 'catBalboa' },
+      { kind: 'tribeCategory', configId: C, tribeRoleId: 'roleChapera', categoryId: 'catChapera' }
+    ]);
+    assert.deepEqual(pd[G].channelAdmin[C].categories.subs, ['catFallback']);
+    assert.deepEqual(pd[G].channelAdmin[C].categories.subsByTribe, { roleBalboa: 'catBalboa', roleChapera: 'catChapera' });
+  });
+
+  it('re-recording a tribe overwrites its pointer (idempotent re-runs)', () => {
+    const pd = {};
+    applyDeltas(pd, G, [{ kind: 'tribeCategory', configId: C, tribeRoleId: 'r1', categoryId: 'old' }]);
+    applyDeltas(pd, G, [{ kind: 'tribeCategory', configId: C, tribeRoleId: 'r1', categoryId: 'recreated' }]);
+    assert.deepEqual(pd[G].channelAdmin[C].categories.subsByTribe, { r1: 'recreated' });
+  });
+
+  it('two tribes with the SAME name stay separate — keying is by roleId', () => {
+    const pd = {};
+    applyDeltas(pd, G, [
+      { kind: 'tribeCategory', configId: C, tribeRoleId: 'r1', categoryId: 'cat1' },
+      { kind: 'tribeCategory', configId: C, tribeRoleId: 'r2', categoryId: 'cat2' }
+    ]);
+    assert.equal(Object.keys(pd[G].channelAdmin[C].categories.subsByTribe).length, 2);
   });
 });

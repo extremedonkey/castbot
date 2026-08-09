@@ -14,6 +14,7 @@
  *   { kind: 'confessional'|'subs', configId, userId, channelId, name, categoryId?, convertedFrom? }
  *   { kind: 'oneonone', pairKey, channelId, name, a, b, tribeRoleId }
  *   { kind: 'category', bucket: 'confessional'|'subs'|'oneonone', configId?, categoryId }
+ *   { kind: 'tribeCategory', configId, tribeRoleId, categoryId }  // per-tribe subs (RaP 0881)
  *   { kind: 'playerRole', userId, roleId }            // roleId null clears a dead role
  *   { kind: 'trustedSpectator', roleId }
  *   { kind: 'appConvert', channelId, completedAt?, preConvertChannelName?, convertedToSubsAt? }
@@ -107,6 +108,16 @@ export function applyDeltas(playerData, guildId, deltas) {
           const list = (season.categories[d.bucket] ||= []);
           if (!list.includes(d.categoryId)) list.push(d.categoryId);
         }
+        applied++;
+        break;
+      }
+
+      case 'tribeCategory': {
+        // Per-tribe subs categories (RaP 0881), keyed by tribeRoleId — NEVER by tribe name
+        // (duplicate names are legal; name-keying could merge two tribes' categories).
+        const season = ensureSeason(node, d.configId);
+        const map = (season.categories.subsByTribe ||= {});
+        map[d.tribeRoleId] = d.categoryId;
         applied++;
         break;
       }

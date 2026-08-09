@@ -1,6 +1,6 @@
 # 🗳️ Subs Category Placement — Design Analysis
 
-**Status**: Idea — not started (RaP)
+**Status**: ✅ v1 shipped 2026-08-09, same evening as the analysis — modal Radio Group + name input, `planSubsPlacement` (channelPlan.js, tested), `moveChannelSafe` (`lockPermissions: false`), `tribeCategory` registry delta, create + convert exec moves. Out of v1 as planned: the same select on Confessionals, emptied-category cleanup.
 **Extends**: [ChannelAdministration.md](../03-features/ChannelAdministration.md) · Subs action
 **Related**: [RaP 0892 Alliances](0892_20260728_Alliances_Analysis.md) (adopt-by-name hazard precedent)
 

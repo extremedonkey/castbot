@@ -22,7 +22,7 @@ The tab clones the Marooning tab's chrome and is expected to absorb the Maroonin
 | 🔐 **Roles** | Sets the server's single Trusted Spectator role |
 | 🎭 **Player Roles** | One personal Discord role per player (the voted-out kill switch) |
 | 🎙️ **Confessionals** | Create / update / delete `#name-confessional` |
-| 🗳️ **Subs** | Create / update / delete `#name-subs`, or **convert application channels** into subs |
+| 🗳️ **Subs** | Create / update / delete `#name-subs`, or **convert application channels** into subs. Category placement select (RaP 0881, 2026-08-09): **Don't touch** (default, today's behaviour) / **Single category** (custom name, moves misplaced channels in) / **One per tribe** (`Balboa Subs` from the default castlist; tribe-less → fallback; re-run after a swap to migrate). Moves always use `moveChannelSafe` (`lockPermissions: false`) so overwrites survive. Per-tribe registry: `categories.subsByTribe` keyed by tribeRoleId |
 | 🤝 **1 on 1s** | A private channel for every *pair* of players in a tribe |
 | 🤝 **Alliances** | Secret member channels via the Alliance Manager — see [RaP 0892](../01-RaP/0892_20260728_Alliances_Analysis.md). Members + hosts only (**no** Trusted Spectator), name defaults to plain `alliance`, same-tribe warn-only guard, player request flow via /menu → Advanced (whitelist v1). Code: [`alliancePlan.js`](../../src/channels/alliancePlan.js) / [`allianceView.js`](../../src/channels/allianceView.js) / [`allianceHandlers.js`](../../src/channels/allianceHandlers.js) |
 

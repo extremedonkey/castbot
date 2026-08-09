@@ -18,7 +18,9 @@ import {
   buildOverwrites,
   preflightBudget,
   planCategoryBuckets,
-  assignChannelNames
+  assignChannelNames,
+  planSubsPlacement,
+  sanitizeCategoryBase
 } from '../src/channels/channelPlan.js';
 
 const VIEW = PermissionFlagsBits.ViewChannel;
@@ -362,5 +364,115 @@ describe('channelPlan — assignChannelNames (collisions)', () => {
     const first = assignChannelNames(members, 'subs');
     const second = assignChannelNames([...members].reverse(), 'subs');
     assert.deepEqual([...first].sort(), [...second].sort());
+  });
+});
+
+describe('channelPlan — sanitizeCategoryBase (RaP 0881)', () => {
+  it('trims, collapses whitespace, keeps caps/emoji (categories are not channel-slugged)', () => {
+    assert.equal(sanitizeCategoryBase('  My   Subs 🗳️ '), 'My Subs 🗳️');
+  });
+
+  it('falls back when empty', () => {
+    assert.equal(sanitizeCategoryBase(''), 'Subs');
+    assert.equal(sanitizeCategoryBase('   ', 'Subs'), 'Subs');
+    assert.equal(sanitizeCategoryBase(null), 'Subs');
+  });
+
+  it('caps at 60 chars', () => {
+    assert.equal(sanitizeCategoryBase('x'.repeat(200)).length, 60);
+  });
+});
+
+describe('channelPlan — planSubsPlacement (RaP 0881)', () => {
+  const M = (id, name = `P${id}`) => ({ userId: id, displayName: name });
+
+  it("'keep' is a pure planCategoryBuckets passthrough and NEVER moves anything", () => {
+    const items = [M('1'), M('2')];
+    const existing = [{ id: 'cat1', name: 'Subs', childCount: 1 }];
+    const channelsByUser = new Map([['1', { channelId: 'ch1', parentId: 'somewhere-else' }]]);
+    const pp = planSubsPlacement(items, { placement: 'keep', baseName: 'Subs', existing, channelsByUser });
+    assert.deepEqual(
+      pp.buckets.map((b) => ({ name: b.categoryName, id: b.categoryId, n: b.items.length })),
+      planCategoryBuckets(items, { baseName: 'Subs', existing }).map((b) => ({ name: b.categoryName, id: b.categoryId, n: b.items.length }))
+    );
+    assert.equal(pp.moves.length, 0, "'keep' must never plan a move — zero behaviour change");
+  });
+
+  it("'single' with a custom name refuses to top up a DIFFERENT tree's categories", () => {
+    const existing = [{ id: 'catSubs', name: 'Subs', childCount: 3 }];
+    const pp = planSubsPlacement([M('1')], { placement: 'single', baseName: 'Submissions', existing });
+    assert.equal(pp.buckets.length, 1);
+    assert.equal(pp.buckets[0].categoryName, 'Submissions');
+    assert.equal(pp.buckets[0].categoryId, null, 'must create anew, not adopt the Subs tree');
+  });
+
+  it("'single' tops up exact and overflow name matches", () => {
+    const existing = [
+      { id: 'catA', name: 'Submissions', childCount: 49 },
+      { id: 'catNope', name: 'Submissions HQ Notes', childCount: 0 },
+      { id: 'catB', name: 'Submissions 2', childCount: 0 }
+    ];
+    const pp = planSubsPlacement([M('1'), M('2')], { placement: 'single', baseName: 'Submissions', existing });
+    assert.deepEqual(pp.buckets.map((b) => b.categoryId), ['catA', 'catB'], 'catNope prefix-matches with startsWith but only via "name " boundary');
+  });
+
+  it("'single' plans moves for channels outside the target category", () => {
+    const existing = [{ id: 'catSubs', name: 'Subs', childCount: 0 }];
+    const channelsByUser = new Map([
+      ['1', { channelId: 'ch1', parentId: 'catApps' }],   // misplaced → move
+      ['2', { channelId: 'ch2', parentId: 'catSubs' }]    // already right → stay
+    ]);
+    const pp = planSubsPlacement([M('1'), M('2')], { placement: 'single', baseName: 'Subs', existing, channelsByUser });
+    assert.deepEqual(pp.moves.map((m) => m.userId), ['1']);
+    assert.equal(pp.moves[0].toName, 'Subs');
+  });
+
+  it("'per_tribe' groups by FIRST tribe, names '{Tribe} {base}', keys by roleId", () => {
+    const tribesByUser = new Map([
+      ['1', [{ roleId: 'rB', name: 'Balboa' }]],
+      ['2', [{ roleId: 'rB', name: 'Balboa' }]],
+      ['3', [{ roleId: 'rC', name: 'Chapera' }, { roleId: 'rB', name: 'Balboa' }]]
+    ]);
+    const pp = planSubsPlacement([M('1'), M('2'), M('3')], { placement: 'per_tribe', baseName: 'Subs', tribesByUser });
+    const balboa = pp.buckets.find((b) => b.tribeRoleId === 'rB');
+    const chapera = pp.buckets.find((b) => b.tribeRoleId === 'rC');
+    assert.equal(balboa.categoryName, 'Balboa Subs');
+    assert.deepEqual(balboa.items.map((i) => i.userId), ['1', '2']);
+    assert.deepEqual(chapera.items.map((i) => i.userId), ['3'], 'first tribe wins');
+    assert.equal(pp.multiTribe.length, 1);
+    assert.equal(pp.multiTribe[0].userId, '3');
+  });
+
+  it("'per_tribe' sends tribe-less players to the fallback tree and reports them", () => {
+    const tribesByUser = new Map([['1', [{ roleId: 'rB', name: 'Balboa' }]]]);
+    const pp = planSubsPlacement([M('1'), M('9', 'Drifter')], { placement: 'per_tribe', baseName: 'Subs', tribesByUser });
+    const fallback = pp.buckets.find((b) => !b.tribeRoleId);
+    assert.equal(fallback.categoryName, 'Subs');
+    assert.deepEqual(fallback.items.map((i) => i.userId), ['9']);
+    assert.equal(pp.tribeless.length, 1);
+  });
+
+  it("'per_tribe' reuses a live registry category for the tribe (no move when already inside)", () => {
+    const tribesByUser = new Map([['1', [{ roleId: 'rB', name: 'Balboa' }]]]);
+    const tribeCategories = { rB: { id: 'catB', childCount: 3 } };
+    const channelsByUser = new Map([['1', { channelId: 'ch1', parentId: 'catB' }]]);
+    const pp = planSubsPlacement([M('1')], { placement: 'per_tribe', baseName: 'Subs', tribesByUser, tribeCategories, channelsByUser });
+    assert.equal(pp.buckets[0].categoryId, 'catB');
+    assert.equal(pp.moves.length, 0);
+  });
+
+  it('duplicate tribe NAMES stay separate buckets — keying is roleId, not name', () => {
+    const tribesByUser = new Map([
+      ['1', [{ roleId: 'r1', name: 'Twins' }]],
+      ['2', [{ roleId: 'r2', name: 'Twins' }]]
+    ]);
+    const pp = planSubsPlacement([M('1'), M('2')], { placement: 'per_tribe', baseName: 'Subs', tribesByUser });
+    assert.equal(pp.buckets.filter((b) => b.tribeRoleId).length, 2);
+  });
+
+  it('tribe category names are capped at 100 chars', () => {
+    const tribesByUser = new Map([['1', [{ roleId: 'r1', name: 'T'.repeat(120) }]]]);
+    const pp = planSubsPlacement([M('1')], { placement: 'per_tribe', baseName: 'Subs', tribesByUser });
+    assert.equal(pp.buckets[0].categoryName.length, 100);
   });
 });

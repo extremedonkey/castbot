@@ -16,11 +16,12 @@ import {
   CATEGORY_NAMES, ACTIONS, PLAN_TTL_MS, MAX_JOB_SECONDS, PACE_DELETE, PACE_SEND
 } from './channelAdminConfig.js';
 import {
-  channelName, assignChannelNames, buildOverwrites, preflightBudget, planCategoryBuckets, pairKey
+  channelName, assignChannelNames, buildOverwrites, preflightBudget, planCategoryBuckets, pairKey,
+  planSubsPlacement, sanitizeCategoryBase
 } from './channelPlan.js';
 import {
   snapshotGuild, checkBotPermissions, ensureCategory, ensureChannel,
-  deleteChannels, ensurePlayerRole, resolvePrincipal
+  deleteChannels, ensurePlayerRole, resolvePrincipal, moveChannelSafe
 } from './channelOps.js';
 import { runPacedJob, acquireJobLock, releaseJobLock, JobBusyError, renderProgress, patchOriginal } from './channelJob.js';
 import { makeDeltaBuffer, flushDeltas } from './channelRegistry.js';
@@ -255,6 +256,55 @@ function emptyRosterMessage(skipped = []) {
     'Mark them **Cast** on the Casting tab and run this again.';
 }
 
+/**
+ * RaP 0881 — resolve the pure placement planner's tribe inputs.
+ * Draft tribes come from the DEFAULT castlist (the same source 1on1s trusts); registry
+ * per-tribe categories are live-filtered so a hand-deleted category is recreated, not pointed at.
+ */
+async function subsPlacementInputs({ placement, guildId, client, node, snapshot }) {
+  const tribesByUser = new Map();
+  if (placement === 'per_tribe') {
+    const { getTribesForCastlist } = await import('../../castlistDataAccess.js');
+    const tribes = await getTribesForCastlist(guildId, 'default', client).catch(() => []);
+    for (const t of tribes || []) {
+      for (const m of t.members || []) {
+        if (!tribesByUser.has(m.id)) tribesByUser.set(m.id, []);
+        tribesByUser.get(m.id).push({ roleId: t.roleId, name: t.name });
+      }
+    }
+  }
+
+  const tribeCategories = {};
+  for (const [rid, cid] of Object.entries(node.categories?.subsByTribe || {})) {
+    if (snapshot.channels.get(cid)) tribeCategories[rid] = { id: cid, childCount: snapshot.childCount.get(cid) || 0 };
+  }
+
+  return { tribesByUser, tribeCategories };
+}
+
+/** RaP 0881 — confirm-screen lines for a non-default placement. */
+function placementLines(pp, base) {
+  if (!pp) return [];
+  const lines = [];
+  const parts = pp.buckets.filter((b) => b.items.length).map((b) => `**${b.categoryName}** (${b.items.length})`);
+  if (parts.length) lines.push(`> 📂 ${parts.slice(0, 6).join(' · ')}${parts.length > 6 ? ` · …and ${parts.length - 6} more` : ''}`);
+  if (pp.moves.length) lines.push(`> 📦 **${pp.moves.length}** existing channel${pp.moves.length > 1 ? 's' : ''} will be **moved** (permissions untouched).`);
+  if (pp.tribeless.length) lines.push(`-# ${pp.tribeless.length} player${pp.tribeless.length > 1 ? 's have' : ' has'} no draft tribe → "${base}".`);
+  if (pp.multiTribe.length) lines.push(`-# ⚠️ ${pp.multiTribe.length} on multiple tribes (first wins): ${pp.multiTribe.slice(0, 5).map((m) => m.displayName).join(', ')}`);
+  return lines;
+}
+
+/** RaP 0881 — stash shape for placement buckets (items collapse to userIds). */
+function serializeBuckets(pp) {
+  if (!pp) return null;
+  return pp.buckets.map((b) => ({
+    categoryName: b.categoryName,
+    categoryId: b.categoryId,
+    tribeRoleId: b.tribeRoleId || null,
+    userIds: b.items.map((i) => i.userId)
+  }));
+}
+
 /** Shared: host overwrites (globalRoleAccess) + @everyone id. */
 async function accessContext(guild, playerData) {
   const roleAccessEntries = await getRoleAccessOverwrites(guild, HOST_ACCESS, { playerData, logPrefix: 'CHANNEL_ADMIN' });
@@ -269,7 +319,9 @@ async function accessContext(guild, playerData) {
  * Build the plan + confirm screen for confessionals/subs.
  * @param {'confessional'|'subs'} kind
  */
-export async function planChannels({ kind, mode, configId, guildId, userId, client, resolved, values }) {
+export async function planChannels({ kind, mode, configId, guildId, userId, client, resolved, values, placement = 'keep', categoryName = '' }) {
+  // Placement is a subs-only concept (RaP 0881); the confessionals modal has no such field.
+  if (kind !== 'subs' || !['keep', 'single', 'per_tribe'].includes(placement)) placement = 'keep';
   const guild = await client.guilds.fetch(guildId);
   const perms = await checkBotPermissions(guild);
   if (!perms.ok) return err(`CastBot is missing the **${perms.missing.join('** and **')}** permission${perms.missing.length > 1 ? 's' : ''}.`);
@@ -335,13 +387,35 @@ export async function planChannels({ kind, mode, configId, guildId, userId, clie
 
     if (!items.length) return err('No accepted applicants with a live application channel to convert.');
 
-    const token = stashPlan(userId, { type: 'convert', kind: 'subs', configId, guildId, items: items.map(serializeItem) });
+    // RaP 0881 — non-default placement also MOVES the converted channels into their category.
+    let pp = null;
+    const base = sanitizeCategoryBase(categoryName, CATEGORY_NAMES.subs);
+    if (placement !== 'keep') {
+      const { tribesByUser, tribeCategories } = await subsPlacementInputs({ placement, guildId, client, node, snapshot });
+      const channelsByUser = new Map(items.map((i) => [i.userId, { channelId: i.appChannel.id, parentId: i.appChannel.parentId || null }]));
+      const existingCats = (node.categories?.subs || [])
+        .map((id) => snapshot.channels.get(id))
+        .filter(Boolean)
+        .map((c) => ({ id: c.id, name: c.name, childCount: snapshot.childCount.get(c.id) || 0 }));
+      pp = planSubsPlacement(items, { placement, baseName: base, tribesByUser, tribeCategories, existing: existingCats, channelsByUser });
+
+      const newCategories = pp.buckets.filter((b) => !b.categoryId && b.items.length).length;
+      const budget = preflightBudget({ existing: snapshot.counts, create: { channels: 0, categories: newCategories } });
+      if (!budget.ok) return budgetRefusal(budget, configId);
+    }
+
+    const token = stashPlan(userId, {
+      type: 'convert', kind: 'subs', configId, guildId,
+      items: items.map(serializeItem),
+      placement, buckets: serializeBuckets(pp)
+    });
     return buildConfirmScreen({
       token,
       configId,
       title: `Convert ${items.length} application channel${items.length > 1 ? 's' : ''} to subs?`,
       lines: [
-        `> **${items.length}** channel${items.length > 1 ? 's' : ''} will be renamed and re-permissioned in place.`,
+        `> **${items.length}** channel${items.length > 1 ? 's' : ''} will be renamed and re-permissioned${placement === 'keep' ? ' in place' : ''}.`,
+        ...placementLines(pp, base),
         `> Both the player **and** their player role get access (belt-and-braces).`,
         '',
         ...items.slice(0, 25).map((i) =>
@@ -378,8 +452,28 @@ export async function planChannels({ kind, mode, configId, guildId, userId, clie
     .filter(Boolean)
     .map((c) => ({ id: c.id, name: c.name, childCount: snapshot.childCount.get(c.id) || 0 }));
 
-  const buckets = planCategoryBuckets(members, { baseName: CATEGORY_NAMES[bucket], existing: existingCats });
+  // RaP 0881 — subs buckets are placement-aware; confessionals keep the default tree.
+  const base = sanitizeCategoryBase(categoryName, CATEGORY_NAMES.subs);
+  let pp = null;
+  let buckets;
+  if (kind === 'subs') {
+    const { tribesByUser, tribeCategories } = await subsPlacementInputs({ placement, guildId, client, node, snapshot });
+    const channelsByUser = new Map();
+    for (const [uid, rec] of Object.entries(registry)) {
+      const live = rec?.channelId ? snapshot.channels.get(rec.channelId) : null;
+      if (live) channelsByUser.set(uid, { channelId: live.id, parentId: live.parentId || null });
+    }
+    pp = planSubsPlacement(members, {
+      placement,
+      baseName: placement === 'keep' ? CATEGORY_NAMES.subs : base,
+      tribesByUser, tribeCategories, existing: existingCats, channelsByUser
+    });
+    buckets = pp.buckets;
+  } else {
+    buckets = planCategoryBuckets(members, { baseName: CATEGORY_NAMES[bucket], existing: existingCats });
+  }
   const newCategories = buckets.filter((b) => !b.categoryId).length;
+  const moveCount = pp?.moves.length || 0;
 
   const budget = preflightBudget({
     existing: snapshot.counts,
@@ -390,9 +484,9 @@ export async function planChannels({ kind, mode, configId, guildId, userId, clie
   if (budget.etaSeconds > MAX_JOB_SECONDS) return etaRefusal(budget, configId);
 
   const token = stashPlan(userId, {
-    type: 'create', kind, configId, guildId,
+    type: 'create', kind, configId, guildId, placement,
     items: members.map((m) => ({ ...serializeItem(m), targetName: names.get(m.userId) })),
-    buckets: buckets.map((b) => ({ categoryName: b.categoryName, categoryId: b.categoryId, userIds: b.items.map((i) => i.userId) }))
+    buckets: buckets.map((b) => ({ categoryName: b.categoryName, categoryId: b.categoryId, tribeRoleId: b.tribeRoleId || null, userIds: b.items.map((i) => i.userId) }))
   });
 
   return buildConfirmScreen({
@@ -400,9 +494,10 @@ export async function planChannels({ kind, mode, configId, guildId, userId, clie
     configId,
     title: `Create / update ${members.length} ${kind === 'subs' ? 'subs' : 'confessional'} channel${members.length > 1 ? 's' : ''}?`,
     lines: [
-      `> **${toCreate.length}** to create · **${members.length - toCreate.length}** already exist (left alone)`,
+      `> **${toCreate.length}** to create · **${members.length - toCreate.length}** already exist (${placement === 'keep' ? 'left alone' : 'moved if misplaced'})`,
       `> **${newCategories}** new categor${newCategories === 1 ? 'y' : 'ies'} · guild after: **${budget.after.channels}/500** channels, **${budget.after.categories}/50** categories`,
-      `> Estimated time: **~${formatEta(budget.etaSeconds)}**`,
+      `> Estimated time: **~${formatEta(budget.etaSeconds + moveCount)}**`,
+      ...(placement !== 'keep' ? placementLines(pp, base) : []),
       '',
       ...(kind === 'confessional'
         ? ['> Player gets access via their **player role** where one exists, else directly.',
@@ -731,7 +826,9 @@ async function execCreate({ plan, guild, snapshot, playerData, buffer, flush, pr
         });
         parentId = category.id;
         categoryIds.set(bucket.categoryName, parentId);
-        buffer.push({ kind: 'category', bucket: plan.kind === 'subs' ? 'subs' : 'confessional', configId: plan.configId, categoryId: parentId });
+        buffer.push(bucket.tribeRoleId
+          ? { kind: 'tribeCategory', configId: plan.configId, tribeRoleId: bucket.tribeRoleId, categoryId: parentId }
+          : { kind: 'category', bucket: plan.kind === 'subs' ? 'subs' : 'confessional', configId: plan.configId, categoryId: parentId });
       }
 
       const principals = principalsFor(plan.kind, item, snapshot, buffer);
@@ -752,19 +849,37 @@ async function execCreate({ plan, guild, snapshot, playerData, buffer, flush, pr
         snapshot
       });
 
+      // RaP 0881 — non-default placement moves misplaced existing channels. `lockPermissions:
+      // false` inside moveChannelSafe is what keeps the overwrites we just applied intact.
+      let moved = false;
+      if (plan.placement && plan.placement !== 'keep' && action !== 'created' && channel.parentId !== parentId) {
+        moved = (await moveChannelSafe(channel, parentId)).moved;
+      }
+
       buffer.push({
         kind: plan.kind === 'subs' ? 'subs' : 'confessional',
         configId: plan.configId, userId: item.userId,
         channelId: channel.id, name: channel.name, categoryId: parentId
       });
 
-      return { ok: true, skipped: action === 'reused' || action === 'adopted', label: channel.name };
+      return {
+        ok: true,
+        skipped: (action === 'reused' || action === 'adopted') && !moved,
+        label: moved ? `${channel.name} (moved)` : channel.name
+      };
     }
   });
 }
 
 async function execConvert({ plan, guild, snapshot, playerData, buffer, flush, progress }) {
   const { everyoneId, roleAccessEntries } = await accessContext(guild, playerData);
+
+  // RaP 0881 — placement buckets (null when 'keep': converted channels stay where they are).
+  const bucketByUser = new Map();
+  if (plan.placement && plan.placement !== 'keep') {
+    for (const b of plan.buckets || []) for (const uid of b.userIds) bucketByUser.set(uid, b);
+  }
+  const categoryIds = new Map();
 
   return await runPacedJob({
     items: plan.items,
@@ -803,15 +918,37 @@ async function execConvert({ plan, guild, snapshot, playerData, buffer, flush, p
         snapshot
       });
 
+      // RaP 0881 — move the converted channel into its planned category (permissions were
+      // applied above; lockPermissions:false in moveChannelSafe keeps them intact).
+      let moved = false;
+      let targetCategoryId = null;
+      const bucket = bucketByUser.get(item.userId);
+      if (bucket) {
+        targetCategoryId = bucket.categoryId || categoryIds.get(bucket.categoryName);
+        if (!targetCategoryId) {
+          const { category } = await ensureCategory(guild, bucket.categoryName, {
+            snapshot,
+            overwrites: buildOverwrites({ everyoneId, principals: [], roleAccessEntries, viewChannelBit: PermissionFlagsBits.ViewChannel })
+          });
+          targetCategoryId = category.id;
+          categoryIds.set(bucket.categoryName, targetCategoryId);
+          buffer.push(bucket.tribeRoleId
+            ? { kind: 'tribeCategory', configId: plan.configId, tribeRoleId: bucket.tribeRoleId, categoryId: targetCategoryId }
+            : { kind: 'category', bucket: 'subs', configId: plan.configId, categoryId: targetCategoryId });
+        }
+        moved = (await moveChannelSafe(ch, targetCategoryId)).moved;
+      }
+
       buffer.push({
         kind: 'subs', configId: plan.configId, userId: item.userId,
-        channelId: ch.id, name: ch.name, convertedFrom: item.appChannelId
+        channelId: ch.id, name: ch.name, convertedFrom: item.appChannelId,
+        ...(targetCategoryId ? { categoryId: targetCategoryId } : {})
       });
 
       return {
         ok: true,
-        skipped: action === 'reused' && !renamePending,
-        label: renamePending ? `${ch.name} (rename deferred — rate limit)` : ch.name
+        skipped: action === 'reused' && !renamePending && !moved,
+        label: renamePending ? `${ch.name} (rename deferred — rate limit)` : (moved ? `${ch.name} (moved)` : ch.name)
       };
     }
   });

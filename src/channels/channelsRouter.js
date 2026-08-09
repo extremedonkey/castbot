@@ -175,6 +175,9 @@ export async function routeChannelsModalSubmit({ context, components, data }) {
   return await H.planChannels({
     kind: kind === 'subs' ? 'subs' : 'confessional',
     mode, configId, guildId, userId, client,
-    resolved: data?.resolved || {}, values: fields.targets || []
+    resolved: data?.resolved || {}, values: fields.targets || [],
+    // RaP 0881 — subs-only placement fields; absent on the confessionals modal.
+    placement: fields.placement?.[0] || 'keep',
+    categoryName: fields.category_name?.[0] || ''
   });
 }

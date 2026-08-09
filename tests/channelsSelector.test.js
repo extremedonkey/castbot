@@ -599,3 +599,22 @@ describe('expandMentionables — bots are valid targets (decision 2026-08-08)', 
     assert.deepEqual(dropped, [{ userId: 'gone', reason: 'Left the server' }]);
   });
 });
+
+describe('Subs modal — placement fields (RaP 0881)', () => {
+  it('carries mode, placement, category name, and picker within the 5-component cap', async () => {
+    const { buildSubsModal } = await import('../src/channels/channelsView.js');
+    const modal = buildSubsModal({ configId: 'config_1_2' });
+    assert.ok(modal.components.length <= 5, 'Discord hard-caps modals at 5 top-level components');
+    const ids = modal.components.map((c) => c.component?.custom_id);
+    assert.deepEqual(ids, ['mode', 'placement', 'category_name', 'targets']);
+  });
+
+  it("placement defaults to 'keep' — zero behaviour change for existing PROD users", async () => {
+    const { buildSubsModal } = await import('../src/channels/channelsView.js');
+    const placement = buildSubsModal({ configId: 'c' }).components.find((c) => c.component?.custom_id === 'placement').component;
+    assert.equal(placement.type, 21, 'Radio Group — String Select default is dead in modals');
+    const def = placement.options.filter((o) => o.default);
+    assert.deepEqual(def.map((o) => o.value), ['keep']);
+    assert.deepEqual(placement.options.map((o) => o.value), ['keep', 'single', 'per_tribe']);
+  });
+});

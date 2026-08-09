@@ -355,6 +355,37 @@ export function buildSubsModal({ configId }) {
         }
       },
       {
+        // RaP 0881 — placement is a Radio Group, not a String Select: String Select's
+        // `default` is dead in modals, and 'Don't touch' MUST be the default (zero
+        // behaviour change — this feature has live PROD users).
+        type: 18,
+        label: 'Subs category',
+        description: 'Where subs channels live — different servers organise these differently.',
+        component: {
+          type: 21,
+          custom_id: 'placement',
+          required: true,
+          options: [
+            { label: "Don't touch", value: 'keep', description: "New channels go under 'Subs'; converted channels stay where they are now.", default: true },
+            { label: 'Single category', value: 'single', description: 'Everything in ONE category — existing/converted channels are MOVED into it. Name below.' },
+            { label: 'One category per tribe', value: 'per_tribe', description: "e.g. 'Balboa Subs' from each player's draft tribe. Tribe-less players use the single category." }
+          ]
+        }
+      },
+      {
+        type: 18,
+        label: 'Category name (optional)',
+        description: 'Single: the category name. Per tribe: the word after the tribe name. Default: Subs',
+        component: {
+          type: 4,
+          custom_id: 'category_name',
+          style: 1,
+          required: false,
+          max_length: 60,
+          placeholder: 'Subs'
+        }
+      },
+      {
         type: 18,
         label: 'Players or roles',
         description: "Only used with 'Add specific subs'. Roles expand to their members.",
