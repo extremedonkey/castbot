@@ -758,12 +758,25 @@ function hasCastRankingPermissions(member, guildId) {
     return true;
   }
   
-  // Standard permission check for other servers: Manage Roles OR Manage Channels
+  // Standard permission check for other servers: Manage Roles OR Manage Channels OR Administrator.
+  //
+  // 🚨 Administrator MUST be listed explicitly here — do not "simplify" it away. Every one of the
+  // 18 call sites passes a discord.js GuildMember from guild.members.fetch(), and that object's
+  // .permissions getter is a raw OR of role bits (GuildMember.js:254) — it does NOT expand
+  // Administrator into "all permissions" the way Discord's own computation does. A role with only
+  // the Administrator box ticked therefore yields bits `0x8` and ANDs to zero against
+  // ManageRoles|ManageChannels. That silently locked every Administrator-only host out of all of
+  // Casting/Marooning until 2026-08-09.
+  //
+  // The deeper fix is to stop reading permissions off a fetched member at all and use
+  // context.member (Discord's own computed value, which expands Administrator and applies channel
+  // overwrites) like the other ~421 gates do — tracked as Option A / RaP 0900 Option A.
   const permissions = BigInt(member.permissions);
-  const castRankingPermissions = 
-    PermissionFlagsBits.ManageRoles | 
-    PermissionFlagsBits.ManageChannels;
-  
+  const castRankingPermissions =
+    PermissionFlagsBits.ManageRoles |
+    PermissionFlagsBits.ManageChannels |
+    PermissionFlagsBits.Administrator;
+
   const hasPermission = (permissions & BigInt(castRankingPermissions)) !== 0n;
   console.log(`🏆 Casting: Standard permission check for server ${guildId}: ${hasPermission}`);
   return hasPermission;

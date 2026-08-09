@@ -114,6 +114,25 @@ if (req.body.member?.user?.id !== '391415444084490240') {
 return ButtonHandlerFactory.create({ ... })(req, res, client);
 ```
 
+### 4b. `hasCastRankingPermissions()` — the Casting family (⚠️ the odd one out)
+
+An undocumented **fifth** primitive, used by 18 Casting/Marooning/DNC gates (app.js:752). Accepts `MANAGE_ROLES | MANAGE_CHANNELS | ADMINISTRATOR` — deliberately narrower than Tier 1 (no `MANAGE_GUILD`).
+
+**It differs from every other gate in one critical way**: all 18 call sites pass a **fetched** `GuildMember` (`await guild.members.fetch(userId)`), not `context.member`. Those are not equivalent:
+
+| | `context.member` (interaction payload) | fetched `GuildMember` |
+|---|---|---|
+| Computed by | **Discord** | discord.js, from `guild.roles.cache` |
+| `ADMINISTRATOR` → all bits | ✅ | ❌ raw OR of role bits |
+| Channel overwrites applied | ✅ | ❌ |
+| Timeout stripping | ✅ | ❌ |
+
+REST `GET /guilds/{id}/members/{id}` returns **no** `permissions` field — the payload's `permissions` is documented as *"total permissions of the member in the channel, including overwrites, **returned when in the interaction object**"*. That is why the two disagree.
+
+**Consequence (2026-08-09)**: a role with only Administrator ticked yields bits `0x8`, which ANDs to zero against `ManageRoles|ManageChannels` — locking Administrator-only hosts out of all 18 Casting screens while `/menu` admitted them normally. Fixed by adding `ADMINISTRATOR` to the mask; the fetched-member source remains and is tracked for unification onto `hasAdminPermissions(context.member)` (see [RaP 0900 Option A](../01-RaP/0900_20260711_SecurityArchitectureOptions_Analysis.md#option-a--registry-driven-enforcement-at-the-chokepoint--primary-recommendation)). Tests: `tests/castRankingPermissions.test.js`.
+
+> **Rule**: gate on `context.member`. A permission read off a fetched `GuildMember` is not Discord's answer — it's a local recomputation that silently omits the Administrator override.
+
 ### 5. Denial Response
 
 All permission denials are **ephemeral** (only visible to the requesting user). The handler never executes. Format:
