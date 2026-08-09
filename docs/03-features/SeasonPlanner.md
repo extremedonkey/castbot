@@ -127,7 +127,7 @@ Round IDs are **`r{seasonRoundNo}`** — `r1`, `r2`, … `r17`. Human-readable, 
 | `speechDays`, `votesDays` | `1`, `1` | `ftc_speeches` / `ftc_votes` |
 | `ftcNotes`, `speechNotes`, `votesNotes` | `''` | the respective modals |
 | `host`, `challengeName` | `'TBC'`, generated title | legacy per-round fallbacks; the **challenge object** is authoritative now |
-| `challengeDays` | `1` | `edit_challenge` modal — days the challenge **block** spans ([§5](#challengedays--the-shared-block-budget)) |
+| `challengeDays` | `1` | `edit_challenge` modal — days the challenge **block** spans, always ≥ 1 ([§5](#challengedays--the-shared-block-budget)); the modal's "0 days" writes `tribalDays: 0` instead |
 | `bonusChallengeId` | absent | `edit_challenge` modal — linked reward/bonus challenge |
 | `bonusOrder` | `'first'` | `edit_challenge` modal — `'first'` \| `'same'` \| `'last'` |
 
@@ -416,12 +416,37 @@ Discord caps modals at 5 components and this one sits **at** the cap:
 |---|---|---|---|
 | 1 | Challenge Name | type 4 text | `challenge.title` |
 | 2 | Prepping Host | type 5 user select | `challenge.creationHost` |
-| 3 | Challenge Duration | type 21 radio, 1–7 days | `round.challengeDays` |
+| 3 | Challenge Duration | type 3 string select, 0–6 days | `round.challengeDays` — **or `tribalDays`, see below** |
 | 4 | Bonus / Reward Challenge | type 3 string select | `round.bonusChallengeId` |
 | 5 | Bonus Placement | type 21 radio (Before · Same day · After) | `round.bonusOrder` |
 
-- **Duration is a single radio, not the marooning-style radio + "Custom Days" pair** — that pair is *two* components and would push this modal to 6. 1–7 days covers any realistic challenge; radio groups allow up to 10 options if that ever needs extending.
-- **The bonus picker only lists challenges that aren't already some round's `primary`** (`getBonusChallengeOptions`). That's both semantically right — a round's own immunity challenge shouldn't double as its reward — and what keeps the list under the 25-option cap, since an 18-player season generates 16 primaries on its own. The currently-linked bonus is always included so it can render as `default`. Capped at 24 + a "None" row, sorted by `lastUpdated`, with any overflow logged.
+- **Duration is a single control, not the marooning-style radio + "Custom Days" pair** — that pair is *two* components and would push this modal to 6. It's a **string select** rather than a radio because seven options each carrying a description line makes an already-5-field modal very tall, and the descriptions are where the logic is explained.
+
+#### 🔑 "0 days" is sugar over `tribalDays`, never a stored `challengeDays: 0`
+
+Picking **0 days** writes `challengeDays: 1, tribalDays: 0` — it does *not* store a zero.
+
+The reason: `challengeDays: 0` would produce schedules **byte-identical** to the existing `tribalDays: 0` ("Edit Tribal → Same Day as Challenge") in every case — marooning 0d, marooning 1d+, and all-three-0d alike. Storing it would encode **one schedule in two fields**, so Edit Tribal could show "Separate Day (1d)" while the planner rendered them together. It would also admit `challengeDays: 0` + `tribalDays: 2`, which leaves a **blank day mid-round**.
+
+Keeping `challengeDays >= 1` is exactly why this feature needed **no change to `seasonRoundSchedule.js`** — no clamp, no negative offsets, no empty days.
+
+| Situation | Duration shows | Rationale |
+|---|---|---|
+| `challengeDays: 1, tribalDays: 0` | **0 days** | the collapsed state |
+| `challengeDays: 3, tribalDays: 0` | **3 days** | a genuine 3-day block whose tribal lands on its last day — **not** flattened to 0 |
+| `challengeDays: 1, tribalDays: 1` | 1 day | |
+
+Writing back (`applyChallengeEdit`):
+
+| Picked | Effect |
+|---|---|
+| `0` | `challengeDays = 1`, `tribalDays = 0` |
+| `N ≥ 1` **while collapsed** | `challengeDays = N`, `tribalDays = 1` — the host means *separate them*, so the pick can't appear to do nothing |
+| `N ≥ 1` otherwise | `challengeDays = N`, **`tribalDays` untouched** — a live tribal on a 3-day challenge survives a bump to 4 |
+
+Both controls therefore always agree. `isCollapsedDuration()` is the single predicate behind the display and write rules.
+- **The bonus picker only lists challenges that aren't already some round's `primary`** (`getBonusChallengeOptions`). That's both semantically right — a round's own immunity challenge shouldn't double as its reward — and what keeps the list under the 25-option cap, since an 18-player season generates 16 primaries on its own. The currently-linked bonus is always included so it can render as `default`.
+- **Ordering is load-bearing, not cosmetic.** The list is capped at 24 + a "None" row, and a modal select can neither paginate nor search — so anything past 24 is *unreachable*. Sorting by `lastUpdated` descending guarantees the survivors are the challenges the host just touched. `lastUpdated` is reliably written by `createChallenge`, `updateChallenge` **and** `generateAndStoreRounds`; challenges somehow lacking it sort last rather than throwing. Overflow is logged.
 - Hosts create the bonus challenge in the **Challenges menu first**, then link it here — the modal copy says so.
 - The **Prepping Host is shared** between the main and bonus challenge. Accepted trade-off: a separate host field would need a 6th component.
 

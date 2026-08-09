@@ -15,6 +15,9 @@ import {
   getBonusChallengeOptions, buildChallengeEditModal, applyChallengeEdit,
   extractModalFields, generateAndStoreRounds, generateSeasonRounds,
 } from '../seasonPlanner.js';
+import {
+  expandRoundDays, getRoundDuration, getRoundPhases, buildRoundSchedule, formatRoundDate,
+} from '../seasonRoundSchedule.js';
 
 const label = (c) => ({ component: c });
 
@@ -90,6 +93,27 @@ describe('getBonusChallengeOptions — which challenges can be a bonus', () => {
     assert.deepEqual(options.slice(1).map(o => o.value), ['c_spare1', 'c_spare2']);
   });
 
+  it('ordering survives the 24-cap so recent challenges stay reachable', () => {
+    // A modal select can't paginate or search, so the cap makes ordering load-bearing:
+    // the 24 most recently touched challenges must be the ones that survive.
+    const many = {};
+    for (let i = 0; i < 40; i++) many[`c_${i}`] = { title: `Spare ${i}`, lastUpdated: i };
+    const { options } = getBonusChallengeOptions(many, {}, null);
+    const kept = options.slice(1).map(o => o.value);
+    assert.equal(kept[0], 'c_39', 'newest must be first');
+    assert.equal(kept.at(-1), 'c_16', 'the 24 newest must be the survivors');
+    assert.equal(kept.includes('c_0'), false, 'the stalest must be dropped, not the freshest');
+  });
+
+  it('challenges with no lastUpdated sort last instead of throwing', () => {
+    const mixed = {
+      c_undated: { title: 'Hand-edited' },
+      c_recent: { title: 'Recent', lastUpdated: 100 },
+    };
+    const { options } = getBonusChallengeOptions(mixed, {}, null);
+    assert.deepEqual(options.slice(1).map(o => o.value), ['c_recent', 'c_undated']);
+  });
+
   it('stays within Discord\'s 25-option cap and reports what it dropped', () => {
     const many = {};
     for (let i = 0; i < 60; i++) many[`c_${i}`] = { title: `Spare ${i}`, lastUpdated: i };
@@ -136,10 +160,10 @@ describe('buildChallengeEditModal — 5 components, no more', () => {
     assert.equal(modal.custom_id, 'planner_challenge_edit:r3:config_123_456');
   });
 
-  it('clamps an out-of-range stored duration into the radio', () => {
+  it('clamps an out-of-range stored duration into the select', () => {
     const modal = buildChallengeEditModal({ fNumber: 9, challengeDays: 99 }, null, {}, {}, 'r9', 'c');
     const days = modal.components.find(c => c.component.custom_id === 'challenge_days').component;
-    assert.equal(days.options.find(o => o.default).value, '7');
+    assert.equal(days.options.find(o => o.default).value, '6');
   });
 });
 
@@ -172,12 +196,12 @@ describe('applyChallengeEdit — modal submission → round + challenge', () => 
     assert.equal(challenge.creationHost, null);
   });
 
-  it('clamps duration to the 1-7 radio range and ignores junk', () => {
+  it('clamps duration to the 0-6 select range and ignores junk', () => {
     const round = {};
     applyChallengeEdit(round, null, { challenge_days: '99' }, []);
-    assert.equal(round.challengeDays, 7);
+    assert.equal(round.challengeDays, 6);
     applyChallengeEdit(round, null, { challenge_days: 'abc' }, []);
-    assert.equal(round.challengeDays, 7, 'junk must not overwrite a good value');
+    assert.equal(round.challengeDays, 6, 'junk must not overwrite a good value');
   });
 
   it('ignores an unrecognised bonus placement', () => {
@@ -196,6 +220,127 @@ describe('applyChallengeEdit — modal submission → round + challenge', () => 
     const challenge = { title: 'Keep Me' };
     applyChallengeEdit({}, challenge, { challenge_name: '', challenge_days: '1' }, []);
     assert.equal(challenge.title, 'Keep Me');
+  });
+});
+
+describe('Challenge Duration "0 days" — sugar over tribalDays, never stored as 0', () => {
+  const pick = (round, days) => { applyChallengeEdit(round, null, { challenge_days: String(days) }, []); return round; };
+  const shown = (round) => buildChallengeEditModal(round, null, {}, {}, 'r1', 'c')
+    .components.find(c => c.component.custom_id === 'challenge_days')
+    .component.options.find(o => o.default)?.value;
+
+  it('INVARIANT: challengeDays is never persisted as 0, whatever is picked', () => {
+    // The entire design rests on this — it is why seasonRoundSchedule.js needed no changes.
+    for (const days of [0, 1, 2, 3, 4, 5, 6, 99]) {
+      const round = pick({}, days);
+      assert.notEqual(round.challengeDays, 0, `picking ${days} stored a 0`);
+      assert.ok(round.challengeDays >= 1);
+    }
+  });
+
+  it('picking 0 makes the tribal live and leaves a 1-day block', () => {
+    const round = pick({}, 0);
+    assert.equal(round.challengeDays, 1);
+    assert.equal(round.tribalDays, 0);
+  });
+
+  it('picking 1 while collapsed separates the tribal again', () => {
+    // Otherwise the pick would visibly do nothing.
+    const round = pick({ challengeDays: 1, tribalDays: 0 }, 1);
+    assert.equal(round.challengeDays, 1);
+    assert.equal(round.tribalDays, 1);
+  });
+
+  it('picking a longer duration while collapsed also separates the tribal', () => {
+    const round = pick({ challengeDays: 1, tribalDays: 0 }, 3);
+    assert.equal(round.challengeDays, 3);
+    assert.equal(round.tribalDays, 1);
+  });
+
+  it('a live tribal on a MULTI-day block survives a duration change', () => {
+    // challengeDays 3 + tribalDays 0 is a real 3-day block, not the collapsed state, so
+    // bumping it to 4 must not silently un-live the host's tribal.
+    const round = pick({ challengeDays: 3, tribalDays: 0 }, 4);
+    assert.equal(round.challengeDays, 4);
+    assert.equal(round.tribalDays, 0, 'live tribal was clobbered');
+  });
+
+  it('a normal duration change never touches tribalDays', () => {
+    const round = pick({ challengeDays: 2, tribalDays: 2 }, 5);
+    assert.equal(round.tribalDays, 2);
+  });
+
+  it('the modal shows 0 only for a collapsed ONE-day block', () => {
+    assert.equal(shown({ challengeDays: 1, tribalDays: 0 }), '0');
+    assert.equal(shown({ challengeDays: 3, tribalDays: 0 }), '3', 'a 3-day block must not flatten to 0');
+    assert.equal(shown({ challengeDays: 1, tribalDays: 1 }), '1');
+    assert.equal(shown({}), '1', 'a bare round defaults to 1 day');
+  });
+
+  it('round-trips: what the modal shows is what re-picking preserves', () => {
+    for (const round of [{ challengeDays: 1, tribalDays: 0 }, { challengeDays: 3, tribalDays: 0 }, { challengeDays: 2, tribalDays: 1 }, {}]) {
+      const before = shown(round);
+      const after = shown(pick({ ...round }, Number(before)));
+      assert.equal(after, before, `re-picking ${before} changed the displayed value`);
+    }
+  });
+
+  it('offers 0-6 and no longer offers 7', () => {
+    const opts = buildChallengeEditModal({}, null, {}, {}, 'r1', 'c')
+      .components.find(c => c.component.custom_id === 'challenge_days').component;
+    assert.equal(opts.type, 3, 'duration must be a string select');
+    assert.deepEqual(opts.options.map(o => o.value), ['0', '1', '2', '3', '4', '5', '6']);
+    assert.ok(opts.options.every(o => o.description), 'every option needs its explanatory description');
+  });
+});
+
+describe('Challenge Duration 0 — the worked cases render as described', () => {
+  // Reece's three scenarios, asserted day-by-day through the real schedule model.
+  // An omitted bonus_challenge means "cleared", so a round keeping its bonus must re-submit it.
+  const apply0 = (round, extra = {}) => { applyChallengeEdit(round, null, { challenge_days: '0', ...extra }, []); return round; };
+  const keys = (round) => expandRoundDays(round).map(d => d.phases.map(p => p.key));
+
+  it('marooning 0d + challenge 0d → marooning, challenge and tribal all on one day', () => {
+    const round = apply0({ fNumber: 18, hasMarooning: true, marooningDays: 0 });
+    assert.equal(getRoundDuration(round), 1);
+    assert.deepEqual(keys(round), [['event', 'challenge', 'tribal']]);
+  });
+
+  it('marooning 1d + challenge 0d → challenge lands on the tribal day', () => {
+    const round = apply0({ fNumber: 18, hasMarooning: true, marooningDays: 1 });
+    assert.equal(getRoundDuration(round), 2);
+    assert.deepEqual(keys(round), [['event'], ['challenge', 'tribal']]);
+  });
+
+  it('marooning 0d + challenge 0d + tribal 0d → one day, the season start date', () => {
+    const round = apply0({ fNumber: 18, hasMarooning: true, marooningDays: 0, tribalDays: 0 });
+    assert.equal(getRoundDuration(round), 1);
+    const schedule = buildRoundSchedule({ r1: { ...round, seasonRoundNo: 1 } }, new Date(2026, 2, 7));
+    assert.equal(formatRoundDate(schedule.byId.r1.phases[0].date), 'Sat 7 Mar');
+    assert.equal(schedule.totalDays, 1);
+  });
+
+  it('standard round + challenge 0d → a single day holding challenge and tribal', () => {
+    const round = apply0({ fNumber: 15, marooningDays: 0 });
+    assert.equal(getRoundDuration(round), 1);
+    assert.deepEqual(keys(round), [['challenge', 'tribal']]);
+  });
+
+  it('a bonus on a 0-day challenge collapses onto the same day', () => {
+    const round = apply0({ fNumber: 15, marooningDays: 0 }, { bonus_challenge: 'c_reward' });
+    assert.equal(getRoundDuration(round), 1);
+    assert.deepEqual(keys(round), [['bonus', 'challenge', 'tribal']]);
+  });
+
+  it('never produces an empty day or a negative offset', () => {
+    // The failure mode a literal challengeDays:0 would have introduced.
+    for (const base of [{ marooningDays: 0 }, { marooningDays: 2, hasMarooning: true }, { swapRound: true, eventDays: 1, marooningDays: 0 }]) {
+      for (const tribalDays of [0, 1, 2]) {
+        const round = apply0({ fNumber: 15, ...base, tribalDays });
+        assert.ok(getRoundPhases(round).every(p => p.offset >= 0), `negative offset: ${JSON.stringify(round)}`);
+        assert.ok(expandRoundDays(round).every(d => d.phases.length >= 1), `empty day: ${JSON.stringify(round)}`);
+      }
+    }
   });
 });
 

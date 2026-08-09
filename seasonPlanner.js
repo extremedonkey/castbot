@@ -1385,8 +1385,40 @@ export function buildRoundModal(action, round, roundId, configId) {
 // Challenge Edit Modal (name / host / duration / bonus challenge)
 // ─────────────────────────────────────────────
 
-/** Days a challenge block can span. Radio groups cap at 10 options; 7 covers a full week. */
-const CHALLENGE_DAY_CHOICES = [1, 2, 3, 4, 5, 6, 7];
+/**
+ * Challenge Duration choices, 0-6 days.
+ *
+ * "0 days" is UI SUGAR — it is NEVER stored as challengeDays. It writes `tribalDays: 0` (the
+ * existing "live tribal") instead, because `challengeDays: 0` produces schedules byte-identical
+ * to `tribalDays: 0` in every case. Storing a literal 0 would encode one schedule in two fields,
+ * letting Edit Tribal show "Separate Day (1d)" while the planner renders them together, and
+ * `challengeDays: 0` + `tribalDays: 2` would leave a blank day mid-round.
+ *
+ * Keeping challengeDays >= 1 is precisely why seasonRoundSchedule.js needs no special case for
+ * this feature — no clamp, no negative offsets, no empty days.
+ * See isCollapsedDuration() and applyChallengeEdit().
+ */
+const CHALLENGE_DAY_CHOICES = [0, 1, 2, 3, 4, 5, 6];
+const MAX_CHALLENGE_DAYS = 6;
+
+/** Human copy per duration choice — carrying this logic is why it's a select, not a radio. */
+function challengeDayOption(days) {
+  if (days === 0) return { label: '0 days — same day as Tribal', description: 'Challenge and Tribal share one day (live tribal)' };
+  if (days === 1) return { label: '1 day', description: 'Challenge gets its own day (default)' };
+  return { label: `${days} days`, description: `Challenge block spans ${days} days` };
+}
+
+/**
+ * Is this round in the "collapsed" state that the 0-day option represents — a one-day block
+ * whose tribal shares that day?
+ *
+ * Deliberately requires `challengeDays === 1`. A 3-day challenge with a live tribal is a genuine
+ * 3-day block (the tribal simply lands on its last day), so it keeps showing "3 days" rather
+ * than being flattened to 0. That's what keeps this control and Edit Tribal both truthful.
+ */
+function isCollapsedDuration(round) {
+  return (round.challengeDays ?? 1) === 1 && (round.tribalDays ?? 1) === 0;
+}
 
 const BONUS_PLACEMENTS = [
   { value: 'first', label: 'Before the main challenge', description: 'Reward runs first, then the immunity challenge' },
@@ -1443,7 +1475,10 @@ export function buildChallengeEditModal(round, challenge, challenges, seasonRoun
   const { options: bonusOptions, truncated } = getBonusChallengeOptions(challenges, seasonRounds, currentBonusId);
   if (truncated) console.log(`🎁 Bonus challenge picker: ${truncated} challenge(s) beyond the 24-option cap not shown`);
 
-  const currentDays = Math.min(7, Math.max(1, round.challengeDays ?? 1));
+  // 0 is shown (not stored) when the block has collapsed onto its tribal — see CHALLENGE_DAY_CHOICES.
+  const currentDays = isCollapsedDuration(round)
+    ? 0
+    : Math.min(MAX_CHALLENGE_DAYS, Math.max(1, round.challengeDays ?? 1));
   const currentOrder = round.bonusOrder ?? 'first';
 
   return {
@@ -1477,9 +1512,13 @@ export function buildChallengeEditModal(round, challenge, challenges, seasonRoun
         label: 'Challenge Duration',
         description: 'Days this round spends on challenges — shared with the bonus challenge below',
         component: {
-          type: 21, custom_id: 'challenge_days',
+          // String select rather than a radio: 7 options each carrying a description line would
+          // make this 5-field modal very tall, and the descriptions are where the logic lives.
+          type: 3, custom_id: 'challenge_days',
+          placeholder: 'How long is the challenge?',
+          min_values: 1, max_values: 1,
           options: CHALLENGE_DAY_CHOICES.map(d => ({
-            label: d === 1 ? '1 day' : `${d} days`,
+            ...challengeDayOption(d),
             value: String(d),
             ...(d === currentDays ? { default: true } : {}),
           })),
@@ -1529,8 +1568,21 @@ export function applyChallengeEdit(round, challenge, fields, rawComponents) {
     challenge.lastUpdated = Date.now();
   }
 
+  // Duration. "0 days" is sugar: it never lands in challengeDays, it makes the tribal live.
   const days = parseInt(fields.challenge_days);
-  if (!isNaN(days) && days >= 1) round.challengeDays = Math.min(7, days);
+  if (!isNaN(days) && days >= 0) {
+    const wasCollapsed = isCollapsedDuration(round);
+    if (days === 0) {
+      round.challengeDays = 1;
+      round.tribalDays = 0;
+    } else {
+      round.challengeDays = Math.min(MAX_CHALLENGE_DAYS, days);
+      // Moving OFF "0 days" means "separate them" — otherwise the pick would appear to do
+      // nothing. Moving between two non-zero durations must NOT touch tribalDays, so a host
+      // running a live tribal on a 3-day challenge keeps it when they bump it to 4.
+      if (wasCollapsed) round.tribalDays = 1;
+    }
+  }
 
   // A cleared select reports '' / 'none' / undefined — all mean "unlink".
   const bonus = fields.bonus_challenge;
