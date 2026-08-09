@@ -1,0 +1,88 @@
+{
+  "period": "AUGUST 2026",
+  "title": "CastBot Update",
+  "subtitle": "CastBot Premium Goes Live — Challenge Rewards, the Marooning Planner & Add Cast",
+  "footer": "Deployed to production 9 August 2026",
+  "accent": "#f39c12",
+  "cards": [
+    {
+      "title": "CastBot Premium Is Live",
+      "badge": "NEW",
+      "color": "#f39c12",
+      "desc": [
+        "Support CastBot from Ko-fi and unlock the full host toolkit.",
+        "Redeem it yourself with your Ko-fi email — no waiting on",
+        "anyone. One subscription covers one server, and you can move",
+        "it to next season's server whenever you like."
+      ]
+    },
+    {
+      "title": "Challenge Days & Rewards",
+      "badge": "NEW",
+      "color": "#3498db",
+      "desc": [
+        "Season Planner rounds now take a challenge length, and a",
+        "linked reward challenge that shares the same budget — so",
+        "adding a reward never stretches your round. The Calendar",
+        "paints reward days, and the Schedule gains a column."
+      ]
+    },
+    {
+      "title": "The Marooning Planner",
+      "badge": "IMPROVED",
+      "color": "#9b59b6",
+      "desc": [
+        "Casting decisions now lead the tab, one line per player,",
+        "grouped by draft tribe with a size on every tribe. Only",
+        "outstanding work is flagged: who has no offer yet, who has",
+        "not replied, who declined. Scores moved to the Casting tab."
+      ]
+    },
+    {
+      "title": "Add Cast",
+      "badge": "NEW",
+      "color": "#2ecc71",
+      "desc": [
+        "Someone joining who never applied? Pick them from a list and",
+        "CastBot builds their application channel exactly as if they",
+        "had clicked Apply themselves. Late additions and off-Discord",
+        "recruits now flow through Casting and Marooning normally."
+      ]
+    },
+    {
+      "title": "A Simpler Menu",
+      "badge": "IMPROVED",
+      "color": "#1abc9c",
+      "desc": [
+        "Tools is gone — everything it held now lives where you would",
+        "look for it. Map tools gained a Utilities submenu, timers",
+        "became Stopwatch and Snowflake, and there is a written user",
+        "guide plus a Support Server link on the main menu."
+      ]
+    },
+    {
+      "title": "Casting Offer Fixes",
+      "badge": "FIXED",
+      "color": "#e74c3c",
+      "desc": [
+        "A production member clicking an applicant's placement card",
+        "used to wipe it, leaving them unable to accept. Editing your",
+        "apply button also quietly erased your Season Planner",
+        "estimates. Both fixed, both covered by tests."
+      ]
+    }
+  ],
+  "underHood": [
+    "Draft tribes can no longer leak a casting decision",
+    "Bots stay in channel rosters",
+    "Manage Roles alone opens Season Manager again",
+    "3,519 tests passing"
+  ],
+  "stats": [
+    { "value": "94", "label": "COMMITS", "color": "#3498db" },
+    { "value": "+18,090", "label": "INSERTIONS", "color": "#2ecc71" },
+    { "value": "-3,619", "label": "DELETIONS", "color": "#e74c3c" },
+    { "value": "171", "label": "FILES CHANGED", "color": "#e91e63" },
+    { "value": "3,519", "label": "TESTS PASSING", "color": "#f1c40f" }
+  ]
+}

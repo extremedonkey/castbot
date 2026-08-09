@@ -140,7 +140,7 @@ function castPlayersHeader(count, estimatedTotalPlayers) {
 }
 
 // Mirrors buildMarooningView's per-tribe header + the ⚠️ Key block (only flags actually in play).
-function tribeHeader(rid, n) { return `<@&${rid}> (${n} player${n === 1 ? '' : 's'})`; }
+function tribeHeader(rid, n) { return `> <@&${rid}> (${n} player${n === 1 ? '' : 's'})`; }
 function keyBlock(flagsUsed) {
   const LINES = [
     [FLAG_NO_OFFER, "Hasn't been sent an offer — send one with ✒️ Bulk Offers, or ✒️ Send Offer on the 🏆 Casting tab."],
@@ -484,11 +484,14 @@ describe('Marooning Draft — stage ordering within a tribe', () => {
 
 describe('Marooning Draft — tribe header shows size, not "(tentative)"', () => {
   it('pluralises the player count', () => {
-    assert.equal(tribeHeader('r1', 4), '<@&r1> (4 players)');
-    assert.equal(tribeHeader('r1', 1), '<@&r1> (1 player)');
+    assert.equal(tribeHeader('r1', 4), '> <@&r1> (4 players)');
+    assert.equal(tribeHeader('r1', 1), '> <@&r1> (1 player)');
   });
   it('drops "(tentative)" — the Tribes blurb already says drafts are private', () => {
     assert.ok(!tribeHeader('r1', 2).includes('tentative'));
+  });
+  it('is a quote line, giving each tribe a left rule separating it from its rows', () => {
+    assert.ok(tribeHeader('r1', 2).startsWith('> '));
   });
 });
 

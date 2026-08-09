@@ -1377,7 +1377,9 @@ export async function buildMarooningView({ configId, guildId, playerData, season
       if (!tribePlayers?.length) continue;
       // "(N players)" replaced "(tentative)" — the draft-ness is already stated by the Tribes blurb
       // above, whereas tribe SIZE is the number you're actually balancing against while marooning.
-      out += `<@&${rid}> (${headCount(tribePlayers.length)})\n${byStage(tribePlayers).map(p => renderRow(p, counter, opts)).join('\n')}\n\n`;
+      // Leading "> " renders the tribe name as a quote block, giving each tribe a visible left rule
+      // that separates it from the numbered rows beneath it.
+      out += `> <@&${rid}> (${headCount(tribePlayers.length)})\n${byStage(tribePlayers).map(p => renderRow(p, counter, opts)).join('\n')}\n\n`;
     }
     if (undrafted.length) {
       if (perTribe.size > 0) out += `-# Not yet drafted to a tribe (${headCount(undrafted.length)})\n`;
@@ -1458,7 +1460,7 @@ export async function buildMarooningView({ configId, guildId, playerData, season
     body += `### \`\`\`⚠️ Drafted — No Application (${total})\`\`\`\n`;
     for (const { rid, ids } of orphanDrafts) {
       // Mentions, not cached display names — a drafted member may not be in the member cache at all.
-      body += `<@&${rid}> (${ids.length} player${ids.length === 1 ? '' : 's'})\n${ids.map(uid => `• <@${uid}> — ⚠️ no application`).join('\n')}\n`;
+      body += `> <@&${rid}> (${ids.length} player${ids.length === 1 ? '' : 's'})\n${ids.map(uid => `• <@${uid}> — ⚠️ no application`).join('\n')}\n`;
     }
     body += `-# Drafted but never applied — they can't be scored or sent an offer. Use 👥 Add Cast to create their application.\n\n`;
   }
