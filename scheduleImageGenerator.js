@@ -8,6 +8,11 @@
  */
 
 import sharp from 'sharp';
+// Day arithmetic is SHARED with the planner's round string selects — never reimplement it
+// here. These images and the selects must always agree. See seasonRoundSchedule.js.
+import {
+  buildRoundSchedule, expandRoundDays, formatRoundDate, formatMonthDay,
+} from './seasonRoundSchedule.js';
 // No libvips cache — ~0% hit rate, starves the 448MB prod box (RaP 0903)
 sharp.cache(false);
 
@@ -50,134 +55,61 @@ function stripEmoji(str) {
   return String(str).replace(/[\u{1F000}-\u{1FFFF}]/gu, '').replace(/[\u{2600}-\u{27BF}]/gu, '').replace(/[\u{FE00}-\u{FE0F}]/gu, '').replace(/[\u{200D}]/gu, '').trim();
 }
 
-function getRoundType(round) {
-  if (round.ftcRound) return 'ftc';
-  if (round.fNumber === 1) return 'reunion';
-  const hasMarooning = round.hasMarooning ?? (round.marooningDays > 0);
-  if (hasMarooning) return 'marooning';
-  if (round.swapRound) return 'swap';
-  if (round.mergeRound) return 'merge';
-  return 'standard';
+/**
+ * Resolve a round's challenge display name, truncated to `max` chars.
+ * Returns null when nothing is linked and no fallback is wanted.
+ */
+function challengeTitle(round, challenges, max, fallback = null) {
+  const linked = round.challengeIDs?.primary ? challenges[round.challengeIDs.primary] : null;
+  const raw = linked?.title ? stripEmoji(linked.title) : (round.challengeName ? stripEmoji(round.challengeName) : null);
+  if (!raw) return fallback;
+  return raw.length > max ? raw.substring(0, max - 2) + '..' : raw;
 }
 
-function getRoundDuration(round) {
-  if (round.ftcRound) return Math.max(1, (round.speechDays ?? 1) + (round.votesDays ?? 1));
-  if (round.fNumber === 1) return 1;
-  const hasMarooning = round.hasMarooning ?? (round.marooningDays > 0);
-  const tribalDays = round.tribalDays ?? 1;
-  if (hasMarooning) return (round.marooningDays ?? 1) + 1 + tribalDays;
-  if (round.swapRound || round.mergeRound) return (round.eventDays ?? 1) + 1 + tribalDays;
-  return 1 + tribalDays;
-}
-
-function formatDateShort(date) {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${months[date.getMonth()]} ${date.getDate()}`;
-}
-
-function formatDate(date) {
-  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]}`;
+/** The event label for a round's leading phase ("Marooning", "Swap 1", "Merge", "Reunion"). */
+function eventLabelFor(roundSchedule) {
+  const { round, type } = roundSchedule;
+  if (type === 'reunion') return 'Reunion';
+  if (type === 'marooning') return 'Marooning';
+  return round.eventLabel || (type === 'swap' ? 'Swap' : 'Merge');
 }
 
 /**
- * Calculate which rounds are skipped (multi-elimination).
+ * Per-day activity labels for the 📅 Calendar, derived from the SHARED phase model.
+ *
+ * expandRoundDays() guarantees exactly getRoundDuration(round) entries, so calendar cells can
+ * never drift out of step with the timeline's round start dates. Days where several phases
+ * coincide (a live tribal, a 0-day marooning) get a combined compact label.
+ *
+ * @returns {Array<{activity: string, label: string}>} one entry per day of the round
  */
-function getSkippedRounds(rounds) {
-  const skipped = new Set();
-  const sortedIds = Object.keys(rounds).sort((a, b) => rounds[a].seasonRoundNo - rounds[b].seasonRoundNo);
-  for (let i = 0; i < sortedIds.length; i++) {
-    const elims = rounds[sortedIds[i]].eliminations ?? 1;
-    if (elims > 1) {
-      for (let skip = 1; skip < elims && (i + skip) < sortedIds.length; skip++) {
-        skipped.add(sortedIds[i + skip]);
-      }
-    }
-  }
-  return skipped;
-}
+function getDayActivities(roundSchedule, challenges = {}) {
+  const { round, type } = roundSchedule;
+  const shortChallenge = challengeTitle(round, challenges, 12, 'Challenge');
+  const eventLabel = eventLabelFor(roundSchedule);
 
-/**
- * Calculate round start dates (skips rounds with 0 duration from multi-elims)
- */
-function calcDates(rounds, startDate) {
-  const sortedIds = Object.keys(rounds).sort((a, b) => rounds[a].seasonRoundNo - rounds[b].seasonRoundNo);
-  const skipped = getSkippedRounds(rounds);
-  const result = {};
-  let dayOffset = 0;
-  for (const id of sortedIds) {
-    if (skipped.has(id)) { result[id] = { date: new Date(startDate), offset: dayOffset, skipped: true }; continue; }
-    const round = rounds[id];
-    const d = new Date(startDate);
-    d.setDate(d.getDate() + dayOffset);
-    result[id] = { date: d, offset: dayOffset };
-    dayOffset += getRoundDuration(round);
-  }
-  result._totalDays = dayOffset;
-  return result;
-}
+  // Full labels when a day holds ONE phase; compact when several share the day.
+  const full = {
+    event: eventLabel,
+    challenge: shortChallenge,
+    tribal: 'Tribal',
+    speeches: 'Speeches',
+    votes: 'Q&A/Votes',
+  };
+  const compact = {
+    event: type === 'marooning' ? 'Mar' : eventLabel,
+    challenge: 'Chall',
+    tribal: 'Tribal',
+    speeches: 'Speech',
+    votes: 'Votes',
+  };
 
-/**
- * Determine what activity happens on each day of a round.
- * Returns an array of { activity, label } for each day.
- */
-function getDayActivities(round, challenges = {}) {
-  const type = getRoundType(round);
-  const linkedChal = round.challengeIDs?.primary ? challenges[round.challengeIDs.primary] : null;
-  const challengeName = linkedChal?.title ? stripEmoji(linkedChal.title) : (round.challengeName ? stripEmoji(round.challengeName) : null);
-  const shortChallenge = challengeName ? (challengeName.length > 12 ? challengeName.substring(0, 10) + '..' : challengeName) : null;
-
-  if (type === 'reunion') {
-    return [{ activity: 'reunion', label: 'Reunion' }];
-  }
-
-  if (type === 'ftc') {
-    const days = [];
-    const speechDays = round.speechDays ?? 1;
-    const votesDays = round.votesDays ?? 1;
-    for (let i = 0; i < speechDays; i++) days.push({ activity: 'speeches', label: 'Speeches' });
-    for (let i = 0; i < votesDays; i++) days.push({ activity: 'votes', label: 'Q&A/Votes' });
-    return days.length > 0 ? days : [{ activity: 'votes', label: 'FTC' }];
-  }
-
-  if (type === 'marooning') {
-    const mDays = round.marooningDays ?? 1;
-    if (mDays === 0) {
-      // Marooning + challenge same day
-      return [
-        { activity: 'marooning', label: 'Mar + Chall' },
-        { activity: 'tribal', label: 'Tribal' },
-      ];
-    }
-    const days = [{ activity: 'marooning', label: 'Marooning' }];
-    days.push({ activity: 'challenge', label: shortChallenge || 'Challenge' });
-    days.push({ activity: 'tribal', label: 'Tribal' });
-    return days;
-  }
-
-  if (type === 'swap' || type === 'merge') {
-    const eDays = round.eventDays ?? 1;
-    const eventLabel = round.eventLabel || (type === 'swap' ? 'Swap' : 'Merge');
-    if (eDays === 0) {
-      // Event + challenge same day
-      return [
-        { activity: type, label: `${eventLabel} + Chall` },
-        { activity: 'tribal', label: 'Tribal' },
-      ];
-    }
-    return [
-      { activity: type, label: eventLabel },
-      { activity: 'challenge', label: shortChallenge || 'Challenge' },
-      { activity: 'tribal', label: 'Tribal' },
-    ];
-  }
-
-  // Standard: challenge + tribal
-  return [
-    { activity: 'challenge', label: shortChallenge || 'Challenge' },
-    { activity: 'tribal', label: 'Tribal' },
-  ];
+  return expandRoundDays(round).map(day => ({
+    activity: day.phases[0]?.activity || type,
+    label: day.phases.length > 1
+      ? day.phases.map(p => compact[p.key]).join(' + ')
+      : (full[day.phases[0]?.key] ?? 'Challenge'),
+  }));
 }
 
 // ═══════════════════════════════════════════
@@ -190,85 +122,57 @@ function getDayActivities(round, challenges = {}) {
 // ═══════════════════════════════════════════
 
 /**
- * Get the columnar breakdown for a round.
- * Returns array of { title, date } objects (1-4 columns depending on round type).
+ * Columnar breakdown of a round for the 📋 Schedule timeline — one column per DAY-GROUP.
+ *
+ * Built from the SHARED phase model, so every date here is the same date the planner's round
+ * select shows. (This function used to hard-code the tribal at "round start + 1", which meant
+ * a live tribal — tribalDays: 0 — read same-day in the select and next-day in this image.)
+ *
+ * Phases landing on the same day are merged into one column ("Marooning + Challenge"), so the
+ * column count never exceeds the 3 the renderer has x-positions for.
+ *
+ * @returns {Array<{title: string, date: string}>} 1-3 columns
  */
-function getScheduleColumns(round, roundStartDate, challenges = {}) {
+function getScheduleColumns(roundSchedule, challenges = {}) {
+  const { round, phases } = roundSchedule;
   const f = round.fNumber;
-  const type = getRoundType(round);
   const elims = round.eliminations ?? 1;
   const elimText = elims === 0 ? 'no elim' : elims === 1 ? '1 elim' : `${elims} elims`;
-  const linkedChal2 = round.challengeIDs?.primary ? challenges[round.challengeIDs.primary] : null;
-  const challengeName = linkedChal2?.title ? stripEmoji(linkedChal2.title) : (round.challengeName ? stripEmoji(round.challengeName) : `Challenge ${round.seasonRoundNo}`);
-  const shortChallenge = challengeName.length > 22 ? challengeName.substring(0, 19) + '...' : challengeName;
+  const shortChallenge = challengeTitle(round, challenges, 22, `Challenge ${round.seasonRoundNo}`);
+  const eventLabel = eventLabelFor(roundSchedule);
 
-  const d0 = formatDate(roundStartDate);
-  const day1 = new Date(roundStartDate); day1.setDate(day1.getDate() + 1);
-  const d1 = formatDate(day1);
-  const day2 = new Date(roundStartDate); day2.setDate(day2.getDate() + 2);
-  const d2 = formatDate(day2);
-
-  if (type === 'reunion') {
-    return [{ title: 'Reunion', date: d0 }];
-  }
-
-  if (type === 'ftc') {
-    const speechDays = round.speechDays ?? 1;
-    const votesStart = new Date(roundStartDate); votesStart.setDate(votesStart.getDate() + speechDays);
-    return [
-      { title: 'Speeches', date: d0 },
-      { title: 'Q&A / Votes', date: formatDate(votesStart) },
-    ];
-  }
-
-  if (type === 'marooning') {
-    const mDays = round.marooningDays ?? 1;
-    if (mDays === 0) {
-      // Marooning + challenge same day
-      return [
-        { title: 'Marooning + Challenge', date: d0 },
-        { title: `F${f} Tribal`, date: `${d1} · ${elimText}` },
-      ];
+  const titleFor = (phase) => {
+    switch (phase.key) {
+      case 'challenge': return shortChallenge;
+      case 'tribal':    return `F${f} Tribal`;
+      case 'speeches':  return 'Speeches';
+      case 'votes':     return 'Q&A / Votes';
+      default:          return eventLabel; // 'event' — marooning / swap / merge / reunion
     }
-    const challDate = new Date(roundStartDate); challDate.setDate(challDate.getDate() + mDays);
-    const tribDate = new Date(roundStartDate); tribDate.setDate(tribDate.getDate() + mDays + 1);
-    return [
-      { title: 'Marooning', date: d0 },
-      { title: shortChallenge, date: formatDate(challDate) },
-      { title: `F${f} Tribal`, date: `${formatDate(tribDate)} · ${elimText}` },
-    ];
+  };
+
+  // Group phases that share a calendar day (0-day marooning, 0-day event, live tribal).
+  const groups = [];
+  for (const phase of phases) {
+    const existing = groups.find(g => g.offset === phase.offset);
+    if (existing) existing.phases.push(phase);
+    else groups.push({ offset: phase.offset, date: phase.date, phases: [phase] });
   }
 
-  if (type === 'swap' || type === 'merge') {
-    const eDays = round.eventDays ?? 1;
-    const eventLabel = round.eventLabel || (type === 'swap' ? 'Swap' : 'Merge');
-    if (eDays === 0) {
-      // Event + challenge same day
-      return [
-        { title: `${eventLabel} + Challenge`, date: d0 },
-        { title: `F${f} Tribal`, date: `${d1} · ${elimText}` },
-      ];
-    }
-    const challDate = new Date(roundStartDate); challDate.setDate(challDate.getDate() + eDays);
-    const tribDate = new Date(roundStartDate); tribDate.setDate(tribDate.getDate() + eDays + 1);
-    return [
-      { title: eventLabel, date: d0 },
-      { title: shortChallenge, date: formatDate(challDate) },
-      { title: `F${f} Tribal`, date: `${formatDate(tribDate)} · ${elimText}` },
-    ];
-  }
-
-  // Standard (2 days): challenge + tribal
-  return [
-    { title: shortChallenge, date: d0 },
-    { title: `F${f} Tribal`, date: `${d1} · ${elimText}` },
-  ];
+  return groups.map(group => {
+    // The elimination count rides along with whichever column holds the tribal.
+    const hasTribal = group.phases.some(p => p.key === 'tribal');
+    const date = formatRoundDate(group.date);
+    return {
+      title: group.phases.map(titleFor).join(' + '),
+      date: hasTribal ? `${date} · ${elimText}` : date,
+    };
+  });
 }
 
 export async function generateVerticalTimeline(seasonName, rounds, startDate, challenges = {}) {
-  const allIds = Object.keys(rounds).sort((a, b) => rounds[a].seasonRoundNo - rounds[b].seasonRoundNo);
-  const dates = calcDates(rounds, startDate);
-  const sortedIds = allIds.filter(id => !dates[id]?.skipped);
+  const schedule = buildRoundSchedule(rounds, startDate);
+  const sortedIds = schedule.ids.filter(id => !schedule.byId[id].skipped);
 
   // Layout constants
   const MARGIN = 20;
@@ -290,7 +194,7 @@ export async function generateVerticalTimeline(seasonName, rounds, startDate, ch
   composites.push({
     input: Buffer.from(`<svg width="${WIDTH}" height="${HEADER_H}" xmlns="http://www.w3.org/2000/svg">
       <text x="${WIDTH / 2}" y="35" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="bold" fill="${TEXT_PRI}">${escapeXml(stripEmoji(seasonName))} — Schedule</text>
-      <text x="${WIDTH / 2}" y="58" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="${TEXT_MUT}">${sortedIds.length} rounds | ${dates._totalDays} days | ${formatDate(startDate)} start</text>
+      <text x="${WIDTH / 2}" y="58" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="${TEXT_MUT}">${sortedIds.length} rounds | ${schedule.totalDays} days | ${formatRoundDate(startDate)} start</text>
       <line x1="${MARGIN}" y1="${HEADER_H - 2}" x2="${WIDTH - MARGIN}" y2="${HEADER_H - 2}" stroke="${SEPARATOR}" stroke-width="1"/>
     </svg>`),
     top: 0, left: 0
@@ -299,13 +203,11 @@ export async function generateVerticalTimeline(seasonName, rounds, startDate, ch
   // Rows
   for (let i = 0; i < sortedIds.length; i++) {
     const id = sortedIds[i];
-    const round = rounds[id];
-    const type = getRoundType(round);
+    const roundSchedule = schedule.byId[id];
+    const { round, type, duration: dur } = roundSchedule;
     const color = TYPE_COLORS[type];
     const y = HEADER_H + i * ROW_H;
-    const dateInfo = dates[id];
-    const dur = getRoundDuration(round);
-    const cols = getScheduleColumns(round, dateInfo.date, challenges);
+    const cols = getScheduleColumns(roundSchedule, challenges);
     const isLast = i === sortedIds.length - 1;
 
     // Column positions
@@ -362,12 +264,11 @@ export async function generateVerticalTimeline(seasonName, rounds, startDate, ch
 // ═══════════════════════════════════════════
 
 export async function generateMonthCalendar(seasonName, rounds, startDate, challenges = {}) {
-  const dates = calcDates(rounds, startDate);
-  const sortedIds = Object.keys(rounds).sort((a, b) => rounds[a].seasonRoundNo - rounds[b].seasonRoundNo)
-    .filter(id => !dates[id]?.skipped);
+  const schedule = buildRoundSchedule(rounds, startDate);
+  const sortedIds = schedule.ids.filter(id => !schedule.byId[id].skipped);
 
   const endDate = new Date(startDate);
-  endDate.setDate(endDate.getDate() + dates._totalDays);
+  endDate.setDate(endDate.getDate() + schedule.totalDays);
 
   const months = [];
   let d = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
@@ -394,16 +295,17 @@ export async function generateMonthCalendar(seasonName, rounds, startDate, chall
   // Build lookup: date string → { round, dayInRound, activity info }
   const dateLookup = {};
   for (const id of sortedIds) {
-    const round = rounds[id];
-    const dateInfo = dates[id];
-    const activities = getDayActivities(round, challenges);
+    const roundSchedule = schedule.byId[id];
+    const { round, type, start } = roundSchedule;
+    // One entry per day — expandRoundDays guarantees activities.length === round duration,
+    // so cells never leave a gap or spill onto the next round's first day.
+    const activities = getDayActivities(roundSchedule, challenges);
     for (let day = 0; day < activities.length; day++) {
-      const rd = new Date(dateInfo.date);
+      const rd = new Date(start);
       rd.setDate(rd.getDate() + day);
       const key = `${rd.getFullYear()}-${rd.getMonth()}-${rd.getDate()}`;
       dateLookup[key] = {
-        round, id, dayInRound: day,
-        type: getRoundType(round),
+        round, id, dayInRound: day, type,
         activity: activities[day].activity,
         activityLabel: activities[day].label,
       };
@@ -426,7 +328,7 @@ export async function generateMonthCalendar(seasonName, rounds, startDate, chall
   composites.push({
     input: Buffer.from(`<svg width="${WIDTH}" height="${TITLE_H}" xmlns="http://www.w3.org/2000/svg">
       <text x="${WIDTH / 2}" y="32" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="bold" fill="${TEXT_PRI}">${escapeXml(stripEmoji(seasonName))}</text>
-      <text x="${WIDTH / 2}" y="55" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="${TEXT_MUT}">${formatDateShort(startDate)} – ${formatDateShort(endDate)} | ${dates._totalDays} days | ${sortedIds.length} rounds</text>
+      <text x="${WIDTH / 2}" y="55" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="${TEXT_MUT}">${formatMonthDay(startDate)} – ${formatMonthDay(endDate)} | ${schedule.totalDays} days | ${sortedIds.length} rounds</text>
     </svg>`),
     top: 0, left: 0
   });

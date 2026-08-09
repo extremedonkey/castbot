@@ -9,10 +9,16 @@
 import { countComponents, validateComponentLimit } from './utils.js';
 import { loadPlayerData, savePlayerData } from './storage.js';
 import { buildSeasonNavRow, seasonManagerHeader, buildSeasonBottomRow } from './seasonSelector.js';
+// Day arithmetic lives in ONE place — seasonRoundSchedule.js. Never reimplement it here.
+import {
+  buildRoundSchedule, formatRoundDate, getRoundType,
+  getRoundDuration, getSkippedRounds,
+} from './seasonRoundSchedule.js';
+
+// Re-exported so existing importers keep resolving these names from either module.
+export { getRoundDuration, getSkippedRounds, getRoundType };
 
 const DOT = '\u2981'; // ⦁
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 // ─────────────────────────────────────────────
 // Pure Logic — Round Generation
@@ -114,103 +120,35 @@ export function generateSeasonRounds(totalPlayers, numSwaps, ftcPlayers) {
 // ─────────────────────────────────────────────
 
 /**
- * Get the duration (in days) for a round based on its properties.
- * - Marooning (round 1): 3 days (marooning + challenge + tribal)
- * - Swap/Merge rounds: 3 days (event + challenge + tribal)
- * - FTC: 2 days (speeches + Q&A/votes)
- * - Reunion (F1): 1 day
- * - Standard: 2 days (challenge + tribal)
- */
-export function getRoundDuration(round) {
-  // FTC checked BEFORE reunion — FTC at F1 should get speeches+votes, not 1-day reunion treatment
-  if (round.ftcRound) {                                                       // FTC: configurable
-    const duration = (round.speechDays ?? 1) + (round.votesDays ?? 1);
-    return Math.max(1, duration);                                             // Minimum 1 day
-  }
-  if (round.fNumber === 1) return 1;                                          // Reunion
-  // hasMarooning: backwards compat — old data uses marooningDays > 0
-  const hasMarooning = round.hasMarooning ?? (round.marooningDays > 0);
-  const tribalDays = round.tribalDays ?? 1;
-  if (hasMarooning) return (round.marooningDays ?? 1) + 1 + tribalDays;       // Marooning + challenge(1) + tribal
-  if (round.swapRound || round.mergeRound) return (round.eventDays ?? 1) + 1 + tribalDays; // Event + challenge(1) + tribal
-  return 1 + tribalDays;                                                      // challenge(1) + tribal
-}
-
-/**
- * Calculate dates for all rounds from a start date.
+ * Formatted round dates for the planner's string selects.
+ *
+ * A thin presentation layer over buildRoundSchedule() (seasonRoundSchedule.js) — the day
+ * arithmetic itself lives there and is shared with the Schedule/Calendar image generators.
+ * Each round yields ONLY the date keys its type uses, which is why buildRoundOptions must
+ * branch on getRoundType() rather than re-deriving the type itself.
+ *
  * @param {Object} rounds - seasonRounds object
  * @param {Date} startDate - Season start date
- * @returns {Object} Map of roundId → { startDay, dates: { event?, challenge?, tribal? } }
+ * @param {Map} [skippedMap] - from getSkippedRounds(); computed when omitted
+ * @returns {Object} roundId → { startOffset, skipped?, event?, challenge?, tribal?, speeches?, votes? }
+ *                   …dates are display strings ("Sat 7 Mar"), not Date objects.
  */
 export function calculateRoundDates(rounds, startDate, skippedMap = null) {
-  const roundIds = Object.keys(rounds).sort((a, b) => rounds[a].seasonRoundNo - rounds[b].seasonRoundNo);
+  const schedule = buildRoundSchedule(rounds, startDate, skippedMap);
   const dates = {};
-  let currentDay = 0; // offset from startDate
 
-  for (const id of roundIds) {
-    const round = rounds[id];
-
-    // Skipped rounds get 0 duration and no dates
-    if (skippedMap?.has(id)) {
-      dates[id] = { startOffset: currentDay, skipped: true };
-      continue; // No duration added — next round starts at same day
+  for (const id of schedule.ids) {
+    const rs = schedule.byId[id];
+    if (rs.skipped) {
+      dates[id] = { startOffset: rs.startOffset, skipped: true };
+      continue;
     }
-
-    const duration = getRoundDuration(round);
-    const roundStart = new Date(startDate);
-    roundStart.setDate(roundStart.getDate() + currentDay);
-
-    const roundDates = { startOffset: currentDay };
-
-    const hasMarooning = round.hasMarooning ?? (round.marooningDays > 0);
-    const mDays = round.marooningDays ?? 1;
-    const eDays = round.eventDays ?? 1;
-    const tDays = round.tribalDays ?? 1;
-
-    // FTC checked BEFORE reunion
-    if (round.ftcRound) {
-      const speechDays = round.speechDays ?? 1;
-      roundDates.speeches = formatDate(roundStart);
-      const votesDate = new Date(roundStart);
-      votesDate.setDate(votesDate.getDate() + speechDays);
-      roundDates.votes = formatDate(votesDate);
-    } else if (round.fNumber === 1) {
-      roundDates.event = formatDate(roundStart);
-    } else if (hasMarooning) {
-      const challOffset = mDays; // 0 = same day, 1+ = after marooning
-      roundDates.event = formatDate(roundStart);
-      const challengeDate = new Date(roundStart);
-      challengeDate.setDate(challengeDate.getDate() + challOffset);
-      roundDates.challenge = formatDate(challengeDate);
-      const tribalDate = new Date(challengeDate);
-      tribalDate.setDate(tribalDate.getDate() + tDays); // 0 = same day as challenge (live), 1 = next day
-      roundDates.tribal = formatDate(tribalDate);
-    } else if (round.swapRound || round.mergeRound) {
-      const challOffset = eDays; // 0 = same day, 1+ = after event
-      roundDates.event = formatDate(roundStart);
-      const challengeDate = new Date(roundStart);
-      challengeDate.setDate(challengeDate.getDate() + challOffset);
-      roundDates.challenge = formatDate(challengeDate);
-      const tribalDate = new Date(challengeDate);
-      tribalDate.setDate(tribalDate.getDate() + tDays);
-      roundDates.tribal = formatDate(tribalDate);
-    } else {
-      // Standard: challenge day 0, tribal offset by tribalDays
-      roundDates.challenge = formatDate(roundStart);
-      const tribalDate = new Date(roundStart);
-      tribalDate.setDate(tribalDate.getDate() + tDays); // 0 = live tribal (same day), 1 = next day
-      roundDates.tribal = formatDate(tribalDate);
-    }
-
+    const roundDates = { startOffset: rs.startOffset };
+    for (const phase of rs.phases) roundDates[phase.key] = formatRoundDate(phase.date);
     dates[id] = roundDates;
-    currentDay += duration;
   }
 
   return dates;
-}
-
-function formatDate(date) {
-  return `${DAYS[date.getDay()]} ${date.getDate()} ${MONTHS[date.getMonth()]}`;
 }
 
 // ─────────────────────────────────────────────
@@ -357,38 +295,8 @@ export function validatePlannerFields(fields) {
   };
 }
 
-// ─────────────────────────────────────────────
-// Skipped Round Detection
-// ─────────────────────────────────────────────
-
-/**
- * Calculate which rounds are skipped due to multi-eliminations.
- * If round X has N eliminations, the next N-1 rounds are skipped.
- * @param {Object} rounds - seasonRounds object
- * @returns {Map<string, { skippedBy: number, elimCount: number }>} roundId → skip info
- */
-export function getSkippedRounds(rounds) {
-  const skipped = new Map();
-  const sortedIds = Object.keys(rounds).sort((a, b) => rounds[a].seasonRoundNo - rounds[b].seasonRoundNo);
-
-  for (let i = 0; i < sortedIds.length; i++) {
-    const id = sortedIds[i];
-    const round = rounds[id];
-    const elims = round.eliminations ?? 1;
-    if (elims > 1) {
-      // Skip the next (elims - 1) rounds
-      for (let skip = 1; skip < elims && (i + skip) < sortedIds.length; skip++) {
-        const skippedId = sortedIds[i + skip];
-        skipped.set(skippedId, {
-          skippedBy: round.fNumber,
-          elimCount: elims
-        });
-      }
-    }
-  }
-
-  return skipped;
-}
+// Skipped-round detection (multi-eliminations) now lives in seasonRoundSchedule.js and is
+// re-exported at the top of this file.
 
 // ─────────────────────────────────────────────
 // Season Planner View — Dynamic round display
@@ -531,16 +439,20 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
  */
 function buildRoundOptions(round, dates, challenges = {}) {
   const f = round.fNumber;
+  // Branch on the SHARED classifier so the option set always agrees with the dates
+  // calculateRoundDates produced. Deriving the type independently here is what caused
+  // "F1 ⦁ undefined ⦁ Reunion": an FTC held at F1 got dates {speeches, votes} but the
+  // reunion branch read dates.event. getRoundType checks ftcRound BEFORE fNumber === 1.
+  const type = getRoundType(round);
 
-  // Determine round type and summary label
-  if (f === 1) {
+  if (type === 'reunion') {
     // Reunion — no editable actions
     return [
       { label: `F1 ${DOT} ${dates.event} ${DOT} Reunion`, value: 'summary', default: true, emoji: { name: '🎉' } },
     ];
   }
 
-  if (round.ftcRound) {
+  if (type === 'ftc') {
     // FTC round
     return [
       { label: `F${f} (FTC) ${DOT} ${dates.speeches} ${DOT} Final Tribal Council`, value: 'summary', default: true, emoji: { name: '🔥' } },
@@ -566,8 +478,7 @@ function buildRoundOptions(round, dates, challenges = {}) {
     ? { label: `Go to ${challengeName}`, value: `go_challenge_${linkedChalId}`, emoji: { name: '🏃' } }
     : null;
 
-  const hasMarooning = round.hasMarooning ?? (round.marooningDays > 0);
-  if (hasMarooning) {
+  if (type === 'marooning') {
     const label = `F${f} ${DOT} ${dates.event} ${DOT} Marooning ${DOT} ${challengeName}`;
     const opts = [
       { label, value: 'summary', default: true, emoji: { name: '🏝️' } },
@@ -583,8 +494,8 @@ function buildRoundOptions(round, dates, challenges = {}) {
     return opts;
   }
 
-  if (round.swapRound || round.mergeRound) {
-    const eventLabel = round.eventLabel || (round.swapRound ? 'Swap' : 'Merge');
+  if (type === 'swap' || type === 'merge') {
+    const eventLabel = round.eventLabel || (type === 'swap' ? 'Swap' : 'Merge');
     const label = `F${f} ${DOT} ${dates.event} ${DOT} ${eventLabel} ${DOT} ${challengeName}`;
     const opts = [
       { label, value: 'summary', default: true, emoji: { name: '🔀' } },

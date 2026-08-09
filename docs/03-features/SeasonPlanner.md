@@ -2,7 +2,8 @@
 
 **Status:** Active (shipped 2026-03-15, iterated through 2026-08-09)
 **Entry:** `/menu` → Production Menu → 📅 **Season Manager** → pick a season → 📅 **Planner** tab (`apps_planner_{configId}`)
-**Core module:** [seasonPlanner.js](../../seasonPlanner.js) · **Images:** [scheduleImageGenerator.js](../../scheduleImageGenerator.js) · **Tests:** [tests/seasonPlanner.test.js](../../tests/seasonPlanner.test.js)
+**Core modules:** [seasonRoundSchedule.js](../../seasonRoundSchedule.js) (day arithmetic — **the single source of truth**) · [seasonPlanner.js](../../seasonPlanner.js) (UI + persistence) · [scheduleImageGenerator.js](../../scheduleImageGenerator.js) (images)
+**Tests:** [tests/seasonRoundSchedule.test.js](../../tests/seasonRoundSchedule.test.js) · [tests/seasonPlanner.test.js](../../tests/seasonPlanner.test.js)
 **Related:** [SeasonManager](SeasonManager.md) (the shell this lives inside) · [SurvivorContext](../concepts/SurvivorContext.md) (domain glossary) · [Challenges](Challenges.md) · [SeasonPlannerUIPrototype](../ui/SeasonPlannerUIPrototype.md) (the original Discord-native mockup)
 
 > **Promoted from RaP 0947** (2026-03-15). This document describes **what was built**, not the original spec. Where the build diverged from the spec, the build wins and the divergence is called out. Original trigger prompt is preserved in [§ Appendix](#appendix--original-trigger-prompt).
@@ -165,18 +166,29 @@ When a structural estimate changes, rounds are rebuilt from scratch. To avoid nu
 **This is the heart of the feature.** Everything the host sees — select labels, option descriptions, both images — is derived from it. It is a **three-layer pipeline**, and keeping the layers straight is what makes the code tractable.
 
 ```
-Layer 1  getRoundDuration(round)      → how many days this round consumes
-Layer 2  calculateRoundDates(...)     → cumulative offset from season start = each round's DAY 0
-Layer 3  (inside Layer 2)             → the named dates WITHIN a round (event/challenge/tribal/…)
+Layer 1  getRoundType(round)       → which of 6 shapes this round is
+Layer 2  getRoundPhases(round)     → the named events inside it, at day OFFSETS from round start
+Layer 3  getRoundDuration(round)   → how many days the round consumes
+Layer 4  buildRoundSchedule(...)   → walks every round, cumulative offsets → real Dates
 ```
+
+🔑 **It all lives in [seasonRoundSchedule.js](../../seasonRoundSchedule.js) — one pure, dependency-free module.** Both `seasonPlanner.js` (round selects) and `scheduleImageGenerator.js` (Schedule + Calendar) import from it. **Never reimplement day arithmetic in a consumer** — that is exactly how the two views drifted apart before ([§7](#7-schedule--calendar-images)).
+
+Consumers present the same schedule three ways:
+
+| Consumer | Entry point | Shape |
+|---|---|---|
+| Round string selects | `calculateRoundDates()` (seasonPlanner.js) | `{challenge: "Sat 7 Mar", tribal: …}` display strings |
+| 📋 Schedule image | `buildRoundSchedule()` → `getScheduleColumns()` | 1–3 columns per round, same-day phases merged |
+| 📅 Calendar image | `buildRoundSchedule()` → `expandRoundDays()` | exactly `duration` day cells |
 
 ### Design premise: days, not timestamps
 
 The planner counts **whole days**, never hours. `startDate` is a local-midnight `Date`; every derived date is `new Date(base); d.setDate(d.getDate() + n)`. There are **no timezones anywhere** in the day logic — the RaP's timezone-aware display section was never built and remains backlog. Dates render via `formatDate()` as `"Sat 7 Mar"` (no year).
 
-### Layer 1 — `getRoundDuration(round)` (seasonPlanner.js:124)
+### Layers 1 & 3 — `getRoundType` and `getRoundDuration`
 
-The **guard order matters** and is deliberate:
+`getRoundType(round)` returns `'ftc' | 'reunion' | 'marooning' | 'swap' | 'merge' | 'standard'`. **Every consumer branches on it** — including `buildRoundOptions`, which used to derive the type itself and got it wrong (see below). The **guard order matters** and is deliberate:
 
 | # | Guard | Duration | Notes |
 |---|---|---|---|
@@ -290,15 +302,18 @@ So **the date a host sees next to "Edit Tribal" is `challenge + tribalDays`** �
 - **Challenge name resolution:** linked challenge's `title` → `round.challengeName` (legacy) → `Challenge {n} (TBC)`.
 - **Host** is `round.host ?? 'TBC'` — a **legacy per-round field the round modals never write**. In practice it always reads "TBC"; the real host lives on the challenge object (`creationHost`, set via the challenge quick-edit modal) and is **not** surfaced in the select descriptions. Low-hanging fix.
 
-### 🐞 Known bug — FTC at F1 renders `undefined`
+### ✅ Fixed — FTC at F1 used to render `undefined`
 
-`buildRoundOptions` checks `f === 1` **before** `round.ftcRound`; `calculateRoundDates` and `getRoundDuration` both check `ftcRound` **first** (with explicit comments saying so). For a season configured with `estimatedFTCPlayers: 1` — which `validatePlannerFields` accepts, and which `generateSeasonRounds` explicitly supports by suppressing the duplicate reunion — the date map contains `{speeches, votes}` but the select builder reads `dates.event`, producing:
+`buildRoundOptions` used to derive the round type itself, checking `f === 1` **before** `round.ftcRound`, while the date functions checked `ftcRound` **first**. For a season with `estimatedFTCPlayers: 1` — which `validatePlannerFields` accepts and `generateSeasonRounds` explicitly supports by suppressing the duplicate reunion — the date map held `{speeches, votes}` but the select read `dates.event`:
 
 ```
-F1 ⦁ undefined ⦁ Reunion
+F1 ⦁ undefined ⦁ Reunion      ← before
+F1 (FTC) ⦁ Wed 18 Mar ⦁ Final Tribal Council   ← now
 ```
 
-The fix is to move the `round.ftcRound` guard above the `f === 1` guard in `buildRoundOptions` so all three functions agree. `buildRoundOptions` is module-private and untested; exporting it for a test is the natural companion change.
+Fixed structurally rather than by reordering two guards: `buildRoundOptions` now branches on the **shared `getRoundType()`**, so the option set can no longer disagree with the dates it was handed. Regression-guarded by `getRoundType — FTC beats reunion at F1` in [tests/seasonRoundSchedule.test.js](../../tests/seasonRoundSchedule.test.js).
+
+**The general rule this encodes:** anything that needs to know "what kind of round is this?" calls `getRoundType(round)`. Re-deriving it locally is how these two views fell out of sync twice.
 
 ---
 
@@ -311,16 +326,21 @@ The two buttons under the round selects render PNGs via `sharp` ([scheduleImageG
 
 Both are disabled until all four estimates exist.
 
-### 🔴 The day logic is DUPLICATED, and the copies disagree
+### ✅ Both images are built from the shared phase model
 
-`scheduleImageGenerator.js` carries its **own private copies** of `getRoundDuration`, `getSkippedRounds`, and a `calcDates` equivalent — it does **not** import from `seasonPlanner.js`. `getRoundDuration` is currently byte-identical, so **round start dates agree**. The *within-round* renderers do not:
+`scheduleImageGenerator.js` **imports** `buildRoundSchedule` / `expandRoundDays` from [seasonRoundSchedule.js](../../seasonRoundSchedule.js). It holds no day arithmetic of its own — only presentation (labels, truncation, colours, SVG).
 
-| Divergence | Effect |
-|---|---|
-| `getScheduleColumns` hard-codes tribal at **challenge + 1**, ignoring `tribalDays` | A live tribal (`tribalDays: 0`) shows same-day in the select and next-day in the Schedule image. Multi-day tribals are likewise wrong. |
-| `getDayActivities` emits a **fixed 2–3 entry** day list per round type | A 2-day marooning (duration 4) paints only 3 calendar cells → a blank day. A live tribal (duration 1) emits 2 entries → the tribal cell lands on the next round's day 0 and is overwritten. |
+- **`getScheduleColumns(roundSchedule, challenges)`** maps phases → columns, merging phases that share a calendar day. A 0-day marooning renders `Marooning + Challenge` in one column; a live tribal renders `{challenge} + F{n} Tribal`. Column count therefore never exceeds the 3 x-positions the renderer has.
+- **`getDayActivities(roundSchedule, challenges)`** wraps `expandRoundDays`, which guarantees **exactly `getRoundDuration(round)` day slots**. That invariant is what keeps calendar cells aligned with round start dates.
 
-**If you change any day arithmetic, you must change it in both files.** The right fix is to export the pure helpers from `seasonPlanner.js` and delete the copies — the duplication predates the `tribalDays`/`hasMarooning` features, which is precisely why only one copy learned about them.
+**This used to be a duplicated copy, and the copies drifted:**
+
+| Old divergence | Symptom | Now |
+|---|---|---|
+| `getScheduleColumns` hard-coded the tribal at **challenge + 1** | A live tribal (`tribalDays: 0`) read same-day in the select, next-day in the image | Reads the `tribal` phase date — identical to the select |
+| `getDayActivities` emitted **fixed 2–3 entry** day lists | 2-day marooning (duration 4) painted 3 cells → blank day; live tribal (duration 1) emitted 2 → the tribal spilled onto the next round's day 0 and was overwritten | `expandRoundDays` fills every day; coincident phases share one cell |
+
+The copies predated `tribalDays`/`hasMarooning`, which is exactly why only one of them learned about those fields. **Add day logic to `seasonRoundSchedule.js`, never to a consumer.**
 
 ---
 
@@ -348,7 +368,7 @@ Notes:
 
 ## 9. Known Gaps & Orphans
 
-**Orphaned handlers — registered, routable, but nothing renders the button:**
+**Dormant handlers — registered, routable, but nothing renders the button.** These are **deliberately kept** (Reece, 2026-08-09: "some reasons for this, we may need to resurrect this at some point"). Do not delete them as dead code.
 
 | custom_id | Status |
 |---|---|
@@ -367,13 +387,13 @@ Notes:
 
 ## 10. Tests
 
-[tests/seasonPlanner.test.js](../../tests/seasonPlanner.test.js) (~60 cases) replicates the pure logic inline — no Discord, no file I/O — per [TestingStandards](../standards/TestingStandards.md):
+**[tests/seasonRoundSchedule.test.js](../../tests/seasonRoundSchedule.test.js) (45 cases) imports the REAL module** — `seasonRoundSchedule.js` is pure and dependency-free precisely so it can be. Covers `getRoundType` (incl. FTC-beats-reunion-at-F1), `getRoundPhases` offsets, `getRoundDuration` parity with the pre-extraction implementation, `getSkippedRounds`, `sortRoundIds`, `buildRoundSchedule` (worked-example dates, live-tribal ripple, skipped rounds), date formatting — plus the **`expandRoundDays().length === getRoundDuration()` invariant** across 16 round shapes, which is the contract the calendar depends on.
 
-`getSwapFNumbers` · `getMergeFNumber` (incl. swap-collision) · `generateSeasonRounds` (counts, F-sequence, marooning/FTC/reunion placement, no swap+merge overlap, no duplicate F1 reunion) · `parseStartDate` · `validatePlannerFields` · **`getRoundDuration` (every type + live-tribal + FTC-at-F1 + 0+0 minimum)** · end-to-end season length.
+[tests/seasonPlanner.test.js](../../tests/seasonPlanner.test.js) (~60 cases) replicates logic inline instead, because `seasonPlanner.js` pulls in storage + Discord — per [TestingStandards](../standards/TestingStandards.md). Covers `getSwapFNumbers` · `getMergeFNumber` (incl. swap-collision) · `generateSeasonRounds` · `parseStartDate` · `validatePlannerFields` · `getRoundDuration` · end-to-end season length.
 
 Related: [tests/seasonCreate.test.js](../../tests/seasonCreate.test.js), [tests/seasonDelete.test.js](../../tests/seasonDelete.test.js), [tests/seasonSelector.test.js](../../tests/seasonSelector.test.js), [tests/applicationConfigPreservation.test.js](../../tests/applicationConfigPreservation.test.js).
 
-**Untested:** `buildRoundOptions` and `calculateRoundDates`' Layer-3 branches (module-private / view-coupled) — which is how the FTC-at-F1 label bug in §6 survived.
+**Still untested:** `buildRoundOptions` (module-private, view-coupled). It no longer classifies rounds itself, so the class of bug that hid there is gone — but its label/description strings are unguarded. Exporting it would be the natural next step.
 
 ---
 
