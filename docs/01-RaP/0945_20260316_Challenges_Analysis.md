@@ -2,7 +2,7 @@
 
 > **RaP #0945** | 2026-03-16
 > **Status**: Specification — ready to build
-> **Related**: [SeasonPlanner RaP](0947_20260315_SeasonPlanner_Analysis.md), [Season Planner UI Prototype](../ui/SeasonPlannerUIPrototype.md), [RichCardUI](../enablers/RichCardUI.md)
+> **Related**: [Season Planner](../03-features/SeasonPlanner.md), [Season Planner UI Prototype](../ui/SeasonPlannerUIPrototype.md), [RichCardUI](../enablers/RichCardUI.md)
 > **Depends on**: Season Planner (built), richCardUI.js (built), Entity Edit Framework (built)
 
 ---

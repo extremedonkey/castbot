@@ -2,7 +2,7 @@
 
 > **RaP #0944** | 2026-03-16
 > **Status**: Specification — design complete, ready to build
-> **Related**: [Challenges RaP](0945_20260316_Challenges_Analysis.md), [Season Planner RaP](0947_20260315_SeasonPlanner_Analysis.md)
+> **Related**: [Challenges RaP](0945_20260316_Challenges_Analysis.md), [Season Planner](../03-features/SeasonPlanner.md)
 > **Depends on**: Challenges MVP (built), richCardUI.js (built), Cast Ranking system (for rating pattern)
 
 ---

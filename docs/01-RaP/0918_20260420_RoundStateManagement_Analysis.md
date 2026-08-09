@@ -2,7 +2,7 @@
 
 > **RaP #0918** | 2026-04-20 (rewritten 2026-04-20 after design pivot)
 > **Status**: ✅ **Shipped** — challenge-only state, global round tracking deferred
-> **Related**: [Challenges RaP 0945](0945_20260316_Challenges_Analysis.md), [Challenge Actions RaP 0943](0943_20260316_ChallengeActions_Analysis.md), [Season Planner RaP 0947](0947_20260315_SeasonPlanner_Analysis.md), [ComponentInteractionFactory RaP 0933](0933_20260323_ComponentInteractionFactory_Analysis.md)
+> **Related**: [Challenges RaP 0945](0945_20260316_Challenges_Analysis.md), [Challenge Actions RaP 0943](0943_20260316_ChallengeActions_Analysis.md), [Season Planner](../03-features/SeasonPlanner.md), [ComponentInteractionFactory RaP 0933](0933_20260323_ComponentInteractionFactory_Analysis.md)
 
 ---
 

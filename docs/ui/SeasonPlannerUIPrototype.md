@@ -1,7 +1,9 @@
 # Season Planner UI Prototype
 
+> ⚠️ **Historical.** This is the original mockup that the Season Planner was built from. `selectStressTest.js` **no longer exists** and `reeces_season_planner_mockup` is now only a legacy alias for `season_manager`. For what actually shipped — round generation, the day arithmetic, the live string-select option sets — read **[docs/03-features/SeasonPlanner.md](../03-features/SeasonPlanner.md)**. Kept here as a reference for the Discord-native prototyping method and the domain rules it captured.
+
 > **Prototyping approach**: See [UIPrototyping.md](UIPrototyping.md) for the general Discord-native prototyping methodology.
-> **Implementation**: `selectStressTest.js` | Button: `reeces_season_planner_mockup` | 37-38/40 components per page
+> **Original implementation**: `selectStressTest.js` (deleted) | Button: `reeces_season_planner_mockup` | 37-38/40 components per page
 
 ## Purpose
 

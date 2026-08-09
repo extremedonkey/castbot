@@ -3,7 +3,7 @@
  *
  * Parallel build: does NOT touch existing Season Apps flow.
  * Entry point: season_manager button in Reece's Stuff.
- * Spec: docs/01-RaP/0947_20260315_SeasonPlanner_Analysis.md
+ * Docs: docs/03-features/SeasonPlanner.md (promoted from RaP 0947)
  */
 
 import { countComponents, validateComponentLimit } from './utils.js';
