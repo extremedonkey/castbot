@@ -5706,12 +5706,14 @@ export function evaluateSecurityTier(tier, { member, userId, guildId }) {
 }
 
 /**
- * Does the clicker hold `permission`?
+ * Does the clicker hold `permission`? ANY-OF — `permission` may be a single flag OR a combined
+ * mask (`ManageRoles | ManageChannels | ManageGuild`, as 9 handlers declare), which means
+ * "any of these", never "all of these".
  *
  * 🚨 Always pass `guildId`. Without it the Global Access whitelist is skipped, so a whitelisted
  * host passes some gates and not others — the hardest kind of permission bug to diagnose.
- * Never replace this with a raw `&`: that skips the Administrator override too (see
- * utils/effectivePermissions.js and the 2026-08-09 Casting lockout).
+ * Route through memberHasAnyPermission; do not hand-roll `&` (loses the Administrator override)
+ * or `.has()` (turns a combined mask into all-of). See utils/effectivePermissions.js.
  */
 export function hasPermission(member, permission, guildId) {
   return memberHasAnyPermission(member, guildId, permission);

@@ -110,7 +110,7 @@ Round IDs are **`r{seasonRoundNo}`** — `r1`, `r2`, … `r17`. Human-readable, 
   hasMarooning: true,    // added post-spec: lets marooningDays be 0 while marooning still exists
   marooningDays: 1,
   eventDays: 0,          // swap/merge event length (1 on generated swap/merge rounds)
-  challengeIDs: {primary: "challenge_ab12…"},  // ONE challenge per round; `.primary` is the only key used
+  challengeIDs: {primary: "challenge_ab12…"},  // the round's MAIN (immunity) challenge
   tribalCouncilIDs: {},  // reserved, never populated
   ftcRound: false, swapRound: false, mergeRound: false,
   juryStart: false       // data-only, no feature reads it
@@ -127,6 +127,11 @@ Round IDs are **`r{seasonRoundNo}`** — `r1`, `r2`, … `r17`. Human-readable, 
 | `speechDays`, `votesDays` | `1`, `1` | `ftc_speeches` / `ftc_votes` |
 | `ftcNotes`, `speechNotes`, `votesNotes` | `''` | the respective modals |
 | `host`, `challengeName` | `'TBC'`, generated title | legacy per-round fallbacks; the **challenge object** is authoritative now |
+| `challengeDays` | `1` | `edit_challenge` modal — days the challenge **block** spans ([§5](#challengedays--the-shared-block-budget)) |
+| `bonusChallengeId` | absent | `edit_challenge` modal — linked reward/bonus challenge |
+| `bonusOrder` | `'first'` | `edit_challenge` modal — `'first'` \| `'same'` \| `'last'` |
+
+> 🔴 **`bonusChallengeId` is a FLAT field, deliberately not `challengeIDs.bonus`.** Four existing sites replace that object wholesale — `app.js` (unlink + link, ~8960/8966), `challengeManager.deleteChallenge`, and `generateAndStoreRounds` — so a link stored inside it would be silently destroyed by linking any challenge from the Challenges menu, deleting the primary, or regenerating rounds. A flat field is structurally immune rather than depending on four correct edits plus future discipline.
 
 > **Do not "normalize" these by writing defaults on generation.** The `?? 1` pattern is what makes old rounds (pre-`hasMarooning`, pre-`tribalDays`) still render. `hasMarooning` in particular has an explicit back-compat read: `round.hasMarooning ?? (round.marooningDays > 0)`.
 
@@ -157,7 +162,9 @@ When a structural estimate changes, rounds are rebuilt from scratch. To avoid nu
 - A carried challenge whose title is still an auto-default (`Challenge N (TBC)` / `Challenge N (FTC Speech)`) is **refreshed** for its new role; custom titles are kept verbatim.
 - Extra new rounds get fresh challenges; surplus ones are **deleted** (matching `deleteSeason`'s cascade).
 
-🔴 **Round-LEVEL edits are NOT carried.** `tribalDays`, `eliminations`, `exiledPlayers`, manual swap/merge placement, FTC notes — all reset to generated defaults on any structural change. There is no warning before this happens. This is the single most surprising planner behaviour; treat it as known-and-unfixed, not as a bug you just found.
+🔴 **Most round-LEVEL edits are NOT carried.** `tribalDays`, `eliminations`, `exiledPlayers`, manual swap/merge placement, FTC notes — all reset to generated defaults on any structural change. There is no warning before this happens. This is the single most surprising planner behaviour; treat it as known-and-unfixed, not as a bug you just found.
+
+**The exception is the challenge block** (`challengeDays`, `bonusChallengeId`, `bonusOrder`), which IS carried by `seasonRoundNo` alongside the challenge itself. That's not a style inconsistency — the bonus link points at a **real challenge object**, and dropping it wouldn't merely reset a setting: the sweep below would then see an unlinked season-owned challenge and **delete the host's reward challenge outright**. Every carried `bonusChallengeId` is added to `linkedChalIds` for exactly that reason. Guarded by `does NOT delete the reward challenge when the cast size changes` in [tests/challengeBonus.test.js](../../tests/challengeBonus.test.js) — verified to fail if the protection is removed.
 
 ---
 
@@ -194,13 +201,38 @@ The planner counts **whole days**, never hours. `startDate` is a local-midnight 
 |---|---|---|---|
 | 1 | `round.ftcRound` | `max(1, speechDays + votesDays)` | Checked **before** the F1 guard, so an FTC at F1 gets speeches+votes, not the 1-day reunion |
 | 2 | `fNumber === 1` | `1` | Reunion |
-| 3 | `hasMarooning` | `marooningDays + 1 + tribalDays` | |
-| 4 | `swapRound \|\| mergeRound` | `eventDays + 1 + tribalDays` | |
-| 5 | *(standard)* | `1 + tribalDays` | |
+| 3 | `hasMarooning` | `marooningDays + challengeDays + tribalDays` | |
+| 4 | `swapRound \|\| mergeRound` | `eventDays + challengeDays + tribalDays` | |
+| 5 | *(standard)* | `challengeDays + tribalDays` | |
 
-**The bare `1` in rows 3–5 is the challenge day. It is hard-coded and not configurable.** Every non-FTC, non-reunion round always spends exactly one day on its challenge. If a "multi-day challenge" is ever requested, this constant — in *both* files (see §7) — is what has to change.
+`getRoundDuration` doesn't actually evaluate those formulas — it returns **`lastPhaseOffset + 1`** (FTC excepted, whose two phases carry their own lengths). The table is what that reduces to.
 
-Defaults applied at read time: `marooningDays ?? 1`, `eventDays ?? 1`, `tribalDays ?? 1`, `speechDays ?? 1`, `votesDays ?? 1`.
+Defaults applied at read time: `marooningDays ?? 1`, `eventDays ?? 1`, `tribalDays ?? 1`, `challengeDays ?? 1`, `speechDays ?? 1`, `votesDays ?? 1`.
+
+### `challengeDays` — the shared block budget
+
+The **challenge block** holds the main challenge plus any linked bonus, and **always spans exactly `challengeDays` days whether or not a bonus is present**:
+
+```
+blockStart = 0 (standard) | marooningDays (marooning) | eventDays (swap/merge)
+blockEnd   = blockStart + challengeDays - 1
+tribal@      blockEnd + tribalDays
+```
+
+That single invariant is why the feature needed **no data migration**: with `challengeDays` absent (= 1), `blockEnd === blockStart` and every formula collapses to the pre-bonus arithmetic exactly. Guarded by the `BACKWARDS COMPAT` case in [tests/seasonRoundSchedule.test.js](../../tests/seasonRoundSchedule.test.js).
+
+**Adding a bonus never lengthens a round** — it shares the budget. A host who wants the reward to have its own day raises `challengeDays` to 2. Phase placement inside the block:
+
+| `bonusOrder` | Phases |
+|---|---|
+| *(no bonus)* | `challenge@blockStart` |
+| `first` | `bonus@blockStart` (1 day), `challenge@blockStart + 1` |
+| `last` | `challenge@blockStart`, `bonus@blockEnd` (1 day) |
+| `same`, **or `challengeDays === 1`** | `bonus@blockStart` (1 day), `challenge@blockStart` |
+
+`challengeDays: 1` + a bonus **degrades to same-day automatically** — one day cannot hold two sequential challenges. There is no error state.
+
+The bonus phase is the only one carrying an explicit `days: 1`. `expandRoundDays` treats a phase without `days` as running until the next phase begins (that's what paints multi-day marooning); the bonus needs the explicit bound so a `same` + `challengeDays: 3` block paints `Reward + Challenge` on day 0 and plain `Challenge` on days 1–2.
 
 ### Layer 2 — `calculateRoundDates(rounds, startDate, skippedMap)` (seasonPlanner.js:145)
 
@@ -224,15 +256,17 @@ Each round yields **only the date keys its type uses**. This is why select label
 |---|---|---|
 | **FTC** (`ftcRound`) | `speeches`, `votes` | `speeches = day0`; `votes = day0 + speechDays` |
 | **Reunion** (`fNumber === 1`) | `event` | `event = day0` |
-| **Marooning** (`hasMarooning`) | `event`, `challenge`, `tribal` | `event = day0`; `challenge = day0 + marooningDays`; **`tribal = challenge + tribalDays`** |
-| **Swap / Merge** | `event`, `challenge`, `tribal` | `event = day0`; `challenge = day0 + eventDays`; **`tribal = challenge + tribalDays`** |
-| **Standard** | `challenge`, `tribal` | `challenge = day0`; **`tribal = challenge + tribalDays`** |
+| **Marooning** (`hasMarooning`) | `event`, *(block)*, `tribal` | `event = day0`; block starts at `marooningDays`; **`tribal = blockEnd + tribalDays`** |
+| **Swap / Merge** | `event`, *(block)*, `tribal` | `event = day0`; block starts at `eventDays`; **`tribal = blockEnd + tribalDays`** |
+| **Standard** | *(block)*, `tribal` | block starts at `day0`; **`tribal = blockEnd + tribalDays`** |
 
-🔑 **`tribalDays` is an offset from the CHALLENGE day, not a length and not an offset from the round start.**
+*(block)* = `challenge` plus, when linked, `bonus` — see [§ challengeDays](#challengedays--the-shared-block-budget).
 
-- `tribalDays: 0` → **live tribal**, same calendar day as the challenge. Round shortens by a day.
-- `tribalDays: 1` → default, tribal the day after the challenge.
-- `tribalDays: 2+` → "multi-day tribal"; the tribal *renders* on day `challenge + N`, and the round lengthens accordingly.
+🔑 **`tribalDays` is an offset from the CHALLENGE BLOCK'S LAST DAY, not a length and not an offset from the round start.**
+
+- `tribalDays: 0` → **live tribal**, same calendar day the block ends. Round shortens by a day.
+- `tribalDays: 1` → default, tribal the day after.
+- `tribalDays: 2+` → "multi-day tribal"; the tribal *renders* that many days later, and the round lengthens accordingly.
 
 The same "0 = same day" convention applies to `marooningDays` and `eventDays`: **0 means the event shares the challenge's day, it does not mean "no event"**. Removal is a separate flag (`hasMarooning: false`, or `swapRound/mergeRound: false` via the "Remove" radio option).
 
@@ -290,14 +324,27 @@ Every set begins with the `summary` option (`default: true`) and most contain a 
 
 Plus, appended when `round.challengeIDs.primary` is set: **`Go to {challenge name}`** 🏃 (`value: go_challenge_{chalId}`) — opens the full [Challenges](Challenges.md) screen as a **new ephemeral message** so the planner stays open behind it.
 
+### The bonus / reward challenge row
+
+When `bonusChallengeId` is set, an extra 🎁 option is spliced in **next to** the main challenge row, ordered so the dropdown reads top-to-bottom in chronological order:
+
+- `bonusOrder: 'first'` or `'same'` → **above** `Edit {challenge}`
+- `bonusOrder: 'last'` → **below** it
+
+Its value is `go_challenge_{bonusId}`, reusing the existing handler — no new routing. The **main challenge's description** becomes `{date} ⦁ + {bonus title} ⦁ {host}` so the pairing is visible without opening anything.
+
+**Dangling link** (challenge deleted out from under the round): renders `⚠️ Missing bonus challenge` as a no-op row rather than disappearing. The phase still occupies a day, so hiding it would make the timeline look wrong for no visible reason. `deleteChallenge` clears `bonusChallengeId`, so this should only appear after out-of-band data edits.
+
+Option count: a standard round goes 9 → 10, well under Discord's 25. **No new components** — options aren't components, so the 40-component budget is untouched.
+
 ### Where the dates surface
 
 This is the direct link between §5 and the UI:
 
-- **Summary label** carries the round's *anchor* date — `event` for marooning/swap/merge/reunion, `challenge` for standard, `speeches` for FTC.
-- **Option `description`** carries the date of the thing that option edits: `Edit {challenge}` → `` `{dates.challenge} ⦁ {host}` ``; `Edit F{f} Tribal` → `` `{dates.tribal} ⦁ {host}` ``; `Manage Marooning` → `dates.event`; FTC's two phase options → `dates.speeches` / `dates.votes`.
+- **Summary label** carries the round's *anchor* date — `event` for marooning/swap/merge/reunion, `speeches` for FTC, and for a standard round the block's first day (which is the **bonus** when it leads).
+- **Option `description`** carries the date of the thing that option edits: `Edit {challenge}` → `` `{dates.challenge} ⦁ {host}` ``; `Edit F{f} Tribal` → `` `{dates.tribal} ⦁ {host}` ``; the bonus row → `dates.bonus`; `Manage Marooning` → `dates.event`; FTC's two phase options → `dates.speeches` / `dates.votes`.
 
-So **the date a host sees next to "Edit Tribal" is `challenge + tribalDays`** — flipping tribal to live changes that description *and* pulls every later round a day earlier, in the same render.
+So **the date a host sees next to "Edit Tribal" is `blockEnd + tribalDays`** — flipping tribal to live, or raising `challengeDays`, changes that description *and* shifts every later round, in the same render.
 
 - **Challenge name resolution:** linked challenge's `title` → `round.challengeName` (legacy) → `Challenge {n} (TBC)`.
 - **Host** is `round.host ?? 'TBC'` — a **legacy per-round field the round modals never write**. In practice it always reads "TBC"; the real host lives on the challenge object (`creationHost`, set via the challenge quick-edit modal) and is **not** surfaced in the select descriptions. Low-hanging fix.
@@ -330,8 +377,10 @@ Both are disabled until all four estimates exist.
 
 `scheduleImageGenerator.js` **imports** `buildRoundSchedule` / `expandRoundDays` from [seasonRoundSchedule.js](../../seasonRoundSchedule.js). It holds no day arithmetic of its own — only presentation (labels, truncation, colours, SVG).
 
-- **`getScheduleColumns(roundSchedule, challenges)`** maps phases → columns, merging phases that share a calendar day. A 0-day marooning renders `Marooning + Challenge` in one column; a live tribal renders `{challenge} + F{n} Tribal`. Column count therefore never exceeds the 3 x-positions the renderer has.
-- **`getDayActivities(roundSchedule, challenges)`** wraps `expandRoundDays`, which guarantees **exactly `getRoundDuration(round)` day slots**. That invariant is what keeps calendar cells aligned with round start dates.
+- **`getScheduleColumns(roundSchedule, challenges)`** maps phases → columns, merging phases that share a calendar day. A 0-day marooning renders `Marooning + Challenge` in one column; a live tribal renders `{challenge} + F{n} Tribal`. Columns are **day-groups, not days** — a 3-day challenge is one column showing its start date, exactly as multi-day marooning always behaved. Merged titles are capped at **26 chars** (≈ what a 175px column fits at bold 13px Arial), because `Loved Ones Reward + Challenge 6` otherwise spilled into the neighbouring column.
+- **`getDayActivities(roundSchedule, challenges)`** wraps `expandRoundDays`, which guarantees **exactly `getRoundDuration(round)` day slots**. That invariant is what keeps calendar cells aligned with round start dates. A bonus day paints pink (`ACTIVITY_COLORS.bonus` — deliberately far from the marooning cyan) with the reward's title, or `Rwd + Chall` when it shares a day. The **Reward legend swatch only appears when the season uses one**, and legend spacing adapts so the extra item fits.
+
+**Column count is adaptive.** A bonus lifts the worst case to **4** columns (`event` + `bonus` + `challenge` + `tribal`, all on distinct days). `generateVerticalTimeline` pre-computes every round's columns, takes the max, and sizes the canvas to it — so seasons without a bonus keep the original 3-column width rather than carrying a dead column. The x-position loop still guards against overflow (an unplaced column would emit `x="undefined"` into the SVG), and `Schedule image column ceiling` in [tests/seasonRoundSchedule.test.js](../../tests/seasonRoundSchedule.test.js) asserts no round shape can exceed 4.
 
 **This used to be a duplicated copy, and the copies drifted:**
 
@@ -356,11 +405,29 @@ Selecting an action opens a modal built by `buildRoundModal(action, round, round
 | `manage_event` | Radio (remove / 0d / 1d / custom) + Label | same, or clears the event |
 | `ftc` | FTC Players + Notes | Clears `ftcRound` on **all** rounds, sets it on the round matching that F-number |
 | `ftc_speeches` / `ftc_votes` | Duration + Notes | `speechDays`/`votesDays`, `*Notes` |
-| `swap_round` | Target F-number (accepts `13`, `F13`, `f-13`) | **Swaps ~21 event fields** between two rounds; `fNumber` + `seasonRoundNo` stay put |
-| `edit_challenge` | Challenge Name + Prepping Host (User Select) | Handled separately in app.js (`planner_challenge_edit:`) — writes the **challenge object**, not the round |
+| `swap_round` | Target F-number (accepts `13`, `F13`, `f-13`) | **Swaps ~24 event fields** between two rounds; `fNumber` + `seasonRoundNo` stay put |
+| `edit_challenge` | see below | `buildChallengeEditModal` / `applyChallengeEdit` (seasonPlanner.js) — writes the challenge object **and** the round's block fields |
+
+### The `edit_challenge` modal — exactly 5 components
+
+Discord caps modals at 5 components and this one sits **at** the cap:
+
+| # | Label | Component | Writes |
+|---|---|---|---|
+| 1 | Challenge Name | type 4 text | `challenge.title` |
+| 2 | Prepping Host | type 5 user select | `challenge.creationHost` |
+| 3 | Challenge Duration | type 21 radio, 1–7 days | `round.challengeDays` |
+| 4 | Bonus / Reward Challenge | type 3 string select | `round.bonusChallengeId` |
+| 5 | Bonus Placement | type 21 radio (Before · Same day · After) | `round.bonusOrder` |
+
+- **Duration is a single radio, not the marooning-style radio + "Custom Days" pair** — that pair is *two* components and would push this modal to 6. 1–7 days covers any realistic challenge; radio groups allow up to 10 options if that ever needs extending.
+- **The bonus picker only lists challenges that aren't already some round's `primary`** (`getBonusChallengeOptions`). That's both semantically right — a round's own immunity challenge shouldn't double as its reward — and what keeps the list under the 25-option cap, since an 18-player season generates 16 primaries on its own. The currently-linked bonus is always included so it can render as `default`. Capped at 24 + a "None" row, sorted by `lastUpdated`, with any overflow logged.
+- Hosts create the bonus challenge in the **Challenges menu first**, then link it here — the modal copy says so.
+- The **Prepping Host is shared** between the main and bonus challenge. Accepted trade-off: a separate host field would need a 6th component.
 
 Notes:
-- The **radio + "Custom Days" text** pairing is a workaround for Discord radio groups holding no free text. `custom_days` **takes priority** when non-empty, so typing `0` there is a valid shortcut regardless of the radio.
+- `extractModalFields` reads **both `value` and `values[0]`** — text inputs and radios report the former, select menus the latter. Before that fix a Label-wrapped select was silently dropped.
+- The **radio + "Custom Days" text** pairing (used by the *other* round modals) is a workaround for Discord radio groups holding no free text. `custom_days` **takes priority** when non-empty, so typing `0` there is a valid shortcut regardless of the radio.
 - `swap_round` swaps by an explicit field list. **A new round field must be added to that list** or it silently fails to travel.
 - `processRoundEdit` does a plain load→mutate→save. It does **not** take `withStorageLock`. Planner edits are low-frequency, single-admin operations, so this hasn't bitten — but it is a latent lost-update path, and any batch/automated round mutation should adopt the lock.
 
@@ -380,7 +447,9 @@ Notes:
 - **Timezone-aware dates never built.** No `Intl.DateTimeFormat`, no per-user format. Input is `mm/dd/yyyy` only; output is always `"Sat 7 Mar"`.
 - **`currentSeasonRoundID`, `juryStart`, `tribalCouncilIDs`, `exiledPlayers`** are written/stored but nothing reads them. Reserved for [Placements](Placements.md) and future exile/jury mechanics.
 - **No regeneration warning.** A structural estimate change silently resets round-level edits (§4).
-- **One challenge per round.** `challengeIDs` is an object but only `.primary` is ever used.
+- **Two challenges per round, maximum** — one main (`challengeIDs.primary`) plus one bonus (`bonusChallengeId`). `challengeIDs` still only ever uses `.primary`.
+- **The bonus has no separate Prepping Host** — it shares the main challenge's, because a 6th modal component isn't available.
+- **Bonus challenges aren't offered on FTC/reunion rounds** — those have no challenge phase, and the Edit Challenge option isn't shown there.
 - **Season Description** is still absent from the modal (5-field limit) — `explanatoryText` is now owned by the apply-button setup flow and deliberately untouched by `updateSeason`.
 
 ---
@@ -390,6 +459,8 @@ Notes:
 **[tests/seasonRoundSchedule.test.js](../../tests/seasonRoundSchedule.test.js) (45 cases) imports the REAL module** — `seasonRoundSchedule.js` is pure and dependency-free precisely so it can be. Covers `getRoundType` (incl. FTC-beats-reunion-at-F1), `getRoundPhases` offsets, `getRoundDuration` parity with the pre-extraction implementation, `getSkippedRounds`, `sortRoundIds`, `buildRoundSchedule` (worked-example dates, live-tribal ripple, skipped rounds), date formatting — plus the **`expandRoundDays().length === getRoundDuration()` invariant** across 16 round shapes, which is the contract the calendar depends on.
 
 [tests/seasonPlanner.test.js](../../tests/seasonPlanner.test.js) (~60 cases) replicates logic inline instead, because `seasonPlanner.js` pulls in storage + Discord — per [TestingStandards](../standards/TestingStandards.md). Covers `getSwapFNumbers` · `getMergeFNumber` (incl. swap-collision) · `generateSeasonRounds` · `parseStartDate` · `validatePlannerFields` · `getRoundDuration` · end-to-end season length.
+
+**[tests/challengeBonus.test.js](../../tests/challengeBonus.test.js) (33 cases)** covers the bonus feature's non-date half, importing the real `seasonPlanner.js`: `extractModalFields` reading `values[]`, `getBonusChallengeOptions` filtering/capping/defaulting, `buildChallengeEditModal` staying at 5 components, `applyChallengeEdit` round-tripping and clearing, and — most importantly — **`generateAndStoreRounds` not deleting a linked reward challenge on regeneration**. That last group drives the real function against a plain fixture (it touches no storage, only the object it's handed), so it catches the regression rather than re-implementing it.
 
 Related: [tests/seasonCreate.test.js](../../tests/seasonCreate.test.js), [tests/seasonDelete.test.js](../../tests/seasonDelete.test.js), [tests/seasonSelector.test.js](../../tests/seasonSelector.test.js), [tests/applicationConfigPreservation.test.js](../../tests/applicationConfigPreservation.test.js).
 

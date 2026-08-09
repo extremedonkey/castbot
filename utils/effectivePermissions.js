@@ -147,19 +147,28 @@ export function effectivePermissions(member, guildId) {
 /**
  * Does the member have ANY of these permissions?
  *
- * Use this instead of a raw `&`. Each permission is tested separately because
- * `PermissionsBitField.has(A | B)` demands BOTH bits — and `.has()` (unlike `.any()`) applies the
- * Administrator override, which is exactly the bug that locked Administrator-only hosts out of
- * Casting.
+ * 🚨 ANY-OF, including *within* a single argument. Callers legitimately pass a combined mask —
+ * `requiresPermission: ManageRoles | ManageChannels | ManageGuild` appears on 9 handlers and means
+ * "any of these three". `PermissionsBitField.has(A | B | C)` is **all-of** (`(bits & x) === x`), so
+ * using it here silently converted those gates into "must hold all three" and locked out every host
+ * who only had Manage Roles (caught on TEST 2026-08-09, before reaching prod). Hence the explicit
+ * `&` per argument, with the Administrator override applied separately.
  *
  * @param {Object} member - payload member
  * @param {string} guildId
- * @param {...bigint} permissions
+ * @param {...(bigint|bigint[])} permissions - each may be a single flag or an OR'd mask
  */
 export function memberHasAnyPermission(member, guildId, ...permissions) {
   if (!member?.permissions && !hasGlobalRoleAccess(member, guildId)) return false;
   const perms = effectivePermissions(member, guildId);
-  return permissions.flat().some(permission => perms.has(permission));
+
+  // Administrator satisfies everything — the override `.has()` would normally give us.
+  if ((perms.bitfield & PermissionFlagsBits.Administrator) !== 0n) return true;
+
+  return permissions.flat().some(permission => {
+    const wanted = BigInt(permission ?? 0n);
+    return wanted !== 0n && (perms.bitfield & wanted) !== 0n;
+  });
 }
 
 /** Test-only: wipe the cache between cases. */

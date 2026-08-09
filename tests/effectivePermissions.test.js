@@ -134,6 +134,41 @@ describe('Global Access — hydration from playerData', () => {
   });
 });
 
+describe('memberHasAnyPermission — combined masks are ANY-OF, not all-of', () => {
+  // Regression: 9 handlers declare `requiresPermission: ManageRoles | ManageChannels | ManageGuild`
+  // meaning "any of these three". PermissionsBitField.has(A|B|C) is ALL-OF, so routing that through
+  // .has() silently required all three and denied every host holding only Manage Roles.
+  // Caught on TEST via season_manager, 2026-08-09.
+  const TRIPLE = PermissionFlagsBits.ManageRoles | PermissionFlagsBits.ManageChannels | PermissionFlagsBits.ManageGuild;
+
+  it('a host with ONLY Manage Roles passes a three-permission mask', () => {
+    assert.equal(memberHasAnyPermission(payload(PermissionFlagsBits.ManageRoles), GUILD, TRIPLE), true);
+  });
+
+  it('a host with ONLY Manage Channels passes it', () => {
+    assert.equal(memberHasAnyPermission(payload(PermissionFlagsBits.ManageChannels), GUILD, TRIPLE), true);
+  });
+
+  it('a host with ONLY Manage Server passes it', () => {
+    assert.equal(memberHasAnyPermission(payload(PermissionFlagsBits.ManageGuild), GUILD, TRIPLE), true);
+  });
+
+  it('a Global Access member passes it (grant covers 2 of the 3 bits)', () => {
+    setGuildRoleAccess(GUILD, [PROD_ROLE]);
+    assert.equal(memberHasAnyPermission(payload(0n, [PROD_ROLE]), GUILD, TRIPLE), true);
+  });
+
+  it('a plain player still fails it', () => {
+    assert.equal(memberHasAnyPermission(payload(PermissionFlagsBits.SendMessages), GUILD, TRIPLE), false);
+  });
+
+  it('documents why .has() cannot be used here', () => {
+    const onlyRoles = new PermissionsBitField(PermissionFlagsBits.ManageRoles);
+    assert.equal(onlyRoles.has(TRIPLE), false, 'has() on a combined mask is all-of — the bug');
+    assert.equal((onlyRoles.bitfield & TRIPLE) !== 0n, true, 'a raw & is any-of — the fix');
+  });
+});
+
 describe('effectivePermissions — Discord semantics', () => {
   it('Administrator satisfies any permission (.has() override)', () => {
     const admin = payload(PermissionFlagsBits.Administrator);
