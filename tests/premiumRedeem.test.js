@@ -5,7 +5,7 @@
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { findLatestSubscriptionPayment, evaluateRedeem, redeemDenialMessage, TRANSFER_COOLDOWN_MS } from '../src/kofi/premiumRedeem.js';
+import { findLatestSubscriptionPayment, evaluateRedeem, redeemDenialMessage } from '../src/kofi/premiumRedeem.js';
 import { RENEWAL_EXTEND_MS } from '../src/kofi/kofiWebhook.js';
 import { GRACE_MS } from '../entitlements.js';
 
@@ -60,15 +60,10 @@ describe('Redeem — evaluateRedeem', () => {
     assert.equal(v.validUntil, (NOW - 5 * 86400000) + RENEWAL_EXTEND_MS);
   });
 
-  it('transfer inside the 7-day cooldown → transfer_cooldown with the unlock time', () => {
-    const unlockAt = NOW + 3 * 86400000;
-    const v = evaluateRedeem({ ...base, linkedGuildId: 'g2', linkedGuildTransferLockedUntil: unlockAt });
-    assert.equal(v.reason, 'transfer_cooldown');
-    assert.equal(v.unlockAt, unlockAt);
-  });
-
-  it('an EXPIRED cooldown stamp no longer blocks the move', () => {
-    const v = evaluateRedeem({ ...base, linkedGuildId: 'g2', linkedGuildTransferLockedUntil: NOW - 1000 });
+  it('transfers are UNLIMITED — no cooldown (Reece 2026-08-09); a legacy stamp is ignored', () => {
+    assert.equal(evaluateRedeem({ ...base, linkedGuildId: 'g2' }).reason, 'transfer_available');
+    // A leftover transferLockedUntil on an old record must not resurrect the removed gate
+    const v = evaluateRedeem({ ...base, linkedGuildId: 'g2', linkedGuildTransferLockedUntil: NOW + 3 * 86400000 });
     assert.equal(v.reason, 'transfer_available');
   });
 
@@ -87,11 +82,9 @@ describe('Redeem — evaluateRedeem', () => {
     assert.equal(evaluateRedeem({ ...base, tierState: { state: 'lapsed' } }).ok, true);
   });
 
-  it('every denial reason has player-facing copy (cooldown names its unlock date)', () => {
+  it('every denial reason has player-facing copy', () => {
     for (const reason of ['no_payment', 'inactive', 'guild_already_premium', 'unknown']) {
       assert.ok(redeemDenialMessage(reason).length > 10);
     }
-    assert.ok(redeemDenialMessage('transfer_cooldown', { unlockAt: NOW }).includes(`<t:${Math.floor(NOW / 1000)}:R>`));
-    assert.ok(TRANSFER_COOLDOWN_MS === 7 * 24 * 60 * 60 * 1000);
   });
 });

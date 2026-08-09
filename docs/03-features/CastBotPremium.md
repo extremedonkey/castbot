@@ -126,7 +126,9 @@ Rules (pure `evaluateRedeem`, unit-tested): run **inside the target server** wit
 
 ### 🔁 Self-service Transfer (LIVE — "transfer = redeem in the new server")
 
-Redeeming with an email linked to a *different* guild no longer denies — it **offers the move**: a confirmation screen with computed facts ("currently powers **Server A** until <date>; A drops to free immediately; one move per 7 days") → confirm executes atomically (revoke+unlink old → grant new anchored to the same payment → re-link → stamp `transferLockedUntil = now + 7d` on the new entry) → transfer card in #💎premium with the same Reece ↩️ Undo. Inside the cooldown the screen names the unlock date instead. Pending offers live in a 10-min in-memory cache (the email can't ride a custom_id) and confirm **re-validates against live state** before executing. The Full model (move without re-typing the email, multi-slot Network tier) remains future work.
+Redeeming with an email linked to a *different* guild no longer denies — it **offers the move**: a confirmation screen with computed facts ("currently powers **Server A** until <date>; A drops to free immediately; you can move it back any time") → confirm executes atomically (revoke+unlink old → grant new anchored to the same payment → re-link) → transfer card in #💎premium with the same Reece ↩️ Undo. Pending offers live in a 10-min in-memory cache (the email can't ride a custom_id) and confirm **re-validates against live state** before executing.
+
+**Transfers are unlimited** — the RaP's 7-day anti-slot-sharing cooldown was built and then deliberately removed (Reece 2026-08-09: *"I don't mind hosts ferrying things around"*). The accepted trade: one subscription can in principle be shuttled between two concurrently-running servers. If that ever becomes a real problem, re-adding it means one field + one branch in `evaluateRedeem` + the confirm copy (a test asserts a legacy `transferLockedUntil` stamp can't silently resurrect the gate). The Full model (move without re-typing the email, multi-slot Network tier) remains future work.
 
 ### 🔀 The premium launch switch
 

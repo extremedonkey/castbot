@@ -34,50 +34,45 @@ export function findLatestSubscriptionPayment(records, email) {
   return latest;
 }
 
-/** Cooldown between self-service transfers (RaP 0891: blocks slot-sharing, allows season moves). */
-export const TRANSFER_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
-
 /**
  * Decide what a redeem attempt may do. Pure — all I/O facts arrive as arguments.
+ *
+ * NO TRANSFER COOLDOWN (Reece, 2026-08-09: "I don't mind hosts ferrying things around").
+ * The RaP's 7-day anti-slot-sharing lock was built and then deliberately removed — moves
+ * are unlimited. Re-adding one means a new field + this branch + the confirm-screen copy.
+ *
  * @param {Object} args
  * @param {Object|null} args.payment - findLatestSubscriptionPayment result
  * @param {string|null} args.linkedGuildId - guild currently linked to this email
  * @param {string} args.guildId - the guild being redeemed in
  * @param {{state: string, permanent?: boolean}} args.tierState - the target guild's current tier state
- * @param {number|null} [args.linkedGuildTransferLockedUntil] - cooldown stamp on the linked guild
  * @param {number} [args.now]
  * @returns {{ok: true, validUntil: number}
  *         | {ok: false, reason: 'transfer_available', validUntil: number, oldGuildId: string}
- *         | {ok: false, reason: 'transfer_cooldown', unlockAt: number}
  *         | {ok: false, reason: string}}
  */
-export function evaluateRedeem({ payment, linkedGuildId, guildId, tierState, linkedGuildTransferLockedUntil = null, now = Date.now() }) {
+export function evaluateRedeem({ payment, linkedGuildId, guildId, tierState, now = Date.now() }) {
   if (!payment) return { ok: false, reason: 'no_payment' };
   const validUntil = payment._paidAt + RENEWAL_EXTEND_MS;
   if (validUntil + GRACE_MS < now) return { ok: false, reason: 'inactive' };
   const foreignActive = linkedGuildId !== guildId
     && (tierState.state === 'active' || tierState.state === 'grace');
   if (foreignActive) return { ok: false, reason: 'guild_already_premium' };
+  // Self-service transfer (2026-08-08): redeeming elsewhere OFFERS the move instead of denying
   if (linkedGuildId && linkedGuildId !== guildId) {
-    // Self-service transfer (2026-08-08): redeeming elsewhere OFFERS the move instead of denying
-    if (Number.isFinite(linkedGuildTransferLockedUntil) && linkedGuildTransferLockedUntil > now) {
-      return { ok: false, reason: 'transfer_cooldown', unlockAt: linkedGuildTransferLockedUntil };
-    }
     return { ok: false, reason: 'transfer_available', validUntil, oldGuildId: linkedGuildId };
   }
   return { ok: true, validUntil };
 }
 
 /** Player-facing copy per denial reason. */
-export function redeemDenialMessage(reason, extra = {}) {
+export function redeemDenialMessage(reason) {
   switch (reason) {
     case 'no_payment':
       return `🎟️ We can't find a CastBot Premium membership for that email yet.\n` +
         `-# Payments can take a minute to arrive. Also check which email your Ko-fi/PayPal receipt went to — that's the one we see.`;
     case 'inactive':
       return `🎟️ That membership looks inactive — its last payment has expired. Renew at ko-fi.com/CastBot, then redeem again.`;
-    case 'transfer_cooldown':
-      return `🎟️ That membership moved servers recently — it can move again <t:${Math.floor((extra.unlockAt || 0) / 1000)}:R>. Need it sooner? Ask in the CastBot server (discord.gg/H7MpJEjkwT).`;
     case 'guild_already_premium':
       return `🎟️ This server already has CastBot Premium — nothing to redeem here.`;
     default:
@@ -176,8 +171,7 @@ export async function handleRedeemModal(req, res, client) {
   const oldEnt = linkedGuildId && linkedGuildId !== guildId ? getGuildEntitlement(linkedGuildId) : null;
   const verdict = evaluateRedeem({
     payment, linkedGuildId, guildId,
-    tierState: ent.exists ? ent.tierState : { state: 'none' },
-    linkedGuildTransferLockedUntil: oldEnt?.transferLockedUntil ?? null
+    tierState: ent.exists ? ent.tierState : { state: 'none' }
   });
 
   console.log(`🎟️ [REDEEM] guild=${guildId} user=${userId} email=${email} → ${verdict.ok ? `OK until ${new Date(verdict.validUntil).toISOString()}` : verdict.reason}`);
@@ -191,7 +185,7 @@ export async function handleRedeemModal(req, res, client) {
       data: { components: [transferConfirmScreen(oldName, newName, verdict.validUntil)], flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL }
     });
   }
-  if (!verdict.ok) return ephemeral(redeemDenialMessage(verdict.reason, verdict));
+  if (!verdict.ok) return ephemeral(redeemDenialMessage(verdict.reason));
 
   const guildName = client?.guilds?.cache?.get(guildId)?.name;
   await grantTier(guildId, 'premium', {
@@ -250,7 +244,7 @@ function transferConfirmScreen(oldName, newName, validUntil) {
         `Moving it to **${newName}**:\n` +
         `• **${oldName} drops to free immediately**\n` +
         `• Renewals extend **${newName}** from now on\n` +
-        `• One move per 7 days` },
+        `• You can move it back any time` },
       { type: 14 },
       { type: 1, components: [
         { type: 2, custom_id: 'premium_transfer_cancel', label: 'Cancel', style: 2, emoji: { name: '❌' } },
@@ -279,11 +273,12 @@ export async function handleTransferButton(context, customId) {
     ]}] };
   }
 
-  // Re-validate: the link must still point at the old guild and its cooldown must still be clear
+  // Re-validate: the link must still point at the old guild (10-min offer window — a
+  // renewal, competing claim, or Reece revoke can land while the host is deciding)
   const { findGuildByKofiEmail, getGuildEntitlement, grantTier, linkKofiEmail, revokeTier } = await import('../../entitlements.js');
   const stillLinked = findGuildByKofiEmail(t.email);
   const oldEnt = stillLinked ? getGuildEntitlement(stillLinked) : null;
-  if (stillLinked !== t.oldGuildId || (Number.isFinite(oldEnt?.transferLockedUntil) && oldEnt.transferLockedUntil > Date.now())) {
+  if (stillLinked !== t.oldGuildId) {
     return { components: [{ type: 17, accent_color: 0xf39c12, components: [
       { type: 10, content: `🎟️ That membership's situation changed while you decided — run **Redeem** again.` },
       { type: 1, components: [{ type: 2, custom_id: 'premium_back', label: '← Premium', style: 2 }] }
@@ -298,8 +293,7 @@ export async function handleTransferButton(context, customId) {
     validUntil: t.validUntil,
     source: 'subscription',
     reason: `Transfer from ${oldName}: <${t.email}>`,
-    name: newName,
-    transferLockedUntil: Date.now() + TRANSFER_COOLDOWN_MS
+    name: newName
   });
   await linkKofiEmail(t.newGuildId, t.email);
   console.log(`🎟️ [TRANSFER] ${t.email}: ${t.oldGuildId} (${oldName}) → ${t.newGuildId} by ${context.userId}`);
@@ -311,7 +305,7 @@ export async function handleTransferButton(context, customId) {
       body: { flags: 1 << 15, components: [{
         type: 17, accent_color: 0xf39c12,
         components: [
-          { type: 10, content: `🔁 **Transfer**: \`${t.email}\` moved **${oldName}** → **${newName || t.newGuildId}** by <@${context.userId}> — premium until <t:${Math.floor(t.validUntil / 1000)}:D>, next move <t:${Math.floor((Date.now() + TRANSFER_COOLDOWN_MS) / 1000)}:R>` },
+          { type: 10, content: `🔁 **Transfer**: \`${t.email}\` moved **${oldName}** → **${newName || t.newGuildId}** by <@${context.userId}> — premium until <t:${Math.floor(t.validUntil / 1000)}:D>` },
           { type: 1, components: [
             { type: 2, custom_id: `kofi_unlink_${t.newGuildId}`, label: 'Undo (revoke + unlink)', style: 4, emoji: { name: '↩️' } }
           ]}
@@ -325,7 +319,7 @@ export async function handleTransferButton(context, customId) {
   return { components: [{ type: 17, accent_color: 0x2ecc71, components: [
     { type: 10, content: `## ⭐ Premium Moved` },
     { type: 14 },
-    { type: 10, content: `**${newName || 'This server'}** now has CastBot Premium until <t:${Math.floor(t.validUntil / 1000)}:D>.\n**${oldName}** is back on the free tier.\n-# Renewals extend this server automatically. Next move possible <t:${Math.floor((Date.now() + TRANSFER_COOLDOWN_MS) / 1000)}:R>.` },
+    { type: 10, content: `**${newName || 'This server'}** now has CastBot Premium until <t:${Math.floor(t.validUntil / 1000)}:D>.\n**${oldName}** is back on the free tier.\n-# Renewals extend this server automatically. You can move it again any time.` },
     { type: 14 },
     { type: 1, components: [{ type: 2, custom_id: 'premium_back', label: '← Premium', style: 2 }] }
   ]}] };
