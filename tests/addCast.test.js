@@ -51,10 +51,19 @@ describe('Add Cast modal', () => {
     }
   });
 
-  it('keeps every option label within the 100-char cap', () => {
+  it('keeps option labels SHORT enough to survive Discord\'s collapsed-row truncation', () => {
+    // The first version used the full sentence as the label; Discord cut both options at
+    // "Automatically create application channels and…", making them indistinguishable in the
+    // collapsed select. ~45 chars is what actually renders — the detail lives in `description`.
     for (const o of modal.components[1].component.options) {
-      assert.ok(o.label.length <= 100, `${o.value}: ${o.label.length} chars`);
+      assert.ok(o.label.length <= 45, `${o.value}: label is ${o.label.length} chars — will truncate`);
+      assert.ok(o.description.length <= 100, `${o.value}: description over Discord's cap`);
     }
+  });
+
+  it('makes the two options distinguishable from their labels alone', () => {
+    const [a, b] = modal.components[1].component.options;
+    assert.notEqual(a.label.slice(0, 30), b.label.slice(0, 30), 'labels must differ before truncation bites');
   });
 });
 

@@ -18,14 +18,22 @@ import { createApplicationChannel } from '../../applicationManager.js';
 import { runPacedJob } from '../channels/channelJob.js';
 import { PACE_CREATE } from '../channels/channelAdminConfig.js';
 
-/** Modes offered by the mode select. The first is the default in every sense — UI and fallback. */
+/**
+ * Modes offered by the mode select. The first is the default in every sense — UI and fallback.
+ * Labels stay SHORT: Discord truncates a select option's label to roughly 45 visible characters in
+ * the collapsed row, so anything longer reads as "Automatically create application channels and…"
+ * and the two options become indistinguishable. The detail belongs in `description`, which renders
+ * on its own line underneath.
+ */
 export const ADD_CAST_MODES = {
   create_and_add: {
-    label: 'Automatically create application channels and add the user to the channel.',
+    label: 'Create channels and add cast',
+    description: 'They can see and answer their own application channel',
     grantApplicantAccess: true
   },
   create_only: {
-    label: 'Automatically create application channels but do not add user to channel',
+    label: 'Create channels only',
+    description: 'Cast can\'t see them yet — for testing without pinging anyone',
     grantApplicantAccess: false
   }
 };
@@ -46,7 +54,7 @@ export function buildAddCastModal(configId, seasonName) {
         type: 18, // Label
         label: 'Cast Members to Add',
         // Discord caps Label descriptions at 100 chars — the "why" lives here, tersely.
-        description: 'For cast who didn\'t apply via a CastBot channel — late additions, off-Discord recruits.',
+        description: 'For cast who never applied — late additions, off-Discord recruits.',
         component: {
           type: 5, // User Select
           custom_id: 'add_cast_users',
@@ -60,9 +68,9 @@ export function buildAddCastModal(configId, seasonName) {
         type: 18, // Label
         label: 'What should CastBot do?',
         // `default: true` on a modal String Select option is unreliable in Discord (same caveat
-        // documented in src/channels/channelsView.js), so the default is ALSO stated here and the
+        // documented in src/channels/channelsView.js), so the default is ALSO named here and the
         // submit handler falls back to it when no value comes back. Never trust the pre-selection alone.
-        description: 'Defaults to creating channels and adding each user to their own channel.',
+        description: 'Defaults to adding each person to their channel.',
         component: {
           type: 3, // String Select
           custom_id: 'add_cast_mode',
@@ -70,7 +78,8 @@ export function buildAddCastModal(configId, seasonName) {
           min_values: 1,
           max_values: 1,
           options: Object.entries(ADD_CAST_MODES).map(([value, m], i) => ({
-            label: m.label.slice(0, 100),
+            label: m.label,
+            description: m.description,
             value,
             default: i === 0
           }))
