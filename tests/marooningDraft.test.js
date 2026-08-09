@@ -52,13 +52,25 @@ function findOrphanDrafts(draftTribes, tribeRoleIds, applicantUserIds) {
 // ONE line per player: "2. ReeceBot - 27yo | @Ask | @CST / CDT". Score/vote count led the row and
 // demographics sat on a `-#` line beneath until 2026-08-09 — both dropped: by marooning the decision is
 // already made, so the score was noise doubling every roster's height. Sort order still encodes it.
+// Offer-progress flags. Accepted (the done state) carries NO marker — only outstanding work is flagged,
+// so the exceptions stay visible. Replaced the "· 🎉 Accepted / · ✅ Accepted (Alt) / · 🚫 Declined"
+// tags AND the three sub-headings they lived under (2026-08-09).
+const FLAG_NO_OFFER = '⚠️✒️';
+const FLAG_AWAITING = '⚠️📨';
+const FLAG_DECLINED = '⚠️🚫';
+const OFFER_ACCEPTED = new Set(['accepted', 'accepted_alternative']);
+function offerStageRank(p) { return OFFER_ACCEPTED.has(p.placementResponse) ? 0 : (p.offerStatus ? 1 : 2); }
+function offerFlagFor(p) {
+  if (OFFER_ACCEPTED.has(p.placementResponse)) return '';
+  if (p.placementResponse === 'declined') return FLAG_DECLINED;
+  return p.offerStatus ? FLAG_AWAITING : FLAG_NO_OFFER;
+}
+
 function renderRow(p, counter, opts = {}) {
-  const resp = (!opts.suppressAcceptedTag && p.placementResponse === 'accepted') ? ' · 🎉 Accepted'
-    : (!opts.suppressAcceptedTag && p.placementResponse === 'accepted_alternative') ? ' · ✅ Accepted (Alt)'
-    : p.placementResponse === 'declined' ? ' · 🚫 Declined' : '';
+  const flag = opts.offerFlags ? offerFlagFor(p) : '';
   counter.n += 1;
   const demo = demographicsInline(p);
-  return `${counter.n}. ${p.name}${demo ? ` - ${demo}` : ''}${resp}`;
+  return `${counter.n}. ${p.name}${demo ? ` - ${demo}` : ''}${flag ? ` ${flag}` : ''}`;
 }
 
 // Mirrors buildMarooningView's demographicsInline — "{age}yo | @{pronoun} | @{timezone}" on the player's
@@ -127,17 +139,25 @@ function castPlayersHeader(count, estimatedTotalPlayers) {
   return `Cast Players (${count}${countSuffix})`;
 }
 
-// Mirrors buildMarooningView's splitByOfferStage — Cast/Alternate broken into Accepted / Offer Sent /
-// Draft. Declined stays folded into Offer Sent (an offer WAS sent; the inline "· 🚫 Declined" marks it).
-const OFFER_STAGE_ACCEPTED = new Set(['accepted', 'accepted_alternative']);
-function splitByOfferStage(players) {
-  const accepted = [], offerSent = [], draft = [];
-  for (const p of players) {
-    if (OFFER_STAGE_ACCEPTED.has(p.placementResponse)) accepted.push(p);
-    else if (p.offerStatus) offerSent.push(p);
-    else draft.push(p);
+// Mirrors buildMarooningView's per-tribe header + the ⚠️ Key block (only flags actually in play).
+function tribeHeader(rid, n) { return `<@&${rid}> (${n} player${n === 1 ? '' : 's'})`; }
+function keyBlock(flagsUsed) {
+  const LINES = [
+    [FLAG_NO_OFFER, "Hasn't been sent an offer — send one with ✒️ Bulk Offers, or ✒️ Send Offer on the 🏆 Casting tab."],
+    [FLAG_AWAITING, "Offer sent, no reply yet — they haven't accepted or declined."],
+    [FLAG_DECLINED, 'Declined their placement — they are NOT playing unless you re-offer.'],
+  ].filter(([f]) => flagsUsed.has(f));
+  return LINES.length ? `> **Key**\n${LINES.map(([f, t]) => `> ${f} ${t}`).join('\n')}` : '';
+}
+
+// Mirrors the duplicate-application detector: same person, several application channels in ONE season.
+function findDuplicateApplicants(allApplications) {
+  const byUser = new Map();
+  for (const a of allApplications) {
+    if (!byUser.has(a.userId)) byUser.set(a.userId, []);
+    byUser.get(a.userId).push(a);
   }
-  return { accepted, offerSent, draft };
+  return [...byUser.entries()].filter(([, apps]) => apps.length > 1);
 }
 
 function tribesLine(tribeRoleIds, tribes) {
@@ -280,15 +300,14 @@ describe('Marooning Draft — row format (numbered, no scores, no medals)', () =
     const unrated = renderRow({ name: 'X', avgScore: 0, voteCount: 0, age: 21 }, { n: 0 });
     assert.equal(rated, unrated);
   });
-  it('keeps the placement-response tags — the whole point of the tab is checking who accepted', () => {
-    assert.equal(renderRow({ name: 'Y', age: 30, placementResponse: 'accepted' }, { n: 2 }), '3. Y - 30yo · 🎉 Accepted');
-    assert.equal(renderRow({ name: 'Z', placementResponse: 'accepted_alternative' }, { n: 0 }), '1. Z · ✅ Accepted (Alt)');
-    assert.equal(renderRow({ name: 'W', placementResponse: 'declined' }, { n: 0 }), '1. W · 🚫 Declined');
+  it('the old "· 🎉 Accepted" / "· ✅ Accepted (Alt)" word tags are gone — ⚠️ flags replaced them', () => {
+    const acc = renderRow({ name: 'Y', age: 30, placementResponse: 'accepted' }, { n: 2 }, { offerFlags: true });
+    assert.equal(acc, '3. Y - 30yo', 'accepted is the done state — no marker at all');
+    assert.ok(!acc.includes('🎉') && !acc.includes('Accepted'));
+    assert.equal(renderRow({ name: 'Z', placementResponse: 'accepted_alternative' }, { n: 0 }, { offerFlags: true }), '1. Z');
   });
-  it('suppressAcceptedTag still drops the Accepted markers under an "- Accepted" sub-heading', () => {
-    assert.equal(renderRow({ name: 'Y', placementResponse: 'accepted' }, { n: 0 }, { suppressAcceptedTag: true }), '1. Y');
-    // Declined is never suppressed — it's the only thing distinguishing it inside "Offer Sent".
-    assert.equal(renderRow({ name: 'W', placementResponse: 'declined' }, { n: 0 }, { suppressAcceptedTag: true }), '1. W · 🚫 Declined');
+  it('declined shows the ⚠️🚫 flag instead of the "· 🚫 Declined" tag', () => {
+    assert.equal(renderRow({ name: 'W', placementResponse: 'declined', offerStatus: 'offer' }, { n: 0 }, { offerFlags: true }), '1. W ⚠️🚫');
   });
 });
 
@@ -408,51 +427,108 @@ describe('Marooning Draft — continuous vs. restarting numbering (host counts t
   });
 });
 
-describe('Marooning Draft — offer-stage breakdown (Cast/Alternate: Accepted / Offer Sent / Draft)', () => {
-  it('splits by placementResponse (accepted) → offerStatus (sent, no response) → neither (draft)', () => {
-    const players = [
-      { name: 'Accepted1', placementResponse: 'accepted' },
-      { name: 'AcceptedAlt', placementResponse: 'accepted_alternative' },
-      { name: 'Sent1', offerStatus: 'offer' },
-      { name: 'Declined1', offerStatus: 'offer', placementResponse: 'declined' }, // stays in Offer Sent, not its own bucket
-      { name: 'Draft1' }
-    ];
-    const { accepted, offerSent, draft } = splitByOfferStage(players);
-    assert.deepEqual(accepted.map(p => p.name), ['Accepted1', 'AcceptedAlt']);
-    assert.deepEqual(offerSent.map(p => p.name), ['Sent1', 'Declined1']);
-    assert.deepEqual(draft.map(p => p.name), ['Draft1']);
+describe('Marooning Draft — offer flags (replaced the Accepted/Offer Sent/Draft sub-headings)', () => {
+  it('accepted carries NO flag — only outstanding work is marked', () => {
+    assert.equal(offerFlagFor({ placementResponse: 'accepted' }), '');
+    assert.equal(offerFlagFor({ placementResponse: 'accepted_alternative' }), '');
   });
-  it('a Declined player still shows the inline suffix even though bucketed under Offer Sent', () => {
-    const row = renderRow({ name: 'D', avgScore: 4, voteCount: 1, offerStatus: 'offer', placementResponse: 'declined' }, { n: 0 });
-    assert.ok(row.includes('· 🚫 Declined'));
+  it('no offer sent → the "send them one" flag', () => {
+    assert.equal(offerFlagFor({}), FLAG_NO_OFFER);
   });
-  it('every player lands in exactly one bucket (no drops, no duplicates)', () => {
-    const players = Array.from({ length: 12 }, (_, i) => ({
-      name: `P${i}`,
-      placementResponse: i % 4 === 0 ? 'accepted' : undefined,
-      offerStatus: i % 3 === 0 ? 'offer' : undefined
-    }));
-    const { accepted, offerSent, draft } = splitByOfferStage(players);
-    assert.equal(accepted.length + offerSent.length + draft.length, players.length);
+  it('offer sent, no reply → the "awaiting reply" flag', () => {
+    assert.equal(offerFlagFor({ offerStatus: 'offer' }), FLAG_AWAITING);
+  });
+  it('declined gets its own flag — it is NOT the same as awaiting a reply', () => {
+    assert.equal(offerFlagFor({ offerStatus: 'offer', placementResponse: 'declined' }), FLAG_DECLINED);
+  });
+  it('every flag is distinct, so a row is never ambiguous', () => {
+    assert.equal(new Set([FLAG_NO_OFFER, FLAG_AWAITING, FLAG_DECLINED]).size, 3);
+  });
+  it('flags render on the row, after the demographics', () => {
+    assert.equal(
+      renderRow({ name: 'ReeceBot', age: 27, pronoun: 'Ask', timezone: 'CST / CDT' }, { n: 1 }, { offerFlags: true }),
+      '2. ReeceBot - 27yo | @Ask | @CST / CDT ⚠️✒️'
+    );
+  });
+  it("sections without offerFlags (Undecided, Don't Cast, Withdrawn) show no flags at all", () => {
+    // You can't chase an offer you haven't decided to make — flagging every Undecided row is pure noise.
+    assert.equal(renderRow({ name: 'U' }, { n: 0 }), '1. U');
+    assert.equal(renderRow({ name: 'U' }, { n: 0 }, { offerFlags: false }), '1. U');
+  });
+  it('an accepted player renders identically with or without flags enabled', () => {
+    const p = { name: 'A', placementResponse: 'accepted', offerStatus: 'offer' };
+    assert.equal(renderRow(p, { n: 0 }, { offerFlags: true }), renderRow(p, { n: 0 }));
   });
 });
 
-describe('Marooning Draft — suppressAcceptedTag (redundant once under an "- Accepted" sub-heading)', () => {
-  it('accepted → no inline tag when suppressed (the "- Accepted" sub-section)', () => {
-    const row = renderRow({ name: 'Mimi', avgScore: 5, voteCount: 2, placementResponse: 'accepted' }, { n: 0 }, { suppressAcceptedTag: true });
-    assert.equal(row, '1. Mimi');
+describe('Marooning Draft — stage ordering within a tribe', () => {
+  it('ranks accepted → awaiting reply → no offer yet', () => {
+    assert.equal(offerStageRank({ placementResponse: 'accepted' }), 0);
+    assert.equal(offerStageRank({ offerStatus: 'offer' }), 1);
+    assert.equal(offerStageRank({}), 2);
   });
-  it('accepted_alternative → also suppressed', () => {
-    const row = renderRow({ name: 'Mimi', avgScore: 5, voteCount: 2, placementResponse: 'accepted_alternative' }, { n: 0 }, { suppressAcceptedTag: true });
-    assert.ok(!row.includes('Accepted'));
+  it('a declined player ranks with "offer sent" — an offer WAS made', () => {
+    assert.equal(offerStageRank({ offerStatus: 'offer', placementResponse: 'declined' }), 1);
   });
-  it('unsuppressed (default) still shows the accepted tag — e.g. a stale record sitting outside its expected bucket', () => {
-    const row = renderRow({ name: 'Mimi', avgScore: 5, voteCount: 2, placementResponse: 'accepted' }, { n: 0 });
-    assert.ok(row.includes('· 🎉 Accepted'));
+  it('sinks the rows still needing action to the bottom of their tribe', () => {
+    const players = [{ name: 'NoOffer' }, { name: 'Sent', offerStatus: 'offer' }, { name: 'Acc', placementResponse: 'accepted' }];
+    const sorted = [...players].sort((a, b) => offerStageRank(a) - offerStageRank(b));
+    assert.deepEqual(sorted.map(p => p.name), ['Acc', 'Sent', 'NoOffer']);
   });
-  it('Declined is NEVER suppressed, even with suppressAcceptedTag set — it\'s the only marker inside Offer Sent', () => {
-    const row = renderRow({ name: 'D', avgScore: 4, voteCount: 1, placementResponse: 'declined' }, { n: 0 }, { suppressAcceptedTag: true });
-    assert.ok(row.includes('· 🚫 Declined'));
+  it('is stable — score order survives inside a stage', () => {
+    const players = [{ name: 'HighScore' }, { name: 'LowScore' }];
+    const sorted = [...players].sort((a, b) => offerStageRank(a) - offerStageRank(b));
+    assert.deepEqual(sorted.map(p => p.name), ['HighScore', 'LowScore']);
+  });
+});
+
+describe('Marooning Draft — tribe header shows size, not "(tentative)"', () => {
+  it('pluralises the player count', () => {
+    assert.equal(tribeHeader('r1', 4), '<@&r1> (4 players)');
+    assert.equal(tribeHeader('r1', 1), '<@&r1> (1 player)');
+  });
+  it('drops "(tentative)" — the Tribes blurb already says drafts are private', () => {
+    assert.ok(!tribeHeader('r1', 2).includes('tentative'));
+  });
+});
+
+describe('Marooning Draft — the ⚠️ Key block', () => {
+  it('lists only the flags actually present', () => {
+    const key = keyBlock(new Set([FLAG_NO_OFFER]));
+    assert.ok(key.includes(FLAG_NO_OFFER));
+    assert.ok(!key.includes(FLAG_AWAITING));
+    assert.ok(!key.includes(FLAG_DECLINED));
+  });
+  it('renders nothing when no row is flagged', () => {
+    assert.equal(keyBlock(new Set()), '');
+  });
+  it('tells you HOW to fix the most common flag', () => {
+    assert.match(keyBlock(new Set([FLAG_NO_OFFER])), /Bulk Offers|Send Offer/);
+  });
+  it('keeps every line in one quote block', () => {
+    const key = keyBlock(new Set([FLAG_NO_OFFER, FLAG_AWAITING, FLAG_DECLINED]));
+    assert.ok(key.split('\n').every(l => l.startsWith('> ')), key);
+  });
+});
+
+describe('Marooning Draft — duplicate applications', () => {
+  const app = (userId, channelId) => ({ userId, channelId });
+
+  it('flags a user with more than one application channel this season', () => {
+    const dupes = findDuplicateApplicants([app('u1', 'c1'), app('u1', 'c2'), app('u2', 'c3')]);
+    assert.equal(dupes.length, 1);
+    assert.equal(dupes[0][0], 'u1');
+    assert.deepEqual(dupes[0][1].map(a => a.channelId), ['c1', 'c2']);
+  });
+  it('says nothing when everyone has exactly one', () => {
+    assert.deepEqual(findDuplicateApplicants([app('u1', 'c1'), app('u2', 'c2')]), []);
+  });
+  it('handles an empty season', () => {
+    assert.deepEqual(findDuplicateApplicants([]), []);
+  });
+  it('catches three-way duplicates (the real TEST case: ReeceBot had 3)', () => {
+    const dupes = findDuplicateApplicants([app('u1', 'c1'), app('u1', 'c2'), app('u1', 'c3')]);
+    assert.equal(dupes[0][1].length, 3);
   });
 });
 

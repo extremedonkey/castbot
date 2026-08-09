@@ -1306,23 +1306,41 @@ export async function buildMarooningView({ configId, guildId, playerData, season
 
   // `counter` is a mutable { n } threaded through a render pass so numbering can run continuously
   // ACROSS multiple calls (Cast → Alternate → Undecided share one; see below) instead of restarting
-  // per group/sub-group/tribe-bucket. `opts.suppressAcceptedTag` drops the inline "· 🎉 Accepted" /
-  // "· ✅ Accepted (Alt)" markers — redundant once the row already sits under an "- Accepted"
-  // sub-heading. "· 🚫 Declined" is NEVER suppressed: Declined stays folded into "Offer Sent" (an
-  // offer WAS sent), so it's the only signal distinguishing it from a still-awaiting-response row there.
+  // per group/tribe-bucket.
+  //
   // ONE line per player: "2. ReeceBot - 27yo | @Ask | @CST / CDT". Scores/vote counts used to lead the
   // row ("5.0/5.0 (1 vote)") with demographics on a second line beneath; both went 2026-08-09 (Reece) —
   // by the time you're marooning, the decision is already made, so the score was noise crowding out the
   // detail you actually plan tribes with. Ordering still runs highest-score-first via computeCastingOrder,
   // so the ranking hasn't been lost, just stopped being restated on every row. Full scores stay one click
   // away on the 🏆 Casting tab.
+  // Accepted values that count as "responded — yes". A declined player still has `offerStatus` set (an
+  // offer WAS sent), so it ranks alongside "awaiting reply" — its own flag is what distinguishes it.
+  const OFFER_STAGE_ACCEPTED = new Set(['accepted', 'accepted_alternative']);
+  const offerStageRank = (p) => OFFER_STAGE_ACCEPTED.has(p.placementResponse) ? 0 : (p.offerStatus ? 1 : 2);
+
+  // Offer-progress flags. Accepted is the DONE state and carries no marker — flagging every row would
+  // make the exceptions invisible, so only outstanding work is marked. Replaces the old three
+  // "- Accepted / - Offer Sent / - Draft" sub-headings (2026-08-09): those split each tribe into three
+  // separate blocks, so you could never see a tribe's actual roster in one place.
+  const FLAG_NO_OFFER = '⚠️✒️';
+  const FLAG_AWAITING = '⚠️📨';
+  const FLAG_DECLINED = '⚠️🚫';
+  const flagsUsed = new Set();
+  const offerFlagFor = (p) => {
+    if (OFFER_STAGE_ACCEPTED.has(p.placementResponse)) return '';
+    if (p.placementResponse === 'declined') return FLAG_DECLINED;
+    return p.offerStatus ? FLAG_AWAITING : FLAG_NO_OFFER;
+  };
+
   const renderRow = (p, counter, opts = {}) => {
-    const resp = (!opts.suppressAcceptedTag && p.placementResponse === 'accepted') ? ' · 🎉 Accepted'
-      : (!opts.suppressAcceptedTag && p.placementResponse === 'accepted_alternative') ? ' · ✅ Accepted (Alt)'
-      : p.placementResponse === 'declined' ? ' · 🚫 Declined' : '';
+    // Flags only where an offer is actually expected (Cast / Alternate). An Undecided or Don't Cast
+    // player has nothing outstanding by definition, so flagging them would be pure noise.
+    const flag = opts.offerFlags ? offerFlagFor(p) : '';
+    if (flag) flagsUsed.add(flag);
     counter.n += 1;
     const demo = demographicsInline(p.userId, p.app);
-    return `${counter.n}. ${p.name}${demo ? ` - ${demo}` : ''}${resp}`;
+    return `${counter.n}. ${p.name}${demo ? ` - ${demo}` : ''}${flag ? ` ${flag}` : ''}`;
   };
 
   // Renders a (already score-sorted) player list, sub-grouped by private draft tribe same as before,
@@ -1347,31 +1365,25 @@ export async function buildMarooningView({ configId, guildId, playerData, season
         undrafted.push(p);
       }
     }
+    // Furthest-along first within each tribe (accepted → awaiting reply → no offer yet), so the rows
+    // still needing action sink to the bottom of their tribe. This is the ordering the old three
+    // sub-headings gave for free; a stable sort keeps score order inside each stage.
+    const byStage = (list) => (opts.offerFlags ? [...list].sort((a, b) => offerStageRank(a) - offerStageRank(b)) : list);
+    const headCount = (n) => `${n} player${n === 1 ? '' : 's'}`;
+
     let out = '';
     for (const rid of tribeRoleIds) {
       const tribePlayers = perTribe.get(rid);
       if (!tribePlayers?.length) continue;
-      out += `<@&${rid}> (tentative)\n${tribePlayers.map(p => renderRow(p, counter, opts)).join('\n')}\n\n`;
+      // "(N players)" replaced "(tentative)" — the draft-ness is already stated by the Tribes blurb
+      // above, whereas tribe SIZE is the number you're actually balancing against while marooning.
+      out += `<@&${rid}> (${headCount(tribePlayers.length)})\n${byStage(tribePlayers).map(p => renderRow(p, counter, opts)).join('\n')}\n\n`;
     }
     if (undrafted.length) {
-      if (perTribe.size > 0) out += `-# Not yet drafted to a tribe\n`;
-      out += `${undrafted.map(p => renderRow(p, counter, opts)).join('\n')}\n\n`;
+      if (perTribe.size > 0) out += `-# Not yet drafted to a tribe (${headCount(undrafted.length)})\n`;
+      out += `${byStage(undrafted).map(p => renderRow(p, counter, opts)).join('\n')}\n\n`;
     }
     return out;
-  };
-
-  // Accepted values that count as "responded — yes" for Cast/Alternate's offer-stage breakdown.
-  // Declined stays folded into "Offer Sent" (an offer WAS sent) — the inline "· 🚫 Declined" suffix
-  // above still marks it, so it isn't lost, just not pulled into its own top-level bucket.
-  const OFFER_STAGE_ACCEPTED = new Set(['accepted', 'accepted_alternative']);
-  const splitByOfferStage = (players) => {
-    const accepted = [], offerSent = [], draft = [];
-    for (const p of players) {
-      if (OFFER_STAGE_ACCEPTED.has(p.placementResponse)) accepted.push(p);
-      else if (p.offerStatus) offerSent.push(p);
-      else draft.push(p);
-    }
-    return { accepted, offerSent, draft };
   };
 
   // The planner intro is its OWN Text Display so the [Add Cast][Bulk Offers] row can sit between it and
@@ -1392,23 +1404,22 @@ export async function buildMarooningView({ configId, guildId, playerData, season
   // cast size at a glance. Deliberately NOT capped: exceeding the estimate (e.g. 22/18) is valid and
   // should show as-is, not clamp or warn.
   const estimatedTotalPlayers = playerData[guildId]?.applicationConfigs?.[configId]?.estimatedTotalPlayers;
+  // `offerFlags`: sections where an offer is expected, so an outstanding one is worth flagging per row.
+  // Undecided has nothing to chase (you can't offer a spot you haven't decided on), so it stays unflagged.
   const CANDIDATE_SECTIONS = [
-    { emoji: '✅', title: 'Cast Players', group: castGroups.cast, breakdown: true, countSuffix: estimatedTotalPlayers != null ? `/${estimatedTotalPlayers}` : '' },
-    { emoji: '🔄', title: 'Alternate', group: castGroups.alternative, breakdown: true },
-    { emoji: '⚪', title: 'Undecided', group: castGroups.undecided, breakdown: false }
+    { emoji: '✅', title: 'Cast Players', group: castGroups.cast, offerFlags: true, countSuffix: estimatedTotalPlayers != null ? `/${estimatedTotalPlayers}` : '' },
+    { emoji: '🔄', title: 'Alternate', group: castGroups.alternative, offerFlags: true },
+    { emoji: '⚪', title: 'Undecided', group: castGroups.undecided, offerFlags: false }
   ];
   const hasCandidates = CANDIDATE_SECTIONS.some(s => s.group.length > 0);
   for (const section of CANDIDATE_SECTIONS) {
     if (section.group.length === 0) continue;
     body += `### \`\`\`${section.emoji} ${section.title} (${section.group.length}${section.countSuffix || ''})\`\`\`\n`;
-    if (section.breakdown) {
-      const { accepted, offerSent, draft } = splitByOfferStage(section.group);
-      if (accepted.length) body += `> ${section.emoji}✅ **${section.title} - Accepted**\n${renderPlayerList(accepted, candidateCounter, { suppressAcceptedTag: true })}`;
-      if (offerSent.length) body += `> ${section.emoji}📨 **${section.title} - Offer Sent**\n${renderPlayerList(offerSent, candidateCounter)}`;
-      if (draft.length) body += `> ${section.emoji} **${section.title} - Draft**\n${renderPlayerList(draft, candidateCounter)}`;
-    } else {
-      body += renderPlayerList(section.group, candidateCounter);
-    }
+    // ONE list per section, grouped by tribe. Cast/Alternate used to fan out into three
+    // "- Accepted / - Offer Sent / - Draft" sub-blocks, which meant a tribe's roster was scattered
+    // across three places and you could never see its shape at a glance — the exact thing you're on
+    // this tab to do. The per-row ⚠️ flags carry the same information without the fragmentation.
+    body += renderPlayerList(section.group, candidateCounter, { offerFlags: section.offerFlags });
   }
 
   // Not candidates — Don't Cast and Withdrawn each restart their OWN numbering at 1. HIDDEN by default
@@ -1447,12 +1458,40 @@ export async function buildMarooningView({ configId, guildId, playerData, season
     body += `### \`\`\`⚠️ Drafted — No Application (${total})\`\`\`\n`;
     for (const { rid, ids } of orphanDrafts) {
       // Mentions, not cached display names — a drafted member may not be in the member cache at all.
-      body += `<@&${rid}> (tentative)\n${ids.map(uid => `• <@${uid}> — ⚠️ no application`).join('\n')}\n`;
+      body += `<@&${rid}> (${ids.length} player${ids.length === 1 ? '' : 's'})\n${ids.map(uid => `• <@${uid}> — ⚠️ no application`).join('\n')}\n`;
     }
     body += `-# Drafted but never applied — they can't be scored or sent an offer. Use 👥 Add Cast to create their application.\n\n`;
   }
 
   if (!hasCandidates && !hasRejects && !orphanDrafts.length) body += '-# No applicants yet for this season.\n\n';
+
+  // ⚠️ Same person, several application channels for ONE season. They render once per application, so a
+  // duplicate silently inflates the cast count and gets counted twice when balancing tribes. Possible
+  // because createApplicationChannel's duplicate guard matches on channel NAME within the category —
+  // rename a channel (or change the season's channelFormat) and the same person can apply again.
+  const appsByUser = new Map();
+  for (const a of allApplications) {
+    if (!appsByUser.has(a.userId)) appsByUser.set(a.userId, []);
+    appsByUser.get(a.userId).push(a);
+  }
+  const duplicated = [...appsByUser.entries()].filter(([, apps]) => apps.length > 1);
+  if (duplicated.length) {
+    body += `### \`\`\`⚠️ Duplicate Applications (${duplicated.length})\`\`\`\n`;
+    for (const [uid, apps] of duplicated) {
+      body += `• <@${uid}> — **${apps.length}** application channels: ${apps.map(a => `<#${a.channelId}>`).join(', ')}\n`;
+    }
+    body += `-# Counted once per channel, so they're inflating the totals above. Open the extra channel and use ✖️ Withdraw to drop it out of the roster.\n\n`;
+  }
+
+  // 🔑 Key — only the flags actually present. A permanent legend for states nobody is in is just clutter.
+  if (flagsUsed.size) {
+    const KEY_LINES = [
+      [FLAG_NO_OFFER, "Hasn't been sent an offer — send one with ✒️ Bulk Offers, or ✒️ Send Offer on the 🏆 Casting tab."],
+      [FLAG_AWAITING, "Offer sent, no reply yet — they haven't accepted or declined."],
+      [FLAG_DECLINED, 'Declined their placement — they are NOT playing unless you re-offer.'],
+    ].filter(([flag]) => flagsUsed.has(flag));
+    body += `> **Key**\n${KEY_LINES.map(([flag, text]) => `> ${flag} ${text}`).join('\n')}\n\n`;
+  }
   // The 📊 SUMMARY block (Total/Cast/Alternate/Undecided/Rejected/Withdrawn + Scored) lived here until
   // 2026-08-09. Removed deliberately (Reece): every number in it is already visible in the section
   // headers directly above, so it was pure restatement taking up the tab's most valuable space.
