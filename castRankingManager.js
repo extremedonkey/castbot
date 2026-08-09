@@ -773,6 +773,79 @@ export async function applyStatusOnlyUpdateLocked(guildId, app, recordAccepted) 
 }
 
 /**
+ * BULK "Update Status Only" — the same write as above, applied to a whole decision group in ONE
+ * locked load→mutate→save cycle (Marooning → ✒️ Bulk Offers → any "Mark …" option).
+ *
+ * Why one cycle rather than N calls to applyStatusOnlyUpdateLocked: each of those owns its own
+ * load+save, so 20 applicants would be 20 read-modify-write rounds against a 5MB file, and a
+ * decision changed halfway through would be observed inconsistently. Loading INSIDE the lock also
+ * means every castingStatus is re-read immediately before its own stamp — closing the stale-decision
+ * window the send path still has (it selects targets from a snapshot taken before a ~700ms/applicant
+ * send loop, then stamps against a later load).
+ *
+ * A record that can't be updated (decision cleared mid-flight, or "Accepted" asked for on a Don't
+ * Cast applicant) is SKIPPED AND REPORTED — never aborts the batch, never silently vanishes. The
+ * Don't Cast case is deliberately not special-cased: applyStatusOnlyUpdate's existing guard rejects
+ * it, and "Mark everyone as Offered + Accepted" wants exactly that — Cast/Alternate get accepted,
+ * Don't Cast falls back to notified (retried below with recordAccepted: false).
+ *
+ * Nothing slow runs inside the lock — no Discord calls, no image work. Pure data.
+ *
+ * @param {string} guildId
+ * @param {Array} apps - applications to update (from selectInviteTargets, mapped back to app records)
+ * @param {boolean} recordAccepted - true for "… + Accepted"
+ * @returns {Promise<{updated: string[], accepted: string[], skipped: Array<{name: string, error: string}>}>}
+ */
+export async function applyStatusOnlyBulkLocked(guildId, apps, recordAccepted) {
+  const { loadPlayerData, savePlayerData, withStorageLock } = await import('./storage.js');
+  const out = { updated: [], accepted: [], skipped: [] };
+  if (!apps?.length) return out;
+
+  await withStorageLock(async () => {
+    const playerData = await loadPlayerData();
+    let dirty = false;
+    for (const app of apps) {
+      let r = applyStatusOnlyUpdate(playerData, guildId, app, recordAccepted);
+      if (!r.ok && recordAccepted) {
+        // No "accepted" state for this decision (Don't Cast) — still record that they were told.
+        const fallback = applyStatusOnlyUpdate(playerData, guildId, app, false);
+        if (fallback.ok) {
+          out.updated.push(fallback.name);
+          dirty = true;
+          continue;
+        }
+        r = fallback; // report the underlying reason, not the accepted-specific one
+      }
+      if (r.ok) {
+        (recordAccepted ? out.accepted : out.updated).push(r.name);
+        dirty = true;
+      } else {
+        out.skipped.push({ name: app.displayName || app.username || 'Applicant', error: r.error });
+      }
+    }
+    if (dirty) await savePlayerData(playerData);
+  });
+  return out;
+}
+
+/**
+ * Summary card for a bulk "Mark …" run. Names every outcome — a status write that silently touched
+ * fewer records than the host expected is worse than one that says so.
+ */
+export function buildStatusOnlySummary({ updated, accepted, skipped }) {
+  const total = updated.length + accepted.length;
+  const lines = [`## 🕵️ Statuses Updated`, `**${total}** applicant${total === 1 ? '' : 's'} updated — **no messages were sent.**`];
+  if (accepted.length) lines.push(`> 🎉 Marked offered + accepted: ${accepted.join(', ')}`);
+  if (updated.length) lines.push(`> 🕵️ Marked offered: ${updated.join(', ')}`);
+  if (!total) lines.push('-# Nothing to update.');
+  if (skipped.length) {
+    lines.push(`-# ⚠️ ${skipped.length} skipped: ${skipped.map(s => s.name).join(', ')}`);
+    lines.push('-# (Skipped applicants have no casting decision set.)');
+  }
+  return { components: [{ type: 17, accent_color: total ? 0x27ae60 : 0xe67e22, components: [{ type: 10, content: lines.join('\n') }] }] };
+}
+
+/**
  * Record an applicant's Accept/Decline click on a placement invite card — locked load→mutate→save.
  * Validates the record exists and the clicker IS the applicant inside the lock, then writes
  * placementResponse ('accepted' / 'accepted_alternative' for an alternate offer / 'declined').
@@ -877,6 +950,65 @@ export function selectInviteTargets(allApplications, playerData, guildId, mode, 
   return targets;
 }
 
+/**
+ * The BULK modal's "what do you want to do?" options (Marooning → ✒️ Bulk Offers).
+ *
+ * Two blocks, both scoped by CASTING DECISION rather than by template name — "Send to Cast only"
+ * is what a host is actually thinking; "Send Successful only" made them translate. The send values
+ * are deliberately UNCHANGED (`all`/`successful`/`alternative`/`unsuccessful`): they double as
+ * message-type keys inside selectInviteTargets, so renaming them would ripple through the send path
+ * for zero user-visible gain. Only the labels moved.
+ *
+ * The `mark_*` block is the bulk twin of the single-invite modal's "Update Status Only" options —
+ * it records what the host already did by hand (DM, group chat, off-Discord) and sends NOTHING.
+ * Doing that for a 20-person cast used to mean opening 20 applicant cards.
+ *
+ * REMOVED 2026-08-09: `selected` ("Send to currently selected applicant only"). Bulk is only
+ * reachable from Marooning, where the button hardcodes appIndex = 0 — so it always fired at
+ * whoever happened to sort first. The single-applicant modal still has its own `selected` option,
+ * which is the one that was ever meaningful.
+ */
+export const BULK_MODE_OPTIONS = [
+  { label: 'Save as draft only', value: 'draft', emoji: { name: '💾' }, description: 'Saves the templates above. Nothing sent, no statuses change.', default: true },
+  // ── Send: posts the message to each applicant's channel ──
+  { label: 'Send to everyone now', value: 'all', emoji: { name: '📨' }, description: 'Cast, Alternate and Don\'t Cast all get their message now.' },
+  { label: 'Send to Cast only', value: 'successful', emoji: { name: '🎬' }, description: 'Only ✅ Cast applicants get their offer.' },
+  { label: 'Send to Alternate only', value: 'alternative', emoji: { name: '🔄' }, description: 'Only 🔄 Alternate applicants get the backup offer.' },
+  { label: 'Send to Don\'t Cast only', value: 'unsuccessful', emoji: { name: '🗑️' }, description: 'Only 🙅 Don\'t Cast applicants get the unsuccessful message.' },
+  // ── Mark: records status, sends nothing ──
+  // EVERY description states that no message is sent. These sit one row below options that DO
+  // message people, in a 12-row list, and the difference between them is a ping to your whole cast.
+  { label: 'Mark everyone as Offered', value: 'mark_offered_all', emoji: { name: '🕵️' }, description: 'No messages sent — records that you told them all yourself.' },
+  { label: 'Mark everyone as Offered + Accepted', value: 'mark_accepted_all', emoji: { name: '🎉' }, description: 'No messages. Cast + Alternate accepted; Don\'t Cast notified.' },
+  { label: 'Mark Cast as Offered', value: 'mark_offered_cast', emoji: { name: '🕵️' }, description: '✅ Cast only. No message sent.' },
+  { label: 'Mark Cast as Offered + Accepted', value: 'mark_accepted_cast', emoji: { name: '🎉' }, description: '✅ Cast only, no message — as if each of them clicked Accept.' },
+  { label: 'Mark Alternate as Offered', value: 'mark_offered_alt', emoji: { name: '🕵️' }, description: '🔄 Alternate only. No message sent.' },
+  { label: 'Mark Alternate as Offered + Accepted', value: 'mark_accepted_alt', emoji: { name: '🎉' }, description: '🔄 Alternate only, no message — records an accepted alternate.' },
+  { label: 'Mark Don\'t Cast as Notified', value: 'mark_offered_reject', emoji: { name: '🗑️' }, description: '🙅 Don\'t Cast only. No message — records you already told them.' }
+];
+
+/**
+ * Parse an `invite_mode` value into what the submit handler actually needs to do.
+ * One place decides send-vs-mark, so the handler branches on `kind` instead of string-matching.
+ *
+ * `scope` is deliberately expressed in selectInviteTargets' EXISTING vocabulary
+ * ('all' | 'successful' | 'alternative' | 'unsuccessful') so both paths share one target selector —
+ * a mark and a send over the same group always hit exactly the same applicants.
+ *
+ * @param {string} mode
+ * @returns {{kind: 'draft'|'send'|'mark', scope: string|null, recordAccepted: boolean}}
+ */
+export function parseInviteMode(mode) {
+  const MARK_SCOPE = { all: 'all', cast: 'successful', alt: 'alternative', reject: 'unsuccessful' };
+  const m = /^mark_(offered|accepted)_(all|cast|alt|reject)$/.exec(String(mode || ''));
+  if (m) return { kind: 'mark', scope: MARK_SCOPE[m[2]], recordAccepted: m[1] === 'accepted' };
+  if (['all', 'successful', 'alternative', 'unsuccessful', 'selected'].includes(mode)) {
+    return { kind: 'send', scope: mode, recordAccepted: false };
+  }
+  // Unknown / 'draft' → save the templates and do nothing else. Never guess at a destructive action.
+  return { kind: 'draft', scope: null, recordAccepted: false };
+}
+
 /** Human words for the single-invite "Send {name} …" option, keyed by the applicant's messageType. */
 const SINGLE_SEND_WORD = { successful: 'Casting Offer', alternative: 'Alternate Message', unsuccessful: 'Unsuccessful Message' };
 
@@ -922,14 +1054,7 @@ export function buildCastingInvitesModal(playerData, guildId, appIndex, configId
       });
     }
   } else {
-    modeOptions = [
-      { label: 'Save as draft only', value: 'draft', emoji: { name: '💾' }, description: 'Save the templates, send nothing', default: true },
-      { label: 'Send ALL now (Cast + Alternate + Reject)', value: 'all', emoji: { name: '📨' } },
-      { label: 'Send Successful only', value: 'successful', emoji: { name: '🎬' } },
-      { label: "Send Unsuccessful only", value: 'unsuccessful', emoji: { name: '🗑️' } },
-      { label: 'Send Alternative only', value: 'alternative', emoji: { name: '🔄' } },
-      { label: 'Send to currently selected applicant only', value: 'selected', emoji: { name: '👤' } }
-    ];
+    modeOptions = BULK_MODE_OPTIONS.map(o => ({ ...o }));
   }
 
   return {
@@ -942,7 +1067,7 @@ export function buildCastingInvitesModal(playerData, guildId, appIndex, configId
       {
         type: 18,
         label: 'What do you want to do when you submit this?',
-        description: 'Undecided applicants (no casting decision) are never messaged.',
+        description: 'Undecided applicants (no casting decision) are never messaged or marked.',
         component: {
           type: 3, custom_id: 'invite_mode', required: true, min_values: 1, max_values: 1,
           options: modeOptions
@@ -952,32 +1077,51 @@ export function buildCastingInvitesModal(playerData, guildId, appIndex, configId
   };
 }
 
-/** Build the ephemeral confirmation card shown before a send actually fires. */
+/**
+ * Build the ephemeral confirmation card shown before a send OR a bulk status write actually fires.
+ *
+ * Marks get the same gate as sends: "Mark everyone as Offered + Accepted" overwrites
+ * placementResponse across a whole cast, and a mis-click on a 12-option select is easy. The wording
+ * flips so nobody confirms a send thinking it's a silent update, or vice versa — the two differ
+ * only in whether players get pinged, which is exactly the mistake worth one extra click.
+ */
 export function buildInvitesConfirm({ mode, appIndex, configId, targets }) {
+  const isMark = parseInviteMode(mode).kind === 'mark';
   const counts = targets.reduce((a, t) => { a[t.messageType] = (a[t.messageType] || 0) + 1; return a; }, {});
   const lines = [
-    counts.successful ? `🎬 Successful → **${counts.successful}**` : null,
-    counts.alternative ? `🔄 Alternative → **${counts.alternative}**` : null,
-    counts.unsuccessful ? `🗑️ Unsuccessful → **${counts.unsuccessful}**` : null
+    counts.successful ? `✅ Cast → **${counts.successful}**` : null,
+    counts.alternative ? `🔄 Alternate → **${counts.alternative}**` : null,
+    counts.unsuccessful ? `🙅 Don't Cast → **${counts.unsuccessful}**` : null
   ].filter(Boolean);
-  const body = targets.length === 0
-    ? `⚠️ No applicants match this option (Undecided applicants are never messaged). Nothing will be sent.`
-    : `You're about to message **${targets.length}** applicant${targets.length !== 1 ? 's' : ''} in their application channels:\n${lines.join('\n')}\n\n-# This pings each applicant and cannot be undone.`;
+  const n = targets.length;
+  const plural = n !== 1 ? 's' : '';
+  const empty = isMark
+    ? `⚠️ No applicants match this option (Undecided applicants are never marked). Nothing will change.`
+    : `⚠️ No applicants match this option (Undecided applicants are never messaged). Nothing will be sent.`;
+  const body = n === 0 ? empty : (isMark
+    ? `You're about to update the status of **${n}** applicant${plural}:\n${lines.join('\n')}\n\n-# **No messages are sent** and nobody is notified — this only records what you've already done.`
+    : `You're about to message **${n}** applicant${plural} in their application channels:\n${lines.join('\n')}\n\n-# This pings each applicant and cannot be undone.`);
   const components = [
-    { type: 10, content: `## 📨 Send Casting Invites?` },
+    { type: 10, content: isMark ? `## 🕵️ Update Statuses?` : `## 📨 Send Casting Invites?` },
     { type: 14 },
     { type: 10, content: body }
   ];
-  if (targets.length > 0) {
+  if (n > 0) {
     components.push({
       type: 1,
       components: [
         { type: 2, custom_id: `casting_invites_cancel`, label: 'Cancel', style: 2, emoji: { name: '❌' } },
-        { type: 2, custom_id: `casting_invites_confirm:${mode}:${appIndex}:${configId}`, label: 'Confirm Send', style: 3, emoji: { name: '📨' } }
+        {
+          type: 2,
+          custom_id: `casting_invites_confirm:${mode}:${appIndex}:${configId}`,
+          label: isMark ? 'Confirm Update' : 'Confirm Send',
+          style: 3,
+          emoji: { name: isMark ? '🕵️' : '📨' }
+        }
       ]
     });
   }
-  return { flags: (1 << 15) | (1 << 6), components: [{ type: 17, accent_color: 0xf39c12, components }] };
+  return { flags: (1 << 15) | (1 << 6), components: [{ type: 17, accent_color: isMark ? 0x9b59b6 : 0xf39c12, components }] };
 }
 
 /**

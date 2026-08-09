@@ -5789,12 +5789,15 @@ export function sendPremiumDenied(res, isAdminSurface) {
  * @param {string} pathLabel - For the warning line, e.g. 'UPDATE_MESSAGE' / 'webhook PATCH'
  * @returns {boolean} true if data was rewritten
  */
-export function wrapBareContentForV2(data, parentMessage, pathLabel) {
+export function wrapBareContentForV2(data, parentMessage, pathLabel, handlerId = null) {
   const parentIsV2 = !!((parentMessage?.flags ?? 0) & (1 << 15));
   if (!parentIsV2) return false;
   if (!data?.content || data.components?.length || data.embeds?.length) return false;
 
-  console.warn(`🛡️ [SHAPE-GUARD] content-only ${pathLabel} onto V2 message — auto-wrapped into container. Fix the handler to return a V2 container.`);
+  // NAME THE HANDLER. Without it this line says "some handler somewhere is wrong" once a minute and
+  // there is nothing you can do with it — you can't grep for a handler the message never identifies.
+  // (Reece, 2026-08-09: "less specific than the stale-read warning".)
+  console.warn(`🛡️ [SHAPE-GUARD] ${handlerId || 'unknown handler'}: content-only ${pathLabel} onto V2 message — auto-wrapped into container. Fix this handler to return a V2 container.`);
   data.components = [{
     type: 17, // Container
     components: [{ type: 10, content: data.content }]
@@ -5803,7 +5806,7 @@ export function wrapBareContentForV2(data, parentMessage, pathLabel) {
   return true;
 }
 
-export function sendResponse(res, data, updateMessage = false, parentMessage = null) {
+export function sendResponse(res, data, updateMessage = false, parentMessage = null, handlerId = null) {
   // Proactive emoji safety for IMMEDIATE responses: res.send goes straight to Discord and
   // (unlike DiscordRequest) can't reactively retry, so scrub invalid/inaccessible/known-bad
   // emoji here. Covers the data.components tree for UPDATE_MESSAGE and CHANNEL_MESSAGE alike.
@@ -5852,7 +5855,7 @@ export function sendResponse(res, data, updateMessage = false, parentMessage = n
 
     // 🛡️ SHAPE-GUARD (immediate path) — see wrapBareContentForV2. ~170 handlers return
     // { content } error strings; scripts/scan-interaction-shapes.js tracks them.
-    wrapBareContentForV2(cleanData, parentMessage, 'UPDATE_MESSAGE');
+    wrapBareContentForV2(cleanData, parentMessage, 'UPDATE_MESSAGE', handlerId);
 
     // Validate the response
     if (!validateResponse(cleanData)) {
@@ -6150,7 +6153,7 @@ export class ButtonHandlerFactory {
           }
 
           console.log(`🔍 ButtonHandlerFactory sending response for ${config.id}, updateMessage: ${shouldUpdateMessage}, isModal: false`);
-          return sendResponse(res, result, shouldUpdateMessage, context.message);
+          return sendResponse(res, result, shouldUpdateMessage, context.message, config.id);
         }
 
         // 7. Handle deferred response update
@@ -6191,7 +6194,7 @@ export class ButtonHandlerFactory {
             // path was not, so every deferred handler with a content-only branch (20 of the
             // grandfathered class-A baseline — permission denials, "not found" errors) was a
             // live failure. Observed on season_app_ranking / season_marooning, 2026-08-09.
-            wrapBareContentForV2(webhookData, context.message, 'webhook PATCH');
+            wrapBareContentForV2(webhookData, context.message, 'webhook PATCH', config.id);
             return updateDeferredResponse(context.token, webhookData);
           }
         }

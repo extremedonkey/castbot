@@ -5583,7 +5583,27 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const appIndex = parseInt(rest.slice(firstColon + 1, secondColon));
           const configId = rest.slice(secondColon + 1);
 
-          const { sendCastingInvites, getCastingMessages, buildInvitesSentSummary } = await import('./castRankingManager.js');
+          const {
+            sendCastingInvites, getCastingMessages, buildInvitesSentSummary,
+            parseInviteMode, selectInviteTargets, applyStatusOnlyBulkLocked, buildStatusOnlySummary
+          } = await import('./castRankingManager.js');
+          const parsed = parseInviteMode(mode);
+
+          // BULK "Mark …" — status write only, no Discord traffic at all.
+          if (parsed.kind === 'mark') {
+            const { getApplicationsForSeason } = await import('./storage.js');
+            const allApplications = await getApplicationsForSeason(context.guildId, configId);
+            const playerData = await loadPlayerData();
+            // Re-select from CURRENT data rather than trusting the confirm card's snapshot — a
+            // decision changed while the card sat on screen must not be stamped with a stale group.
+            const targets = selectInviteTargets(allApplications, playerData, context.guildId, parsed.scope, appIndex);
+            const byChannel = new Map(allApplications.map(a => [a.channelId, a]));
+            const apps = targets.map(t => byChannel.get(t.channelId)).filter(Boolean);
+            const r = await applyStatusOnlyBulkLocked(context.guildId, apps, parsed.recordAccepted);
+            console.log(`🕵️ Bulk status [${mode}] guild ${context.guildId}: ${r.updated.length + r.accepted.length} updated, ${r.skipped.length} skipped`);
+            return buildStatusOnlySummary(r);
+          }
+
           const playerData = await loadPlayerData();
           const messages = getCastingMessages(playerData, context.guildId, configId);
           const r = await sendCastingInvites({ client: context.client, guildId: context.guildId, configId, mode, appIndex, messages });
@@ -37208,16 +37228,29 @@ To fix this:
           const messages = { successful: fields.msg_successful || '', alternative: fields.msg_alternative || '', unsuccessful: fields.msg_unsuccessful || '' };
           const mode = fields.invite_mode || 'draft';
 
-          const { saveCastingMessages, selectInviteTargets, buildInvitesConfirm, applyStatusOnlyUpdateLocked } = await import('./castRankingManager.js');
+          const { saveCastingMessages, selectInviteTargets, buildInvitesConfirm, applyStatusOnlyUpdateLocked, parseInviteMode } = await import('./castRankingManager.js');
           await saveCastingMessages(context.guildId, configId, messages, context.userId, Date.now());
 
-          if (mode === 'draft') {
+          const parsed = parseInviteMode(mode);
+          // Unknown modes land on 'draft' — templates saved, nothing else touched. Never guess at a
+          // destructive action from a value we don't recognise.
+          if (mode === 'draft' || (parsed.kind === 'draft' && mode !== 'status_only' && mode !== 'status_only_accepted')) {
             return { flags: (1 << 15), components: [{ type: 17, accent_color: 0x27ae60, components: [{ type: 10, content: '💾 **Templates saved.** No messages were sent.' }] }] };
           }
 
           const { getApplicationsForSeason } = await import('./storage.js');
           const allApplications = await getApplicationsForSeason(context.guildId, configId);
 
+          // BULK "Mark …" — same confirm gate as a send (it can overwrite a whole cast's
+          // placementResponse), so compute the targets here and let the confirm handler do the write.
+          if (parsed.kind === 'mark') {
+            const playerData = await loadPlayerData();
+            const targets = selectInviteTargets(allApplications, playerData, context.guildId, parsed.scope, appIndex);
+            return buildInvitesConfirm({ mode, appIndex, configId, targets });
+          }
+
+          // SINGLE-applicant status-only (Casting tab) — one record, applied immediately. No confirm:
+          // a single row is cheap to correct, and the card it came from names the applicant already.
           if (mode === 'status_only' || mode === 'status_only_accepted') {
             const result = await applyStatusOnlyUpdateLocked(context.guildId, allApplications[appIndex], mode === 'status_only_accepted');
             if (!result.ok) {
