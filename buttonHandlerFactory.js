@@ -3,6 +3,7 @@ import {
   InteractionResponseFlags,
 } from 'discord-interactions';
 import { PermissionFlagsBits } from 'discord.js';
+import { memberHasAnyPermission } from './utils/effectivePermissions.js';
 import { DiscordRequest } from './utils.js';
 import { sanitizeComponentEmojis } from './utils/emojiUtils.js';
 
@@ -3424,6 +3425,15 @@ export const BUTTON_REGISTRY = {
     category: 'application_management',
     requiresModal: true
   },
+  'marooning_add_cast_*': {
+    label: 'Add Cast',
+    description: 'Create application channels for cast who never clicked Apply (late additions, off-Discord recruits) — same result as them applying themselves',
+    emoji: '👥',
+    style: 'Secondary',
+    parent: 'season_marooning',
+    category: 'application_management',
+    requiresModal: true
+  },
   'marooning_show_rejects_*': {
     label: 'Rejects',
     description: 'Toggle button — currently collapsed: reveal the Don\'t Cast/Withdrawn roster on Marooning (hidden by default)',
@@ -5679,23 +5689,32 @@ export const SECURITY_TIERS = {
 const OWNER_USER_ID = '391415444084490240';
 
 /** Resolves a `security:` tier against the clicker. Pure-ish — unit-tested via evaluateSecurityTier. */
-export function evaluateSecurityTier(tier, { member, userId }) {
+export function evaluateSecurityTier(tier, { member, userId, guildId }) {
   if (tier == null) return { allowed: true, reason: 'no_tier' };
   if (!(tier in SECURITY_TIERS)) return { allowed: false, reason: 'unknown_tier' };
   if (tier === 'public') return { allowed: true, reason: 'public' };
   if (tier === 'owner') {
+    // Deliberately NOT reachable via Global Access — the owner tier is an identity check,
+    // not a permission, and a guild admin must not be able to grant it.
     return userId === OWNER_USER_ID
       ? { allowed: true, reason: 'owner' }
       : { allowed: false, reason: 'not_owner', permissionName: 'Bot Owner' };
   }
-  return hasPermission(member, SECURITY_TIERS[tier])
+  return hasPermission(member, SECURITY_TIERS[tier], guildId)
     ? { allowed: true, reason: 'has_permission' }
     : { allowed: false, reason: 'missing_permission', permissionName: 'Manage Roles' };
 }
 
-export function hasPermission(member, permission) {
-  if (!member?.permissions) return false;
-  return (BigInt(member.permissions) & permission) !== 0n;
+/**
+ * Does the clicker hold `permission`?
+ *
+ * 🚨 Always pass `guildId`. Without it the Global Access whitelist is skipped, so a whitelisted
+ * host passes some gates and not others — the hardest kind of permission bug to diagnose.
+ * Never replace this with a raw `&`: that skips the Administrator override too (see
+ * utils/effectivePermissions.js and the 2026-08-09 Casting lockout).
+ */
+export function hasPermission(member, permission, guildId) {
+  return memberHasAnyPermission(member, guildId, permission);
 }
 
 /**
@@ -6072,7 +6091,7 @@ export class ButtonHandlerFactory {
         
         // 3. Permission checking
         if (config.requiresPermission) {
-          if (!hasPermission(context.member, config.requiresPermission)) {
+          if (!hasPermission(context.member, config.requiresPermission, context.guildId)) {
             return sendPermissionDenied(res, config.permissionName || 'required permissions');
           }
         }

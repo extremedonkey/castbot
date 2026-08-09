@@ -352,7 +352,15 @@ export class MenuBuilder {
     let stateLine = `**This server doesn't have CastBot Premium yet.**`;
     if (ts?.state === 'lapsed') stateLine = `**This server's premium lapsed <t:${Math.floor(ts.graceUntil / 1000)}:R>** — renew to pick up where you left off.`;
     else if (ts?.state === 'grace') stateLine = `**This server's premium expired <t:${Math.floor(ts.validUntil / 1000)}:R>** — still working during grace, renew to keep it.`;
-    else if (ts?.state === 'active') stateLine = `**This server has CastBot Premium** ${ts.permanent ? '(permanent)' : `until <t:${Math.floor(ts.validUntil / 1000)}:D>`}.`;
+    // Active + Ko-fi-backed: name the renewal explicitly. Hosts kept reading "until <date>" as "it stops
+    // then" and re-subscribing on top. A permanent grant has no Ko-fi charge, so it keeps the short line.
+    else if (ts?.state === 'active') {
+      stateLine = ts.permanent
+        ? `**This server has CastBot Premium** (permanent).`
+        : `**This server has paid up for CastBot Premium** until <t:${Math.floor(ts.validUntil / 1000)}:D>. ` +
+          `Ko-Fi will attempt to charge you close to the renewal date, to renew CastBot Premium for another month.`;
+    }
+    const isEntitled = ts?.state === 'active';
 
     const components = [
       { type: 10, content: `## ⭐ CastBot Premium` },
@@ -366,13 +374,19 @@ export class MenuBuilder {
           `• 🦁 **Safari power ops** — attributes, enemies, import/export\n` +
           `• 🚀 **Early access** to new features as they land`
       },
+      // Already entitled? "How to get it" is noise — the only thing left to do from this screen is move
+      // the subscription to next season's server, which is the actual reason entitled hosts come here.
       {
         type: 10,
-        content: `**How to get it**\n` +
-          `1. Join the **CastBot Premium** membership at [ko-fi.com/CastBot](https://ko-fi.com/CastBot)\n` +
-          `2. Come back here and tap **🎟️ Redeem** to link your subscription\n` +
-          `3. Premium activates for this server — features unlock instantly\n` +
-          `-# One subscription covers one server, and you can move it when a new season means a new server.`
+        content: isEntitled
+          ? `**How to transfer Premium to another server**\n` +
+            `1. Simply tap **🎟️ Redeem** below and enter your **Ko-Fi account** email address.\n` +
+            `2. CastBot will then inform you what server you have CastBot Premium on and allow you to transfer.`
+          : `**How to get it**\n` +
+            `1. Join the **CastBot Premium** membership at [ko-fi.com/CastBot](https://ko-fi.com/CastBot)\n` +
+            `2. Come back here and tap **🎟️ Redeem** to link your subscription\n` +
+            `3. Premium activates for this server — features unlock instantly\n` +
+            `-# One subscription covers one server, and you can move it when a new season means a new server.`
       },
       { type: 14 },
       { type: 1, components: [

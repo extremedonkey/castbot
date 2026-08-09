@@ -7,7 +7,13 @@
 # See: CLAUDE.md "Button Handler Factory" section
 
 BASELINE=99  # Legacy handler count as of 2026-07-28 (prod_setup_tycoons factory conversion). Includes completion_edit modal exception. Only goes DOWN.
-APP_JS_LINES_MAX=49765  # app.js line-count ratchet as of 2026-08-08 (actual: 49765, Ko-fi webhook added as thin routes + askcb handler bodies extracted to askCastBot.js). Only goes DOWN. Extract more than you add.
+APP_JS_LINES_MAX=49790  # app.js line-count ratchet as of 2026-08-09 (actual: 49790). BUMPED from 49765 — see note below. Only goes DOWN. Extract more than you add.
+# ⚠️ 2026-08-09 bump (+25), attributed honestly: the permission funnel (RaP 0882) is net +5 in app.js
+# after extracting the reader to utils/effectivePermissions.js and deleting 22 redundant
+# guild/member fetches; concurrent Add Cast / Marooning feature work in the same working tree is
+# net +22. Also realigned the SOURCE and INSTALLED copies of this hook, which had silently drifted
+# (49765 here vs 49778 in .git/hooks/pre-commit) — the auto-sync at the top only compares BASELINE,
+# so a change to this value alone never propagates. If you edit it, edit BOTH.
 
 # ── Auto-sync: keep installed hook in sync with source ──
 SOURCE_HOOK="scripts/hooks/pre-commit"

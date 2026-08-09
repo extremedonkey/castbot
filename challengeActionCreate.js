@@ -12,6 +12,8 @@
 
 import { loadPlayerData, savePlayerData } from './storage.js';
 import { resolveEmoji } from './utils/emojiUtils.js';
+import { PermissionFlagsBits } from 'discord.js';
+import { memberHasAnyPermission } from './utils/effectivePermissions.js';
 
 // ─────────────────────────────────────────────
 // Backwards-compat helper: normalize assignment values
@@ -699,15 +701,33 @@ export function verifyChallengeStatus(challenge, isAdmin) {
 // Exported: Security — Access verification (sync)
 // ─────────────────────────────────────────────
 
+/** True if `member` holds `roleId`. Tolerates the payload shape (roles = array of IDs) and the
+ *  discord.js shape (roles.cache = Collection). The payload shape is what callers actually pass. */
+function memberHasRole(member, roleId) {
+  const roles = member?.roles;
+  if (!roles) return false;
+  if (Array.isArray(roles)) return roles.some(id => String(id) === String(roleId));
+  return !!roles.cache?.has?.(roleId);
+}
+
 /**
  * Verify a member has access to execute a challenge action.
  * Called before executeButtonActions() for challenge-posted action buttons.
+ *
+ * 🐞 Fixed 2026-08-09: this was written against a discord.js GuildMember (`.roles.cache`,
+ * `.permissions.has()`) but the only caller (app.js) passes the INTERACTION PAYLOAD member, where
+ * `roles` is an array of ID strings and `permissions` is a string. Both optional-chained checks
+ * therefore evaluated to `undefined` — so every **tribe** action said "this action is for another
+ * tribe" and every **host** action said "this is a host-only action", for everyone, always.
+ * Failed closed, which is why it was never reported as a security issue — just as broken buttons.
+ *
  * @param {object} challenge - Challenge entity
  * @param {string} actionId - The action being executed
- * @param {object} member - Discord GuildMember (needs .user.id and .roles.cache)
+ * @param {object} member - Interaction payload member (context.member)
+ * @param {string} [guildId] - Needed for Global Access roles on the host tier
  * @returns {{ allowed: boolean, reason?: string }}
  */
-export function verifyChallengeActionAccess(challenge, actionId, member) {
+export function verifyChallengeActionAccess(challenge, actionId, member, guildId) {
   const actions = getChallengeActions(challenge);
 
   // playerAll — anyone can execute
@@ -726,15 +746,14 @@ export function verifyChallengeActionAccess(challenge, actionId, member) {
   // tribe — only members with the tribe role
   for (const [roleId, assignedIds] of Object.entries(actions.tribe)) {
     if (extractActionIds(assignedIds).includes(actionId)) {
-      if (member?.roles?.cache?.has(roleId)) return { allowed: true };
+      if (memberHasRole(member, roleId)) return { allowed: true };
       return { allowed: false, reason: 'This action is for another tribe.' };
     }
   }
 
-  // host — only users with ManageRoles (standard host permission)
+  // host — only users with ManageRoles (standard host permission) or a Global Access role
   if (extractActionIds(actions.host).includes(actionId)) {
-    const hasPermission = member?.permissions?.has?.(1n << 28n); // MANAGE_ROLES
-    if (hasPermission) return { allowed: true };
+    if (memberHasAnyPermission(member, guildId, PermissionFlagsBits.ManageRoles)) return { allowed: true };
     return { allowed: false, reason: 'This is a host-only action.' };
   }
 

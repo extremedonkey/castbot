@@ -147,7 +147,9 @@ export async function handleRedeemModal(req, res, client) {
 
   const { hasPermission } = await import('../../buttonHandlerFactory.js');
   const { PermissionFlagsBits } = await import('discord.js');
-  if (!hasPermission(req.body.member, PermissionFlagsBits.ManageRoles)) {
+  // Global Access roles count here too (they're worth Manage Roles) — a producer trusted to run
+  // the season can bind the host's Ko-fi code to it. Owner-tier features remain unreachable.
+  if (!hasPermission(req.body.member, PermissionFlagsBits.ManageRoles, req.body.guild_id)) {
     return ephemeral('🎟️ You need Manage Roles in this server to redeem premium for it.');
   }
   const guildId = req.body.guild_id;

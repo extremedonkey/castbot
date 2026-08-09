@@ -105,13 +105,16 @@ Incident-05 shape: concurrent `load → mutate → save` cycles silently erase e
 
 ## 📐 Current Marooning Render Shape (code-authoritative: `buildMarooningView`)
 
+> ⚠️ **Superseded 2026-08-09** — the tab was reordered (casting first, Tribes below), SUMMARY was
+> deleted, Bulk Invites became **Bulk Offers** in a new row with **👥 Add Cast**, and New Tribe went
+> private from this tab. Diagram below updated to match; see `docs/03-features/SeasonManager.md`.
+
 ```
 ## 🚣 Marooning  /  > ### {season}
 [Apps · Planner · Casting · Marooning · (Channels)]
-### ```🏕️ Tribes```
-[🏕️ New Tribe] [💭 Draft Tribes (disabled if 0 tribes)]
-Tribes: {emoji @role, ...}          ← ALL known live-role tribes (scope decision: intentional)
-### ```🎬 Casting Decisions```
+### ```🚣‍♀️ Marooning Planner```
+Use this tab to review all of your casting decisions, …    ← intro copy
+[👥 Add Cast] [✒️ Bulk Offers]
 ### ```✅ Cast Players (N or N/Est)```
 > ✅✅ Cast Players - Accepted       ← suppressAcceptedTag
 1. Name - 4.5/5.0 (2 votes)
@@ -122,11 +125,24 @@ Tribes: {emoji @role, ...}          ← ALL known live-role tribes (scope decisi
 ### ```⚪ Undecided (N)```           ← flat, numbering continues from Alternate
 -# 🗑️ N Don't Cast/Withdrawn applicants hidden — click Rejects below to view.   ← collapsed default
    (expanded: ### 🙅 Don't Cast, ### ✖️ Withdrawn — each numbered from 1)
-### 📊 SUMMARY                       ← counts ALWAYS include hidden groups
-[← Seasons] [✏️ Edit] [✒️ Bulk Invites] [🗑️ Rejects (disabled if none)]
+### ```🏕️ Tribes```
+Use Draft Tribes to play around with different casting combinations…   ← intro copy
+[🏕️ New Tribe (PRIVATE)] [💭 Draft Tribes (disabled if 0 tribes)]
+Tribes: {emoji @role, ...}          ← ALL known live-role tribes (scope decision: intentional)
+[← Seasons] [✏️ Edit] [🗑️ Rejects (disabled if none)]
 ```
 
+(The 📊 SUMMARY block sat above the bottom row until 2026-08-09 — deleted as pure restatement of the
+section headers.)
+
 Per-tribe draft sub-grouping (`draftTribes` under `applicationConfigs[configId]`, host-only, no roles assigned) still applies inside every list.
+
+**Draft Tribes never assigned roles — New Tribe did.** A 2026-08-09 report that Draft Tribes was
+setting player roles traced to the button beside it: 🏕️ New Tribe's modal carried a Tribe Members
+User Select (`member.roles.add()`) and linked the tribe straight to the Active Castlist, all without
+leaving this tab. From Marooning both are now suppressed — role created, nothing else. Note the
+mislabelled comment that made this easy to miss: the `roles.add` loop was described in-code as
+"assigning selected members to draft tribes".
 
 ---
 

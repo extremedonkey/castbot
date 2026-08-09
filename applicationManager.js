@@ -434,8 +434,15 @@ function createApplicationButton(buttonText, configId, buttonStyle = 'Primary') 
 
 /**
  * Create an application channel for a user
+ * @param {Object} [options]
+ * @param {boolean} [options.grantApplicantAccess=true] - false omits the applicant's own permission
+ *   overwrite, so the channel is created and fully wired (record, welcome card, prod access) but the
+ *   user can't see it. Used by 👥 Add Cast's "don't add user to channel" mode for dry runs — you get a
+ *   real, working application without pinging a real person. NEVER default this to false: an applicant
+ *   who can't see their own channel can't apply.
  */
-async function createApplicationChannel(guild, user, config, configId = 'unknown') {
+async function createApplicationChannel(guild, user, config, configId = 'unknown', options = {}) {
+    const { grantApplicantAccess = true } = options;
     try {
         // Get the category
         const category = await guild.channels.fetch(config.categoryId);
@@ -510,7 +517,8 @@ async function createApplicationChannel(guild, user, config, configId = 'unknown
                 id: everyoneRoleId,
                 deny: [PermissionFlagsBits.ViewChannel]
             },
-            {
+            // The applicant's own access — omitted only by Add Cast's "don't add user" test mode.
+            ...(grantApplicantAccess ? [{
                 id: userId,
                 allow: [
                     PermissionFlagsBits.ViewChannel,
@@ -520,7 +528,7 @@ async function createApplicationChannel(guild, user, config, configId = 'unknown
                     PermissionFlagsBits.AddReactions,
                     PermissionFlagsBits.UseExternalEmojis
                 ]
-            }
+            }] : [])
         ];
 
         // Add globalRoleAccess roles from CastBot permissions config (Roles & Security)

@@ -229,7 +229,6 @@
   "app.js::season_delete_select",
   "app.js::season_export_questions",
   "app.js::season_import_questions",
-  "app.js::season_management_menu",
   "app.js::share_tip",
   "app.js::show_castlist2",
   "app.js::snowflake_calculator",

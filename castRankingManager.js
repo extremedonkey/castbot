@@ -1249,7 +1249,8 @@ export async function buildMarooningView({ configId, guildId, playerData, season
 
   // Per-applicant score + casting decision (userId kept for the private draft-tribe grouping below).
   // Grouping + score sort live in computeCastingOrder — shared with the Casting jump-select.
-  const { ordered: applicantData, groups: castGroups } = computeCastingOrder(allApplications, playerData, guildId, guild);
+  // Only `groups` is needed here; the flat `ordered` list was solely for the deleted SUMMARY's score tally.
+  const { groups: castGroups } = computeCastingOrder(allApplications, playerData, guildId, guild);
 
   // ===== 🏕️ Tribes — loaded up here because the casting list below groups players by their PRIVATE
   // draft-tribe assignment, and the Draft Tribes button needs the tribe count. Deleted-role tribes are
@@ -1359,7 +1360,14 @@ export async function buildMarooningView({ configId, guildId, playerData, season
     return { accepted, offerSent, draft };
   };
 
-  let body = '### ```🎬 Casting Decisions```\n';
+  // The planner intro is its OWN Text Display so the [Add Cast][Bulk Offers] row can sit between it and
+  // the roster. Keeping them in one string (as before) would force the buttons above the header or below
+  // the whole roster — neither is where the actions belong.
+  const plannerIntro = '### ```🚣‍♀️ Marooning Planner```\n' +
+    'Use this tab to review all of your casting decisions, make sure everyone has accepted their ' +
+    'placement and plan / balance tribes ahead of marooning.';
+
+  let body = '';
 
   // Cast, Alternate, and Undecided share ONE continuous counter: a host tracking toward a target cast
   // size wants a single running count across everyone still "in consideration". Don't Cast and Withdrawn
@@ -1392,8 +1400,7 @@ export async function buildMarooningView({ configId, guildId, playerData, season
   // Not candidates — Don't Cast and Withdrawn each restart their OWN numbering at 1. HIDDEN by default
   // (🗑️ Show/Hide Rejects toggle in the bottom row, marooning_{show|hide}_rejects_{configId}) — Marooning
   // is primarily a "who's still in the running" view, so rejected/withdrawn applicants are noise most of
-  // the time. The Summary counts below always include them regardless of the toggle — only the detailed
-  // roster is collapsed.
+  // the time.
   const NON_CANDIDATE_SECTIONS = [
     { emoji: '🙅', title: "Don't Cast", group: castGroups.reject },
     { emoji: '✖️', title: 'Withdrawn', group: castGroups.withdrawn }
@@ -1411,22 +1418,28 @@ export async function buildMarooningView({ configId, guildId, playerData, season
   }
 
   if (!hasCandidates && !hasRejects) body += '-# No applicants yet for this season.\n\n';
-  body += `### 📊 **SUMMARY**\n`;
-  body += `> **Total Applicants:** ${allApplications.length}\n`;
-  body += `> **Cast:** ${castGroups.cast.length} | **Alternate:** ${castGroups.alternative.length} | **Undecided:** ${castGroups.undecided.length} | **Rejected:** ${castGroups.reject.length} | **Withdrawn:** ${castGroups.withdrawn.length}\n`;
-  const totalScored = applicantData.filter(a => a.voteCount > 0).length;
-  body += `> **Scored:** ${totalScored}/${allApplications.length} applicants`;
+  // The 📊 SUMMARY block (Total/Cast/Alternate/Undecided/Rejected/Withdrawn + Scored) lived here until
+  // 2026-08-09. Removed deliberately (Reece): every number in it is already visible in the section
+  // headers directly above, so it was pure restatement taking up the tab's most valuable space.
+  // Its own Text Display now, so it must never be empty — Discord rejects a blank type 10.
+  body = body.trimEnd() || '-# No applicants yet for this season.';
 
-  // 🏕️ Tribes section — the New Tribe button REUSES the Castlist Hub's button (tribe_add_button|default) so
-  // it's identical in look/feel/function: opens the Add New Tribe modal → creates the role → adds it to the
-  // DEFAULT castlist. 💭 Draft Tribes opens the private draft modal (needs ≥1 tribe, else disabled).
+  // 🏕️ Tribes section — the New Tribe button REUSES the Castlist Hub's button (tribe_add_button|default)
+  // but carries a marooning origin, which makes it PRIVATE: no member assignment, no castlist link (see
+  // app.js tribe_add_modal). 💭 Draft Tribes opens the private draft modal (needs ≥1 tribe, else disabled).
   const canDraft = tribeRoleIds.length >= 1;
+  const tribesIntro = 'Use Draft Tribes to play around with different casting combinations and balance ' +
+    'as you see fit. Only Prod can see this - tribes only become public when added to a castlist.';
 
-  // ✒️ Bulk Invites — season-level bulk sends (Cast/Alternate/Reject templates → applicant channels).
+  // 👥 Add Cast — creates application channels for cast who never clicked Apply (late additions, people
+  // recruited off-Discord). Sits LEFT of Bulk Offers: you add the people first, then message them.
+  const addCastButton = { type: 2, custom_id: `marooning_add_cast_${configId}`, label: 'Add Cast', style: 2, emoji: { name: '👥' } };
+
+  // ✒️ Bulk Offers — season-level bulk sends (Cast/Alternate/Reject templates → applicant channels).
   // appIndex is baked as 0: it's only read by the modal's "selected applicant" mode, which is N/A from
-  // this season-level view (guarded by a name-showing confirm card). Lives in the bottom row, next to
-  // the 🗑️ Rejects toggle it's most often used together with (send outcome messages, then check who's left).
-  const bulkInvitesButton = { type: 2, custom_id: `casting_messages_0_${configId}`, label: 'Bulk Invites', style: 2, emoji: { name: '✒️' } };
+  // this season-level view (guarded by a name-showing confirm card). Was "Bulk Invites" in the bottom row
+  // until 2026-08-09; the custom_id is deliberately unchanged so in-flight interactions keep working.
+  const bulkOffersButton = { type: 2, custom_id: `casting_messages_0_${configId}`, label: 'Bulk Offers', style: 2, emoji: { name: '✒️' } };
 
   // 🗑️ Rejects — toggles the Don't Cast/Withdrawn roster. Label stays static ("Rejects", not
   // "Show/Hide Rejects") — the body text already makes the current state obvious. Disabled when
@@ -1444,18 +1457,22 @@ export async function buildMarooningView({ configId, guildId, playerData, season
       seasonManagerHeader('marooning', seasonName),
       buildSeasonNavRow(configId, 'marooning', userId),
       { type: 14 },
-      { type: 10, content: '### ```🏕️ Tribes```' },
+      // Casting decisions lead the tab — it's what hosts come here for. Tribes moved below (2026-08-09).
+      { type: 10, content: plannerIntro },
+      { type: 1, components: [addCastButton, bulkOffersButton] },
+      { type: 10, content: body },
+      { type: 14 },
+      { type: 10, content: `### \`\`\`🏕️ Tribes\`\`\`\n${tribesIntro}` },
       { type: 1, components: [
-        // New Tribe reuses the Castlist Hub button, but carries a 'marooning_{configId}' origin so the modal
-        // SUBMIT refreshes THIS Marooning message (not the Castlist Hub). Still adds to the default castlist.
+        // New Tribe reuses the Castlist Hub button, but carries a 'marooning_{configId}' origin. That origin
+        // does double duty: the modal SUBMIT refreshes THIS Marooning message, AND the tribe is created
+        // PRIVATELY (no members assigned, not linked to a castlist) — see app.js tribe_add_button/modal.
         { type: 2, custom_id: `tribe_add_button|default|marooning_${configId}`, label: 'New Tribe', style: 2, emoji: { name: '🏕️' } },
         { type: 2, custom_id: `marooning_draft_tribes_${configId}`, label: 'Draft Tribes', style: 2, emoji: { name: '💭' }, disabled: !canDraft }
       ]},
       { type: 10, content: tribesLine },
       { type: 14 },
-      { type: 10, content: body },
-      { type: 14 },
-      buildSeasonBottomRow(configId, 'marooning', [bulkInvitesButton, rejectsToggleButton])
+      buildSeasonBottomRow(configId, 'marooning', [rejectsToggleButton])
     ]
   };
 

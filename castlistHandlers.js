@@ -587,8 +587,8 @@ export async function handleCastlistButton(req, res, client, custom_id) {
   if (buttonType === 'placements') {
     // Check production permissions
     const member = req.body.member;
-    const hasAdminPermissions = member?.permissions &&
-      (BigInt(member.permissions) & BigInt(PermissionFlagsBits.ManageRoles)) !== 0n;
+    const { memberHasAnyPermission } = await import('./utils/effectivePermissions.js');
+    const hasAdminPermissions = memberHasAnyPermission(member, req.body.guild_id, PermissionFlagsBits.ManageRoles);
 
     if (!hasAdminPermissions) {
       return ButtonHandlerFactory.create({

@@ -43,7 +43,7 @@ export async function createEntityManagementUI(options) {
     // buttons, and the Location Actions select + Quick Create buttons (the latter
     // is the security-sensitive one — it enumerates guild-wide action names/
     // descriptions, not just this coordinate's — never let a non-admin see it).
-    const isAdmin = entityType === 'map_cell' ? !!hasPermission(member, PERMISSIONS.MANAGE_ROLES) : true;
+    const isAdmin = entityType === 'map_cell' ? !!hasPermission(member, PERMISSIONS.MANAGE_ROLES, guildId) : true;
 
     // Load entity data
     const safariData = await loadSafariContent();

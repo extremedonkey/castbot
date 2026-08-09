@@ -30,6 +30,8 @@ import {
   isAskCastBotEnvironment, resolveWriteDenyRules, neutralizeMentions, truncate
 } from './askCastBot.js';
 import { validatePlan, describeOp, MAX_OPS_PER_PLAN, PLAN_VERSION } from './safariPlanSchema.js';
+import { PermissionFlagsBits } from 'discord.js';
+import { memberHasAnyPermission } from './utils/effectivePermissions.js';
 import { logAskEvent } from './src/analytics/askLog.js';
 import { hasFeature, FEATURES } from './entitlements.js';
 
@@ -47,19 +49,24 @@ const PLAN_CACHE_MAX = 5;
 // ---------------------------------------------------------------------------
 
 /**
- * Replica of app.js hasAdminPermissions (module-local there, not exported): any of
- * ManageChannels / ManageGuild / ManageRoles / Administrator.
+ * Same tier as app.js hasAdminPermissions (module-local there, not exported): any of
+ * ManageChannels / ManageGuild / ManageRoles / Administrator, plus Global Access roles.
+ *
+ * Routes through the single reader rather than testing bits inline — a raw `&` here would skip
+ * both the Administrator override and the Global Access grant.
+ *
  * @param {Object} member - raw interaction member (permissions is a bitfield string)
+ * @param {string} [guildId] - pass it, or Global Access roles are ignored for this gate
  */
-export function isAdminMember(member) {
-  if (!member || !member.permissions) return false;
-  let permissions;
-  try { permissions = BigInt(member.permissions); } catch { return false; }
-  const ADMIN_BITS = (1n << 4n)   // MANAGE_CHANNELS
-    | (1n << 5n)                  // MANAGE_GUILD
-    | (1n << 28n)                 // MANAGE_ROLES
-    | (1n << 3n);                 // ADMINISTRATOR
-  return (permissions & ADMIN_BITS) !== 0n;
+export function isAdminMember(member, guildId) {
+  return memberHasAnyPermission(
+    member,
+    guildId,
+    PermissionFlagsBits.ManageChannels,
+    PermissionFlagsBits.ManageGuild,
+    PermissionFlagsBits.ManageRoles,
+    PermissionFlagsBits.Administrator
+  );
 }
 
 /**
@@ -71,7 +78,7 @@ export function isAdminMember(member) {
 export async function hasSafariEditAccess({ guildId, member } = {}) {
   if (!isAskCastBotEnvironment()) return false;
   if (!guildId || !(await hasFeature(guildId, FEATURES.SAFARI_EDIT))) return false;
-  return isAdminMember(member);
+  return isAdminMember(member, guildId);
 }
 
 // ---------------------------------------------------------------------------

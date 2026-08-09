@@ -8,13 +8,35 @@
 
 ---
 
+## 🚨 The One Rule
+
+**Every permission decision goes through `memberHasAnyPermission()` in [utils/effectivePermissions.js](../../utils/effectivePermissions.js), passing the interaction payload member and the guild ID.**
+
+```javascript
+import { memberHasAnyPermission } from './utils/effectivePermissions.js';
+if (!memberHasAnyPermission(context.member, context.guildId, PermissionFlagsBits.ManageRoles)) return denial;
+```
+
+Two things you must never do, both of which shipped bugs on 2026-08-09 ([RaP 0882](../01-RaP/0882_20260809_GlobalAccessSecurityModel_Analysis.md)):
+
+| Anti-pattern | Why it breaks |
+|---|---|
+| `BigInt(member.permissions) & X` | Skips the **Administrator override** (Administrator is a single bit, not the other bits) *and* the Global Access grant |
+| Permissions off `await guild.members.fetch()` | That's discord.js recomputing **locally**: no Administrator expansion, no channel overwrites, no timeout handling, cache-dependent, and an extra API call |
+
+Both are enforced at zero by `tests/permissionSources.test.js`. Exemptions exist only where no interaction payload exists (the bot checking its own permissions, gateway reaction events, admin enumeration).
+
+Also: `PermissionsBitField.has(A | B)` demands **both** bits. `memberHasAnyPermission` tests each separately — use it rather than hand-rolling.
+
+---
+
 ## Permission Tiers
 
 CastBot enforces three permission tiers. All permission checks happen server-side before any handler logic executes.
 
 ### Tier 1: Server Admin
 
-A user is considered a CastBot admin if they have **any one** of these Discord permissions:
+A user is considered a CastBot admin if they have **any one** of these Discord permissions, **or** hold a Global Access role:
 
 | Permission | Hex | Typical Discord Role |
 |---|---|---|
@@ -22,21 +44,21 @@ A user is considered a CastBot admin if they have **any one** of these Discord p
 | `MANAGE_ROLES` | `0x10000000` | Moderator, Co-Host |
 | `MANAGE_CHANNELS` | `0x10` | Channel Manager |
 | `MANAGE_GUILD` | `0x20` | Server Settings Manager |
+| *(a `globalRoleAccess` role)* | — | Producer on a server that won't grant Discord admin |
 
-**Gate function** — `hasAdminPermissions(member)` in app.js:
+**Gate function** — `hasAdminPermissions(member, guildId)` in app.js:
 
 ```javascript
-function hasAdminPermissions(member) {
-  if (!member || !member.permissions) return false;
-  const permissions = BigInt(member.permissions);
-  const adminPermissions =
-    PermissionFlagsBits.ManageChannels |
-    PermissionFlagsBits.ManageGuild |
-    PermissionFlagsBits.ManageRoles |
-    PermissionFlagsBits.Administrator;
-  return (permissions & BigInt(adminPermissions)) !== 0n;
+function hasAdminPermissions(member, guildId) {
+  return memberHasAnyPermission(member, guildId,
+    PermissionFlagsBits.ManageChannels,
+    PermissionFlagsBits.ManageGuild,
+    PermissionFlagsBits.ManageRoles,
+    PermissionFlagsBits.Administrator);
 }
 ```
+
+⚠️ **`guildId` is not optional in practice** — omit it and the Global Access whitelist isn't consulted, so a whitelisted host is silently treated as a player at that one gate. That produces "my producer can use Casting but not Safari", the hardest permission bug shape to diagnose.
 
 **What admins can access**: Production Menu (full server management), Safari management, store creation/editing, custom actions, casting, player management, data import/export.
 
@@ -189,22 +211,37 @@ permissionOverwrites: [{ id: guild.roles.everyone.id, deny: [ViewChannel] }, ...
 Application channels also display an access disclosure:
 > Additional roles configured in CastBot Settings: @Co-Host, @Producer
 
-### Target State (Not Yet Implemented)
+### ✅ Admin Grant (Implemented 2026-08-09)
 
-`globalRoleAccess` should become an **additional OR condition** in `hasAdminPermissions()`:
+`globalRoleAccess` is now an OR condition in **every** permission check, not just channel creation:
 
 ```
 User is CastBot admin if:
   ADMINISTRATOR OR MANAGE_ROLES OR MANAGE_CHANNELS OR MANAGE_GUILD
-  OR member has a role in globalRoleAccess    ← future
+  OR member holds a role in globalRoleAccess
 ```
 
-This would unlock Production Menu, Safari management, and all admin-gated features for `globalRoleAccess` roles — not just application channel visibility.
+Implemented as a synthetic bit grant in [utils/effectivePermissions.js](../../utils/effectivePermissions.js) rather than 440 per-gate edits:
 
-**Status**: Needs design and testing before implementation. Key considerations:
-- `hasAdminPermissions()` currently only receives `member.permissions` (a BigInt) — it would need the member's role list and guild ID to check `globalRoleAccess`
-- Performance: requires loading `playerData` on every permission check
-- Caching strategy for role lookups
+```javascript
+if (hasGlobalRoleAccess(member, guildId)) bits |= (ManageRoles | ManageChannels);
+```
+
+Because every gate already asks "do you have Manage Roles?", they all honour it automatically.
+
+**Grant boundaries:**
+- Worth exactly `MANAGE_ROLES | MANAGE_CHANNELS`. **Not** `ADMINISTRATOR` — `.has()` treats Administrator as satisfying everything, which would hand over gates written in future for things nobody has considered.
+- The `owner` tier (Reece's hardcoded ID) is unreachable. It's an identity check; a guild admin must not be able to grant it. This also keeps playerData import out of scope.
+- In scope by explicit decision: Nuke Category, Ko-fi premium redeem.
+- **`@everyone` can never be whitelisted** — stripped by `sanitizeRoleAccessIds()` on both the write path and boot hydration, so a pre-existing stored value can't become live either. Without this, one Role Select click makes an entire server CastBot admins.
+
+**How the two blockers listed here previously were resolved:**
+- *"needs the member's role list"* — it's already in the interaction payload (`member.roles`, an array of IDs). No fetch.
+- *"requires loading playerData on every check"* — the whitelist is mirrored in a module-level Map, hydrated at boot (`🔐 Global Access hydrated: N role(s) across M guild(s)`) and updated by `castbot_roles_security_select` / `_clear`. Checks are synchronous with zero I/O.
+
+**🚨 The check must never become async.** A permission gate returning a Promise fails OPEN — `if (promise)` is always true, so one forgotten `await` at any of ~440 sites silently grants admin to everyone, with no error and no log line. `tests/effectivePermissions.test.js` asserts the reader returns a boolean and never a thenable.
+
+**Security model note**: this is the point at which CastBot access stopped being a subset of Discord permissions. See [RaP 0882](../01-RaP/0882_20260809_GlobalAccessSecurityModel_Analysis.md).
 
 ---
 

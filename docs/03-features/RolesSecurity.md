@@ -6,7 +6,12 @@
 
 Roles & Security lets server admins whitelist Discord roles that should have CastBot access **without** holding blanket Discord admin permissions. The trigger problem: many servers don't give their production team the Administrator permission, so prod members (other than the server owner) couldn't see CastBot's private channels.
 
-Whitelisted roles receive **channel permission overwrites at channel-creation time** on channels CastBot creates. This is a *channel visibility* feature — it does **not** (yet) make members CastBot admins for menus/handlers (see [Future Work](#future-work)).
+Whitelisted roles get **two** things:
+
+1. **CastBot host access** (since 2026-08-09) — members are treated as if they held Manage Roles + Manage Channels by every permission check in CastBot: Production Menu, Safari, Casting, Season Apps, player management, channel creation/deletion. See [Admin Grant](#-admin-grant-implemented-2026-08-09).
+2. **Channel permission overwrites at channel-creation time** on channels CastBot creates (the original behaviour).
+
+> 🚨 **This is a real privilege-escalation path, by design.** A member with zero Discord permissions can now drive CastBot to create channels, rewrite permission overwrites and delete categories, because CastBot acts with *the bot's* Discord permissions. Treat the whitelist as being as sensitive as handing out Manage Roles itself. Security-model rationale: [RaP 0882](../01-RaP/0882_20260809_GlobalAccessSecurityModel_Analysis.md).
 
 ## UI & Configuration
 
@@ -90,10 +95,35 @@ permissionOverwrites: [
 - **Zero rate-limit cost**: overwrites ride the existing `channels.create()` calls; the only extra API call is one `guild.roles.fetch()` per operation, and only when the whitelist is non-empty.
 - **Spoiler surface**: whitelisted roles can see 🗺️castbot-images (full map originals + per-cell fog maps + uploaded location images). Intentional — the whitelist is for trusted production staff.
 
-## Future Work
+## 🔑 Admin Grant (implemented 2026-08-09)
 
-`globalRoleAccess` as an **OR condition in `hasAdminPermissions()`** — unlocking Production Menu and admin-gated features, not just channel visibility. Design considerations (member role list + guildId plumbing, playerData load per permission check, caching) are tracked in [SecurityArchitecture.md → Target State](../infrastructure-security/SecurityArchitecture.md). Not implemented.
+Whitelisted members are treated as holding `MANAGE_ROLES | MANAGE_CHANNELS` by every CastBot gate. Rather than teaching ~440 gates about the whitelist, one reader synthesises the bits:
+
+```javascript
+// utils/effectivePermissions.js
+if (hasGlobalRoleAccess(member, guildId)) bits |= GLOBAL_ACCESS_GRANT;
+```
+
+| Aspect | Behaviour |
+|---|---|
+| Grant | `MANAGE_ROLES \| MANAGE_CHANNELS`. **Not** Administrator — `.has()` treats that as satisfying every check, including gates added in future |
+| Owner tier | **Unreachable.** Reece's hardcoded ID is an identity check, not a permission (so playerData import stays out of reach) |
+| `@everyone` | **Never granted.** `sanitizeRoleAccessIds()` strips it on write *and* on boot hydration — one click would otherwise make a whole server admin |
+| Storage | The **sanitised** list is persisted, so what's stored is exactly what's enforced |
+| Propagation | Immediate. `setGuildRoleAccess()` updates the in-memory cache in the same handler that saves |
+| Cross-guild | Scoped per guild; a role ID whitelisted in one guild grants nothing in another |
+| Lookup cost | Zero I/O — synchronous Map read |
+
+**Why a cache instead of reading playerData per check**: the check must stay synchronous. An async permission gate fails **open** — `if (promise)` is always true, so one forgotten `await` at any of ~440 call sites silently grants admin to everyone with no error. `tests/effectivePermissions.test.js` asserts the reader never returns a thenable.
+
+Boot log: `🔐 Global Access hydrated: N role(s) across M guild(s)`. If hydration fails it fails **closed** (empty cache — Discord permissions still work).
+
+**Any new handler that writes `globalRoleAccess` must call `setGuildRoleAccess()`**, or the grant goes stale until the next restart.
 
 ## Testing
+
+`tests/effectivePermissions.test.js` — 25 cases over the grant: `@everyone` rejection (write + hydrate paths), cross-guild isolation, immediate revocation, grant boundaries (does not confer ManageGuild/BanMembers/Administrator), Administrator override, payload *and* discord.js member shapes, and three assertions that the reader stays synchronous.
+
+`tests/permissionSources.test.js` — two ratchets at **zero**: no raw `BigInt(member.permissions) & X`, and no permission read off a `guild.members.fetch()` result. Both would bypass this feature.
 
 `tests/roleAccessUtils.test.js` — 14 cases over the pure core (replicated inline per [TestingStandards](../standards/TestingStandards.md)): empty/null whitelist, happy path, deleted-role skip, `@everyone` filter, dedupe, bit-set pass-through (guards ManageChannels leaking into application channels), composition invariant, falsy-ID safety.

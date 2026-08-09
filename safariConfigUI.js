@@ -36,12 +36,15 @@ export async function createRolesSecurityUI(guildId) {
         components: [
             {
                 type: 10,
-                content: `## 🔐 Roles & Security\n\nConfigure which roles have access to CastBot features beyond server admins.\n\n**Current roles with full CastBot access:**\n${roleListText}\n\n-# **Note**: Currently only gives access to Cast Applications and all Safari channel locations.`
+                // Copy must state the real blast radius. Until 2026-08-09 this said "full CastBot
+                // access" while only granting channel visibility — a host could hand out the role
+                // believing their producer could run the season, and be wrong.
+                content: `## 🔐 Roles & Security\n\nGrant CastBot host access to roles that don't have Discord admin permissions — for example a Producer role on a server where only the owner is an admin.\n\n**Roles with CastBot host access:**\n${roleListText}\n\n-# ⚠️ Members of these roles are treated as if they had **Manage Roles** in CastBot. They get the Production Menu and everything in it — Safari, Casting, Season Apps, player management, and channel creation/deletion — plus access to the private channels CastBot creates. They do **not** gain any Discord permission outside CastBot.`
             },
             { type: 14 },
             {
                 type: 10,
-                content: `**Select roles with full CastBot access:**`
+                content: `**Select roles to grant CastBot host access:**\n-# Pick trusted production staff only. \`@everyone\` is ignored if selected.`
             },
             {
                 type: 1,

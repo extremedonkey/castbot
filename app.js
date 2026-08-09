@@ -563,11 +563,10 @@ import {
 } from './utils/roleUtils.js';
 import {
   requirePermission,
-  requireAdminPermission,
-  requireSpecificUser,
   hasPermission,
   PERMISSIONS
 } from './utils/permissionUtils.js';
+import { memberHasAnyPermission, hydrateGlobalRoleAccess, setGuildRoleAccess } from './utils/effectivePermissions.js';
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
@@ -633,18 +632,10 @@ function createPlayerNotesSection(channelId, appIndex, playerData, guildId, conf
  * @param {Object} member - Discord member object from interaction
  * @returns {boolean} True if user has any admin permission
  */
-function hasAdminPermissions(member) {
-  if (!member || !member.permissions) return false;
-  
-  // Convert permissions string to BigInt for comparison
-  const permissions = BigInt(member.permissions);
-  const adminPermissions = 
-    PermissionFlagsBits.ManageChannels | 
-    PermissionFlagsBits.ManageGuild | 
-    PermissionFlagsBits.ManageRoles | 
-    PermissionFlagsBits.Administrator;
-  
-  return (permissions & BigInt(adminPermissions)) !== 0n;
+function hasAdminPermissions(member, guildId) {
+  // 🚨 payload member + guildId, both required — see utils/effectivePermissions.js.
+  return memberHasAnyPermission(member, guildId, PermissionFlagsBits.ManageChannels,
+    PermissionFlagsBits.ManageGuild, PermissionFlagsBits.ManageRoles, PermissionFlagsBits.Administrator);
 }
 
 /**
@@ -745,32 +736,8 @@ async function canSendMessagesInChannel(member, channelId, client) {
  */
 
 /**
- * Check if user has Casting permissions (with special exception for server 1331657596087566398).
- *
- * 🚨 PASS `context.member` — the INTERACTION PAYLOAD member. Never a GuildMember from
- * `guild.members.fetch()`. The two are not interchangeable:
- *
- *   payload `member.permissions`  → computed by DISCORD. Administrator expands to all
- *                                   permissions, channel overwrites applied, timeouts honoured.
- *                                   Documented as "total permissions of the member in the
- *                                   channel, including overwrites, returned when in the
- *                                   interaction object".
- *   fetched GuildMember           → computed LOCALLY by discord.js as a raw OR of role bits
- *                                   (GuildMember.js:254). Administrator is NOT expanded, channel
- *                                   overwrites are ignored, and it depends on guild.roles.cache.
- *
- * REST `GET /guilds/{id}/members/{id}` returns no `permissions` field at all — which is exactly
- * why discord.js has to recompute one, and why its answer differs from Discord's.
- *
- * All 18 call sites used to pass a fetched member, so a role with ONLY the Administrator box
- * ticked yielded bits `0x8` and failed a raw AND against ManageRoles|ManageChannels — locking
- * every Administrator-only host out of the whole Casting/Marooning family (found 2026-08-09).
- * `PermissionsBitField.has()` is used below rather than a raw `&` because `has()` applies the
- * Administrator override structurally, so this cannot regress the same way twice.
- *
- * @param {Object} member - `context.member` (req.body.member) — NOT a fetched GuildMember
- * @param {string} guildId - Discord guild ID
- * @returns {boolean} True if user has casting permissions
+ * Casting gate — Manage Roles OR Manage Channels (no ManageGuild, unlike hasAdminPermissions),
+ * plus Administrator and Global Access. 🚨 payload member only — see utils/effectivePermissions.js.
  */
 function hasCastRankingPermissions(member, guildId) {
   if (!member || !member.permissions) return false;
@@ -781,12 +748,8 @@ function hasCastRankingPermissions(member, guildId) {
     return true;
   }
 
-  // Manage Roles OR Manage Channels (deliberately narrower than hasAdminPermissions — no
-  // ManageGuild). `.has()` grants Administrator implicitly; note it must be called once per
-  // permission, since has(A | B) demands BOTH bits.
-  const permissions = new PermissionsBitField(BigInt(member.permissions));
-  const hasPermission = permissions.has(PermissionFlagsBits.ManageRoles)
-    || permissions.has(PermissionFlagsBits.ManageChannels);
+  const hasPermission = memberHasAnyPermission(member, guildId,
+    PermissionFlagsBits.ManageRoles, PermissionFlagsBits.ManageChannels);
 
   console.log(`🏆 Casting: Standard permission check for server ${guildId}: ${hasPermission}`);
   return hasPermission;
@@ -1497,6 +1460,14 @@ client.once('ready', async () => {
     console.error('❌ Server metadata analytics failed:', error.message);
   }
 
+  // 🔐 Global Access whitelist → memory (checks read it synchronously). Fails CLOSED.
+  try {
+    const { guilds: raGuilds, roles: raRoles } = hydrateGlobalRoleAccess(await loadPlayerData());
+    console.log(`🔐 Global Access hydrated: ${raRoles} role(s) across ${raGuilds} guild(s)`);
+  } catch (error) {
+    console.error('❌ Global Access hydration failed — whitelisted roles inactive until restart:', error.message);
+  }
+
   // Initialize reaction mappings from persistent storage
   console.log('📥 Loading reaction mappings from persistent storage...');
   client.roleReactions = new Map();
@@ -1698,16 +1669,9 @@ const REQUIRED_PERMISSIONS = [
 ];
 
 // Add this helper function
-async function hasRequiredPermissions(guildId, userId) {
-  try {
-    const guild = await client.guilds.fetch(guildId);
-    const member = await guild.members.fetch(userId);
-    // Return true if they have ANY of the required permissions
-    return REQUIRED_PERMISSIONS.some(perm => member.permissions.has(perm));
-  } catch (error) {
-    console.error('Error checking permissions:', error);
-    return false;
-  }
+function hasRequiredPermissions(member, guildId) {
+  // Payload member — no API calls, no cache dependency. See utils/effectivePermissions.js.
+  return memberHasAnyPermission(member, guildId, REQUIRED_PERMISSIONS);
 }
 
 // Add a route to serve a test HTML page
@@ -2580,7 +2544,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     // Only castlist and menu are open commands - all others removed
     const readOnlyCommands = ['castlist', 'menu'];
     if (!readOnlyCommands.includes(name)) {
-      const hasPerms = await hasRequiredPermissions(req.body.guild_id, req.body.member.user.id);
+      const hasPerms = hasRequiredPermissions(req.body.member, req.body.guild_id);
       if (!hasPerms) {
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -2621,8 +2585,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       let wizardHasPostedCastlist = false;
       let wizardHasSeason = false;
       {
-        const ADMIN_MASK = PermissionFlagsBits.Administrator | PermissionFlagsBits.ManageGuild | PermissionFlagsBits.ManageRoles;
-        const isAdmin = !!member?.permissions && (BigInt(member.permissions) & ADMIN_MASK) !== 0n;
+        const isAdmin = memberHasAnyPermission(member, guildId,
+          PermissionFlagsBits.Administrator, PermissionFlagsBits.ManageGuild, PermissionFlagsBits.ManageRoles);
         if (isAdmin && castlistIdentifier === 'default') {
           const { castlistManager } = await import('./castlistManager.js');
           const tribeRoleIds = await castlistManager.getTribesUsingCastlist(guildId, 'default'); // fast: playerData only
@@ -2852,7 +2816,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
     // THEN check permissions and load data
     const member = req.body.member;
-    const isAdmin = hasAdminPermissions(member);
+    const isAdmin = hasAdminPermissions(member, req.body.guild_id);
     console.log(`[MENU] Menu access: Admin=${isAdmin}, User=${member?.user?.username || 'unknown'}`);
 
     const guildId = req.body.guild_id;
@@ -5144,7 +5108,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             const { verifyChallengeActionAccess, verifyChallengeStatus, getChallengeActions, extractActionIds: _extractIds } = await import('./challengeActionCreate.js');
             const pd = await (await import('./storage.js')).loadPlayerData();
             const challenges = pd[guildId]?.challenges || {};
-            const isAdmin = hasAdminPermissions(context.member);
+            const isAdmin = hasAdminPermissions(context.member, context.guildId);
             for (const ch of Object.values(challenges)) {
               const actions = getChallengeActions(ch);
               const hostIds = _extractIds(actions.host);
@@ -5163,7 +5127,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                     return { content: statusCheck.reason, ephemeral: true };
                   }
                 }
-                const access = verifyChallengeActionAccess(ch, resolvedButtonId, context.member);
+                const access = verifyChallengeActionAccess(ch, resolvedButtonId, context.member, context.guildId);
                 if (!access.allowed) {
                   console.log(`🔒 Challenge action access denied: ${resolvedButtonId} — ${access.reason}`);
                   return { content: `❌ ${access.reason}`, ephemeral: true };
@@ -6493,9 +6457,9 @@ To fix this:
         id: 'viral_menu',
         ephemeral: true,
         handler: async (context) => {
-          const { member, guildId, client } = context;
-          const isAdmin = hasAdminPermissions(member);
-          
+          const { member, guildId, client } = context;   // member = payload member (see hasAdminPermissions)
+          const isAdmin = hasAdminPermissions(member, guildId);
+
           console.log(`Menu button clicked: Admin=${isAdmin}, User=${member?.user?.username || 'unknown'}`);
           
           if (isAdmin) {
@@ -6709,7 +6673,7 @@ To fix this:
           const guild = await client.guilds.fetch(guildId);
 
           // Check admin permissions
-          if (!hasAdminPermissions(member)) {
+          if (!hasAdminPermissions(member, guildId)) {
             return {
               content: '❌ You need Manage Roles, Manage Channels, or Manage Server permissions to use this feature.',
               flags: InteractionResponseFlags.EPHEMERAL
@@ -9630,7 +9594,7 @@ To fix this:
         try {
           const { getChallengeActions, verifyChallengeStatus, extractActionIds: _extractIds } = await import('./challengeActionCreate.js');
           const pd = await loadPlayerData();
-          const isAdmin = hasAdminPermissions(context.member);
+          const isAdmin = hasAdminPermissions(context.member, context.guildId);
           for (const ch of Object.values(pd[context.guildId]?.challenges || {})) {
             const actions = getChallengeActions(ch);
             const nonHostIds = [
@@ -10177,7 +10141,7 @@ To fix this:
         }
 
         // Everything below is admin-only.
-        if (!hasAdminPermissions(context.member)) return { content: '❌ You need admin permissions for this.', ephemeral: true };
+        if (!hasAdminPermissions(context.member, context.guildId)) return { content: '❌ You need admin permissions for this.', ephemeral: true };
 
         if (selectedValue === 'init') {
           const { initializePlayerOnMap } = await import('./safariMapAdmin.js');
@@ -11154,11 +11118,8 @@ To fix this:
           const { guildId, userId, channelId, client } = context;
           const guild = await client.guilds.fetch(guildId);
           
-          // Check admin permissions
-          const member = await guild.members.fetch(userId);
-          if (!member.permissions.has(PermissionFlagsBits.ManageRoles) && 
-              !member.permissions.has(PermissionFlagsBits.ManageChannels) && 
-              !member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+          // Check admin permissions (payload member — see utils/effectivePermissions.js)
+          if (!hasAdminPermissions(context.member, guildId)) {
             return {
               content: '❌ You need Manage Roles, Manage Channels, or Manage Server permissions to use this feature.',
               ephemeral: true
@@ -13310,6 +13271,13 @@ To fix this:
           const { TRIBE_COLOR_PRESETS } = await import('./utils/tribeDataUtils.js');
           const { resolveEmoji: resolveEmojiUtil } = await import('./utils/emojiUtils.js');
 
+          // 🔒 PRIVATE MODE — launched from the 🚣 Marooning tab, where tribes are a PLANNING tool.
+          // The Tribe Members select is dropped entirely: assigning a real Discord role there would
+          // broadcast an in-flux casting decision to every spectator and cast member the instant it's
+          // picked. Populate privately via 💭 Draft Tribes instead. The submit handler enforces the
+          // same rule (skips roles.add AND the castlist link) — this just removes the temptation.
+          const isPrivateTribe = !!origin?.startsWith('marooning_');
+
           return {
             type: 9, // MODAL
             data: {
@@ -13319,7 +13287,9 @@ To fix this:
                 {
                   type: 18, // Label
                   label: 'Tribe Name',
-                  description: 'CastBot will create the Discord role for you. Already have the role? Add via previous screen.',
+                  description: isPrivateTribe
+                    ? 'Creates the Discord role only — no members assigned, not added to a castlist.'
+                    : 'CastBot will create the Discord role for you. Already have the role? Add via previous screen.',
                   component: {
                     type: 4, // Text Input
                     custom_id: 'tribe_name',
@@ -13343,7 +13313,8 @@ To fix this:
                     max_length: 60
                   }
                 },
-                {
+                // Omitted in private mode — see isPrivateTribe above.
+                ...(isPrivateTribe ? [] : [{
                   type: 18, // Label
                   label: 'Tribe Members',
                   description: 'Selected users will be assigned this role automatically after creation.',
@@ -13355,7 +13326,7 @@ To fix this:
                     min_values: 0,
                     max_values: 25
                   }
-                },
+                }]),
                 {
                   type: 18, // Label
                   label: 'Tribe Color',
@@ -13672,11 +13643,8 @@ To fix this:
         const guild = await client.guilds.fetch(guildId);
         const userId = req.body.member.user.id;
 
-        // Check admin permissions
-        const member = await guild.members.fetch(userId);
-        if (!member.permissions.has(PermissionFlagsBits.ManageRoles) && 
-            !member.permissions.has(PermissionFlagsBits.ManageChannels) && 
-            !member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+        // Check admin permissions (payload member — see utils/effectivePermissions.js)
+        if (!hasAdminPermissions(req.body.member, guildId)) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
@@ -13826,6 +13794,25 @@ To fix this:
           return modal;
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('marooning_add_cast_')) {
+      // 👥 Add Cast — bring in cast who never clicked Apply (late additions, off-Discord recruits).
+      return ButtonHandlerFactory.create({
+        id: 'marooning_add_cast',
+        updateMessage: false, // returns a modal
+        handler: async (context) => {
+          // Opens the picker modal; all the work happens on submit (marooning_add_cast_modal|).
+          const configId = context.customId.replace('marooning_add_cast_', '');
+          if (!hasCastRankingPermissions(context.member, context.guildId)) {
+            return { content: '❌ You need Manage Roles or Manage Channels permissions to add cast.', ephemeral: true };
+          }
+          const playerData = await loadPlayerData();
+          const config = playerData?.[context.guildId]?.applicationConfigs?.[configId];
+          if (!config) return { content: '❌ Season configuration not found.', ephemeral: true };
+
+          const { buildAddCastModal } = await import('./src/seasons/addCast.js');
+          return { type: InteractionResponseType.MODAL, data: buildAddCastModal(configId, config.seasonName) };
+        }
+      })(req, res, client);
     } else if (custom_id === 'prod_setup_tycoons') {
       // Creates ~40 roles — deferred (the old inline version risked the 3s timeout). Body in roleUtils.
       return ButtonHandlerFactory.create({
@@ -13833,7 +13820,7 @@ To fix this:
         deferred: true,
         ephemeral: true,
         handler: async (context) => {
-          if (!hasAdminPermissions(context.member)) {
+          if (!hasAdminPermissions(context.member, context.guildId)) {
             return { content: '❌ You need Manage Roles, Manage Channels, or Manage Server permissions to use this feature.', ephemeral: true };
           }
           const { runProdSetupTycoons } = await import('./utils/roleUtils.js');
@@ -15486,9 +15473,8 @@ To fix this:
         ephemeral: true,
         handler: async (context) => {
           // Check admin permissions
-          const hasPermission = context.member?.permissions && 
-            (BigInt(context.member.permissions) & BigInt(PERMISSIONS.MANAGE_ROLES)) !== 0n;
-          
+          const hasPermission = memberHasAnyPermission(context.member, context.guildId, PERMISSIONS.MANAGE_ROLES);
+
           if (!hasPermission) {
             return {
               type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -16232,7 +16218,9 @@ To fix this:
         permissionName: 'Manage Roles',
         updateMessage: true,
         handler: async (context) => {
-          const selectedRoles = context.values || [];
+          // Sanitises (drops @everyone — one click would otherwise make a whole server admin)
+          // and updates the live cache. The SANITISED list is what gets persisted.
+          const selectedRoles = setGuildRoleAccess(context.guildId, context.values || []);
           const playerData = await loadPlayerData();
           if (!playerData[context.guildId]) playerData[context.guildId] = {};
           if (!playerData[context.guildId].permissions) playerData[context.guildId].permissions = {};
@@ -16250,6 +16238,7 @@ To fix this:
         permissionName: 'Manage Roles',
         updateMessage: true,
         handler: async (context) => {
+          setGuildRoleAccess(context.guildId, []);   // drop the grant immediately, not at next boot
           const playerData = await loadPlayerData();
           if (playerData[context.guildId]?.permissions) {
             playerData[context.guildId].permissions.globalRoleAccess = [];
@@ -24496,8 +24485,7 @@ To fix this:
       const userId = req.body.member?.user?.id;
 
       // Check permissions
-      const memberPermissions = BigInt(req.body.member?.permissions || 0);
-      if (!(memberPermissions & PermissionFlagsBits.ManageRoles)) {
+      if (!memberHasAnyPermission(req.body.member, req.body.guild_id, PermissionFlagsBits.ManageRoles)) {
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
@@ -25169,7 +25157,7 @@ To fix this:
 
           // Only the owner (or an admin) may cancel
           const isOwner = job.payload?.userId === context.userId;
-          const isAdmin = context.member?.permissions && (BigInt(context.member.permissions) & PermissionFlagsBits.ManageRoles) !== 0n;
+          const isAdmin = memberHasAnyPermission(context.member, context.guildId, PermissionFlagsBits.ManageRoles);
           if (!isOwner && !isAdmin) {
             return {
               components: [{ type: 17, components: [{ type: 10, content: '❌ You can only cancel your own timer.' }] }]
@@ -27162,12 +27150,8 @@ To fix this:
 
         const guild = await client.guilds.fetch(guildId);
         const targetMember = await guild.members.fetch(targetPlayerId);
-        const adminMember = await guild.members.fetch(adminUserId);
-
-        // Check admin permissions
-        if (!adminMember.permissions.has(PermissionFlagsBits.ManageRoles) && 
-            !adminMember.permissions.has(PermissionFlagsBits.ManageChannels) && 
-            !adminMember.permissions.has(PermissionFlagsBits.ManageGuild)) {
+        // Admin gate on the payload member (was: fetch the clicker, read discord.js recompute).
+        if (!hasAdminPermissions(req.body.member, guildId)) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
@@ -27250,12 +27234,8 @@ To fix this:
 
         const guild = await client.guilds.fetch(guildId);
         const targetMember = await guild.members.fetch(targetPlayerId);
-        const adminMember = await guild.members.fetch(adminUserId);
-
-        // Check admin permissions
-        if (!adminMember.permissions.has(PermissionFlagsBits.ManageRoles) && 
-            !adminMember.permissions.has(PermissionFlagsBits.ManageChannels) && 
-            !adminMember.permissions.has(PermissionFlagsBits.ManageGuild)) {
+        // Admin gate on the payload member (was: fetch the clicker, read discord.js recompute).
+        if (!hasAdminPermissions(req.body.member, guildId)) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
@@ -27337,12 +27317,8 @@ To fix this:
 
         const guild = await client.guilds.fetch(guildId);
         const targetMember = await guild.members.fetch(targetPlayerId);
-        const adminMember = await guild.members.fetch(adminUserId);
-
-        // Check admin permissions
-        if (!adminMember.permissions.has(PermissionFlagsBits.ManageRoles) && 
-            !adminMember.permissions.has(PermissionFlagsBits.ManageChannels) && 
-            !adminMember.permissions.has(PermissionFlagsBits.ManageGuild)) {
+        // Admin gate on the payload member (was: fetch the clicker, read discord.js recompute).
+        if (!hasAdminPermissions(req.body.member, guildId)) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
@@ -32764,7 +32740,7 @@ To fix this:
         deferred: true,
         handler: async (context) => {
           const playerData = await loadPlayerData();
-          const isAdmin = hasAdminPermissions(context.member);
+          const isAdmin = hasAdminPermissions(context.member, context.guildId);
           console.log(`[MENU] anchor_open_menu access: Admin=${isAdmin}, User=${context.userId}`);
 
           if (isAdmin) {
@@ -34647,7 +34623,7 @@ To fix this:
         ephemeral: true,
         handler: async (context) => {
           // Button is visible to everyone (it's on a public message), but only admins/prod team can run it.
-          if (!hasAdminPermissions(context.member)) {
+          if (!hasAdminPermissions(context.member, context.guildId)) {
             return {
               components: [{
                 type: 17,
@@ -40587,6 +40563,40 @@ To fix this:
         console.error('[DRAFT TRIBES] Error saving draft:', error);
         return updateDeferredResponse(token, { components: [{ type: 17, components: [{ type: 10, content: `❌ Error saving draft tribes: ${error.message}` }] }] });
       }
+    } else if (custom_id.startsWith('marooning_add_cast_modal|')) {
+      // 👥 Add Cast submit — creates one application channel per selected user, exactly as if each had
+      // clicked Apply. Deferred: channel creation is paced (PACE_CREATE), so 25 users takes minutes.
+      const token = req.body.token;
+      res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
+
+      try {
+        const configId = custom_id.split('|')[1];
+        const guildId = req.body.guild_id;
+        const { parseAddCastSubmission, addCastMembers, buildAddCastSummary } = await import('./src/seasons/addCast.js');
+        const { userIds, mode } = parseAddCastSubmission(req.body.data.components);
+
+        const guild = await client.guilds.fetch(guildId);
+        const result = await addCastMembers({
+          guild, configId, userIds, mode,
+          progress: { interactionToken: token, applicationId: process.env.APP_ID }
+        });
+
+        // Config-level failures (no season, no category) abort before anything is created.
+        if (result.error) {
+          return updateDeferredResponse(token, { components: [{ type: 17, components: [{ type: 10, content: result.error }] }] });
+        }
+
+        // Re-render Marooning so the new applicants appear immediately, with the outcome above it.
+        const playerData = await loadPlayerData();
+        const seasonName = playerData?.[guildId]?.applicationConfigs?.[configId]?.seasonName || `Season ${configId}`;
+        const { buildMarooningView } = await import('./castRankingManager.js');
+        const view = await buildMarooningView({ configId, guildId, playerData, seasonName, guild, userId: req.body.member.user.id });
+        const summary = { type: 17, accent_color: result.failed.length ? 0xe74c3c : 0x27ae60, components: [{ type: 10, content: buildAddCastSummary(result) }] };
+        return updateDeferredResponse(token, { components: [summary, ...view.components] });
+      } catch (error) {
+        console.error('👥 Add Cast: error creating applications:', error);
+        return updateDeferredResponse(token, { components: [{ type: 17, components: [{ type: 10, content: `❌ Error adding cast: ${error.message}` }] }] });
+      }
     } else if (custom_id.startsWith('tribe_add_modal|')) {
       // Handle Add Tribe modal submission - creates Discord role and links as tribe
       const token = req.body.token;
@@ -40597,7 +40607,13 @@ To fix this:
         const guildId = req.body.guild_id;
         const components = req.body.data.components;
 
-        console.log(`[TRIBE ADD] Processing add tribe modal for castlist ${castlistId}`);
+        // 🔒 PRIVATE MODE (marooning origin) — the tribe is a planning artifact, so it gets NEITHER
+        // member role assignment NOR a castlist link. Enforced here, not just by hiding the modal
+        // field: a replayed/crafted submit carrying tribe_members must not be able to assign roles.
+        const submitOrigin = custom_id.split('|')[2];
+        const isPrivateTribe = !!submitOrigin?.startsWith('marooning_');
+
+        console.log(`[TRIBE ADD] Processing add tribe modal for castlist ${castlistId}${isPrivateTribe ? ' (private — marooning)' : ''}`);
 
         // Extract field values (same pattern as tribe_edit_modal)
         const getFieldValue = (customId) => {
@@ -40666,40 +40682,51 @@ To fix this:
         const tribe = populateTribeData({}, role, castlistId, castlistName);
         if (processedEmoji) tribe.emoji = processedEmoji;
         if (processedColor) tribe.color = processedColor;
+        if (isPrivateTribe) {
+          // populateTribeData always stamps a castlist association; strip it so the tribe exists as an
+          // entity (Marooning lists it, Draft Tribes can use it) but no castlist renderer can find it.
+          tribe.castlistIds = [];
+          delete tribe.castlist;
+        }
         playerData[guildId].tribes[role.id] = tribe;
         await savePlayerData(playerData);
 
-        // Link tribe to castlist
-        await castlistManager.linkTribeToCastlist(guildId, role.id, castlistId);
-        console.log(`[TRIBE ADD] ✅ Linked tribe "${tribeName}" (${role.id}) to castlist ${castlistId}`);
+        // Link tribe to castlist — skipped in private mode: the castlist is PUBLIC, and appearing there
+        // is exactly the exposure Marooning tribes must not have until the host publishes deliberately.
+        if (isPrivateTribe) {
+          console.log(`[TRIBE ADD] 🔒 Private tribe "${tribeName}" (${role.id}) — no castlist link, no members assigned`);
+        } else {
+          await castlistManager.linkTribeToCastlist(guildId, role.id, castlistId);
+          console.log(`[TRIBE ADD] ✅ Linked tribe "${tribeName}" (${role.id}) to castlist ${castlistId}`);
 
-        // Assign role to selected members
-        const membersRaw = getFieldValue('tribe_members');
-        const selectedMemberIds = Array.isArray(membersRaw) ? membersRaw : [];
-        if (selectedMemberIds.length > 0) {
-          for (const userId of selectedMemberIds) {
-            try {
-              const member = await guild.members.fetch(userId);
-              await member.roles.add(role.id, 'CastBot tribe creation — member assignment');
-              console.log(`[TRIBE ADD] ✅ Assigned role "${tribeName}" to ${member.displayName} (${userId})`);
-            } catch (err) {
-              console.warn(`[TRIBE ADD] Failed to assign role to ${userId}: ${err.message}`);
+          // Assign role to selected members
+          const membersRaw = getFieldValue('tribe_members');
+          const selectedMemberIds = Array.isArray(membersRaw) ? membersRaw : [];
+          if (selectedMemberIds.length > 0) {
+            for (const userId of selectedMemberIds) {
+              try {
+                const member = await guild.members.fetch(userId);
+                await member.roles.add(role.id, 'CastBot tribe creation — member assignment');
+                console.log(`[TRIBE ADD] ✅ Assigned role "${tribeName}" to ${member.displayName} (${userId})`);
+              } catch (err) {
+                console.warn(`[TRIBE ADD] Failed to assign role to ${userId}: ${err.message}`);
+              }
             }
+            console.log(`[TRIBE ADD] Assigned ${selectedMemberIds.length} members to ${tribeName}`);
           }
-          console.log(`[TRIBE ADD] Assigned ${selectedMemberIds.length} members to ${tribeName}`);
         }
 
-        // CONTEXT-AWARE post-submit refresh (the tribe itself was already created + linked above; only the
-        // view that gets refreshed differs). Origin is the 3rd custom_id segment carried from the button.
-        const origin = custom_id.split('|')[2];
-        if (origin && origin.startsWith('marooning_')) {
+        // CONTEXT-AWARE post-submit refresh (the tribe itself was already created above; only the view
+        // that gets refreshed differs). Origin is the 3rd custom_id segment carried from the button.
+        if (isPrivateTribe) {
           // Launched from the 🚣 Marooning tab → refresh the PARENT Marooning message (not the Castlist Hub).
-          const marooningConfigId = origin.slice('marooning_'.length);
+          const marooningConfigId = submitOrigin.slice('marooning_'.length);
           const fresh = await loadPlayerData();
           const seasonName = fresh[guildId]?.applicationConfigs?.[marooningConfigId]?.seasonName || `Season ${marooningConfigId}`;
           const { buildMarooningView } = await import('./castRankingManager.js');
-          // NOTE: `userId` here must be the INVOKING admin — not the loop variable of the same
-          // name used above when assigning selected members to draft tribes.
+          // NOTE: `userId` here must be the INVOKING admin — not the loop variable of the same name used
+          // in the (public-path-only) member assignment above. That loop assigns REAL Discord roles for a
+          // Castlist Hub tribe; it has nothing to do with draft tribes, despite what this comment used to say.
           const view = await buildMarooningView({ configId: marooningConfigId, guildId, playerData: fresh, seasonName, guild, userId: req.body.member.user.id });
           await updateDeferredResponse(token, { components: view.components });
           return null;
@@ -46432,7 +46459,7 @@ To fix this:
         const member = req.body.member;
         
         // Security check - require ManageRoles permission
-        if (!member?.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+        if (!memberHasAnyPermission(member, guildId, PermissionFlagsBits.ManageRoles)) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
@@ -46533,7 +46560,7 @@ To fix this:
         const channelId = custom_id.split('safari_schedule_modal_')[1];
         
         // Security check - require ManageRoles permission
-        if (!member?.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+        if (!memberHasAnyPermission(member, guildId, PermissionFlagsBits.ManageRoles)) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {

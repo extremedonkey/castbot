@@ -327,8 +327,8 @@ export async function movePlayer(guildId, userId, newCoordinate, client, options
 // redirected to the anchor message's Explore button.
 export async function resolveForeignNavigateClick(context, targetUserId) {
     const { buildNavigateDenialUI, buildAdminNavPanelWarningUI } = await import('./mapNavigationUI.js');
-    const isAdmin = context.member?.permissions &&
-        (BigInt(context.member.permissions) & PermissionFlagsBits.ManageRoles) !== 0n;
+    const { memberHasAnyPermission } = await import('./utils/effectivePermissions.js');
+    const isAdmin = memberHasAnyPermission(context.member, context.guildId, PermissionFlagsBits.ManageRoles);
     if (!isAdmin) return buildNavigateDenialUI();
     const ownerState = await getPlayerLocation(context.guildId, targetUserId);
     return buildAdminNavPanelWarningUI(targetUserId, context.messageId, ownerState?.currentCoordinate || null);

@@ -746,7 +746,7 @@ export async function handleAskModalSubmit(req, res, client = null) {
     // the model emits a plan, the asker gets a private preview + Apply (the original
     // requirement — Ask CastBot MAKES the change, it doesn't point at another button).
     const writeMod = editAvailable ? await import('./askCastBotWrite.js').catch(() => null) : null;
-    const canEdit = !!(writeMod?.isAdminMember(req.body.member));
+    const canEdit = !!(writeMod?.isAdminMember(req.body.member, guildId));
     const editSection = canEdit
       ? await writeMod.buildEditCapabilitySection(guildId, client).catch(() => '')
       : '';
