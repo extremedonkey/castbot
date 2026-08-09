@@ -13713,10 +13713,7 @@ To fix this:
           
           // Check Casting permissions (includes special exception for server 1331657596087566398)
           if (!hasCastRankingPermissions(member, guildId)) {
-            return {
-              content: '❌ You need Manage Roles or Manage Channels permissions to access Casting.',
-              ephemeral: true
-            };
+            return { flags: (1 << 15), components: [{ type: 17, components: [{ type: 10, content: '❌ You need Manage Roles or Manage Channels permissions to access Casting.' }] }] };
           }
 
           // Build via the shared helper (also used by the Edit-modal context-aware refresh) so the
@@ -13745,10 +13742,7 @@ To fix this:
           const member = await guild.members.fetch(userId);
           // Same gate as the Casting tab — Marooning exposes the same casting data.
           if (!hasCastRankingPermissions(member, guildId)) {
-            return {
-              content: '❌ You need Manage Roles or Manage Channels permissions to access Marooning.',
-              ephemeral: true
-            };
+            return { flags: (1 << 15), components: [{ type: 17, components: [{ type: 10, content: '❌ You need Manage Roles or Manage Channels permissions to access Marooning.' }] }] };
           }
 
           const playerData = await loadPlayerData();

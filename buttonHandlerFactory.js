@@ -5752,6 +5752,36 @@ export function sendPremiumDenied(res, isAdminSurface) {
  * @param {Object} data - Response data
  * @param {boolean} updateMessage - Whether to update existing message
  */
+/**
+ * 🛡️ SHAPE-GUARD — Discord rejects a content-only response onto a Components V2 message.
+ * Two different failure modes, same cause:
+ *   • immediate UPDATE_MESSAGE → silent 400, user sees "This interaction failed"
+ *   • deferred webhook PATCH   → 50035 MESSAGE_CANNOT_REMOVE_COMPONENTS_V2_FLAG, message never updates
+ * Auto-wrap bare `content` into a container so the user sees the text instead of a dead
+ * interaction. Non-V2 parents are left untouched (content works there).
+ *
+ * This is a net, not a licence: handlers must still return proper V2 containers. The
+ * grandfathered offenders are ratcheted in tests/interactionResponseShape.test.js.
+ *
+ * @param {Object} data - Mutated in place when a wrap occurs
+ * @param {Object|null} parentMessage - The message being updated (needs `.flags`)
+ * @param {string} pathLabel - For the warning line, e.g. 'UPDATE_MESSAGE' / 'webhook PATCH'
+ * @returns {boolean} true if data was rewritten
+ */
+export function wrapBareContentForV2(data, parentMessage, pathLabel) {
+  const parentIsV2 = !!((parentMessage?.flags ?? 0) & (1 << 15));
+  if (!parentIsV2) return false;
+  if (!data?.content || data.components?.length || data.embeds?.length) return false;
+
+  console.warn(`🛡️ [SHAPE-GUARD] content-only ${pathLabel} onto V2 message — auto-wrapped into container. Fix the handler to return a V2 container.`);
+  data.components = [{
+    type: 17, // Container
+    components: [{ type: 10, content: data.content }]
+  }];
+  delete data.content;
+  return true;
+}
+
 export function sendResponse(res, data, updateMessage = false, parentMessage = null) {
   // Proactive emoji safety for IMMEDIATE responses: res.send goes straight to Discord and
   // (unlike DiscordRequest) can't reactively retry, so scrub invalid/inaccessible/known-bad
@@ -5799,21 +5829,9 @@ export function sendResponse(res, data, updateMessage = false, parentMessage = n
     // Always strip flags and ephemeral for UPDATE_MESSAGE responses
     const { flags, ephemeral, ...cleanData } = data;
 
-    // 🛡️ SHAPE-GUARD: a content-only update onto a Components V2 message is rejected
-    // by Discord with NO feedback (interaction responses are HTTP replies — Discord
-    // never tells us). ~170 handlers return { content } error strings this way (see
-    // scripts/scan-interaction-shapes.js). When the parent message is V2, auto-wrap
-    // the content into a container so the user sees the message instead of
-    // "This interaction failed". Non-V2 parents are left untouched (content works).
-    const parentIsV2 = !!((parentMessage?.flags ?? 0) & (1 << 15));
-    if (parentIsV2 && cleanData.content && !cleanData.components?.length && !cleanData.embeds?.length) {
-      console.warn(`🛡️ [SHAPE-GUARD] content-only UPDATE_MESSAGE onto V2 message — auto-wrapped into container. Fix the handler to return a V2 container.`);
-      cleanData.components = [{
-        type: 17, // Container
-        components: [{ type: 10, content: cleanData.content }]
-      }];
-      delete cleanData.content;
-    }
+    // 🛡️ SHAPE-GUARD (immediate path) — see wrapBareContentForV2. ~170 handlers return
+    // { content } error strings; scripts/scan-interaction-shapes.js tracks them.
+    wrapBareContentForV2(cleanData, parentMessage, 'UPDATE_MESSAGE');
 
     // Validate the response
     if (!validateResponse(cleanData)) {
@@ -6131,10 +6149,18 @@ export class ButtonHandlerFactory {
 
           // Choose between updating existing message or creating new follow-up
           if (config.updateMessage === false) {
-            // Create NEW follow-up message (for visual history tracking)
+            // Create NEW follow-up message (for visual history tracking) — a new message
+            // has no inherited V2 flag, so bare `content` is legal here. No guard.
             return createFollowupMessage(context.token, webhookData);
           } else {
-            // Update existing message (default behavior)
+            // Update existing message (default behavior).
+            // 🛡️ SHAPE-GUARD (deferred path): PATCHing @original with bare `content` drops
+            // IS_COMPONENTS_V2 → Discord 50035 MESSAGE_CANNOT_REMOVE_COMPONENTS_V2_FLAG and the
+            // message never updates. The immediate path has been guarded since 2026-07-12; this
+            // path was not, so every deferred handler with a content-only branch (20 of the
+            // grandfathered class-A baseline — permission denials, "not found" errors) was a
+            // live failure. Observed on season_app_ranking / season_marooning, 2026-08-09.
+            wrapBareContentForV2(webhookData, context.message, 'webhook PATCH');
             return updateDeferredResponse(context.token, webhookData);
           }
         }

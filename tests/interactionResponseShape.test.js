@@ -8,9 +8,13 @@
  *
  * Classes:
  *   A content_only_update  — updateMessage:true handler returns { content } only.
- *     Runtime-mitigated by the sendResponse SHAPE-GUARD (auto-wraps when the parent
- *     message is V2), but new code must return proper V2 containers. Baseline is
- *     grandfathered debt — SHRINK it (fix a handler, delete its key), never grow it.
+ *     Runtime-mitigated by the SHAPE-GUARD (wrapBareContentForV2), which auto-wraps when
+ *     the parent message is V2. 2026-08-09: that mitigation covered ONLY the immediate
+ *     UPDATE_MESSAGE path — the deferred webhook-PATCH path was unguarded, so the 20
+ *     baselined handlers with `deferred: true` were live 50035 failures, not debt
+ *     (season_app_ranking / season_marooning hit it in prod). Both paths are guarded now.
+ *     Do not read "baselined" as "safe": new code must return proper V2 containers.
+ *     Baseline is grandfathered debt — SHRINK it (fix a handler, delete its key), never grow it.
  *   B content_with_v2_flag — content alongside IS_COMPONENTS_V2. Eradicated; must stay 0.
  *   C/D legacy res.send(UPDATE_MESSAGE) with content-only data / flags in data.
  *     Count-ratcheted downward.
@@ -78,7 +82,6 @@ const FROZEN_A_BASELINE = [
   'app.js::map_admin_add_item::A',
   'app.js::map_admin_blacklist_modal::A',
   'app.js::map_admin_edit_quantities::A',
-  'app.js::map_drop_style::A',
   'app.js::menu_visibility_select::A',
   'app.js::nuke_cat_confirm::A',
   'app.js::nuke_cat_select::A',
@@ -141,11 +144,9 @@ const FROZEN_A_BASELINE = [
   'app.js::safari_role_update::A',
   'app.js::safari_store_items_select_back::A',
   'app.js::save_player_notes::A',
-  'app.js::season_app_ranking::A',
   'app.js::season_delete::A',
   'app.js::season_delete_cancel::A',
   'app.js::season_delete_confirm::A',
-  'app.js::season_marooning::A',
   'app.js::season_nav_next::A',
   'app.js::season_nav_prev::A',
   'app.js::season_question_delete::A',
@@ -156,7 +157,10 @@ const FROZEN_A_BASELINE = [
 ];
 // Structural tamper guard — the baseline can only SHRINK. If you legitimately fixed
 // handlers, delete their keys AND decrement this number.
-const FROZEN_A_MAX = 123;
+// 2026-08-09: 123 → 120. Fixed season_app_ranking + season_marooning (returned bare
+// content on the permission-denied branch → prod 50035); dropped map_drop_style, whose
+// handler no longer exists anywhere in the codebase.
+const FROZEN_A_MAX = 120;
 
 // Legacy res.send(UPDATE_MESSAGE) count ratchets (migrate handlers to the factory).
 const FROZEN_C_MAX = 6;   // content-only data
