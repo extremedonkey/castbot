@@ -114,11 +114,11 @@ if (req.body.member?.user?.id !== '391415444084490240') {
 return ButtonHandlerFactory.create({ ... })(req, res, client);
 ```
 
-### 4b. `hasCastRankingPermissions()` — the Casting family (⚠️ the odd one out)
+### 4b. `hasCastRankingPermissions()` — the Casting family
 
-An undocumented **fifth** primitive, used by 18 Casting/Marooning/DNC gates (app.js:752). Accepts `MANAGE_ROLES | MANAGE_CHANNELS | ADMINISTRATOR` — deliberately narrower than Tier 1 (no `MANAGE_GUILD`).
+A **fifth** primitive, used by 18 Casting/Marooning/DNC gates (app.js:775). Admits `MANAGE_ROLES` or `MANAGE_CHANNELS` via `PermissionsBitField.has()`, which grants `ADMINISTRATOR` implicitly — deliberately narrower than Tier 1 (no `MANAGE_GUILD`).
 
-**It differs from every other gate in one critical way**: all 18 call sites pass a **fetched** `GuildMember` (`await guild.members.fetch(userId)`), not `context.member`. Those are not equivalent:
+Like every other gate it now reads `context.member`. **This matters**: until 2026-08-09 all 18 sites passed a **fetched** `GuildMember` (`await guild.members.fetch(userId)`) instead. Those are not equivalent:
 
 | | `context.member` (interaction payload) | fetched `GuildMember` |
 |---|---|---|
@@ -129,9 +129,15 @@ An undocumented **fifth** primitive, used by 18 Casting/Marooning/DNC gates (app
 
 REST `GET /guilds/{id}/members/{id}` returns **no** `permissions` field — the payload's `permissions` is documented as *"total permissions of the member in the channel, including overwrites, **returned when in the interaction object**"*. That is why the two disagree.
 
-**Consequence (2026-08-09)**: a role with only Administrator ticked yields bits `0x8`, which ANDs to zero against `ManageRoles|ManageChannels` — locking Administrator-only hosts out of all 18 Casting screens while `/menu` admitted them normally. Fixed by adding `ADMINISTRATOR` to the mask; the fetched-member source remains and is tracked for unification onto `hasAdminPermissions(context.member)` (see [RaP 0900 Option A](../01-RaP/0900_20260711_SecurityArchitectureOptions_Analysis.md#option-a--registry-driven-enforcement-at-the-chokepoint--primary-recommendation)). Tests: `tests/castRankingPermissions.test.js`.
+**Consequence (2026-08-09)**: a role with only Administrator ticked yields bits `0x8`, which ANDs to zero against `ManageRoles|ManageChannels` — locking Administrator-only hosts out of all 18 Casting screens while `/menu` admitted them normally. This is also why it hid for ~a year: most servers tick several boxes, so the wrong answer and the right answer coincide. Only a role with *Administrator alone* exposes it.
+
+**Fixed in two steps**: (1) `ADMINISTRATOR` added to the mask; (2) all 18 sites repointed to `context.member` and the now-dead `guild.members.fetch()` calls deleted — 18 fetches removed from hot admin paths, plus 4 `guilds.fetch()` that existed only to reach them.
 
 > **Rule**: gate on `context.member`. A permission read off a fetched `GuildMember` is not Discord's answer — it's a local recomputation that silently omits the Administrator override.
+>
+> Use `PermissionsBitField.has()`, never a raw `&`. `has()` applies the Administrator override structurally. Note it must be called **once per permission**: `has(A | B)` demands *both* bits.
+
+**Enforced by** `tests/castRankingPermissions.test.js` — a ratchet at zero fails the build if any gate is fed something other than `context.member`, or if a `members.fetch()` result reaches a casting gate. Negative-tested (both guards confirmed to fire).
 
 ### 5. Denial Response
 

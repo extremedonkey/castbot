@@ -17,6 +17,7 @@ import {
   EmbedBuilder, 
   SnowflakeUtil, 
   PermissionFlagsBits,
+  PermissionsBitField,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
@@ -744,40 +745,49 @@ async function canSendMessagesInChannel(member, channelId, client) {
  */
 
 /**
- * Check if user has Casting permissions (with special exception for server 1331657596087566398)
- * @param {Object} member - Discord member object from interaction
+ * Check if user has Casting permissions (with special exception for server 1331657596087566398).
+ *
+ * 🚨 PASS `context.member` — the INTERACTION PAYLOAD member. Never a GuildMember from
+ * `guild.members.fetch()`. The two are not interchangeable:
+ *
+ *   payload `member.permissions`  → computed by DISCORD. Administrator expands to all
+ *                                   permissions, channel overwrites applied, timeouts honoured.
+ *                                   Documented as "total permissions of the member in the
+ *                                   channel, including overwrites, returned when in the
+ *                                   interaction object".
+ *   fetched GuildMember           → computed LOCALLY by discord.js as a raw OR of role bits
+ *                                   (GuildMember.js:254). Administrator is NOT expanded, channel
+ *                                   overwrites are ignored, and it depends on guild.roles.cache.
+ *
+ * REST `GET /guilds/{id}/members/{id}` returns no `permissions` field at all — which is exactly
+ * why discord.js has to recompute one, and why its answer differs from Discord's.
+ *
+ * All 18 call sites used to pass a fetched member, so a role with ONLY the Administrator box
+ * ticked yielded bits `0x8` and failed a raw AND against ManageRoles|ManageChannels — locking
+ * every Administrator-only host out of the whole Casting/Marooning family (found 2026-08-09).
+ * `PermissionsBitField.has()` is used below rather than a raw `&` because `has()` applies the
+ * Administrator override structurally, so this cannot regress the same way twice.
+ *
+ * @param {Object} member - `context.member` (req.body.member) — NOT a fetched GuildMember
  * @param {string} guildId - Discord guild ID
  * @returns {boolean} True if user has casting permissions
  */
 function hasCastRankingPermissions(member, guildId) {
   if (!member || !member.permissions) return false;
-  
+
   // Special exception for server 1331657596087566398 - allow all users
   if (guildId === '1331657596087566398') {
     console.log(`🏆 Casting: Special permission granted for server ${guildId}`);
     return true;
   }
-  
-  // Standard permission check for other servers: Manage Roles OR Manage Channels OR Administrator.
-  //
-  // 🚨 Administrator MUST be listed explicitly here — do not "simplify" it away. Every one of the
-  // 18 call sites passes a discord.js GuildMember from guild.members.fetch(), and that object's
-  // .permissions getter is a raw OR of role bits (GuildMember.js:254) — it does NOT expand
-  // Administrator into "all permissions" the way Discord's own computation does. A role with only
-  // the Administrator box ticked therefore yields bits `0x8` and ANDs to zero against
-  // ManageRoles|ManageChannels. That silently locked every Administrator-only host out of all of
-  // Casting/Marooning until 2026-08-09.
-  //
-  // The deeper fix is to stop reading permissions off a fetched member at all and use
-  // context.member (Discord's own computed value, which expands Administrator and applies channel
-  // overwrites) like the other ~421 gates do — tracked as Option A / RaP 0900 Option A.
-  const permissions = BigInt(member.permissions);
-  const castRankingPermissions =
-    PermissionFlagsBits.ManageRoles |
-    PermissionFlagsBits.ManageChannels |
-    PermissionFlagsBits.Administrator;
 
-  const hasPermission = (permissions & BigInt(castRankingPermissions)) !== 0n;
+  // Manage Roles OR Manage Channels (deliberately narrower than hasAdminPermissions — no
+  // ManageGuild). `.has()` grants Administrator implicitly; note it must be called once per
+  // permission, since has(A | B) demands BOTH bits.
+  const permissions = new PermissionsBitField(BigInt(member.permissions));
+  const hasPermission = permissions.has(PermissionFlagsBits.ManageRoles)
+    || permissions.has(PermissionFlagsBits.ManageChannels);
+
   console.log(`🏆 Casting: Standard permission check for server ${guildId}: ${hasPermission}`);
   return hasPermission;
 }
@@ -5413,10 +5423,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           
           const { guildId, userId, client } = context;
           const guild = await client.guilds.fetch(guildId);
-          const member = await guild.members.fetch(userId);
           
           // Check Casting permissions (includes special exception for server 1331657596087566398)
-          if (!hasCastRankingPermissions(member, guildId)) {
+          if (!hasCastRankingPermissions(context.member, guildId)) {
             return {
               content: '❌ You need Manage Roles or Manage Channels permissions to rate applicants.',
               ephemeral: true
@@ -5457,8 +5466,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
           // SECURITY: same casting gate as every sibling handler — this UI exposes
           // applicant scores, notes, and casting decisions.
-          const rankerMember = await guild.members.fetch(userId);
-          if (!hasCastRankingPermissions(rankerMember, guildId)) {
+          if (!hasCastRankingPermissions(context.member, guildId)) {
             return {
               content: '❌ You need Manage Roles or Manage Channels permissions to view casting rankings.',
               ephemeral: true
@@ -5506,10 +5514,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
           const { guildId, userId, client } = context;
           const guild = await client.guilds.fetch(guildId);
-          const member = await guild.members.fetch(userId);
 
           // Permission check — same as all Casting handlers
-          if (!hasCastRankingPermissions(member, guildId)) {
+          if (!hasCastRankingPermissions(context.member, guildId)) {
             return {
               content: '❌ You need Manage Roles or Manage Channels permissions to access the DNC Overview.',
               ephemeral: true
@@ -5533,8 +5540,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         handler: async (context) => {
           const { guildId, userId, client } = context;
           const guild = await client.guilds.fetch(guildId);
-          const member = await guild.members.fetch(userId);
-          if (!hasCastRankingPermissions(member, guildId)) {
+          if (!hasCastRankingPermissions(context.member, guildId)) {
             return { content: '❌ You need Manage Roles or Manage Channels permissions for this.', ephemeral: true };
           }
           const m = context.customId.match(/^casting_votes_(\d+)_(\d+)_(.+)$/);
@@ -5555,9 +5561,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         id: 'casting_send',
         requiresModal: true,
         handler: async (context) => {
-          const guild = await context.client.guilds.fetch(context.guildId);
-          const member = await guild.members.fetch(context.userId);
-          if (!hasCastRankingPermissions(member, context.guildId)) {
+          if (!hasCastRankingPermissions(context.member, context.guildId)) {
             return { content: '❌ You need Manage Roles or Manage Channels permissions for this.', ephemeral: true };
           }
           const m = context.customId.match(/^casting_send_(\d+)_(.+)$/);
@@ -5579,9 +5583,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         id: 'casting_messages',
         requiresModal: true,
         handler: async (context) => {
-          const guild = await context.client.guilds.fetch(context.guildId);
-          const member = await guild.members.fetch(context.userId);
-          if (!hasCastRankingPermissions(member, context.guildId)) {
+          if (!hasCastRankingPermissions(context.member, context.guildId)) {
             return { content: '❌ You need Manage Roles or Manage Channels permissions for this.', ephemeral: true };
           }
           const m = context.customId.match(/^casting_messages_(\d+)_(.+)$/);
@@ -5606,9 +5608,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         deferred: true,
         updateMessage: true,
         handler: async (context) => {
-          const guild = await context.client.guilds.fetch(context.guildId);
-          const member = await guild.members.fetch(context.userId);
-          if (!hasCastRankingPermissions(member, context.guildId)) {
+          if (!hasCastRankingPermissions(context.member, context.guildId)) {
             return { content: '❌ You need Manage Roles or Manage Channels permissions for this.' };
           }
           // casting_invites_confirm:{mode}:{appIndex}:{configId}
@@ -5640,7 +5640,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           // Locked load→validate→mutate→save lives in castRankingManager; Discord side effects stay out here.
           const { recordPlacementResponse } = await import('./castRankingManager.js');
           const rp = await recordPlacementResponse({ guildId, channelId, clickerUserId: context.userId, offerType, accepted });
-          if (!rp.ok) return { content: rp.error, ephemeral: true };
+          // The invite card is PUBLIC in the app channel — production members sit in there too.
+          // A rejection must never edit the card (that would strip the buttons and leave the
+          // applicant unable to accept), so force a new ephemeral message instead. RaP 0968.
+          if (!rp.ok) return { content: rp.error, ephemeral: true, _newMessage: true };
 
           const { DiscordRequest } = await import('./utils.js');
           const offerLabel = offerType === 'alternative' ? 'the alternate spot' : 'their cast placement';
@@ -5686,10 +5689,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           
           const { guildId, userId, client } = context;
           const guild = await client.guilds.fetch(guildId);
-          const member = await guild.members.fetch(userId);
           
           // Check Casting permissions (includes special exception for server 1331657596087566398)
-          if (!hasCastRankingPermissions(member, guildId)) {
+          if (!hasCastRankingPermissions(context.member, guildId)) {
             return {
               content: '❌ You need Manage Roles or Manage Channels permissions to access Casting.',
               ephemeral: true
@@ -5723,10 +5725,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           
           const { guildId, userId, client } = context;
           const guild = await client.guilds.fetch(guildId);
-          const member = await guild.members.fetch(userId);
           
           // Check Casting permissions
-          if (!hasCastRankingPermissions(member, guildId)) {
+          if (!hasCastRankingPermissions(context.member, guildId)) {
             return {
               content: '❌ You need Manage Roles or Manage Channels permissions to navigate applicants.',
               ephemeral: true
@@ -5787,8 +5788,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const appIndex = parseInt(rest.split('_')[0]) || 0;
           const configId = rest.substring(rest.indexOf('_') + 1);
           const guild = await context.client.guilds.fetch(context.guildId);
-          const member = await guild.members.fetch(context.userId);
-          if (!hasCastRankingPermissions(member, context.guildId)) {
+          if (!hasCastRankingPermissions(context.member, context.guildId)) {
             return { content: '❌ You need Manage Roles or Manage Channels permissions to access Casting.' };
           }
           const { buildRankingScreen } = await import('./castRankingManager.js');
@@ -5807,8 +5807,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const appIndex = parseInt(rest.split('_')[0]) || 0;
           const configId = rest.substring(rest.indexOf('_') + 1);
           const guild = await context.client.guilds.fetch(context.guildId);
-          const member = await guild.members.fetch(context.userId);
-          if (!hasCastRankingPermissions(member, context.guildId)) {
+          if (!hasCastRankingPermissions(context.member, context.guildId)) {
             return { content: '❌ You need Manage Roles or Manage Channels permissions to post a public ranking.', ephemeral: true };
           }
           const { buildRankingScreen } = await import('./castRankingManager.js');
@@ -5825,8 +5824,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         handler: async (context) => {
           const { guildId, userId, client } = context;
           const guild = await client.guilds.fetch(guildId);
-          const member = await guild.members.fetch(userId);
-          if (!hasCastRankingPermissions(member, guildId)) {
+          if (!hasCastRankingPermissions(context.member, guildId)) {
             return { content: '❌ You need Manage Roles or Manage Channels permissions to set casting status.', ephemeral: true };
           }
           const m = context.customId.match(/^castdec_([cna])_(\d+)_(\d+)_(.+)$/);
@@ -5849,8 +5847,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         handler: async (context) => {
           const { guildId, userId, client } = context;
           const guild = await client.guilds.fetch(guildId);
-          const member = await guild.members.fetch(userId);
-          if (!hasCastRankingPermissions(member, guildId)) {
+          if (!hasCastRankingPermissions(context.member, guildId)) {
             return { content: '❌ You need Manage Roles or Manage Channels permissions to set casting status.', ephemeral: true };
           }
           // cast_[status]_[channelId]_[appIndex]_[configId]
@@ -13722,10 +13719,9 @@ To fix this:
           console.log(`🏆 Casting for season: ${configId}`);
           
           const guild = await client.guilds.fetch(guildId);
-          const member = await guild.members.fetch(userId);
           
           // Check Casting permissions (includes special exception for server 1331657596087566398)
-          if (!hasCastRankingPermissions(member, guildId)) {
+          if (!hasCastRankingPermissions(context.member, guildId)) {
             return { flags: (1 << 15), components: [{ type: 17, components: [{ type: 10, content: '❌ You need Manage Roles or Manage Channels permissions to access Casting.' }] }] };
           }
 
@@ -13752,9 +13748,8 @@ To fix this:
           const configId = context.customId.replace('season_marooning_', '');
 
           const guild = await client.guilds.fetch(guildId);
-          const member = await guild.members.fetch(userId);
           // Same gate as the Casting tab — Marooning exposes the same casting data.
-          if (!hasCastRankingPermissions(member, guildId)) {
+          if (!hasCastRankingPermissions(context.member, guildId)) {
             return { flags: (1 << 15), components: [{ type: 17, components: [{ type: 10, content: '❌ You need Manage Roles or Manage Channels permissions to access Marooning.' }] }] };
           }
 
@@ -13776,8 +13771,7 @@ To fix this:
         handler: async (context) => {
           const { guildId, userId, client } = context;
           const guild = await client.guilds.fetch(guildId);
-          const member = await guild.members.fetch(userId);
-          if (!hasCastRankingPermissions(member, guildId)) return { flags: (1 << 15), components: [{ type: 17, components: [{ type: 10, content: '❌ You need Manage Roles or Manage Channels permissions to access Marooning.' }] }] };
+          if (!hasCastRankingPermissions(context.member, guildId)) return { flags: (1 << 15), components: [{ type: 17, components: [{ type: 10, content: '❌ You need Manage Roles or Manage Channels permissions to access Marooning.' }] }] };
           const playerData = await loadPlayerData();
           const { renderMarooningRejectsToggle } = await import('./castRankingManager.js');
           return renderMarooningRejectsToggle(context.customId, guildId, userId, guild, playerData);
@@ -13821,8 +13815,7 @@ To fix this:
           console.log(`🔍 START: marooning_draft_tribes - user ${context.userId}`);
           const { guildId, userId, client } = context;
           const guild = await client.guilds.fetch(guildId);
-          const member = await guild.members.fetch(userId);
-          if (!hasCastRankingPermissions(member, guildId)) {
+          if (!hasCastRankingPermissions(context.member, guildId)) {
             return { content: '❌ You need Manage Roles or Manage Channels permissions to draft tribes.', ephemeral: true };
           }
           const playerData = await loadPlayerData();
@@ -37251,9 +37244,7 @@ To fix this:
         id: 'casting_messages_save',
         ephemeral: true,
         handler: async (context) => {
-          const guild = await context.client.guilds.fetch(context.guildId);
-          const member = await guild.members.fetch(context.userId);
-          if (!hasCastRankingPermissions(member, context.guildId)) {
+          if (!hasCastRankingPermissions(context.member, context.guildId)) {
             return { content: '❌ You need Manage Roles or Manage Channels permissions for this.' };
           }
           const idPart = custom_id.slice('casting_messages_save:'.length);

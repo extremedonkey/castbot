@@ -6115,7 +6115,13 @@ export class ButtonHandlerFactory {
             return res.send(result);
           }
 
-          const shouldUpdateMessage = config.updateMessage;
+          // Per-response override (RaP 0968): a handler configured `updateMessage: true` can
+          // force ONE branch to send a NEW message instead of editing the parent. Needed when
+          // the parent is a shared/public message that the clicker must not clobber — e.g. the
+          // "this offer isn't yours" rejection on the public casting invite card.
+          const forceNewMessage = result._newMessage === true;
+          delete result._newMessage;
+          const shouldUpdateMessage = config.updateMessage && !forceNewMessage;
 
           // Inject ephemeral flag from config into result data
           if (config.ephemeral && !shouldUpdateMessage) {
@@ -6147,8 +6153,12 @@ export class ButtonHandlerFactory {
           // Some handlers return { type: 4, data: {...} } instead of just {...}
           const webhookData = result.data || result;
 
+          // Per-response override — same contract as the immediate path above.
+          const forceNewMessage = webhookData._newMessage === true;
+          delete webhookData._newMessage;
+
           // Choose between updating existing message or creating new follow-up
-          if (config.updateMessage === false) {
+          if (config.updateMessage === false || forceNewMessage) {
             // Create NEW follow-up message (for visual history tracking) — a new message
             // has no inherited V2 flag, so bare `content` is legal here. No guard.
             return createFollowupMessage(context.token, webhookData);
