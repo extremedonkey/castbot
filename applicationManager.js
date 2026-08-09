@@ -454,17 +454,10 @@ async function createApplicationChannel(guild, user, config, configId = 'unknown
         const sanitizedName = sanitizeChannelName(user.displayName || user.username);
         const channelName = config.channelFormat.replace('%name%', sanitizedName);
 
-        // Check if channel already exists
-        const existingChannel = guild.channels.cache.find(
-            channel => channel.name === channelName && channel.parentId === category.id
-        );
-        
-        if (existingChannel) {
-            return { success: false, error: 'You already have an application channel!', channel: existingChannel };
-        }
-
         // Clean up any orphaned application data for this user (where channel was manually deleted)
-        // This ensures users can reapply after their channel is deleted by admins
+        // This ensures users can reapply after their channel is deleted by admins.
+        // MUST run before the duplicate check below, or a stale record for a deleted channel would
+        // permanently block a legitimate re-apply.
         const data = await loadPlayerData();
         if (data[guild.id]?.applications) {
             // Find any applications for this user where the channel no longer exists
@@ -472,17 +465,58 @@ async function createApplicationChannel(guild, user, config, configId = 'unknown
                 .filter(([channelId, application]) => {
                     return application.userId === user.id && !guild.channels.cache.has(channelId);
                 });
-            
+
             // Remove orphaned application data
             for (const [channelId] of orphanedApplications) {
                 console.log(`🧹 Cleaning up orphaned application data for channel ${channelId} (user: ${user.displayName})`);
                 delete data[guild.id].applications[channelId];
             }
-            
+
             if (orphanedApplications.length > 0) {
                 await savePlayerData(data);
                 console.log(`🧹 Cleaned up ${orphanedApplications.length} orphaned application(s) for user ${user.displayName}`);
             }
+        }
+
+        // 🔒 DUPLICATE GUARD — by APPLICATION IDENTITY (userId + configId), not by channel name.
+        //
+        // The name check below used to be the only guard, and it silently stopped working the moment
+        // an application progressed: CastBot renames these channels as state changes (📝 open →
+        // ☑️ submitted → ✖️ withdrawn → ✅/❌ placement — the emoji prefix IS the state machine), so a
+        // lookup for the freshly-computed "📝name-app" could no longer find "☑️name-app". Clicking
+        // Apply again then created a SECOND channel and a second application record for the same
+        // person in the same season, which double-counts them in Casting/Marooning and inflates the
+        // cast total. Same failure if the host moves the channel to another category (the old check
+        // also matched on parentId), or renames it by hand.
+        // Observed on prod: 16 duplicated applicants across 12 servers, trickling in since 2025.
+        // This is the same identity rule splitExistingApplicants (src/seasons/addCast.js) uses.
+        if (configId && configId !== 'unknown') {
+            const existing = Object.entries(data[guild.id]?.applications || {}).find(
+                ([channelId, application]) =>
+                    application.userId === user.id &&
+                    application.configId === configId &&
+                    guild.channels.cache.has(channelId) // orphans were just swept above; belt and braces
+            );
+            if (existing) {
+                const [existingId] = existing;
+                console.log(`🔒 [APPLICATION] ${user.displayName || user.id} already has an application for ${configId} (channel ${existingId}) — refusing duplicate`);
+                return {
+                    success: false,
+                    error: 'You already have an application channel!',
+                    channel: guild.channels.cache.get(existingId)
+                };
+            }
+        }
+
+        // Secondary net: a channel with this exact name already sitting in the category. Catches the
+        // cases the identity check can't see — a channel created outside CastBot, or one whose
+        // application record was lost — and is why it survives rather than being replaced.
+        const existingChannel = guild.channels.cache.find(
+            channel => channel.name === channelName && channel.parentId === category.id
+        );
+
+        if (existingChannel) {
+            return { success: false, error: 'You already have an application channel!', channel: existingChannel };
         }
 
         // Create the channel with proper permissions
