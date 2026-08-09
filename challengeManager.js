@@ -165,15 +165,20 @@ export async function deleteChallenge(guildId, challengeId) {
   const title = playerData[guildId].challenges[challengeId].title;
   delete playerData[guildId].challenges[challengeId];
 
-  // Unlink from any rounds that reference this challenge
+  // Unlink from any rounds that reference this challenge — as the round's main challenge OR as
+  // its bonus/reward. A dangling bonusChallengeId still occupies a day in the schedule, so it
+  // has to be cleared here rather than left for the planner to render as "missing".
   const seasonRounds = playerData[guildId]?.seasonRounds;
   if (seasonRounds) {
     for (const seasonId of Object.keys(seasonRounds)) {
       for (const round of Object.values(seasonRounds[seasonId])) {
         if (round.challengeIDs?.primary === challengeId) {
-          round.challengeIDs = {};
+          // Delete the key rather than replacing the object — a wholesale reset would also
+          // discard any other link stored alongside it.
+          delete round.challengeIDs.primary;
           round.challengeName = '';
         }
+        if (round.bonusChallengeId === challengeId) delete round.bonusChallengeId;
       }
     }
   }

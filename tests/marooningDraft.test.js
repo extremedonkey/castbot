@@ -6,27 +6,40 @@ import assert from 'node:assert/strict';
 
 // ── Replicas of the pure logic in buildMarooningView / buildDraftTribesModal ──
 
-function buildUserDraftTribe(draftTribes) {
-  const userDraftTribe = {};
+// userId → EVERY tribe that drafted them (was first-tribe-wins until 2026-08-09; see the suite below).
+function buildUserDraftTribes(draftTribes) {
+  const map = {};
   for (const [rid, ids] of Object.entries(draftTribes || {})) {
-    for (const uid of (ids || [])) { if (!userDraftTribe[uid]) userDraftTribe[uid] = rid; }
+    for (const uid of (ids || [])) { (map[uid] ||= []).push(rid); }
   }
-  return userDraftTribe;
+  return map;
 }
 
-function groupByTribe(players, userDraftTribe, tribeRoleIds) {
+function groupByTribe(players, userDraftTribes, tribeRoleIds) {
   const perTribe = new Map();
   const undrafted = [];
   for (const p of players) {
-    const rid = userDraftTribe[p.userId];
-    if (rid && tribeRoleIds.includes(rid)) {
-      if (!perTribe.has(rid)) perTribe.set(rid, []);
-      perTribe.get(rid).push(p);
+    const rids = (userDraftTribes[p.userId] || []).filter(rid => tribeRoleIds.includes(rid));
+    if (rids.length) {
+      for (const rid of rids) {
+        if (!perTribe.has(rid)) perTribe.set(rid, []);
+        perTribe.get(rid).push(p);
+      }
     } else {
       undrafted.push(p);
     }
   }
   return { perTribe, undrafted };
+}
+
+// Drafted users with no application for this season — invisible in every roster before 2026-08-09.
+function findOrphanDrafts(draftTribes, tribeRoleIds, applicantUserIds) {
+  const out = [];
+  for (const rid of tribeRoleIds) {
+    const ids = (draftTribes[rid] || []).filter(uid => !applicantUserIds.has(uid));
+    if (ids.length) out.push({ rid, ids });
+  }
+  return out;
 }
 
 // `counter` is a mutable { n } threaded through a render pass so numbering can run continuously
@@ -159,18 +172,19 @@ function getMarooningTribeRoleIds(playerData, guildId, guild) {
   return guild ? allTribeIds.filter(rid => guild.roles.cache.has(rid)) : allTribeIds;
 }
 
-describe('Marooning Draft — userDraftTribe map (first tribe wins)', () => {
-  it('maps each userId to its first drafting tribe', () => {
-    const m = buildUserDraftTribe({ roleA: ['u1', 'u2'], roleB: ['u3'] });
-    assert.deepEqual(m, { u1: 'roleA', u2: 'roleA', u3: 'roleB' });
+describe('Marooning Draft — userDraftTribes map (EVERY tribe, not just the first)', () => {
+  it('maps each userId to its drafting tribes', () => {
+    const m = buildUserDraftTribes({ roleA: ['u1', 'u2'], roleB: ['u3'] });
+    assert.deepEqual(m, { u1: ['roleA'], u2: ['roleA'], u3: ['roleB'] });
   });
-  it('a user in two tribes keeps the FIRST (stable, no duplicates)', () => {
-    const m = buildUserDraftTribe({ roleA: ['u1'], roleB: ['u1'] });
-    assert.equal(m.u1, 'roleA');
+  it('a user in two tribes keeps BOTH — the draft modal shows them in both, so this view must too', () => {
+    // Regression: first-tribe-wins made the second tribe render empty while the modal showed the
+    // player pre-selected in it (TEST 2026-08-09, CastBot-Test drafted into lk;klnk AND Any).
+    assert.deepEqual(buildUserDraftTribes({ roleA: ['u1'], roleB: ['u1'] }).u1, ['roleA', 'roleB']);
   });
   it('empty / missing → empty map', () => {
-    assert.deepEqual(buildUserDraftTribe({}), {});
-    assert.deepEqual(buildUserDraftTribe(undefined), {});
+    assert.deepEqual(buildUserDraftTribes({}), {});
+    assert.deepEqual(buildUserDraftTribes(undefined), {});
   });
 });
 
@@ -181,19 +195,66 @@ describe('Marooning Draft — grouping the casting list by draft tribe', () => {
     { userId: 'u2', name: 'Bob' },
     { userId: 'u3', name: 'Cara' } // undrafted
   ];
-  const userDraftTribe = buildUserDraftTribe({ roleA: ['u1'], roleB: ['u2'] });
+  const userDraftTribes = buildUserDraftTribes({ roleA: ['u1'], roleB: ['u2'] });
 
   it('splits players into per-tribe buckets + an undrafted bucket', () => {
-    const { perTribe, undrafted } = groupByTribe(players, userDraftTribe, tribeRoleIds);
+    const { perTribe, undrafted } = groupByTribe(players, userDraftTribes, tribeRoleIds);
     assert.deepEqual(perTribe.get('roleA').map(p => p.name), ['Alice']);
     assert.deepEqual(perTribe.get('roleB').map(p => p.name), ['Bob']);
     assert.deepEqual(undrafted.map(p => p.name), ['Cara']);
   });
+  it('a player drafted into two tribes appears under BOTH', () => {
+    const both = buildUserDraftTribes({ roleA: ['u1'], roleB: ['u1'] });
+    const { perTribe, undrafted } = groupByTribe([players[0]], both, tribeRoleIds);
+    assert.deepEqual(perTribe.get('roleA').map(p => p.name), ['Alice']);
+    assert.deepEqual(perTribe.get('roleB').map(p => p.name), ['Alice']);
+    assert.equal(undrafted.length, 0, 'appearing twice is the signal, not a reason to hide them');
+  });
   it('a draft pointing at a tribe NOT on the castlist falls back to undrafted', () => {
-    const stray = buildUserDraftTribe({ roleGONE: ['u1'] });
+    const stray = buildUserDraftTribes({ roleGONE: ['u1'] });
     const { perTribe, undrafted } = groupByTribe([players[0]], stray, tribeRoleIds);
     assert.equal(perTribe.size, 0);
     assert.deepEqual(undrafted.map(p => p.name), ['Alice']);
+  });
+  it('a player drafted into one live and one deleted tribe still shows under the live one', () => {
+    const mixed = buildUserDraftTribes({ roleA: ['u1'], roleGONE: ['u1'] });
+    const { perTribe, undrafted } = groupByTribe([players[0]], mixed, tribeRoleIds);
+    assert.deepEqual(perTribe.get('roleA').map(p => p.name), ['Alice']);
+    assert.equal(undrafted.length, 0);
+  });
+});
+
+describe('Marooning Draft — drafted users with no application', () => {
+  const tribeRoleIds = ['roleA', 'roleB'];
+
+  it('surfaces a drafted non-applicant instead of silently dropping them', () => {
+    // The draft modal's User Select offers EVERY server member, but every roster is built from
+    // applications — so these users used to vanish, leaving a tribe looking half-empty.
+    const orphans = findOrphanDrafts({ roleA: ['u1', 'ghost'] }, tribeRoleIds, new Set(['u1']));
+    assert.deepEqual(orphans, [{ rid: 'roleA', ids: ['ghost'] }]);
+  });
+
+  it('reports nothing when every drafted user has an application', () => {
+    assert.deepEqual(findOrphanDrafts({ roleA: ['u1'] }, tribeRoleIds, new Set(['u1'])), []);
+  });
+
+  it('groups orphans under each tribe, in tribe order', () => {
+    const orphans = findOrphanDrafts({ roleB: ['g2'], roleA: ['g1'] }, tribeRoleIds, new Set());
+    assert.deepEqual(orphans.map(o => o.rid), ['roleA', 'roleB'], 'follows tribeRoleIds order, not object key order');
+  });
+
+  it('ignores drafts pointing at tribes that no longer exist', () => {
+    assert.deepEqual(findOrphanDrafts({ roleGONE: ['ghost'] }, tribeRoleIds, new Set()), []);
+  });
+
+  it('counts one orphan per tribe they were drafted into', () => {
+    const orphans = findOrphanDrafts({ roleA: ['ghost'], roleB: ['ghost'] }, tribeRoleIds, new Set());
+    assert.equal(orphans.reduce((n, o) => n + o.ids.length, 0), 2);
+  });
+
+  it('an empty season with only orphan drafts still has something to render', () => {
+    const orphans = findOrphanDrafts({ roleA: ['ghost'] }, tribeRoleIds, new Set());
+    assert.ok(orphans.length > 0, 'the "No applicants yet" empty state must not swallow this');
   });
 });
 
@@ -451,10 +512,10 @@ describe('Marooning — deleted Discord roles are gracefully ignored', () => {
     assert.deepEqual(filterDeletedRoles(['roleA', 'roleB'], null), ['roleA', 'roleB']);
   });
   it('draftees of a deleted tribe fall back to the undrafted list', () => {
-    const userDraftTribe = buildUserDraftTribe({ roleDead: ['u1'], roleLive: ['u2'] });
+    const userDraftTribes = buildUserDraftTribes({ roleDead: ['u1'], roleLive: ['u2'] });
     const live = filterDeletedRoles(['roleDead', 'roleLive'], mockGuild(['roleLive']));
     const players = [{ userId: 'u1', name: 'A' }, { userId: 'u2', name: 'B' }];
-    const { perTribe, undrafted } = groupByTribe(players, userDraftTribe, live);
+    const { perTribe, undrafted } = groupByTribe(players, userDraftTribes, live);
     assert.deepEqual([...perTribe.keys()], ['roleLive']);
     assert.deepEqual(undrafted.map(p => p.name), ['A']);
   });

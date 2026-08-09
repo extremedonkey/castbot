@@ -472,6 +472,40 @@ function buildRoundOptions(round, dates, challenges = {}) {
   const elims = round.eliminations ?? 1;
   const elimText = elims === 0 ? 'no elim' : elims === 1 ? '1 elim' : `${elims} elims`;
 
+  // Bonus / reward challenge. A dangling link (challenge deleted out from under the round)
+  // still occupies a day in the schedule, so surface it rather than hiding it — silently
+  // dropping the option would make the timeline look wrong for no visible reason.
+  const bonusId = round.bonusChallengeId;
+  const bonusChallenge = bonusId ? challenges[bonusId] : null;
+  const bonusMissing = !!bonusId && !bonusChallenge;
+  const bonusTitle = bonusMissing ? '⚠️ Missing bonus challenge' : (bonusChallenge?.title || '');
+  const bonusOption = bonusId
+    ? {
+        // No emoji prefix in the label — the option's own `emoji` renders it, and host titles
+        // often already start with one (which read as "🎁 🎁 Loved Ones Reward").
+        label: (bonusMissing ? 'Missing bonus challenge' : bonusTitle).substring(0, 100),
+        // Nothing to open when the challenge is gone — fall back to a no-op row.
+        value: bonusMissing ? 'divider' : `go_challenge_${bonusId}`,
+        emoji: { name: bonusMissing ? '⚠️' : '🎁' },
+        description: `${dates.bonus || ''} ${DOT} ${host}`.trim().substring(0, 100),
+      }
+    : null;
+  // Bonus runs first (or same day) → list it ABOVE the main challenge so the dates in the
+  // dropdown read top-to-bottom in chronological order; 'last' → below.
+  const bonusFirst = (round.bonusOrder ?? 'first') !== 'last';
+
+  // The main challenge's description names the bonus so the pairing is visible without opening it.
+  const challengeDesc = bonusId
+    ? `${dates.challenge} ${DOT} + ${bonusTitle} ${DOT} ${host}`.substring(0, 100)
+    : `${dates.challenge} ${DOT} ${host}`;
+
+  /** Challenge + bonus rows in chronological order, ready to splice into an option list. */
+  const challengeRows = () => {
+    const editChallenge = { label: `Edit ${challengeName}`, value: 'edit_challenge', emoji: { name: '🤸' }, description: challengeDesc };
+    if (!bonusOption) return [editChallenge];
+    return bonusFirst ? [bonusOption, editChallenge] : [editChallenge, bonusOption];
+  };
+
   // "Go to Challenge" option — only if linked
   const linkedChalId = round.challengeIDs?.primary;
   const goToChallenge = linkedChalId
@@ -483,7 +517,7 @@ function buildRoundOptions(round, dates, challenges = {}) {
     const opts = [
       { label, value: 'summary', default: true, emoji: { name: '🏝️' } },
       { label: 'Manage Marooning & Exile', value: 'marooning', emoji: { name: '🏝️' }, description: dates.event },
-      { label: `Edit ${challengeName}`, value: 'edit_challenge', emoji: { name: '🤸' }, description: `${dates.challenge} ${DOT} ${host}` },
+      ...challengeRows(),
       { label: `Edit F${f} Tribal (${elimText})`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${dates.tribal} ${DOT} ${host}` },
       { label: '───────────────────', value: 'divider', description: ' ' },
       { label: 'Add Swap / Merge', value: 'swap_merge', emoji: { name: '🔀' } },
@@ -500,7 +534,7 @@ function buildRoundOptions(round, dates, challenges = {}) {
     const opts = [
       { label, value: 'summary', default: true, emoji: { name: '🔀' } },
       { label: `Manage ${eventLabel}`, value: 'manage_event', emoji: { name: '🔀' }, description: dates.event },
-      { label: `Edit ${challengeName}`, value: 'edit_challenge', emoji: { name: '🤸' }, description: `${dates.challenge} ${DOT} ${host}` },
+      ...challengeRows(),
       { label: `Edit F${f} Tribal (${elimText})`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${dates.tribal} ${DOT} ${host}` },
       { label: '───────────────────', value: 'divider', description: ' ' },
       { label: 'Manage Marooning & Exile', value: 'marooning', emoji: { name: '🏝️' } },
@@ -511,11 +545,11 @@ function buildRoundOptions(round, dates, challenges = {}) {
     return opts;
   }
 
-  // Standard round
-  const label = `F${f} ${DOT} ${dates.challenge} ${DOT} ${challengeName}`;
+  // Standard round — the summary shows the round's first day, which is the bonus when it leads.
+  const label = `F${f} ${DOT} ${(bonusOption && bonusFirst ? dates.bonus : dates.challenge) || dates.challenge} ${DOT} ${challengeName}`;
   const opts = [
     { label, value: 'summary', default: true, emoji: { name: '▫️' } },
-    { label: `Edit ${challengeName}`, value: 'edit_challenge', emoji: { name: '🤸' }, description: `${dates.challenge} ${DOT} ${host}` },
+    ...challengeRows(),
     { label: `Edit F${f} Tribal (${elimText})`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${dates.tribal} ${DOT} ${host}` },
     { label: '───────────────────', value: 'divider', description: ' ' },
     { label: 'Manage Marooning & Exile', value: 'marooning', emoji: { name: '🏝️' } },
@@ -748,9 +782,13 @@ function isDefaultChallengeTitle(title, seasonRoundNo) {
  * fresh challenge; surplus old challenges (when the count shrinks) are dropped. A carried challenge
  * whose title is still an auto-default is refreshed for its new round role; custom titles are kept.
  * Mutates playerData in place.
+ *
+ * Exported for tests: it touches no storage, only the object it is handed, so it can be
+ * driven with a plain fixture. The challenge-sweep at the bottom is genuinely destructive,
+ * so it deserves real coverage rather than a replicated copy.
  * @returns {{ roundCount: number, chalCount: number }}
  */
-async function generateAndStoreRounds(playerData, guildId, seasonId, data, createdBy) {
+export async function generateAndStoreRounds(playerData, guildId, seasonId, data, createdBy) {
   const { default: crypto } = await import('crypto');
   if (!playerData[guildId].seasonRounds) playerData[guildId].seasonRounds = {};
   if (!playerData[guildId].challenges) playerData[guildId].challenges = {};
@@ -758,6 +796,19 @@ async function generateAndStoreRounds(playerData, guildId, seasonId, data, creat
   // Capture existing challenge links by seasonRoundNo BEFORE replacing the rounds (first-time create
   // has none, so this is empty and everything is generated fresh).
   const oldRounds = playerData[guildId].seasonRounds[seasonId] || {};
+  // Challenge-block settings ride along with the challenge they describe. Round-LEVEL edits
+  // (tribal days, eliminations) intentionally reset on a structural change, but the bonus LINK
+  // points at a real challenge object — dropping it would orphan (and then delete) that object.
+  const carriedBlockByRoundNo = {};
+  for (const old of Object.values(oldRounds)) {
+    if (old.challengeDays != null || old.bonusChallengeId) {
+      carriedBlockByRoundNo[old.seasonRoundNo] = {
+        challengeDays: old.challengeDays,
+        bonusChallengeId: old.bonusChallengeId,
+        bonusOrder: old.bonusOrder,
+      };
+    }
+  }
   const carriedChalIdByRoundNo = {};
   for (const old of Object.values(oldRounds)) {
     const chalId = old.challengeIDs?.primary;
@@ -800,6 +851,19 @@ async function generateAndStoreRounds(playerData, guildId, seasonId, data, creat
       };
       round.challengeIDs = { primary: chalId };
       linkedChalIds.add(chalId);
+    }
+
+    // Restore the challenge-block settings that belong with this round position.
+    const block = carriedBlockByRoundNo[round.seasonRoundNo];
+    if (block) {
+      if (block.challengeDays != null) round.challengeDays = block.challengeDays;
+      if (block.bonusChallengeId) {
+        round.bonusChallengeId = block.bonusChallengeId;
+        if (block.bonusOrder) round.bonusOrder = block.bonusOrder;
+        // MUST be registered as linked, or the sweep below would DELETE the host's reward
+        // challenge outright — it is not any round's `primary`, so nothing else protects it.
+        linkedChalIds.add(block.bonusChallengeId);
+      }
     }
     chalCount++;
   }
@@ -1318,6 +1382,165 @@ export function buildRoundModal(action, round, roundId, configId) {
 }
 
 // ─────────────────────────────────────────────
+// Challenge Edit Modal (name / host / duration / bonus challenge)
+// ─────────────────────────────────────────────
+
+/** Days a challenge block can span. Radio groups cap at 10 options; 7 covers a full week. */
+const CHALLENGE_DAY_CHOICES = [1, 2, 3, 4, 5, 6, 7];
+
+const BONUS_PLACEMENTS = [
+  { value: 'first', label: 'Before the main challenge', description: 'Reward runs first, then the immunity challenge' },
+  { value: 'same', label: 'Same day as the main challenge', description: 'Both run on the same day' },
+  { value: 'last', label: 'After the main challenge', description: 'Immunity challenge first, then the reward' },
+];
+
+/**
+ * Challenges eligible to be linked as a round's BONUS.
+ *
+ * Only challenges that aren't already some round's `primary` are offered — a round's own
+ * immunity challenge shouldn't double as its reward, and the filter keeps the list far under
+ * Discord's 25-option select cap (an 18-player season alone generates 16 primaries).
+ * The currently-linked bonus is always included so it can render as the default.
+ * @returns {{options: Array, truncated: number}}
+ */
+export function getBonusChallengeOptions(challenges = {}, seasonRounds = {}, currentBonusId = null) {
+  const primaryIds = new Set();
+  for (const rounds of Object.values(seasonRounds)) {
+    for (const round of Object.values(rounds || {})) {
+      if (round.challengeIDs?.primary) primaryIds.add(round.challengeIDs.primary);
+    }
+  }
+
+  const eligible = Object.entries(challenges)
+    .filter(([id]) => id === currentBonusId || !primaryIds.has(id))
+    .sort((a, b) => (b[1]?.lastUpdated || 0) - (a[1]?.lastUpdated || 0));
+
+  const MAX = 24; // 24 + the "None" row = Discord's 25-option ceiling
+  const truncated = Math.max(0, eligible.length - MAX);
+
+  const options = [
+    { label: 'None', value: 'none', description: 'No bonus challenge this round', emoji: { name: '🚫' }, ...(currentBonusId ? {} : { default: true }) },
+    ...eligible.slice(0, MAX).map(([id, chal]) => ({
+      label: (chal?.title || 'Untitled').substring(0, 100),
+      value: id,
+      description: 'Created in the Challenges menu',
+      emoji: { name: '🎁' },
+      ...(id === currentBonusId ? { default: true } : {}),
+    })),
+  ];
+
+  return { options, truncated };
+}
+
+/**
+ * Build the round's challenge-edit modal — exactly 5 components (Discord's cap).
+ *
+ * Duration is a single radio rather than the marooning-style radio + "Custom Days" text pair,
+ * because that pair is TWO components and would push this modal to 6.
+ */
+export function buildChallengeEditModal(round, challenge, challenges, seasonRounds, roundId, configId) {
+  const currentBonusId = round.bonusChallengeId || null;
+  const { options: bonusOptions, truncated } = getBonusChallengeOptions(challenges, seasonRounds, currentBonusId);
+  if (truncated) console.log(`🎁 Bonus challenge picker: ${truncated} challenge(s) beyond the 24-option cap not shown`);
+
+  const currentDays = Math.min(7, Math.max(1, round.challengeDays ?? 1));
+  const currentOrder = round.bonusOrder ?? 'first';
+
+  return {
+    custom_id: `planner_challenge_edit:${roundId}:${configId}`,
+    title: `Edit F${round.fNumber ?? '?'} Challenge`,
+    components: [
+      {
+        type: 18,
+        label: 'Challenge Name',
+        description: 'Title shown in the season planner and schedule',
+        component: {
+          type: 4, custom_id: 'challenge_name', style: 1,
+          placeholder: 'e.g., "Tycoons of the Nile"',
+          required: true, max_length: 100,
+          ...(challenge?.title ? { value: challenge.title } : {}),
+        },
+      },
+      {
+        type: 18,
+        label: 'Prepping Host',
+        description: 'Who is planning / preparing this challenge',
+        component: {
+          type: 5, custom_id: 'prepping_host',
+          placeholder: 'Select host...',
+          required: false, min_values: 0, max_values: 1,
+          ...(challenge?.creationHost ? { default_values: [{ id: challenge.creationHost, type: 'user' }] } : {}),
+        },
+      },
+      {
+        type: 18,
+        label: 'Challenge Duration',
+        description: 'Days this round spends on challenges — shared with the bonus challenge below',
+        component: {
+          type: 21, custom_id: 'challenge_days',
+          options: CHALLENGE_DAY_CHOICES.map(d => ({
+            label: d === 1 ? '1 day' : `${d} days`,
+            value: String(d),
+            ...(d === currentDays ? { default: true } : {}),
+          })),
+        },
+      },
+      {
+        type: 18,
+        label: 'Bonus / Reward Challenge',
+        description: 'Create it in the Challenges menu first, then link it here',
+        component: {
+          type: 3, custom_id: 'bonus_challenge',
+          placeholder: 'No bonus challenge',
+          required: false, min_values: 0, max_values: 1,
+          options: bonusOptions,
+        },
+      },
+      {
+        type: 18,
+        label: 'Bonus Placement',
+        description: 'Where the bonus sits — it always runs contiguously with the main challenge',
+        component: {
+          type: 21, custom_id: 'bonus_order',
+          options: BONUS_PLACEMENTS.map(p => ({ ...p, ...(p.value === currentOrder ? { default: true } : {}) })),
+        },
+      },
+    ],
+  };
+}
+
+/**
+ * Apply a challenge-edit modal submission: challenge title/host + the round's challengeDays,
+ * bonusChallengeId and bonusOrder. Mutates in place; the caller owns load/save.
+ *
+ * `rawComponents` is the modal's raw component array — needed because a User Select reports
+ * its value as `values[0]` rather than `value`, which extractModalFields() flattens away.
+ */
+export function applyChallengeEdit(round, challenge, fields, rawComponents) {
+  if (challenge) {
+    if (fields.challenge_name) challenge.title = fields.challenge_name;
+    for (const comp of (rawComponents || [])) {
+      const inner = comp.component || comp.components?.[0];
+      if (inner?.custom_id === 'prepping_host') {
+        challenge.creationHost = inner.values?.[0] || inner.value || null;
+        break;
+      }
+    }
+    challenge.lastUpdated = Date.now();
+  }
+
+  const days = parseInt(fields.challenge_days);
+  if (!isNaN(days) && days >= 1) round.challengeDays = Math.min(7, days);
+
+  // A cleared select reports '' / 'none' / undefined — all mean "unlink".
+  const bonus = fields.bonus_challenge;
+  if (bonus && bonus !== 'none') round.bonusChallengeId = bonus;
+  else delete round.bonusChallengeId;
+
+  if (BONUS_PLACEMENTS.some(p => p.value === fields.bonus_order)) round.bonusOrder = fields.bonus_order;
+}
+
+// ─────────────────────────────────────────────
 // Round Edit Processing
 // ─────────────────────────────────────────────
 
@@ -1327,14 +1550,17 @@ export function buildRoundModal(action, round, roundId, configId) {
  */
 export function extractModalFields(components) {
   const fields = {};
+  // Text inputs and radios report `value`; select menus (string/user/role/channel) report
+  // `values: []`. Read both so a Label-wrapped select isn't silently dropped.
+  const read = (c) => (c.value !== undefined && c.value !== null) ? c.value : c.values?.[0];
   for (const comp of (components || [])) {
     if (comp.component && comp.component.custom_id) {
       // Label-wrapped component (type 18)
-      fields[comp.component.custom_id] = comp.component.value;
+      fields[comp.component.custom_id] = read(comp.component);
     } else if (comp.components) {
       // Legacy ActionRow pattern
       for (const c of comp.components) {
-        if (c.custom_id) fields[c.custom_id] = c.value;
+        if (c.custom_id) fields[c.custom_id] = read(c);
       }
     }
   }
@@ -1476,12 +1702,14 @@ export async function processRoundEdit(guildId, action, roundId, configId, field
       const targetRound = targetEntry[1];
 
       // Swap all event data — keep fNumber and seasonRoundNo fixed
+      // ⚠️ Any NEW round field must be added here or it silently stays behind on a swap.
       const swapFields = [
         'hasMarooning', 'marooningDays', 'eventDays', 'tribalDays',
         'swapRound', 'mergeRound', 'eventLabel', 'ftcRound',
         'eliminations', 'exiledPlayers', 'challengeIDs', 'tribalCouncilIDs',
         'challengeName', 'host', 'juryStart',
-        'tribalNotes', 'ftcNotes', 'speechDays', 'votesDays', 'speechNotes', 'votesNotes'
+        'tribalNotes', 'ftcNotes', 'speechDays', 'votesDays', 'speechNotes', 'votesNotes',
+        'challengeDays', 'bonusChallengeId', 'bonusOrder'
       ];
       for (const field of swapFields) {
         const temp = round[field];

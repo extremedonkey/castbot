@@ -39,6 +39,7 @@ const TYPE_COLORS = {
 const ACTIVITY_COLORS = {
   marooning: '#06b6d4',
   challenge: '#5865F2',
+  bonus:     '#ec4899',  // Reward / bonus challenge — pink, distinct from every other activity
   tribal:    '#e74c3c',
   swap:      '#f59e0b',
   merge:     '#9b59b6',
@@ -66,6 +67,14 @@ function challengeTitle(round, challenges, max, fallback = null) {
   return raw.length > max ? raw.substring(0, max - 2) + '..' : raw;
 }
 
+/** Title of the round's linked bonus/reward challenge (falls back if the link is dangling). */
+function bonusTitle(round, challenges, max, fallback = 'Reward') {
+  const linked = round.bonusChallengeId ? challenges[round.bonusChallengeId] : null;
+  const raw = linked?.title ? stripEmoji(linked.title) : null;
+  if (!raw) return fallback;
+  return raw.length > max ? raw.substring(0, max - 2) + '..' : raw;
+}
+
 /** The event label for a round's leading phase ("Marooning", "Swap 1", "Merge", "Reunion"). */
 function eventLabelFor(roundSchedule) {
   const { round, type } = roundSchedule;
@@ -86,12 +95,14 @@ function eventLabelFor(roundSchedule) {
 function getDayActivities(roundSchedule, challenges = {}) {
   const { round, type } = roundSchedule;
   const shortChallenge = challengeTitle(round, challenges, 12, 'Challenge');
+  const shortBonus = bonusTitle(round, challenges, 12, 'Reward');
   const eventLabel = eventLabelFor(roundSchedule);
 
   // Full labels when a day holds ONE phase; compact when several share the day.
   const full = {
     event: eventLabel,
     challenge: shortChallenge,
+    bonus: shortBonus,
     tribal: 'Tribal',
     speeches: 'Speeches',
     votes: 'Q&A/Votes',
@@ -99,6 +110,7 @@ function getDayActivities(roundSchedule, challenges = {}) {
   const compact = {
     event: type === 'marooning' ? 'Mar' : eventLabel,
     challenge: 'Chall',
+    bonus: 'Rwd',
     tribal: 'Tribal',
     speeches: 'Speech',
     votes: 'Votes',
@@ -139,11 +151,14 @@ function getScheduleColumns(roundSchedule, challenges = {}) {
   const elims = round.eliminations ?? 1;
   const elimText = elims === 0 ? 'no elim' : elims === 1 ? '1 elim' : `${elims} elims`;
   const shortChallenge = challengeTitle(round, challenges, 22, `Challenge ${round.seasonRoundNo}`);
+  // Shorter cap for the bonus — when it shares a day its title is joined with another.
+  const shortBonus = bonusTitle(round, challenges, 18, 'Reward');
   const eventLabel = eventLabelFor(roundSchedule);
 
   const titleFor = (phase) => {
     switch (phase.key) {
       case 'challenge': return shortChallenge;
+      case 'bonus':     return shortBonus;
       case 'tribal':    return `F${f} Tribal`;
       case 'speeches':  return 'Speeches';
       case 'votes':     return 'Q&A / Votes';
@@ -159,12 +174,17 @@ function getScheduleColumns(roundSchedule, challenges = {}) {
     else groups.push({ offset: phase.offset, date: phase.date, phases: [phase] });
   }
 
+  // A column is COL_W (175px) of bold 13px Arial ≈ 26 characters. Titles merged from several
+  // phases blow past that and spill into the neighbouring column, so cap the joined string.
+  const MAX_TITLE = 26;
+
   return groups.map(group => {
     // The elimination count rides along with whichever column holds the tribal.
     const hasTribal = group.phases.some(p => p.key === 'tribal');
     const date = formatRoundDate(group.date);
+    const title = group.phases.map(titleFor).join(' + ');
     return {
-      title: group.phases.map(titleFor).join(' + '),
+      title: title.length > MAX_TITLE ? title.substring(0, MAX_TITLE - 2) + '..' : title,
       date: hasTribal ? `${date} · ${elimText}` : date,
     };
   });
@@ -173,6 +193,16 @@ function getScheduleColumns(roundSchedule, challenges = {}) {
 export async function generateVerticalTimeline(seasonName, rounds, startDate, challenges = {}) {
   const schedule = buildRoundSchedule(rounds, startDate);
   const sortedIds = schedule.ids.filter(id => !schedule.byId[id].skipped);
+
+  // Pre-compute every round's columns so the canvas can be sized to the widest one.
+  // A round with a bonus challenge needs a 4th column (event + bonus + challenge + tribal);
+  // seasons without one keep the original 3-column width rather than carrying a dead column.
+  const columnsById = {};
+  let maxColumns = 1;
+  for (const id of sortedIds) {
+    columnsById[id] = getScheduleColumns(schedule.byId[id], challenges);
+    maxColumns = Math.max(maxColumns, columnsById[id].length);
+  }
 
   // Layout constants
   const MARGIN = 20;
@@ -183,9 +213,9 @@ export async function generateVerticalTimeline(seasonName, rounds, startDate, ch
   const COL2_X = COL1_X + COL1_W + 20;  // Day 1 (gap after F-number)
   const COL_W = 175;           // Width per day column
   const COL_GAP = 12;
-  const COL3_X = COL2_X + COL_W + COL_GAP;  // Day 2
-  const COL4_X = COL3_X + COL_W + COL_GAP;  // Day 3
-  const WIDTH = COL4_X + COL_W + MARGIN;
+  // One x-position per day column, grown to fit the widest round in this season.
+  const colXs = Array.from({ length: maxColumns }, (_, i) => COL2_X + i * (COL_W + COL_GAP));
+  const WIDTH = colXs[colXs.length - 1] + COL_W + MARGIN;
   const HEIGHT = HEADER_H + sortedIds.length * ROW_H + MARGIN;
 
   const composites = [];
@@ -207,11 +237,8 @@ export async function generateVerticalTimeline(seasonName, rounds, startDate, ch
     const { round, type, duration: dur } = roundSchedule;
     const color = TYPE_COLORS[type];
     const y = HEADER_H + i * ROW_H;
-    const cols = getScheduleColumns(roundSchedule, challenges);
+    const cols = columnsById[id];
     const isLast = i === sortedIds.length - 1;
-
-    // Column positions
-    const colXs = [COL2_X, COL3_X, COL4_X];
 
     // Build SVG parts
     let svgParts = '';
@@ -232,6 +259,9 @@ export async function generateVerticalTimeline(seasonName, rounds, startDate, ch
     for (let c = 0; c < cols.length; c++) {
       const col = cols[c];
       const cx = colXs[c];
+      // Belt-and-braces: an unplaced column would emit x="undefined" into the SVG.
+      // colXs is sized from maxColumns above, so this should be unreachable.
+      if (cx === undefined) { console.warn(`⚠️ Schedule: round ${id} has ${cols.length} columns, only ${colXs.length} placed`); break; }
 
       // First column of special rounds gets the type color for the title
       const isEventCol = isSpecial && c === 0;
@@ -407,9 +437,15 @@ export async function generateMonthCalendar(seasonName, rounds, startDate, chall
     { label: 'FTC', color: ACTIVITY_COLORS.votes },
     { label: 'Reunion', color: ACTIVITY_COLORS.reunion },
   ];
+  // Only advertise Reward when the season actually uses one.
+  if (Object.values(dateLookup).some(d => d.activity === 'bonus')) {
+    legendItems.push({ label: 'Reward', color: ACTIVITY_COLORS.bonus });
+  }
+  // Spread the swatches across the available width so an extra item still fits.
+  const legendGap = Math.min(108, (WIDTH - MARGIN * 2) / legendItems.length);
   const legendSvg = legendItems.map((item, i) =>
-    `<rect x="${MARGIN + i * 108}" y="8" width="12" height="12" rx="3" fill="${item.color}"/>` +
-    `<text x="${MARGIN + i * 108 + 18}" y="18" font-family="Arial, Helvetica, sans-serif" font-size="10" fill="${TEXT_MUT}">${item.label}</text>`
+    `<rect x="${MARGIN + i * legendGap}" y="8" width="12" height="12" rx="3" fill="${item.color}"/>` +
+    `<text x="${MARGIN + i * legendGap + 18}" y="18" font-family="Arial, Helvetica, sans-serif" font-size="10" fill="${TEXT_MUT}">${item.label}</text>`
   ).join('');
   composites.push({
     input: Buffer.from(`<svg width="${WIDTH}" height="${LEGEND_H}" xmlns="http://www.w3.org/2000/svg">${legendSvg}</svg>`),

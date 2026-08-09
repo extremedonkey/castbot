@@ -8615,45 +8615,15 @@ To fix this:
           const configId = afterPrefix.substring(firstUnderscore + 1);
 
           if (selectedValue === 'edit_challenge') {
-            // Show quick-edit modal for challenge name + prepping host
+            // Name / host / duration / bonus-challenge link — built in seasonPlanner.js
             const { loadPlayerData } = await import('./storage.js');
-            const playerData = await loadPlayerData();
-            const config = playerData[context.guildId]?.applicationConfigs?.[configId];
-            const round = playerData[context.guildId]?.seasonRounds?.[config?.seasonId]?.[roundId];
-            const linkedChalId = round?.challengeIDs?.primary;
-            const challenge = linkedChalId ? playerData[context.guildId]?.challenges?.[linkedChalId] : null;
-
-            return { type: 9, data: {
-              custom_id: `planner_challenge_edit:${roundId}:${configId}`,
-              title: `Edit F${round?.fNumber || '?'} Challenge`,
-              components: [
-                {
-                  type: 18,
-                  label: 'Challenge Name',
-                  description: 'Title shown in the season planner and schedule',
-                  component: {
-                    type: 4, custom_id: 'challenge_name', style: 1,
-                    placeholder: 'e.g., "Tycoons of the Nile"',
-                    required: true, max_length: 100,
-                    ...(challenge?.title ? { value: challenge.title } : {})
-                  }
-                },
-                {
-                  type: 18,
-                  label: 'Prepping Host',
-                  description: 'Who is planning / preparing this challenge',
-                  component: {
-                    type: 5, // User Select
-                    custom_id: 'prepping_host',
-                    placeholder: 'Select host...',
-                    required: false,
-                    min_values: 0,
-                    max_values: 1,
-                    ...(challenge?.creationHost ? { default_values: [{ id: challenge.creationHost, type: 'user' }] } : {})
-                  }
-                }
-              ]
-            }};
+            const { buildChallengeEditModal } = await import('./seasonPlanner.js');
+            const g = (await loadPlayerData())[context.guildId] || {};
+            const config = g.applicationConfigs?.[configId];
+            const round = g.seasonRounds?.[config?.seasonId]?.[roundId];
+            if (!round) return { type: 6 };
+            const challenge = round.challengeIDs?.primary ? g.challenges?.[round.challengeIDs.primary] : null;
+            return { type: 9, data: buildChallengeEditModal(round, challenge, g.challenges || {}, g.seasonRounds || {}, roundId, configId) };
           }
 
           // Load round data for pre-population
@@ -37796,7 +37766,7 @@ To fix this:
           const parts = custom_id.split(':');
           const roundId = parts[1];
           const configId = parts.slice(2).join(':');
-          const { extractModalFields, buildPlannerView } = await import('./seasonPlanner.js');
+          const { extractModalFields, applyChallengeEdit, buildPlannerView } = await import('./seasonPlanner.js');
           const { loadPlayerData, savePlayerData } = await import('./storage.js');
           const fields = extractModalFields(components);
           const playerData = await loadPlayerData();
@@ -37806,22 +37776,8 @@ To fix this:
           if (!round) return { content: '❌ Round not found' };
 
           const linkedChalId = round.challengeIDs?.primary;
-          if (linkedChalId && playerData[context.guildId]?.challenges?.[linkedChalId]) {
-            const challenge = playerData[context.guildId].challenges[linkedChalId];
-            challenge.title = fields.challenge_name || challenge.title;
-            // User Select returns value (userId) or null
-            // Extract from Label-wrapped User Select: component.value or component.values[0]
-            for (const comp of (components || [])) {
-              const inner = comp.component || comp.components?.[0];
-              if (inner?.custom_id === 'prepping_host') {
-                const userId = inner.values?.[0] || inner.value || null;
-                if (userId) challenge.creationHost = userId;
-                else challenge.creationHost = null; // Cleared
-                break;
-              }
-            }
-            challenge.lastUpdated = Date.now();
-          }
+          const challenge = linkedChalId ? playerData[context.guildId]?.challenges?.[linkedChalId] : null;
+          applyChallengeEdit(round, challenge, fields, components);
 
           await savePlayerData(playerData);
           const seasonRounds = playerData[context.guildId].seasonRounds[config.seasonId];

@@ -1265,11 +1265,16 @@ export async function buildMarooningView({ configId, guildId, playerData, season
 
   // Private draft-tribe assignments (season-scoped, HOST-ONLY). Stored under applicationConfigs[configId]
   // .draftTribes — physically OFF the tribe objects, and NO Discord roles are assigned — so no player-facing
-  // tribe/castlist renderer can ever surface them. userId → first tribe roleId that drafted them.
+  // tribe/castlist renderer can ever surface them. userId → EVERY tribe roleId that drafted them.
+  //
+  // Was first-tribe-wins (uid → one rid), which made this view silently disagree with the draft modal:
+  // the modal is user-keyed and shows a player pre-selected in BOTH tribes they were drafted into, while
+  // this view showed them under only the first — so the second tribe looked empty. Observed on TEST
+  // 2026-08-09 (CastBot-Test drafted into two tribes; the "Any" tribe rendered with no players).
   const draftTribes = playerData[guildId]?.applicationConfigs?.[configId]?.draftTribes || {};
-  const userDraftTribe = {};
+  const userDraftTribes = {};
   for (const [rid, ids] of Object.entries(draftTribes)) {
-    for (const uid of (ids || [])) { if (!userDraftTribe[uid]) userDraftTribe[uid] = rid; }
+    for (const uid of (ids || [])) { (userDraftTribes[uid] ||= []).push(rid); }
   }
 
   // Warm the member cache before resolving demographics — pronoun/timezone are read off
@@ -1320,15 +1325,20 @@ export async function buildMarooningView({ configId, guildId, playerData, season
   // numbering via the shared `counter`. Rows within a group butt directly against each other (no blank
   // line between entries — keeps a long roster scannable on mobile); the trailing \n\n only separates
   // this whole group from whatever comes next. Returns '' for an empty list (caller skips the header).
+  // A player drafted into several tribes is rendered under EACH of them (deliberate — it mirrors the
+  // draft modal, where they show pre-selected in every one). They therefore consume a numbering slot per
+  // appearance; seeing the same name twice IS the signal that they still need to be assigned to one tribe.
   const renderPlayerList = (players, counter, opts = {}) => {
     if (players.length === 0) return '';
     const perTribe = new Map();
     const undrafted = [];
     for (const p of players) {
-      const rid = userDraftTribe[p.userId];
-      if (rid && tribeRoleIds.includes(rid)) {
-        if (!perTribe.has(rid)) perTribe.set(rid, []);
-        perTribe.get(rid).push(p);
+      const rids = (userDraftTribes[p.userId] || []).filter(rid => tribeRoleIds.includes(rid));
+      if (rids.length) {
+        for (const rid of rids) {
+          if (!perTribe.has(rid)) perTribe.set(rid, []);
+          perTribe.get(rid).push(p);
+        }
       } else {
         undrafted.push(p);
       }
@@ -1417,7 +1427,28 @@ export async function buildMarooningView({ configId, guildId, playerData, season
     body += `-# 🗑️ ${hiddenCount} Don't Cast/Withdrawn applicant${hiddenCount !== 1 ? 's' : ''} hidden — click Rejects below to view.\n\n`;
   }
 
-  if (!hasCandidates && !hasRejects) body += '-# No applicants yet for this season.\n\n';
+  // ⚠️ Drafted, but has no application for this season. The draft modal's User Select offers EVERY server
+  // member, while every roster above is built from applications[channelId] — so these people were silently
+  // invisible here, and a tribe could look half-empty with no explanation (TEST, 2026-08-09). They can't be
+  // scored, sent an offer, or accept a placement until an application exists (👥 Add Cast creates one), so
+  // they get their own block rather than being folded into a casting group they aren't part of.
+  const applicantUserIds = new Set(allApplications.map(a => a.userId));
+  const orphanDrafts = [];
+  for (const rid of tribeRoleIds) {
+    const ids = (draftTribes[rid] || []).filter(uid => !applicantUserIds.has(uid));
+    if (ids.length) orphanDrafts.push({ rid, ids });
+  }
+  if (orphanDrafts.length) {
+    const total = orphanDrafts.reduce((n, t) => n + t.ids.length, 0);
+    body += `### \`\`\`⚠️ Drafted — No Application (${total})\`\`\`\n`;
+    for (const { rid, ids } of orphanDrafts) {
+      // Mentions, not cached display names — a drafted member may not be in the member cache at all.
+      body += `<@&${rid}> (tentative)\n${ids.map(uid => `• <@${uid}> — ⚠️ no application`).join('\n')}\n`;
+    }
+    body += `-# Drafted but never applied — they can't be scored or sent an offer. Use 👥 Add Cast to create their application.\n\n`;
+  }
+
+  if (!hasCandidates && !hasRejects && !orphanDrafts.length) body += '-# No applicants yet for this season.\n\n';
   // The 📊 SUMMARY block (Total/Cast/Alternate/Undecided/Rejected/Withdrawn + Scored) lived here until
   // 2026-08-09. Removed deliberately (Reece): every number in it is already visible in the section
   // headers directly above, so it was pure restatement taking up the tab's most valuable space.

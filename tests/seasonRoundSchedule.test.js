@@ -137,13 +137,124 @@ describe('getRoundPhases — tribalDays is an offset FROM THE CHALLENGE DAY', ()
   });
 });
 
+describe('challengeDays + bonus challenge — the shared block budget', () => {
+  const BONUS = 'challenge_bonus123';
+  const offsets = (round) => Object.fromEntries(getRoundPhases(round).map(p => [p.key, p.offset]));
+
+  it('BACKWARDS COMPAT: rounds without challengeDays or a bonus are byte-identical', () => {
+    // The regression that matters most — every pre-existing season must be untouched.
+    const shapes = [
+      standard(), standard({ tribalDays: 0 }), standard({ tribalDays: 2 }),
+      marooning(), marooning({ marooningDays: 2 }), marooning({ marooningDays: 0 }),
+      swap(), swap({ eventDays: 0 }), merge(), ftc(), reunion(),
+    ];
+    const expected = [2, 1, 3, 3, 4, 2, 3, 2, 3, 2, 1];
+    shapes.forEach((round, i) => assert.equal(getRoundDuration(round), expected[i],
+      `duration drifted for ${getRoundType(round)} #${i}`));
+    assert.deepEqual(offsets(standard()), { challenge: 0, tribal: 1 });
+    assert.deepEqual(offsets(marooning()), { event: 0, challenge: 1, tribal: 2 });
+  });
+
+  it('challengeDays lengthens the block and pushes the tribal back', () => {
+    assert.deepEqual(offsets(standard({ challengeDays: 2 })), { challenge: 0, tribal: 2 });
+    assert.deepEqual(offsets(standard({ challengeDays: 3 })), { challenge: 0, tribal: 3 });
+    assert.equal(getRoundDuration(standard({ challengeDays: 3 })), 4);
+  });
+
+  it('challengeDays composes with marooning/swap offsets', () => {
+    assert.deepEqual(offsets(marooning({ marooningDays: 1, challengeDays: 2 })), { event: 0, challenge: 1, tribal: 3 });
+    assert.deepEqual(offsets(swap({ eventDays: 1, challengeDays: 3 })), { event: 0, challenge: 1, tribal: 4 });
+  });
+
+  it('challengeDays composes with a live tribal', () => {
+    assert.deepEqual(offsets(standard({ challengeDays: 3, tribalDays: 0 })), { challenge: 0, tribal: 2 });
+    assert.equal(getRoundDuration(standard({ challengeDays: 3, tribalDays: 0 })), 3);
+  });
+
+  it('bonus FIRST takes day 1 of the block, main challenge takes the rest', () => {
+    const r = standard({ challengeDays: 2, bonusChallengeId: BONUS, bonusOrder: 'first' });
+    assert.deepEqual(offsets(r), { bonus: 0, challenge: 1, tribal: 2 });
+    assert.deepEqual(getRoundPhases(r).map(p => p.key), ['bonus', 'challenge', 'tribal']);
+  });
+
+  it('bonus LAST takes the final day of the block', () => {
+    const r = standard({ challengeDays: 3, bonusChallengeId: BONUS, bonusOrder: 'last' });
+    assert.deepEqual(offsets(r), { challenge: 0, bonus: 2, tribal: 3 });
+    assert.deepEqual(getRoundPhases(r).map(p => p.key), ['challenge', 'bonus', 'tribal']);
+  });
+
+  it('bonus SAME shares the block start with the main challenge', () => {
+    const r = standard({ challengeDays: 3, bonusChallengeId: BONUS, bonusOrder: 'same' });
+    assert.deepEqual(offsets(r), { bonus: 0, challenge: 0, tribal: 3 });
+  });
+
+  it('a bonus NEVER lengthens the round — it shares the budget', () => {
+    // The whole point of the shared-budget model: linking a reward must not silently
+    // push every later round back a day.
+    const withoutBonus = getRoundDuration(standard({ challengeDays: 2 }));
+    for (const order of ['first', 'same', 'last']) {
+      assert.equal(getRoundDuration(standard({ challengeDays: 2, bonusChallengeId: BONUS, bonusOrder: order })),
+        withoutBonus, `bonus order "${order}" changed the round length`);
+    }
+  });
+
+  it('challengeDays 1 + bonus degrades to same-day instead of erroring', () => {
+    for (const order of ['first', 'last', 'same', undefined]) {
+      const r = standard({ challengeDays: 1, bonusChallengeId: BONUS, bonusOrder: order });
+      assert.deepEqual(offsets(r), { bonus: 0, challenge: 0, tribal: 1 }, `order "${order}"`);
+      assert.equal(getRoundDuration(r), 2);
+    }
+  });
+
+  it('bonusOrder defaults to first', () => {
+    const r = standard({ challengeDays: 2, bonusChallengeId: BONUS });
+    assert.deepEqual(offsets(r), { bonus: 0, challenge: 1, tribal: 2 });
+  });
+
+  it('a bonus on a marooning round sits inside the block, after the marooning', () => {
+    const r = marooning({ marooningDays: 1, challengeDays: 2, bonusChallengeId: BONUS, bonusOrder: 'first' });
+    assert.deepEqual(offsets(r), { event: 0, bonus: 1, challenge: 2, tribal: 3 });
+  });
+
+  it('bonusChallengeId absent means no bonus phase, whatever bonusOrder says', () => {
+    assert.deepEqual(getRoundPhases(standard({ bonusOrder: 'last' })).map(p => p.key), ['challenge', 'tribal']);
+  });
+
+  it('the block always spans exactly challengeDays days', () => {
+    for (const challengeDays of [1, 2, 3, 5, 7]) {
+      for (const bonusOrder of ['first', 'same', 'last']) {
+        for (const bonusChallengeId of [BONUS, undefined]) {
+          const phases = getRoundPhases(standard({ challengeDays, bonusOrder, bonusChallengeId }));
+          const block = phases.filter(p => p.key === 'challenge' || p.key === 'bonus');
+          const spanEnd = Math.max(...block.map(p => p.offset));
+          const spanStart = Math.min(...block.map(p => p.offset));
+          assert.equal(spanEnd - spanStart + 1 <= challengeDays, true,
+            `block overflowed budget: ${challengeDays}d / ${bonusOrder} / bonus=${!!bonusChallengeId}`);
+          // The tribal always sits tribalDays after the block's LAST day.
+          const tribal = phases.find(p => p.key === 'tribal');
+          assert.equal(tribal.offset, challengeDays - 1 + 1);
+        }
+      }
+    }
+  });
+});
+
 describe('expandRoundDays — the calendar invariant', () => {
+  const BONUS = 'challenge_bonus123';
   const cases = [
     standard(), standard({ tribalDays: 0 }), standard({ tribalDays: 2 }),
     marooning(), marooning({ marooningDays: 2 }), marooning({ marooningDays: 0 }), marooning({ tribalDays: 0 }),
     swap(), swap({ eventDays: 0 }), swap({ tribalDays: 0 }), merge(),
     ftc(), ftc({ speechDays: 2, votesDays: 3 }), ftc({ speechDays: 0, votesDays: 0 }),
     ftc({ speechDays: 2, votesDays: 0 }), reunion(),
+    // challengeDays + bonus permutations
+    standard({ challengeDays: 3 }), standard({ challengeDays: 5, tribalDays: 0 }),
+    standard({ challengeDays: 2, bonusChallengeId: BONUS, bonusOrder: 'first' }),
+    standard({ challengeDays: 3, bonusChallengeId: BONUS, bonusOrder: 'last' }),
+    standard({ challengeDays: 3, bonusChallengeId: BONUS, bonusOrder: 'same' }),
+    standard({ challengeDays: 1, bonusChallengeId: BONUS }),
+    marooning({ marooningDays: 2, challengeDays: 3, bonusChallengeId: BONUS, bonusOrder: 'last' }),
+    swap({ eventDays: 0, challengeDays: 2, bonusChallengeId: BONUS, bonusOrder: 'same' }),
   ];
 
   it('always yields exactly getRoundDuration(round) day slots', () => {
@@ -179,6 +290,57 @@ describe('expandRoundDays — the calendar invariant', () => {
     const days = expandRoundDays(ftc({ speechDays: 2, votesDays: 0 }));
     assert.equal(days.length, 2);
     assert.ok(days[1].phases.some(p => p.key === 'votes'));
+  });
+
+  it('a same-day bonus occupies only its own day, not the rest of the block', () => {
+    // The reason bonus phases carry an explicit `days: 1`.
+    const days = expandRoundDays(standard({ challengeDays: 3, bonusChallengeId: BONUS, bonusOrder: 'same' }));
+    assert.deepEqual(days.map(d => d.phases.map(p => p.key)),
+      [['bonus', 'challenge'], ['challenge'], ['challenge'], ['tribal']]);
+  });
+
+  it('a multi-day main challenge repeats across its days', () => {
+    const days = expandRoundDays(standard({ challengeDays: 3, bonusChallengeId: BONUS, bonusOrder: 'first' }));
+    assert.deepEqual(days.map(d => d.phases.map(p => p.key)),
+      [['bonus'], ['challenge'], ['challenge'], ['tribal']]);
+  });
+
+  it('a trailing bonus lands on the block\'s last day', () => {
+    const days = expandRoundDays(standard({ challengeDays: 3, bonusChallengeId: BONUS, bonusOrder: 'last' }));
+    assert.deepEqual(days.map(d => d.phases.map(p => p.key)),
+      [['challenge'], ['challenge'], ['bonus'], ['tribal']]);
+  });
+});
+
+describe('Schedule image column ceiling — battle-testing the row logic', () => {
+  // generateVerticalTimeline lays each round out across a fixed set of x-positions. If any
+  // round shape can produce more day-groups than there are columns, the renderer emits
+  // x="undefined" into the SVG. This asserts the ceiling the renderer must be built for.
+  const BONUS = 'challenge_bonus123';
+  const MAX_COLUMNS = 4; // event + bonus + challenge + tribal, all on distinct days
+
+  const dayGroups = (round) => new Set(getRoundPhases(round).map(p => p.offset)).size;
+
+  it('no round shape ever needs more than 4 columns', () => {
+    const shapes = [];
+    for (const base of [standard, marooning, swap, merge, ftc, reunion]) {
+      for (const challengeDays of [1, 2, 3, 7]) {
+        for (const tribalDays of [0, 1, 3]) {
+          for (const bonusOrder of ['first', 'same', 'last']) {
+            for (const bonusChallengeId of [BONUS, undefined]) {
+              shapes.push(base({ challengeDays, tribalDays, bonusOrder, bonusChallengeId }));
+              shapes.push(base({ challengeDays, tribalDays, bonusOrder, bonusChallengeId, marooningDays: 0, eventDays: 0 }));
+            }
+          }
+        }
+      }
+    }
+    for (const round of shapes) {
+      assert.ok(dayGroups(round) <= MAX_COLUMNS,
+        `${getRoundType(round)} needs ${dayGroups(round)} columns: ${JSON.stringify(round)}`);
+    }
+    // …and that 4 is actually reachable, so the renderer genuinely needs the 4th slot.
+    assert.equal(dayGroups(marooning({ marooningDays: 1, challengeDays: 2, bonusChallengeId: BONUS, bonusOrder: 'first' })), 4);
   });
 });
 

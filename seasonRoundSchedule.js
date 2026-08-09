@@ -23,12 +23,18 @@
  *   3. getRoundDuration(round)  → how many days the round consumes
  *   4. buildRoundSchedule(...)  → walks all rounds, accumulating offsets into real Dates
  *
- * `tribalDays` is an OFFSET FROM THE CHALLENGE DAY, not a length:
- *   0 → live tribal, same calendar day as the challenge (round is a day shorter)
+ * `tribalDays` is an OFFSET FROM THE CHALLENGE BLOCK'S LAST DAY, not a length:
+ *   0 → live tribal, same calendar day the challenge block ends (round is a day shorter)
  *   1 → default, the day after
- *   2+ → the tribal lands that many days after the challenge
+ *   2+ → the tribal lands that many days later
  * `marooningDays` / `eventDays` use the same convention: 0 means "shares the challenge's
  * day", NOT "no event" (removal is a separate flag — hasMarooning / swapRound / mergeRound).
+ *
+ * `challengeDays` (default 1) is the challenge BLOCK's length — a SHARED BUDGET covering the
+ * main challenge and any linked bonus/reward challenge. The block always spans exactly
+ * challengeDays days whether or not a bonus is present, so adding a reward never silently
+ * lengthens a season: the host buys it a day by raising challengeDays. With challengeDays
+ * absent (=1) every formula below collapses to the pre-bonus arithmetic exactly.
  *
  * Docs: docs/03-features/SeasonPlanner.md § The Day Logic
  */
@@ -81,55 +87,86 @@ export function getRoundType(round) {
 }
 
 /**
+ * Where a round's challenge block starts (day offset), and how long it runs.
+ *
+ * The block holds the main challenge plus any linked bonus/reward challenge, and ALWAYS spans
+ * exactly `challengeDays` days regardless of whether a bonus is present — that invariant is
+ * what makes the tribal offset below collapse to the pre-bonus formula when challengeDays is
+ * absent. FTC and reunion rounds have no challenge block.
+ */
+function getChallengeBlock(round, type) {
+  const start = type === 'marooning' ? (round.marooningDays ?? 1)
+    : (type === 'swap' || type === 'merge') ? (round.eventDays ?? 1)
+    : 0;
+  const days = Math.max(1, round.challengeDays ?? 1);
+  return { start, days, end: start + days - 1 };
+}
+
+/**
+ * The challenge block's phases, in chronological order.
+ *
+ * The bonus takes ONE day at whichever end `bonusOrder` names, and the main challenge takes
+ * the rest of the budget. `challengeDays: 1` cannot be split across two sequential challenges,
+ * so it degrades to same-day automatically rather than erroring.
+ *
+ * The bonus phase carries an explicit `days: 1` because in the same-day case it does NOT run
+ * until the next phase starts — expandRoundDays needs to know it ends after one day so a
+ * 3-day block paints "Reward + Challenge" then "Challenge", "Challenge".
+ */
+function getBlockPhases(round, block) {
+  const challenge = { key: 'challenge', activity: 'challenge', offset: block.start };
+  if (!round.bonusChallengeId) return [challenge];
+
+  const bonus = { key: 'bonus', activity: 'bonus', offset: block.start, days: 1 };
+  const order = round.bonusOrder ?? 'first';
+
+  // One day can't hold two sequential challenges — fall back to sharing it.
+  if (order === 'same' || block.days === 1) return [bonus, challenge];
+
+  if (order === 'last') {
+    bonus.offset = block.end;
+    return [challenge, bonus];
+  }
+  challenge.offset = block.start + 1; // 'first'
+  return [bonus, challenge];
+}
+
+/**
  * The named events inside a round, in chronological order, as day offsets from the round's
  * own start (day 0). This is the ONE place the within-round arithmetic lives.
  *
- * `key` is the stable identifier consumers switch on ('event' | 'challenge' | 'tribal' |
- * 'speeches' | 'votes'); `activity` is the colour/category token the images use.
+ * `key` is the stable identifier consumers switch on ('event' | 'bonus' | 'challenge' |
+ * 'tribal' | 'speeches' | 'votes'); `activity` is the colour/category token the images use.
+ * `days` is optional — when present the phase ends after that many days, otherwise it runs
+ * until the next phase begins (which is what paints multi-day marooning).
  *
- * @returns {Array<{key: string, activity: string, offset: number}>}
+ * @returns {Array<{key: string, activity: string, offset: number, days?: number}>}
  */
 export function getRoundPhases(round) {
   const type = getRoundType(round);
-  const tribalDays = round.tribalDays ?? 1;
 
-  switch (type) {
-    case 'reunion':
-      return [{ key: 'event', activity: 'reunion', offset: 0 }];
-
-    case 'ftc': {
-      const speechDays = round.speechDays ?? 1;
-      return [
-        { key: 'speeches', activity: 'speeches', offset: 0 },
-        { key: 'votes', activity: 'votes', offset: speechDays },
-      ];
-    }
-
-    case 'marooning': {
-      const marooningDays = round.marooningDays ?? 1;
-      return [
-        { key: 'event', activity: 'marooning', offset: 0 },
-        { key: 'challenge', activity: 'challenge', offset: marooningDays },
-        { key: 'tribal', activity: 'tribal', offset: marooningDays + tribalDays },
-      ];
-    }
-
-    case 'swap':
-    case 'merge': {
-      const eventDays = round.eventDays ?? 1;
-      return [
-        { key: 'event', activity: type, offset: 0 },
-        { key: 'challenge', activity: 'challenge', offset: eventDays },
-        { key: 'tribal', activity: 'tribal', offset: eventDays + tribalDays },
-      ];
-    }
-
-    default:
-      return [
-        { key: 'challenge', activity: 'challenge', offset: 0 },
-        { key: 'tribal', activity: 'tribal', offset: tribalDays },
-      ];
+  if (type === 'reunion') {
+    return [{ key: 'event', activity: 'reunion', offset: 0 }];
   }
+
+  if (type === 'ftc') {
+    const speechDays = round.speechDays ?? 1;
+    return [
+      { key: 'speeches', activity: 'speeches', offset: 0 },
+      { key: 'votes', activity: 'votes', offset: speechDays },
+    ];
+  }
+
+  const block = getChallengeBlock(round, type);
+  const tribal = { key: 'tribal', activity: 'tribal', offset: block.end + (round.tribalDays ?? 1) };
+
+  if (type === 'marooning') {
+    return [{ key: 'event', activity: 'marooning', offset: 0 }, ...getBlockPhases(round, block), tribal];
+  }
+  if (type === 'swap' || type === 'merge') {
+    return [{ key: 'event', activity: type, offset: 0 }, ...getBlockPhases(round, block), tribal];
+  }
+  return [...getBlockPhases(round, block), tribal];
 }
 
 /**
@@ -259,7 +296,11 @@ export function expandRoundDays(round) {
   let active = [];
   for (let d = 0; d < duration; d++) {
     if (byOffset.has(d)) active = byOffset.get(d);
-    days.push({ dayOffset: d, phases: active });
+    // A phase with an explicit `days` stops after it; one without runs until the next phase
+    // starts. That's how a same-day bonus drops off after day 1 while the main challenge
+    // carries on, and how a multi-day marooning keeps painting until the challenge begins.
+    const live = active.filter(p => p.days == null || d < p.offset + p.days);
+    days.push({ dayOffset: d, phases: live.length ? live : active });
   }
 
   // A phase can fall outside the duration when a later phase has zero length
