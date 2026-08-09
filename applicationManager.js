@@ -237,13 +237,23 @@ async function saveApplicationConfig(guildId, configId, config) {
     if (!data[guildId].applicationConfigs) {
         data[guildId].applicationConfigs = {};
     }
-    
+
+    // MERGE, never replace. This used to be a wholesale overwrite, so any caller that built a
+    // partial config object silently destroyed every field it didn't know about — Season Planner's
+    // estimates (estimatedTotalPlayers/Swaps/FTCPlayers/StartDate), currentSeasonRoundID and
+    // seasonIdeas were wiped whenever a host re-opened the app-button modal. Symptom: rounds still
+    // exist under seasonRounds[seasonId] (stored separately, so they survived) while the Planner
+    // showed its "Set up Season Planner" prompt and the Edit modal came back blank.
+    // Explicit values still win, so `productionRole: null` clears as before — only omission is safe now.
+    const existing = data[guildId].applicationConfigs[configId];
     data[guildId].applicationConfigs[configId] = {
+        ...existing,
         ...config,
-        createdAt: Date.now(),
+        // createdAt is the season's birthday — it must survive every subsequent save.
+        createdAt: existing?.createdAt ?? config.createdAt ?? Date.now(),
         lastUpdated: Date.now()
     };
-    
+
     await savePlayerData(data);
     return configId;
 }
@@ -772,26 +782,20 @@ async function handleApplicationButtonModalSubmit(interactionBody, guild) {
             existingConfig = await getApplicationConfig(guild.id, interactionBody.existingConfigId);
         }
         
+        // Carry the WHOLE existing config forward, then overlay the three modal fields. This was a
+        // hand-maintained whitelist of ~10 keys, which meant every field added to a season since
+        // (Season Planner estimates, currentSeasonRoundID, seasonIdeas, draftTribes…) was silently
+        // dropped the moment a host edited their apply button. Spread first = new fields are safe
+        // by default; anything genuinely per-edit is overridden below.
         const tempConfig = {
+            ...(existingConfig || {}),
             buttonText,
             explanatoryText,
             channelFormat,
-            stage: 'awaiting_selections',
-            // Preserve season data if updating existing config
+            stage: 'awaiting_selections', // re-entering the setup flow; the post step sets it back to 'active'
             ...(existingConfig && {
-                seasonId: existingConfig.seasonId,
-                seasonName: existingConfig.seasonName,
                 questions: existingConfig.questions || [],
-                targetChannelId: existingConfig.targetChannelId,
-                categoryId: existingConfig.categoryId,
-                buttonStyle: existingConfig.buttonStyle,
-                productionRole: existingConfig.productionRole,
-                createdBy: existingConfig.createdBy,
-                createdAt: existingConfig.createdAt,
-                lastUpdated: Date.now(),
-                // Backwards compatibility: preserve old welcomeDescription if it exists
-                welcomeDescription: existingConfig.welcomeDescription,
-                welcomeTitle: existingConfig.welcomeTitle
+                lastUpdated: Date.now()
             })
         };
 

@@ -8598,7 +8598,7 @@ To fix this:
           const seasonRounds = playerData[context.guildId]?.seasonRounds?.[config.seasonId];
           if (!seasonRounds) return { content: '❌ No planner data found' };
           const startDate = new Date(config.estimatedStartDate);
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page, config.seasonIdeas, playerData[context.guildId]?.challenges, null, context.userId);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page, config.seasonIdeas, playerData[context.guildId]?.challenges, config, context.userId);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('planner_edit_')) {
@@ -8833,7 +8833,7 @@ To fix this:
           console.log(`📋 Season Planner: Posted schedule for "${seasonName}"`);
 
           const { buildPlannerView } = await import('./seasonPlanner.js');
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[context.guildId]?.challenges, null, context.userId);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[context.guildId]?.challenges, config, context.userId);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('planner_calendar_')) {
@@ -8867,7 +8867,7 @@ To fix this:
           console.log(`📅 Season Planner: Posted calendar for "${seasonName}"`);
 
           const { buildPlannerView } = await import('./seasonPlanner.js');
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[context.guildId]?.challenges, null, context.userId);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[context.guildId]?.challenges, config, context.userId);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('planner_tribes_')) {
@@ -37852,7 +37852,7 @@ To fix this:
           const startDate = new Date(config.estimatedStartDate);
           const roundNo = round.seasonRoundNo;
           const page = Math.floor((roundNo - 1) / 10);
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page, config.seasonIdeas, playerData[context.guildId]?.challenges, null, context.userId);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page, config.seasonIdeas, playerData[context.guildId]?.challenges, config, context.userId);
         }
       })(req, res, client);
 
@@ -37976,9 +37976,9 @@ To fix this:
 
           console.log(`💡 Season Planner: Ideas updated for "${config.seasonName}"`);
 
-          const seasonRounds = playerData[context.guildId]?.seasonRounds?.[config.seasonId];
+          const seasonRounds = playerData[context.guildId]?.seasonRounds?.[config.seasonId] || {};
           const startDate = new Date(config.estimatedStartDate);
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[context.guildId]?.challenges, null, context.userId);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[context.guildId]?.challenges, config, context.userId);
         }
       })(req, res, client);
 
@@ -38080,7 +38080,7 @@ To fix this:
           // Navigate to the page containing the edited round
           const roundNo = seasonRounds[roundId]?.seasonRoundNo || 1;
           const page = Math.floor((roundNo - 1) / 12);
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page, config.seasonIdeas, playerData[context.guildId]?.challenges, null, context.userId);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page, config.seasonIdeas, playerData[context.guildId]?.challenges, config, context.userId);
         }
       })(req, res, client);
 

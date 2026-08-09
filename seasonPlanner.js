@@ -448,7 +448,15 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
   const roundIds = Object.keys(rounds).sort((a, b) => rounds[a].seasonRoundNo - rounds[b].seasonRoundNo);
   const totalPages = Math.ceil(roundIds.length / SELECTS_PER_PAGE);
   if (page < 0 || page >= totalPages) page = 0;
-  const pageInfo = totalPages > 1 ? ` (Pg ${page + 1}/${totalPages})` : '';
+
+  // Planner readiness: per-field when a config is supplied, else inferred from generated rounds.
+  // Computed BEFORE the header/pagination because the setup state must hide both — rounds can
+  // outlive their estimates (they live under seasonRounds[seasonId], a separate tree), and showing
+  // "Pg 1/2" with working arrows above a "you haven't set this up yet" prompt is a contradiction.
+  const missing = getMissingPlannerFields(config, rounds);
+  const plannerReady = missing.length === 0;
+
+  const pageInfo = plannerReady && totalPages > 1 ? ` (Pg ${page + 1}/${totalPages})` : '';
 
   const skippedMap = getSkippedRounds(rounds);
   const dates = calculateRoundDates(rounds, startDate, skippedMap);
@@ -473,10 +481,6 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
     };
   });
 
-  // Planner readiness: per-field when a config is supplied, else inferred from generated rounds.
-  const missing = getMissingPlannerFields(config, rounds);
-  const plannerReady = missing.length === 0;
-
   // Schedule body: round selects + active actions when set up; otherwise a setup prompt with the
   // Schedule/Calendar actions disabled until every estimate is supplied via the Edit modal.
   const scheduleBody = plannerReady
@@ -495,11 +499,12 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
         ]},
       ];
 
-  // Shared bottom row [← Seasons][✏️ Edit] + planner pagination (◀ ▶) as extraButtons
-  const paginationButtons = [
+  // Shared bottom row [← Seasons][✏️ Edit] + planner pagination (◀ ▶) as extraButtons.
+  // No arrows in the setup state — there are no round selects to page through.
+  const paginationButtons = plannerReady ? [
     { type: 2, custom_id: `planner_page_${page - 1}_${configId}`, label: '◀', style: page === 0 ? 2 : 1, disabled: page === 0 },
     { type: 2, custom_id: `planner_page_${page + 1}_${configId}`, label: '▶', style: page >= totalPages - 1 ? 2 : 1, disabled: page >= totalPages - 1 },
-  ];
+  ] : [];
 
   const container = {
     type: 17, accent_color: 0x9b59b6,
