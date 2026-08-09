@@ -2,6 +2,54 @@
     "version": "2.0.0",
     "tasks": [
         {
+            // Auto-runs on folder open (see runOptions). One-time enable:
+            // Command Palette → "Tasks: Allow Automatic Tasks in Folder"
+            "label": "🟥 PROD logs (castbot-lightsail)",
+            "type": "shell",
+            "command": "ssh -t castbot-lightsail \"pm2 logs castbot-pm --lines 50\"",
+            "problemMatcher": [],
+            "runOptions": {
+                "runOn": "folderOpen"
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": true,
+                "showReuseMessage": false,
+                "focus": false,
+                "group": "CastBotBoxes",
+                "echo": false,
+                "close": false
+            },
+            "icon": {
+                "id": "server-process",
+                "color": "terminal.ansiRed"
+            }
+        },
+        {
+            "label": "🟦 TEST logs (castbot-blue)",
+            "type": "shell",
+            "command": "ssh -t castbot-blue \"pm2 logs castbot-pm --lines 50\"",
+            "problemMatcher": [],
+            "runOptions": {
+                "runOn": "folderOpen"
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": true,
+                "showReuseMessage": false,
+                "focus": false,
+                "group": "CastBotBoxes",
+                "echo": false,
+                "close": false
+            },
+            "icon": {
+                "id": "server-process",
+                "color": "terminal.ansiBlue"
+            }
+        },
+        {
             "label": "Win Restart (commit+push+deploy TEST)",
             "type": "shell",
             "command": "node scripts/dev/win-restart.js \"${input:commitMessage}\"",
