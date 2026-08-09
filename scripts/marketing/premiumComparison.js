@@ -156,30 +156,34 @@ export function buildComparisonSvg() {
   p.push(`<rect width="${W}" height="${H}" fill="url(#grid)"/>`);
 
   // ── Header ──
-  p.push(text(PAD, 74, 'CASTBOT PREMIUM', { size: 14, fill: ACCENT, weight: 'bold', spacing: 3.2 }));
-  p.push(text(PAD, 128, 'Most of this is free.', { size: 42, weight: 'bold' }));
-  p.push(text(PAD, 178, 'The rest is seven dollars.', { size: 42, weight: 'bold', fill: ACCENT }));
+  p.push(text(PAD, 74, 'CASTBOT', { size: 14, fill: ACCENT, weight: 'bold', spacing: 3.2 }));
+  p.push(text(PAD, 128, 'The things other bots', { size: 42, weight: 'bold' }));
+  p.push(text(PAD, 178, 'charge for are free here.', { size: 42, weight: 'bold', fill: ACCENT }));
   p.push(text(PAD, 214, 'Applications, casting, castlists, idol hunts, maps and economies — almost none of it behind a paywall.', { size: 16, fill: TEXT_SEC }));
 
   // ── Price cards ──
   const cardY = 244, cardH = 168, gap = 24;
   const cardW = (CARD_W - gap) / 2;
 
+  // FRAMING NOTE (2026-08-09): the cards deliberately do NOT put $7 next to Kadabra's $3.
+  // Verified US pricing is $3 / $5 / $7 for one / two / three activations, so a head-to-head
+  // price line is a comparison CastBot loses. What CastBot actually wins is the FREE tier —
+  // so the hero number here is $0, and Premium is the secondary line.
   p.push(`<rect x="${CARD_X}" y="${cardY}" width="${cardW}" height="${cardH}" rx="10" fill="${CARD_BG}" stroke="${ACCENT}" stroke-width="1.5"/>`);
   p.push(`<rect x="${CARD_X}" y="${cardY}" width="${cardW}" height="4" rx="2" fill="${ACCENT}"/>`);
-  p.push(text(CARD_X + 26, cardY + 40, 'CASTBOT PREMIUM', { size: 12, fill: ACCENT, weight: 'bold', spacing: 2.4 }));
-  p.push(text(CARD_X + 26, cardY + 92, '$7', { size: 46, weight: 'bold' }));
-  p.push(text(CARD_X + 86, cardY + 92, '/ month', { size: 17, fill: TEXT_SEC }));
-  p.push(text(CARD_X + 26, cardY + 122, 'One tier. Everything included.', { size: 15, fill: TEXT_PRI }));
-  p.push(text(CARD_X + 26, cardY + 146, 'Everything free stays free — Premium adds to it.', { size: 13.5, fill: TEXT_MUT }));
+  p.push(text(CARD_X + 26, cardY + 40, 'CASTBOT', { size: 12, fill: ACCENT, weight: 'bold', spacing: 2.4 }));
+  p.push(text(CARD_X + 26, cardY + 92, '$0', { size: 46, weight: 'bold' }));
+  p.push(text(CARD_X + 92, cardY + 92, 'for everything below', { size: 17, fill: TEXT_SEC }));
+  p.push(text(CARD_X + 26, cardY + 122, 'Every row marked ✓ — free, in every server.', { size: 15, fill: TEXT_PRI }));
+  p.push(text(CARD_X + 26, cardY + 146, 'Premium ($7/mo) adds the three starred rows.', { size: 13.5, fill: TEXT_MUT }));
 
   const kx = CARD_X + cardW + gap;
   p.push(`<rect x="${kx}" y="${cardY}" width="${cardW}" height="${cardH}" rx="10" fill="${CARD_BG}" stroke="${RULE}" stroke-width="1.5"/>`);
   p.push(text(kx + 26, cardY + 40, 'KADABRA', { size: 12, fill: RIVAL, weight: 'bold', spacing: 2.4 }));
-  p.push(text(kx + 26, cardY + 92, '$5', { size: 46, weight: 'bold', fill: TEXT_SEC }));
-  p.push(text(kx + 106, cardY + 92, '/ month, 1 activation', { size: 17, fill: TEXT_SEC }));
+  p.push(text(kx + 26, cardY + 92, '$3', { size: 46, weight: 'bold', fill: TEXT_SEC }));
+  p.push(text(kx + 92, cardY + 92, '/ month, 1 activation', { size: 17, fill: TEXT_SEC }));
   p.push(text(kx + 26, cardY + 122, 'One activation unlocks ORG automation OR Safari.', { size: 15, fill: TEXT_PRI }));
-  p.push(text(kx + 26, cardY + 146, 'Both in one server → 2 activations, $8.50 / month.', { size: 13.5, fill: TEXT_MUT }));
+  p.push(text(kx + 26, cardY + 146, 'Both in one server → 2 activations, $5 / month.', { size: 13.5, fill: TEXT_MUT }));
 
   // ── Legend ──
   const ly = 436;
@@ -226,8 +230,8 @@ export function buildComparisonSvg() {
   // ── Footer ──
   const fy = TABLE_Y + tableH + 40;
   p.push(`<line x1="${PAD}" y1="${fy - 22}" x2="${W - PAD}" y2="${fy - 22}" stroke="${RULE}" stroke-width="1"/>`);
-  p.push(text(PAD, fy, 'Kadabra pricing and premium boundaries from its public Patreon and the Kadabra V2 Guide, checked August 2026.', { size: 13, fill: TEXT_MUT }));
-  p.push(text(PAD, fy + 22, 'Patreon shows prices in the viewer’s local currency. This chart covers the features listed — both bots do things the other doesn’t.', { size: 13, fill: TEXT_MUT }));
+  p.push(text(PAD, fy, 'Kadabra pricing (US) and premium boundaries from its public Patreon and the Kadabra V2 Guide, checked August 2026.', { size: 13, fill: TEXT_MUT }));
+  p.push(text(PAD, fy + 22, 'Prices shown in USD. This chart covers the features listed — both bots do things the other doesn’t.', { size: 13, fill: TEXT_MUT }));
   p.push(text(PAD, fy + 52, 'ko-fi.com/castbot', { size: 15, fill: ACCENT, weight: 'bold' }));
   p.push(text(W - PAD, fy + 52, 'CastBot — made by Reece (@extremedonkey)', { size: 13, fill: TEXT_MUT, anchor: 'end' }));
 
