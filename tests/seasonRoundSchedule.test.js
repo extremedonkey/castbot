@@ -292,11 +292,20 @@ describe('expandRoundDays — the calendar invariant', () => {
     assert.ok(days[1].phases.some(p => p.key === 'votes'));
   });
 
-  it('a same-day bonus occupies only its own day, not the rest of the block', () => {
-    // The reason bonus phases carry an explicit `days: 1`.
+  it('a same-day bonus runs CONCURRENTLY across the whole block', () => {
+    // "Same day" means the reward and the immunity challenge run together for the block's
+    // full span — so the calendar paints both on every day of it, not just the first.
     const days = expandRoundDays(standard({ challengeDays: 3, bonusChallengeId: BONUS, bonusOrder: 'same' }));
     assert.deepEqual(days.map(d => d.phases.map(p => p.key)),
-      [['bonus', 'challenge'], ['challenge'], ['challenge'], ['tribal']]);
+      [['bonus', 'challenge'], ['bonus', 'challenge'], ['bonus', 'challenge'], ['tribal']]);
+  });
+
+  it('a first/last bonus still takes exactly one day', () => {
+    // Only 'same' is concurrent; 'last' in particular must not stretch into a tribal gap.
+    assert.deepEqual(
+      expandRoundDays(standard({ challengeDays: 3, bonusChallengeId: BONUS, bonusOrder: 'last', tribalDays: 3 }))
+        .map(d => d.phases.map(p => p.key)),
+      [['challenge'], ['challenge'], ['bonus'], ['bonus'], ['tribal']]);
   });
 
   it('a multi-day main challenge repeats across its days', () => {

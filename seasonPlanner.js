@@ -350,7 +350,29 @@ export function buildPlannerSetupPrompt(missing) {
  * @param {string} [userId] - viewer; gates the hidden Channels tab in the shared nav row
  * @returns {Object} Components V2 response
  */
-export function buildPlannerView(seasonName, rounds, startDate, configId, page = 0, ideas = '', challenges = {}, config = null, userId = null) {
+/**
+ * Resolve each challenge's `creationHost` id to a display name for select descriptions.
+ *
+ * Descriptions are PLAIN TEXT — a `<@id>` mention renders literally — so the name has to be
+ * resolved here. Cache-only by design: a fetch per render would be far too expensive, and the
+ * codebase is deliberately moving away from members.fetch. Unresolved hosts fall back to "TBC".
+ * @param {Object} guild - discord.js Guild (optional; omit and every host reads "TBC")
+ */
+export function resolveHostNames(guild, challenges = {}) {
+  const names = {};
+  if (!guild) return names;
+  for (const chal of Object.values(challenges)) {
+    const id = chal?.creationHost;
+    if (!id || names[id]) continue;
+    const member = guild.members?.cache?.get(id);
+    const name = member?.displayName || member?.nickname || member?.user?.username;
+    if (name) names[id] = name;
+  }
+  return names;
+}
+
+export function buildPlannerView(seasonName, rounds, startDate, configId, page = 0, ideas = '', challenges = {}, config = null, userId = null, guild = null) {
+  const hostNames = resolveHostNames(guild, challenges);
   // Guard a missing/invalid start date so round dates never render as "undefined NaN undefined"
   if (!(startDate instanceof Date) || isNaN(startDate.getTime())) startDate = new Date();
   const roundIds = Object.keys(rounds).sort((a, b) => rounds[a].seasonRoundNo - rounds[b].seasonRoundNo);
@@ -376,7 +398,7 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
     const skipInfo = skippedMap.get(id);
     const options = skipInfo
       ? [{ label: `F${round.fNumber} ${DOT} Skipped (F${skipInfo.skippedBy} eliminates ${skipInfo.elimCount})`, value: 'summary', default: true, emoji: { name: '⏭️' } }]
-      : buildRoundOptions(round, roundDates, challenges);
+      : buildRoundOptions(round, roundDates, challenges, hostNames);
 
     return {
       type: 1,
@@ -437,7 +459,7 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
 /**
  * Build string select options for a single round.
  */
-function buildRoundOptions(round, dates, challenges = {}) {
+function buildRoundOptions(round, dates, challenges = {}, hostNames = {}) {
   const f = round.fNumber;
   // Branch on the SHARED classifier so the option set always agrees with the dates
   // calculateRoundDates produced. Deriving the type independently here is what caused
@@ -468,7 +490,12 @@ function buildRoundOptions(round, dates, challenges = {}) {
   const linkedChallenge = round.challengeIDs?.primary ? challenges[round.challengeIDs.primary] : null;
   const rawChallengeName = linkedChallenge?.title || round.challengeName || `Challenge ${round.seasonRoundNo} (TBC)`;
   const challengeName = rawChallengeName.length > 50 ? rawChallengeName.substring(0, 47) + '...' : rawChallengeName;
-  const host = round.host || 'TBC';
+  // Host lives on the CHALLENGE (creationHost, set by the Edit Challenge modal). `round.host`
+  // is a legacy field nothing ever writes — reading it made every description say "TBC" even
+  // when a host was set. hostNames maps userId → display name (select descriptions are plain
+  // text, so a <@id> mention would render literally).
+  const hostFor = (chal) => (chal?.creationHost && hostNames[chal.creationHost]) || 'TBC';
+  const host = hostFor(linkedChallenge);
   const elims = round.eliminations ?? 1;
   const elimText = elims === 0 ? 'no elim' : elims === 1 ? '1 elim' : `${elims} elims`;
 
@@ -479,38 +506,41 @@ function buildRoundOptions(round, dates, challenges = {}) {
   const bonusChallenge = bonusId ? challenges[bonusId] : null;
   const bonusMissing = !!bonusId && !bonusChallenge;
   const bonusTitle = bonusMissing ? '⚠️ Missing bonus challenge' : (bonusChallenge?.title || '');
+  const bonusHost = hostFor(bonusChallenge);
   const bonusOption = bonusId
     ? {
         // No emoji prefix in the label — the option's own `emoji` renders it, and host titles
         // often already start with one (which read as "🎁 🎁 Loved Ones Reward").
         label: (bonusMissing ? 'Missing bonus challenge' : bonusTitle).substring(0, 100),
-        // Nothing to open when the challenge is gone — fall back to a no-op row.
-        value: bonusMissing ? 'divider' : `go_challenge_${bonusId}`,
+        // Opens the SAME Edit Challenge modal as the main challenge row. That modal owns the
+        // whole block (duration + bonus link + placement), so editing either side of the pair
+        // lands in one consistent place. "Go to" below is the jump-to-the-challenge action.
+        value: bonusMissing ? 'divider' : 'edit_challenge',
         emoji: { name: bonusMissing ? '⚠️' : '🎁' },
-        description: `${dates.bonus || ''} ${DOT} ${host}`.trim().substring(0, 100),
+        description: `${dates.bonus || ''} ${DOT} ${bonusHost}`.trim().substring(0, 100),
       }
     : null;
   // Bonus runs first (or same day) → list it ABOVE the main challenge so the dates in the
-  // dropdown read top-to-bottom in chronological order; 'last' → below.
+  // dropdown read top-to-bottom in chronological order; 'last' → below. The same ordering is
+  // applied to the "Go to …" rows lower down, so both pairs stay chronological.
   const bonusFirst = (round.bonusOrder ?? 'first') !== 'last';
+  const chronological = (mainRow, bonusRow) =>
+    !bonusRow ? [mainRow] : (bonusFirst ? [bonusRow, mainRow] : [mainRow, bonusRow]);
 
-  // The main challenge's description names the bonus so the pairing is visible without opening it.
-  const challengeDesc = bonusId
-    ? `${dates.challenge} ${DOT} + ${bonusTitle} ${DOT} ${host}`.substring(0, 100)
-    : `${dates.challenge} ${DOT} ${host}`;
+  const challengeDesc = `${dates.challenge} ${DOT} ${host}`;
 
   /** Challenge + bonus rows in chronological order, ready to splice into an option list. */
-  const challengeRows = () => {
-    const editChallenge = { label: `Edit ${challengeName}`, value: 'edit_challenge', emoji: { name: '🤸' }, description: challengeDesc };
-    if (!bonusOption) return [editChallenge];
-    return bonusFirst ? [bonusOption, editChallenge] : [editChallenge, bonusOption];
-  };
+  const challengeRows = () => chronological(
+    { label: `Edit ${challengeName}`, value: 'edit_challenge', emoji: { name: '🤸' }, description: challengeDesc },
+    bonusOption
+  );
 
-  // "Go to Challenge" option — only if linked
+  // "Go to …" rows — jump straight to a challenge's own screen. Only for linked challenges.
   const linkedChalId = round.challengeIDs?.primary;
-  const goToChallenge = linkedChalId
-    ? { label: `Go to ${challengeName}`, value: `go_challenge_${linkedChalId}`, emoji: { name: '🏃' } }
-    : null;
+  const goToRows = chronological(
+    linkedChalId ? { label: `Go to ${challengeName}`, value: `go_challenge_${linkedChalId}`, emoji: { name: '🏃' } } : null,
+    (bonusId && !bonusMissing) ? { label: `Go to ${bonusTitle}`.substring(0, 100), value: `go_challenge_${bonusId}`, emoji: { name: '🎁' } } : null
+  ).filter(Boolean);
 
   if (type === 'marooning') {
     const label = `F${f} ${DOT} ${dates.event} ${DOT} Marooning ${DOT} ${challengeName}`;
@@ -524,7 +554,7 @@ function buildRoundOptions(round, dates, challenges = {}) {
       { label: 'Manage Final Tribal Council', value: 'ftc', emoji: { name: '⚖️' } },
       { label: 'Swap Events With Another Round', value: 'swap_round', emoji: { name: '↔️' } },
     ];
-    if (goToChallenge) opts.push(goToChallenge);
+    opts.push(...goToRows);
     return opts;
   }
 
@@ -541,7 +571,7 @@ function buildRoundOptions(round, dates, challenges = {}) {
       { label: 'Manage Final Tribal Council', value: 'ftc', emoji: { name: '⚖️' } },
       { label: 'Swap Events With Another Round', value: 'swap_round', emoji: { name: '↔️' } },
     ];
-    if (goToChallenge) opts.push(goToChallenge);
+    opts.push(...goToRows);
     return opts;
   }
 
@@ -557,7 +587,7 @@ function buildRoundOptions(round, dates, challenges = {}) {
     { label: 'Manage Final Tribal Council', value: 'ftc', emoji: { name: '⚖️' } },
     { label: 'Swap Events With Another Round', value: 'swap_round', emoji: { name: '↔️' } },
   ];
-  if (goToChallenge) opts.push(goToChallenge);
+  opts.push(...goToRows);
   return opts;
 }
 

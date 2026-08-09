@@ -8562,7 +8562,7 @@ To fix this:
           const seasonRounds = playerData[context.guildId]?.seasonRounds?.[config.seasonId];
           if (!seasonRounds) return { content: '❌ No planner data found' };
           const startDate = new Date(config.estimatedStartDate);
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page, config.seasonIdeas, playerData[context.guildId]?.challenges, config, context.userId);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page, config.seasonIdeas, playerData[context.guildId]?.challenges, config, context.userId, context.client?.guilds?.cache?.get(context.guildId));
         }
       })(req, res, client);
     } else if (custom_id.startsWith('planner_edit_')) {
@@ -8721,7 +8721,7 @@ To fix this:
           // so pass an empty rounds object and the config for per-field missing-estimate detection.
           const seasonRounds = playerData[context.guildId]?.seasonRounds?.[config.seasonId] || {};
           const startDate = new Date(config.estimatedStartDate);
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[context.guildId]?.challenges, config, context.userId);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[context.guildId]?.challenges, config, context.userId, context.client?.guilds?.cache?.get(context.guildId));
         }
       })(req, res, client);
     } else if (custom_id.startsWith('planner_ranking_')) {
@@ -8767,7 +8767,7 @@ To fix this:
           console.log(`📋 Season Planner: Posted schedule for "${seasonName}"`);
 
           const { buildPlannerView } = await import('./seasonPlanner.js');
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[context.guildId]?.challenges, config, context.userId);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[context.guildId]?.challenges, config, context.userId, context.client?.guilds?.cache?.get(context.guildId));
         }
       })(req, res, client);
     } else if (custom_id.startsWith('planner_calendar_')) {
@@ -8801,7 +8801,7 @@ To fix this:
           console.log(`📅 Season Planner: Posted calendar for "${seasonName}"`);
 
           const { buildPlannerView } = await import('./seasonPlanner.js');
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[context.guildId]?.challenges, config, context.userId);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[context.guildId]?.challenges, config, context.userId, context.client?.guilds?.cache?.get(context.guildId));
         }
       })(req, res, client);
     } else if (custom_id.startsWith('planner_tribes_')) {
@@ -37784,7 +37784,7 @@ To fix this:
           const startDate = new Date(config.estimatedStartDate);
           const roundNo = round.seasonRoundNo;
           const page = Math.floor((roundNo - 1) / 10);
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page, config.seasonIdeas, playerData[context.guildId]?.challenges, config, context.userId);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page, config.seasonIdeas, playerData[context.guildId]?.challenges, config, context.userId, context.client?.guilds?.cache?.get(context.guildId));
         }
       })(req, res, client);
 
@@ -37910,7 +37910,7 @@ To fix this:
 
           const seasonRounds = playerData[context.guildId]?.seasonRounds?.[config.seasonId] || {};
           const startDate = new Date(config.estimatedStartDate);
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[context.guildId]?.challenges, config, context.userId);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[context.guildId]?.challenges, config, context.userId, context.client?.guilds?.cache?.get(context.guildId));
         }
       })(req, res, client);
 
@@ -37960,7 +37960,7 @@ To fix this:
             // both the name-only edit and the full edit through it (config drives per-field display).
             const seasonRounds = playerData[guildId]?.seasonRounds?.[config.seasonId] || {};
             const startDate = new Date(config.estimatedStartDate);
-            return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[guildId]?.challenges, config, userId);
+            return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[guildId]?.challenges, config, userId, client?.guilds?.cache?.get(guildId));
           }
 
           // CREATE — unified season creation (name-only allowed; rounds only if estimates supplied)
@@ -38012,7 +38012,7 @@ To fix this:
           // Navigate to the page containing the edited round
           const roundNo = seasonRounds[roundId]?.seasonRoundNo || 1;
           const page = Math.floor((roundNo - 1) / 12);
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page, config.seasonIdeas, playerData[context.guildId]?.challenges, config, context.userId);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page, config.seasonIdeas, playerData[context.guildId]?.challenges, config, context.userId, context.client?.guilds?.cache?.get(context.guildId));
         }
       })(req, res, client);
 
@@ -41195,7 +41195,7 @@ To fix this:
             const { buildPlannerView } = await import('./seasonPlanner.js');
             const seasonRounds = fresh[guildId]?.seasonRounds?.[freshConfig.seasonId] || {};
             const startDate = new Date(freshConfig.estimatedStartDate);
-            originView = buildPlannerView(freshConfig.seasonName, seasonRounds, startDate, configId, 0, freshConfig.seasonIdeas, fresh[guildId]?.challenges, freshConfig, editUserId);
+            originView = buildPlannerView(freshConfig.seasonName, seasonRounds, startDate, configId, 0, freshConfig.seasonIdeas, fresh[guildId]?.challenges, freshConfig, editUserId, client?.guilds?.cache?.get(guildId));
           } else if (originMode === 'ranking') {
             const { buildSeasonRankingResponse } = await import('./castRankingManager.js');
             originView = await buildSeasonRankingResponse({ guildId, userId: editUserId, configId, client, playerData: fresh });

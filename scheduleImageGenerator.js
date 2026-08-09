@@ -83,23 +83,29 @@ function eventLabelFor(roundSchedule) {
   return round.eventLabel || (type === 'swap' ? 'Swap' : 'Merge');
 }
 
+/** Most pills that fit in one calendar cell before they'd overflow it. */
+const MAX_CELL_PILLS = 3;
+
 /**
- * Per-day activity labels for the 📅 Calendar, derived from the SHARED phase model.
+ * Per-day activities for the 📅 Calendar, derived from the SHARED phase model.
  *
  * expandRoundDays() guarantees exactly getRoundDuration(round) entries, so calendar cells can
- * never drift out of step with the timeline's round start dates. Days where several phases
- * coincide (a live tribal, a 0-day marooning) get a combined compact label.
+ * never drift out of step with the timeline's round start dates.
  *
- * @returns {Array<{activity: string, label: string}>} one entry per day of the round
+ * Each day returns a LIST of activities, one per phase running that day — the calendar stacks
+ * them as separate pills. A reward running alongside its immunity challenge therefore shows
+ * both real titles on both days, rather than one merged "Rwd + Chall" label on the first day
+ * only. Phases are already in chronological order, so the reward lands on top when it leads.
+ *
+ * @returns {Array<Array<{activity: string, label: string}>>} one entry per day of the round
  */
 function getDayActivities(roundSchedule, challenges = {}) {
   const { round, type } = roundSchedule;
-  const shortChallenge = challengeTitle(round, challenges, 12, 'Challenge');
-  const shortBonus = bonusTitle(round, challenges, 12, 'Reward');
+  const shortChallenge = challengeTitle(round, challenges, 13, 'Challenge');
+  const shortBonus = bonusTitle(round, challenges, 13, 'Reward');
   const eventLabel = eventLabelFor(roundSchedule);
 
-  // Full labels when a day holds ONE phase; compact when several share the day.
-  const full = {
+  const labels = {
     event: eventLabel,
     challenge: shortChallenge,
     bonus: shortBonus,
@@ -107,21 +113,14 @@ function getDayActivities(roundSchedule, challenges = {}) {
     speeches: 'Speeches',
     votes: 'Q&A/Votes',
   };
-  const compact = {
-    event: type === 'marooning' ? 'Mar' : eventLabel,
-    challenge: 'Chall',
-    bonus: 'Rwd',
-    tribal: 'Tribal',
-    speeches: 'Speech',
-    votes: 'Votes',
-  };
 
-  return expandRoundDays(round).map(day => ({
-    activity: day.phases[0]?.activity || type,
-    label: day.phases.length > 1
-      ? day.phases.map(p => compact[p.key]).join(' + ')
-      : (full[day.phases[0]?.key] ?? 'Challenge'),
-  }));
+  return expandRoundDays(round).map(day => {
+    const pills = day.phases.slice(0, MAX_CELL_PILLS).map(p => ({
+      activity: p.activity,
+      label: labels[p.key] ?? 'Challenge',
+    }));
+    return pills.length ? pills : [{ activity: type, label: labels.challenge }];
+  });
 }
 
 // ═══════════════════════════════════════════
@@ -334,11 +333,8 @@ export async function generateMonthCalendar(seasonName, rounds, startDate, chall
       const rd = new Date(start);
       rd.setDate(rd.getDate() + day);
       const key = `${rd.getFullYear()}-${rd.getMonth()}-${rd.getDate()}`;
-      dateLookup[key] = {
-        round, id, dayInRound: day, type,
-        activity: activities[day].activity,
-        activityLabel: activities[day].label,
-      };
+      // `pills` is a LIST — a reward running alongside its challenge stacks two in one cell.
+      dateLookup[key] = { round, id, dayInRound: day, type, pills: activities[day] };
     }
   }
 
@@ -398,28 +394,28 @@ export async function generateMonthCalendar(seasonName, rounds, startDate, chall
       const key = `${year}-${month}-${day}`;
       const info = dateLookup[key];
 
-      let cellBg = CARD_BG;
-      let accentColor = null;
-      let fText = '';
-      let activityLabel = '';
-      let activityColor = TEXT_MUT;
+      const pills = info?.pills || [];
+      // The cell's accent + F-number take the colour of the FIRST activity of the day.
+      const accentColor = info ? (ACTIVITY_COLORS[pills[0]?.activity] || TYPE_COLORS[info.type]) : null;
+      const cellBg = info ? CARD_ALT : CARD_BG;
+      const fText = info ? `F${info.round.fNumber}` : '';
 
-      if (info) {
-        accentColor = ACTIVITY_COLORS[info.activity] || TYPE_COLORS[info.type];
-        activityColor = accentColor;
-        cellBg = CARD_ALT;
-        fText = `F${info.round.fNumber}`;
-        activityLabel = escapeXml(info.activityLabel);
-      }
+      // Stacked pills: 16px tall on an 18px pitch from y=30, so three still clear the cell.
+      const PILL_H = 16, PILL_PITCH = 18, PILL_TOP = 30;
+      const pillSvg = pills.map((pill, pi) => {
+        const color = ACTIVITY_COLORS[pill.activity] || TYPE_COLORS[info.type];
+        const py = PILL_TOP + pi * PILL_PITCH;
+        return `<rect x="8" y="${py}" width="${CELL_W - 20}" height="${PILL_H}" rx="4" ry="4" fill="${color}" fill-opacity="0.15"/>`
+          + `<text x="${CELL_W / 2}" y="${py + 11.5}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="bold" fill="${color}">${escapeXml(pill.label)}</text>`;
+      }).join('');
 
       composites.push({
         input: Buffer.from(`<svg width="${CELL_W}" height="${CELL_H}" xmlns="http://www.w3.org/2000/svg">
           <rect x="2" y="2" width="${CELL_W - 4}" height="${CELL_H - 4}" rx="6" ry="6" fill="${cellBg}"/>
           ${accentColor ? `<rect x="2" y="2" width="${CELL_W - 4}" height="3" rx="1" fill="${accentColor}"/>` : ''}
           <text x="10" y="22" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="bold" fill="${info ? TEXT_PRI : TEXT_MUT}">${day}</text>
-          ${fText ? `<text x="${CELL_W - 10}" y="22" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="${activityColor}">${fText}</text>` : ''}
-          ${activityLabel ? `<rect x="8" y="32" width="${CELL_W - 20}" height="18" rx="4" ry="4" fill="${activityColor}" fill-opacity="0.15"/>` : ''}
-          ${activityLabel ? `<text x="${CELL_W / 2}" y="45" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="bold" fill="${activityColor}">${activityLabel}</text>` : ''}
+          ${fText ? `<text x="${CELL_W - 10}" y="22" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="${accentColor}">${fText}</text>` : ''}
+          ${pillSvg}
         </svg>`),
         top: cy, left: cx
       });
@@ -438,7 +434,7 @@ export async function generateMonthCalendar(seasonName, rounds, startDate, chall
     { label: 'Reunion', color: ACTIVITY_COLORS.reunion },
   ];
   // Only advertise Reward when the season actually uses one.
-  if (Object.values(dateLookup).some(d => d.activity === 'bonus')) {
+  if (Object.values(dateLookup).some(d => d.pills?.some(p => p.activity === 'bonus'))) {
     legendItems.push({ label: 'Reward', color: ACTIVITY_COLORS.bonus });
   }
   // Spread the swatches across the available width so an extra item still fits.

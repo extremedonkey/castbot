@@ -109,26 +109,27 @@ function getChallengeBlock(round, type) {
  * the rest of the budget. `challengeDays: 1` cannot be split across two sequential challenges,
  * so it degrades to same-day automatically rather than erroring.
  *
- * The bonus phase carries an explicit `days: 1` because in the same-day case it does NOT run
- * until the next phase starts — expandRoundDays needs to know it ends after one day so a
- * 3-day block paints "Reward + Challenge" then "Challenge", "Challenge".
+ * A 'first' or 'last' bonus carries an explicit `days: 1` so it occupies exactly one day — for
+ * 'last' that stops it stretching into a multi-day tribal gap. A **'same' bonus deliberately
+ * carries no `days`**: it runs concurrently with the main challenge for the block's whole
+ * span, so a 2-day block paints BOTH on BOTH days rather than the reward vanishing after day 1.
  */
 function getBlockPhases(round, block) {
   const challenge = { key: 'challenge', activity: 'challenge', offset: block.start };
   if (!round.bonusChallengeId) return [challenge];
 
-  const bonus = { key: 'bonus', activity: 'bonus', offset: block.start, days: 1 };
   const order = round.bonusOrder ?? 'first';
 
   // One day can't hold two sequential challenges — fall back to sharing it.
-  if (order === 'same' || block.days === 1) return [bonus, challenge];
+  if (order === 'same' || block.days === 1) {
+    return [{ key: 'bonus', activity: 'bonus', offset: block.start }, challenge];
+  }
 
   if (order === 'last') {
-    bonus.offset = block.end;
-    return [challenge, bonus];
+    return [challenge, { key: 'bonus', activity: 'bonus', offset: block.end, days: 1 }];
   }
   challenge.offset = block.start + 1; // 'first'
-  return [bonus, challenge];
+  return [{ key: 'bonus', activity: 'bonus', offset: block.start, days: 1 }, challenge];
 }
 
 /**
