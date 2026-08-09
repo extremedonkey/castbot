@@ -13455,8 +13455,8 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'data_admin') {
-      // Data admin menu — access check BEFORE factory: prevents V2 flag mismatch crash on public messages (e.g. restart notification)
-      if (req.body.member?.user?.id !== '391415444084490240') { console.log(`❌ ACCESS DENIED: data_admin - user ${req.body.member?.user?.id} not authorized`); return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Access denied. This feature is restricted.', flags: InteractionResponseFlags.EPHEMERAL } }); }
+      // Data admin menu (Reece + test user — SAME pair as reeces_stuff and the Settings render gate in safariConfigUI.js; when they drift, a user is shown a button that denies them). Check runs BEFORE the factory: prevents a V2 flag mismatch crash on public messages (e.g. the restart notification).
+      if (!['391415444084490240', '1086246253819613274'].includes(req.body.member?.user?.id)) { console.log(`❌ ACCESS DENIED: data_admin - user ${req.body.member?.user?.id} not authorized`); return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Access denied. This feature is restricted.', flags: InteractionResponseFlags.EPHEMERAL } }); }
       return ButtonHandlerFactory.create({
         id: 'data_admin',
         updateMessage: true,  // Button clicks always update (per CLAUDE.md)
