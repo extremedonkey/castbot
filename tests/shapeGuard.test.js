@@ -69,4 +69,38 @@ describe('SHAPE-GUARD — wrapBareContentForV2', () => {
     const data = { content: '' };
     assert.equal(wrapBareContentForV2(data, EPHEMERAL_V2_MESSAGE, 'webhook PATCH'), false);
   });
+
+  it('names the handler, so the warning is actionable', () => {
+    // Without this it read "some handler somewhere returned the wrong shape" — you cannot grep
+    // for a handler the message never identifies (Reece, 2026-08-09).
+    const data = { content: 'hi' };
+    const warned = [];
+    const orig = console.warn;
+    console.warn = (m) => warned.push(m);
+    try { wrapBareContentForV2(data, EPHEMERAL_V2_MESSAGE, 'webhook PATCH', 'season_marooning'); }
+    finally { console.warn = orig; }
+    assert.match(warned[0], /season_marooning/);
+  });
+});
+
+// ── The two-line rule that decides whether the guard runs at all (buttonHandlerFactory deferred path) ──
+// @original means different things depending on which deferred ACK was sent, and the guard inspects
+// `context.message` (the card the button sits on) which is V2 in BOTH cases. Guarding unconditionally
+// fired on handlers that were never broken and paged prod once a minute off a live Safari game.
+const shouldGuardDeferred = (config) => config.updateMessage === false ? 'followup-no-guard' : (config.updateMessage ? 'guard' : 'no-guard');
+
+describe('SHAPE-GUARD — only guards the path where @original is the V2 parent', () => {
+  it('updateMessage: true → DEFERRED_UPDATE_MESSAGE, @original IS the V2 parent → guard', () => {
+    assert.equal(shouldGuardDeferred({ deferred: true, updateMessage: true }), 'guard');
+  });
+
+  it('updateMessage unset → deferred NEW message, @original is a fresh non-V2 ephemeral → do NOT guard', () => {
+    // whisper_read / apply: `deferred: true, ephemeral: true`, no updateMessage. Bare content was
+    // always legal for them; the guard wrapped needlessly and warned about a working handler.
+    assert.equal(shouldGuardDeferred({ deferred: true, ephemeral: true }), 'no-guard');
+  });
+
+  it('updateMessage: false → follow-up POST, no inherited flag → no guard (unchanged)', () => {
+    assert.equal(shouldGuardDeferred({ deferred: true, updateMessage: false }), 'followup-no-guard');
+  });
 });

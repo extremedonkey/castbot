@@ -6194,7 +6194,19 @@ export class ButtonHandlerFactory {
             // path was not, so every deferred handler with a content-only branch (20 of the
             // grandfathered class-A baseline — permission denials, "not found" errors) was a
             // live failure. Observed on season_app_ranking / season_marooning, 2026-08-09.
-            wrapBareContentForV2(webhookData, context.message, 'webhook PATCH', config.id);
+            //
+            // ONLY when updateMessage is true. What @original refers to depends on which deferred
+            // ACK was sent (sendDeferredResponse):
+            //   updateMessage: true  → DEFERRED_UPDATE_MESSAGE → @original IS the V2 parent  → guard
+            //   updateMessage unset  → DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE → @original is a FRESH
+            //                          ephemeral message with no V2 flag → bare content is legal
+            // The guard inspects `context.message` (the card the button sits on), which is V2 in
+            // BOTH cases — so without this condition it fired on handlers that were never broken
+            // (whisper_read, apply), wrapping needlessly and paging prod once a minute off a live
+            // Safari game. A warning you have to learn to ignore is worse than no warning.
+            if (config.updateMessage) {
+              wrapBareContentForV2(webhookData, context.message, 'webhook PATCH', config.id);
+            }
             return updateDeferredResponse(context.token, webhookData);
           }
         }
