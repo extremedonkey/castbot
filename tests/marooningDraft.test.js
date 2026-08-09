@@ -49,25 +49,25 @@ function findOrphanDrafts(draftTribes, tribeRoleIds, applicantUserIds) {
 // Declined stays folded into "Offer Sent", so it's the only signal marking it there.
 // Demographics now render on their OWN line (not appended inline) — long inline code spans wrap into
 // several disconnected-looking boxes on Discord mobile; a full-width line wraps far more cleanly.
+// ONE line per player: "2. ReeceBot - 27yo | @Ask | @CST / CDT". Score/vote count led the row and
+// demographics sat on a `-#` line beneath until 2026-08-09 — both dropped: by marooning the decision is
+// already made, so the score was noise doubling every roster's height. Sort order still encodes it.
 function renderRow(p, counter, opts = {}) {
-  const scoreDisplay = p.avgScore > 0 ? p.avgScore.toFixed(1) : 'Unrated';
   const resp = (!opts.suppressAcceptedTag && p.placementResponse === 'accepted') ? ' · 🎉 Accepted'
     : (!opts.suppressAcceptedTag && p.placementResponse === 'accepted_alternative') ? ' · ✅ Accepted (Alt)'
     : p.placementResponse === 'declined' ? ' · 🚫 Declined' : '';
   counter.n += 1;
-  const line1 = `${counter.n}. ${p.name} - ${scoreDisplay}/5.0 (${p.voteCount} vote${p.voteCount !== 1 ? 's' : ''})${resp}`;
-  const demo = demographicsSuffix(p);
-  return demo ? `${line1}\n${demo}` : line1;
+  const demo = demographicsInline(p);
+  return `${counter.n}. ${p.name}${demo ? ` - ${demo}` : ''}${resp}`;
 }
 
-// Mirrors buildMarooningView's demographicsSuffix — "{age}yo | @{pronoun} | @{timezone}" as a `-#`
-// subtext line (not a backtick code span — wraps into disconnected pill boxes on Discord mobile).
-// Test fixtures pass the already-resolved strings directly on `p` (pronoun/age/timezone) rather than
-// replicating the guild-role-cache lookup, which is Discord-object-shaped and not pure logic (covered
-// separately by resolvePlayerDemographics below).
-function demographicsSuffix(p) {
+// Mirrors buildMarooningView's demographicsInline — "{age}yo | @{pronoun} | @{timezone}" on the player's
+// own row. Test fixtures pass the already-resolved strings directly on `p` (pronoun/age/timezone) rather
+// than replicating the guild-role-cache lookup, which is Discord-object-shaped and not pure logic
+// (covered separately by resolvePlayerDemographics below).
+function demographicsInline(p) {
   const bits = [p.age ? `${p.age}yo` : null, p.pronoun ? `@${p.pronoun}` : null, p.timezone ? `@${p.timezone}` : null].filter(Boolean);
-  return bits.length ? `-# ${bits.join(' | ')}` : '';
+  return bits.join(' | ');
 }
 
 // Mirrors resolvePlayerDemographics (castRankingManager.js) — the shared age/pronoun/timezone resolver
@@ -258,52 +258,65 @@ describe('Marooning Draft — drafted users with no application', () => {
   });
 });
 
-describe('Marooning Draft — score row format (no medals, numbered)', () => {
+describe('Marooning Draft — row format (numbered, no scores, no medals)', () => {
   it('numbers sequentially, no 🥇🥈🥉', () => {
     const counter = { n: 0 };
     const rows = [
       { name: 'Internet Crybaby', avgScore: 4.0, voteCount: 1 },
       { name: 'Benja Man', avgScore: 2.0, voteCount: 1 }
     ].map(p => renderRow(p, counter));
-    assert.equal(rows[0], '1. Internet Crybaby - 4.0/5.0 (1 vote)');
-    assert.equal(rows[1], '2. Benja Man - 2.0/5.0 (1 vote)');
+    assert.equal(rows[0], '1. Internet Crybaby');
+    assert.equal(rows[1], '2. Benja Man');
     assert.ok(!rows.join('').match(/🥇|🥈|🥉/), 'no medal emojis');
   });
-  it('unrated + plural votes + placement annotation', () => {
-    assert.equal(renderRow({ name: 'X', avgScore: 0, voteCount: 0 }, { n: 0 }), '1. X - Unrated/5.0 (0 votes)');
-    assert.equal(renderRow({ name: 'Y', avgScore: 3, voteCount: 2, placementResponse: 'accepted' }, { n: 2 }),
-      '3. Y - 3.0/5.0 (2 votes) · 🎉 Accepted');
+  it('NEVER shows the score or vote count — that is the Casting tab\'s job', () => {
+    const row = renderRow({ name: 'X', avgScore: 4.5, voteCount: 3, age: 21 }, { n: 0 });
+    assert.ok(!row.includes('/5.0'), row);
+    assert.ok(!row.includes('vote'), row);
+    assert.ok(!row.includes('Unrated'), row);
   });
-  it('accepted_alternative renders "Accepted (Alt)" (distinct from a main-cast accept)', () => {
-    assert.equal(
-      renderRow({ name: 'Z', avgScore: 4, voteCount: 1, placementResponse: 'accepted_alternative' }, { n: 0 }),
-      '1. Z - 4.0/5.0 (1 vote) · ✅ Accepted (Alt)'
-    );
+  it('an unrated player looks exactly like a rated one', () => {
+    const rated = renderRow({ name: 'X', avgScore: 5, voteCount: 9, age: 21 }, { n: 0 });
+    const unrated = renderRow({ name: 'X', avgScore: 0, voteCount: 0, age: 21 }, { n: 0 });
+    assert.equal(rated, unrated);
+  });
+  it('keeps the placement-response tags — the whole point of the tab is checking who accepted', () => {
+    assert.equal(renderRow({ name: 'Y', age: 30, placementResponse: 'accepted' }, { n: 2 }), '3. Y - 30yo · 🎉 Accepted');
+    assert.equal(renderRow({ name: 'Z', placementResponse: 'accepted_alternative' }, { n: 0 }), '1. Z · ✅ Accepted (Alt)');
+    assert.equal(renderRow({ name: 'W', placementResponse: 'declined' }, { n: 0 }), '1. W · 🚫 Declined');
+  });
+  it('suppressAcceptedTag still drops the Accepted markers under an "- Accepted" sub-heading', () => {
+    assert.equal(renderRow({ name: 'Y', placementResponse: 'accepted' }, { n: 0 }, { suppressAcceptedTag: true }), '1. Y');
+    // Declined is never suppressed — it's the only thing distinguishing it inside "Offer Sent".
+    assert.equal(renderRow({ name: 'W', placementResponse: 'declined' }, { n: 0 }, { suppressAcceptedTag: true }), '1. W · 🚫 Declined');
   });
 });
 
-describe('Marooning Draft — demographics suffix ("Nyo | @pronoun | @timezone" as a -# subtext line)', () => {
-  it('all three present → on their OWN -# subtext line, pipe-joined, Age(yo)/Pronoun/Timezone order, @-prefixed', () => {
+describe('Marooning Draft — demographics inline on the player row', () => {
+  it('all three present → same row, pipe-joined, Age(yo)/Pronoun/Timezone order, @-prefixed', () => {
     assert.equal(
       renderRow({ name: 'Reece', avgScore: 5, voteCount: 1, pronoun: 'He/Him', age: 33, timezone: 'GMT+8' }, { n: 0 }),
-      '1. Reece - 5.0/5.0 (1 vote)\n-# 33yo | @He/Him | @GMT+8'
+      '1. Reece - 33yo | @He/Him | @GMT+8'
     );
+  });
+  it('is ONE line per player — the -# second line is gone', () => {
+    const row = renderRow({ name: 'Reece', age: 33, pronoun: 'He/Him', timezone: 'GMT+8' }, { n: 0 });
+    assert.ok(!row.includes('\n'), row);
+    assert.ok(!row.includes('-#'), row);
   });
   it('partial demographics — only the known bits appear, no dangling pipes', () => {
-    assert.equal(
-      renderRow({ name: 'X', avgScore: 0, voteCount: 0, age: 21 }, { n: 0 }),
-      '1. X - Unrated/5.0 (0 votes)\n-# 21yo'
-    );
+    assert.equal(renderRow({ name: 'X', avgScore: 0, voteCount: 0, age: 21 }, { n: 0 }), '1. X - 21yo');
+    assert.equal(renderRow({ name: 'X', timezone: 'EST' }, { n: 0 }), '1. X - @EST');
   });
-  it('no demographics known → single-line row, no second line at all', () => {
+  it('no demographics known → just the name, with no trailing dash', () => {
     const row = renderRow({ name: 'X', avgScore: 0, voteCount: 0 }, { n: 0 });
-    assert.equal(row, '1. X - Unrated/5.0 (0 votes)');
-    assert.ok(!row.includes('\n'));
+    assert.equal(row, '1. X');
+    assert.ok(!row.endsWith('-'), 'a dangling separator would look like missing data');
   });
 });
 
 describe('Marooning Draft — rows within a group butt directly together (no blank line — long-roster scroll length)', () => {
-  it('consecutive 2-line rows join with a single newline, never a blank line', () => {
+  it('consecutive rows join with a single newline, one line each, never a blank line', () => {
     const counter = { n: 0 };
     const rows = [
       { name: 'Q', avgScore: 5, voteCount: 2, age: 21, pronoun: 'He/Him', timezone: 'EST' },
@@ -313,8 +326,9 @@ describe('Marooning Draft — rows within a group butt directly together (no bla
     const joined = rows.join('\n');
     assert.equal(
       joined,
-      '1. Q - 5.0/5.0 (2 votes)\n-# 21yo | @He/Him | @EST\n2. Andrew - 5.0/5.0 (1 vote)\n-# 27yo | @He/Him | @CST'
+      '1. Q - 21yo | @He/Him | @EST\n2. Andrew - 27yo | @He/Him | @CST'
     );
+    assert.equal(joined.split('\n').length, 2, 'two players = two lines (was four)');
     assert.ok(!joined.includes('\n\n'), 'no blank line snuck in between entries');
   });
 });
@@ -426,7 +440,7 @@ describe('Marooning Draft — offer-stage breakdown (Cast/Alternate: Accepted / 
 describe('Marooning Draft — suppressAcceptedTag (redundant once under an "- Accepted" sub-heading)', () => {
   it('accepted → no inline tag when suppressed (the "- Accepted" sub-section)', () => {
     const row = renderRow({ name: 'Mimi', avgScore: 5, voteCount: 2, placementResponse: 'accepted' }, { n: 0 }, { suppressAcceptedTag: true });
-    assert.equal(row, '1. Mimi - 5.0/5.0 (2 votes)');
+    assert.equal(row, '1. Mimi');
   });
   it('accepted_alternative → also suppressed', () => {
     const row = renderRow({ name: 'Mimi', avgScore: 5, voteCount: 2, placementResponse: 'accepted_alternative' }, { n: 0 }, { suppressAcceptedTag: true });

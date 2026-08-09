@@ -1292,16 +1292,16 @@ export async function buildMarooningView({ configId, guildId, playerData, season
     }
   }
 
-  // "{age}yo | @{pronoun} | @{timezone}" as a `-#` subtext line (not a backtick code span — a long
-  // inline code span wraps into several disconnected-looking pill boxes on Discord mobile; `-#` wraps
-  // as plain small text instead). Same age/pronoun/timezone order as the Casting card's 👤 Overview
-  // line, but "yo"-suffixed and subtext-styled — Marooning's rows are denser, so this reads as a
-  // de-emphasized detail line rather than a highlighted code block.
-  const demographicsSuffix = (playerUserId, app = null) => {
+  // "{age}yo | @{pronoun} | @{timezone}", rendered INLINE on the player's own row. Same age/pronoun/
+  // timezone order as the Casting card's 👤 Overview line, but "yo"-suffixed. Was a `-#` subtext line
+  // underneath each player until 2026-08-09 — that doubled the height of every roster and made a
+  // 20-player tribe a wall of alternating lines. Not a backtick code span: a long inline code span
+  // wraps into several disconnected-looking pill boxes on Discord mobile.
+  const demographicsInline = (playerUserId, app = null) => {
     const member = guild?.members?.cache?.get(playerUserId);
     const { age, pronounName, timezoneName } = resolvePlayerDemographics(playerData, guildId, playerUserId, member, guild, app);
     const bits = [age ? `${age}yo` : null, pronounName ? `@${pronounName}` : null, timezoneName ? `@${timezoneName}` : null].filter(Boolean);
-    return bits.length ? `-# ${bits.join(' | ')}` : '';
+    return bits.join(' | ');
   };
 
   // `counter` is a mutable { n } threaded through a render pass so numbering can run continuously
@@ -1310,15 +1310,19 @@ export async function buildMarooningView({ configId, guildId, playerData, season
   // "· ✅ Accepted (Alt)" markers — redundant once the row already sits under an "- Accepted"
   // sub-heading. "· 🚫 Declined" is NEVER suppressed: Declined stays folded into "Offer Sent" (an
   // offer WAS sent), so it's the only signal distinguishing it from a still-awaiting-response row there.
+  // ONE line per player: "2. ReeceBot - 27yo | @Ask | @CST / CDT". Scores/vote counts used to lead the
+  // row ("5.0/5.0 (1 vote)") with demographics on a second line beneath; both went 2026-08-09 (Reece) —
+  // by the time you're marooning, the decision is already made, so the score was noise crowding out the
+  // detail you actually plan tribes with. Ordering still runs highest-score-first via computeCastingOrder,
+  // so the ranking hasn't been lost, just stopped being restated on every row. Full scores stay one click
+  // away on the 🏆 Casting tab.
   const renderRow = (p, counter, opts = {}) => {
-    const scoreDisplay = p.avgScore > 0 ? p.avgScore.toFixed(1) : 'Unrated';
     const resp = (!opts.suppressAcceptedTag && p.placementResponse === 'accepted') ? ' · 🎉 Accepted'
       : (!opts.suppressAcceptedTag && p.placementResponse === 'accepted_alternative') ? ' · ✅ Accepted (Alt)'
       : p.placementResponse === 'declined' ? ' · 🚫 Declined' : '';
     counter.n += 1;
-    const line1 = `${counter.n}. ${p.name} - ${scoreDisplay}/5.0 (${p.voteCount} vote${p.voteCount !== 1 ? 's' : ''})${resp}`;
-    const demo = demographicsSuffix(p.userId, p.app);
-    return demo ? `${line1}\n${demo}` : line1;
+    const demo = demographicsInline(p.userId, p.app);
+    return `${counter.n}. ${p.name}${demo ? ` - ${demo}` : ''}${resp}`;
   };
 
   // Renders a (already score-sorted) player list, sub-grouped by private draft tribe same as before,

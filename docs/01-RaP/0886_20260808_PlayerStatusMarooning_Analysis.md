@@ -117,8 +117,7 @@ Use this tab to review all of your casting decisions, …    ← intro copy
 [👥 Add Cast] [✒️ Bulk Offers]
 ### ```✅ Cast Players (N or N/Est)```
 > ✅✅ Cast Players - Accepted       ← suppressAcceptedTag
-1. Name - 4.5/5.0 (2 votes)
--# 21yo | @He/Him | @EST / EDT
+1. Name - 21yo | @He/Him | @EST / EDT       ← one line; score/votes dropped 2026-08-09
 > ✅📨 Cast Players - Offer Sent     ← Declined lives here with · 🚫 Declined
 > ✅ Cast Players - Draft
 ### ```🔄 Alternate (N)```           ← same 3-way split
