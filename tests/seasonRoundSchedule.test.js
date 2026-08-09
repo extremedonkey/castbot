@@ -300,12 +300,17 @@ describe('expandRoundDays — the calendar invariant', () => {
       [['bonus', 'challenge'], ['bonus', 'challenge'], ['bonus', 'challenge'], ['tribal']]);
   });
 
-  it('a first/last bonus still takes exactly one day', () => {
-    // Only 'same' is concurrent; 'last' in particular must not stretch into a tribal gap.
+  it('a first/last bonus gets its own day, and gap days follow the phase before them', () => {
+    // Only 'same' runs concurrently. A trailing gap (tribalDays >= 2) paints the phase it
+    // follows rather than rendering blank — the same rule multi-day marooning relies on.
     assert.deepEqual(
       expandRoundDays(standard({ challengeDays: 3, bonusChallengeId: BONUS, bonusOrder: 'last', tribalDays: 3 }))
         .map(d => d.phases.map(p => p.key)),
-      [['challenge'], ['challenge'], ['bonus'], ['bonus'], ['tribal']]);
+      [['challenge'], ['challenge'], ['bonus'], ['bonus'], ['bonus'], ['tribal']]);
+    assert.deepEqual(
+      expandRoundDays(standard({ challengeDays: 2, bonusChallengeId: BONUS, bonusOrder: 'first' }))
+        .map(d => d.phases.map(p => p.key)),
+      [['bonus'], ['challenge'], ['tribal']]);
   });
 
   it('a multi-day main challenge repeats across its days', () => {

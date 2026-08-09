@@ -228,11 +228,11 @@ That single invariant is why the feature needed **no data migration**: with `cha
 | *(no bonus)* | `challenge@blockStart` |
 | `first` | `bonus@blockStart` (1 day), `challenge@blockStart + 1` |
 | `last` | `challenge@blockStart`, `bonus@blockEnd` (1 day) |
-| `same`, **or `challengeDays === 1`** | `bonus@blockStart` (1 day), `challenge@blockStart` |
+| `same`, **or `challengeDays === 1`** | `bonus@blockStart`, `challenge@blockStart` — **same offset, so they run concurrently** |
 
 `challengeDays: 1` + a bonus **degrades to same-day automatically** — one day cannot hold two sequential challenges. There is no error state.
 
-The bonus phase is the only one carrying an explicit `days: 1`. `expandRoundDays` treats a phase without `days` as running until the next phase begins (that's what paints multi-day marooning); the bonus needs the explicit bound so a `same` + `challengeDays: 3` block paints `Reward + Challenge` on day 0 and plain `Challenge` on days 1–2.
+**A phase runs until the next phase begins.** Two consequences fall out of that one rule: phases sharing an offset (a live tribal, a same-day reward) run **concurrently for the whole block**, so a `same` reward on a 2-day challenge paints on *both* days; and a gap day (`tribalDays >= 2`) paints the phase it follows rather than rendering blank — the same rule multi-day marooning has always relied on.
 
 ### Layer 2 — `calculateRoundDates(rounds, startDate, skippedMap)` (seasonPlanner.js:145)
 
@@ -326,16 +326,26 @@ Plus, appended when `round.challengeIDs.primary` is set: **`Go to {challenge nam
 
 ### The bonus / reward challenge row
 
-When `bonusChallengeId` is set, an extra 🎁 option is spliced in **next to** the main challenge row, ordered so the dropdown reads top-to-bottom in chronological order:
+When `bonusChallengeId` is set the round gains **two** rows, both ordered chronologically by the same `chronological()` helper so the dropdown reads top-to-bottom in date order (`'first'`/`'same'` → above the main row, `'last'` → below):
 
-- `bonusOrder: 'first'` or `'same'` → **above** `Edit {challenge}`
-- `bonusOrder: 'last'` → **below** it
+| Row | Value | Purpose |
+|---|---|---|
+| 🎁 `{bonus title}` — next to `🤸 Edit {challenge}` | **`edit_challenge`** | Opens the **same Edit Challenge modal** as the main row. That modal owns the whole block (duration + bonus link + placement), so editing either side of the pair lands in one place. |
+| 🎁 `Go to {bonus title}` — next to `🏃 Go to {challenge}` | `go_challenge_{bonusId}` | Jumps to the challenge's own screen. |
 
-Its value is `go_challenge_{bonusId}`, reusing the existing handler — no new routing. The **main challenge's description** becomes `{date} ⦁ + {bonus title} ⦁ {host}` so the pairing is visible without opening anything.
+The main challenge's description is plain `{date} ⦁ {host}` — it does **not** name the bonus, since the bonus has its own row showing its real title.
 
-**Dangling link** (challenge deleted out from under the round): renders `⚠️ Missing bonus challenge` as a no-op row rather than disappearing. The phase still occupies a day, so hiding it would make the timeline look wrong for no visible reason. `deleteChallenge` clears `bonusChallengeId`, so this should only appear after out-of-band data edits.
+**Dangling link** (challenge deleted out from under the round): renders `⚠️ Missing bonus challenge` as a no-op row rather than disappearing, and contributes no "Go to" row. The phase still occupies a day, so hiding it would make the timeline look wrong for no visible reason. `deleteChallenge` clears `bonusChallengeId`, so this should only appear after out-of-band data edits.
 
-Option count: a standard round goes 9 → 10, well under Discord's 25. **No new components** — options aren't components, so the 40-component budget is untouched.
+Option count: a standard round goes 9 → 11 with a bonus, well under Discord's 25. **No new components** — options aren't components, so the 40-component budget is untouched.
+
+### 🔑 The host comes from the CHALLENGE, not the round
+
+Descriptions render `{date} ⦁ {host}`. The host is `challenges[…].creationHost` resolved to a display name — **not** `round.host`, a legacy per-round field nothing has ever written. Reading it made every description say "TBC" even when a host was set (reported in prod, 2026-08-09).
+
+`resolveHostNames(guild, challenges)` builds the id → name map from the **guild member cache only** — no `members.fetch`, which would be far too expensive per render and runs against the direction the codebase is moving. Unresolved ids fall back to `TBC` rather than leaking a raw snowflake. `buildPlannerView` takes the `guild` as its 10th argument; call sites pass `context.client?.guilds?.cache?.get(context.guildId)`.
+
+Select option descriptions are **plain text** — a `<@id>` mention renders literally — which is why the name has to be resolved rather than mentioned.
 
 ### Where the dates surface
 
@@ -347,7 +357,7 @@ This is the direct link between §5 and the UI:
 So **the date a host sees next to "Edit Tribal" is `blockEnd + tribalDays`** — flipping tribal to live, or raising `challengeDays`, changes that description *and* shifts every later round, in the same render.
 
 - **Challenge name resolution:** linked challenge's `title` → `round.challengeName` (legacy) → `Challenge {n} (TBC)`.
-- **Host** is `round.host ?? 'TBC'` — a **legacy per-round field the round modals never write**. In practice it always reads "TBC"; the real host lives on the challenge object (`creationHost`, set via the challenge quick-edit modal) and is **not** surfaced in the select descriptions. Low-hanging fix.
+- **Host** is the linked challenge's `creationHost`, resolved to a display name — see [§ the host comes from the challenge](#-the-host-comes-from-the-challenge-not-the-round). `round.host` is a dead legacy field; nothing reads it any more.
 
 ### ✅ Fixed — FTC at F1 used to render `undefined`
 
@@ -378,7 +388,7 @@ Both are disabled until all four estimates exist.
 `scheduleImageGenerator.js` **imports** `buildRoundSchedule` / `expandRoundDays` from [seasonRoundSchedule.js](../../seasonRoundSchedule.js). It holds no day arithmetic of its own — only presentation (labels, truncation, colours, SVG).
 
 - **`getScheduleColumns(roundSchedule, challenges)`** maps phases → columns, merging phases that share a calendar day. A 0-day marooning renders `Marooning + Challenge` in one column; a live tribal renders `{challenge} + F{n} Tribal`. Columns are **day-groups, not days** — a 3-day challenge is one column showing its start date, exactly as multi-day marooning always behaved. Merged titles are capped at **26 chars** (≈ what a 175px column fits at bold 13px Arial), because `Loved Ones Reward + Challenge 6` otherwise spilled into the neighbouring column.
-- **`getDayActivities(roundSchedule, challenges)`** wraps `expandRoundDays`, which guarantees **exactly `getRoundDuration(round)` day slots**. That invariant is what keeps calendar cells aligned with round start dates. A bonus day paints pink (`ACTIVITY_COLORS.bonus` — deliberately far from the marooning cyan) with the reward's title, or `Rwd + Chall` when it shares a day. The **Reward legend swatch only appears when the season uses one**, and legend spacing adapts so the extra item fits.
+- **`getDayActivities(roundSchedule, challenges)`** wraps `expandRoundDays`, which guarantees **exactly `getRoundDuration(round)` day slots**. That invariant is what keeps calendar cells aligned with round start dates. It returns a **list of activities per day**, and the calendar **stacks them as separate pills** (16px tall on an 18px pitch from y=30, so three still clear the 88px cell; capped at `MAX_CELL_PILLS`). A same-day reward therefore shows *both real titles* on *both* days of its block — `CrossWorlds Luau` above `Spam Musabi` — rather than one merged `Rwd + Chall` label on the first day only. Bonus pills paint pink (`ACTIVITY_COLORS.bonus`, deliberately far from the marooning cyan); the cell's accent bar and F-number take the colour of the day's **first** activity. The **Reward legend swatch only appears when the season uses one**, and legend spacing adapts so the extra item fits.
 
 **Column count is adaptive.** A bonus lifts the worst case to **4** columns (`event` + `bonus` + `challenge` + `tribal`, all on distinct days). `generateVerticalTimeline` pre-computes every round's columns, takes the max, and sizes the canvas to it — so seasons without a bonus keep the original 3-column width rather than carrying a dead column. The x-position loop still guards against overflow (an unplaced column would emit `x="undefined"` into the SVG), and `Schedule image column ceiling` in [tests/seasonRoundSchedule.test.js](../../tests/seasonRoundSchedule.test.js) asserts no round shape can exceed 4.
 

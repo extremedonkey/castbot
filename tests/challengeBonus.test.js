@@ -14,6 +14,7 @@ import assert from 'node:assert/strict';
 import {
   getBonusChallengeOptions, buildChallengeEditModal, applyChallengeEdit,
   extractModalFields, generateAndStoreRounds, generateSeasonRounds,
+  buildPlannerView, resolveHostNames,
 } from '../seasonPlanner.js';
 import {
   expandRoundDays, getRoundDuration, getRoundPhases, buildRoundSchedule, formatRoundDate,
@@ -341,6 +342,100 @@ describe('Challenge Duration 0 — the worked cases render as described', () => 
         assert.ok(expandRoundDays(round).every(d => d.phases.length >= 1), `empty day: ${JSON.stringify(round)}`);
       }
     }
+  });
+});
+
+describe('Round select rows — host, bonus behaviour and Go-to ordering', () => {
+  const HOST = '1536007399112974367';
+  const START = new Date(2026, 8, 9);
+  const CFG = { estimatedTotalPlayers: 6, estimatedSwaps: 0, estimatedFTCPlayers: 3, estimatedStartDate: START.getTime() };
+  const guild = { members: { cache: new Map([[HOST, { displayName: 'radicaldinosaur' }]]) } };
+
+  /** A 2-round season whose round 2 carries a linked reward. */
+  function season(bonusOrder = 'same') {
+    const rounds = {
+      r1: { seasonRoundNo: 1, fNumber: 6, marooningDays: 0, challengeIDs: { primary: 'c_main' }, challengeDays: 2, bonusChallengeId: 'c_rwd', bonusOrder },
+      r2: { seasonRoundNo: 2, fNumber: 5, marooningDays: 0, challengeIDs: { primary: 'c_plain' } },
+    };
+    const challenges = {
+      c_main: { title: 'Spam Musabi', creationHost: HOST },
+      c_plain: { title: 'Plain One', creationHost: HOST },
+      c_rwd: { title: 'CrossWorlds Luau', creationHost: HOST },
+    };
+    return { rounds, challenges };
+  }
+
+  const optionsFor = ({ rounds, challenges }, roundIdx, g = guild) =>
+    buildPlannerView('S', rounds, START, 'config_1_2', 0, '', challenges, CFG, 'u1', g)
+      .components[0].components.filter(c => c.type === 1 && c.components?.[0]?.type === 3)[roundIdx]
+      .components[0].options;
+
+  it('resolves the host from the CHALLENGE, not the never-written round.host', () => {
+    // The prod bug: every description read "TBC" because round.host is a legacy field.
+    const opts = optionsFor(season(), 0);
+    const edit = opts.find(o => o.value === 'edit_challenge' && o.emoji.name === '🤸');
+    assert.match(edit.description, /radicaldinosaur/);
+    assert.equal(edit.description.includes('TBC'), false);
+  });
+
+  it('falls back to TBC when the host cannot be resolved from the member cache', () => {
+    const edit = optionsFor(season(), 0, null).find(o => o.value === 'edit_challenge' && o.emoji.name === '🤸');
+    assert.match(edit.description, /TBC/);
+  });
+
+  it('an unknown host id does not leak a raw snowflake into the description', () => {
+    const s = season();
+    s.challenges.c_main.creationHost = '999999999999999999';
+    const edit = optionsFor(s, 0).find(o => o.value === 'edit_challenge' && o.emoji.name === '🤸');
+    assert.equal(edit.description.includes('999999999999999999'), false);
+  });
+
+  it('the bonus row opens the same Edit Challenge modal as the main row', () => {
+    const bonus = optionsFor(season(), 0).find(o => o.emoji.name === '🎁' && !o.label.startsWith('Go to'));
+    assert.equal(bonus.value, 'edit_challenge');
+    assert.equal(bonus.label, 'CrossWorlds Luau');
+  });
+
+  it('the main challenge description no longer names the bonus', () => {
+    const edit = optionsFor(season(), 0).find(o => o.value === 'edit_challenge' && o.emoji.name === '🤸');
+    assert.equal(edit.description.includes('CrossWorlds'), false);
+  });
+
+  it('adds a Go to row for the reward alongside the main one', () => {
+    const gotos = optionsFor(season(), 0).filter(o => String(o.value).startsWith('go_challenge_'));
+    assert.deepEqual(gotos.map(o => o.label), ['Go to CrossWorlds Luau', 'Go to Spam Musabi']);
+  });
+
+  it('Go to rows follow the same chronological order as the edit rows', () => {
+    for (const [order, expected] of [
+      ['first', ['Go to CrossWorlds Luau', 'Go to Spam Musabi']],
+      ['same', ['Go to CrossWorlds Luau', 'Go to Spam Musabi']],
+      ['last', ['Go to Spam Musabi', 'Go to CrossWorlds Luau']],
+    ]) {
+      const opts = optionsFor(season(order), 0);
+      assert.deepEqual(opts.filter(o => String(o.value).startsWith('go_challenge_')).map(o => o.label), expected, order);
+      // …and the edit-row pair must agree with it.
+      const editRows = opts.filter(o => o.value === 'edit_challenge').map(o => o.emoji.name);
+      assert.deepEqual(editRows, order === 'last' ? ['🤸', '🎁'] : ['🎁', '🤸'], order);
+    }
+  });
+
+  it('a round with no bonus has exactly one Go to row and a plain description', () => {
+    const opts = optionsFor(season(), 1);
+    assert.deepEqual(opts.filter(o => String(o.value).startsWith('go_challenge_')).map(o => o.label), ['Go to Plain One']);
+    assert.equal(opts.filter(o => o.value === 'edit_challenge').length, 1);
+  });
+
+  it('a dangling bonus link stays visible but offers no Go to row', () => {
+    const s = season();
+    delete s.challenges.c_rwd;
+    const opts = optionsFor(s, 0);
+    assert.ok(opts.some(o => o.emoji.name === '⚠️'), 'missing bonus must still surface');
+    assert.deepEqual(opts.filter(o => String(o.value).startsWith('go_challenge_')).map(o => o.label), ['Go to Spam Musabi']);
+  });
+
+  it('stays within Discord\'s 25-option select cap with a bonus linked', () => {
+    assert.ok(optionsFor(season(), 0).length <= 25);
   });
 });
 

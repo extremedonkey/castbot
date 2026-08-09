@@ -109,27 +109,24 @@ function getChallengeBlock(round, type) {
  * the rest of the budget. `challengeDays: 1` cannot be split across two sequential challenges,
  * so it degrades to same-day automatically rather than erroring.
  *
- * A 'first' or 'last' bonus carries an explicit `days: 1` so it occupies exactly one day — for
- * 'last' that stops it stretching into a multi-day tribal gap. A **'same' bonus deliberately
- * carries no `days`**: it runs concurrently with the main challenge for the block's whole
- * span, so a 2-day block paints BOTH on BOTH days rather than the reward vanishing after day 1.
+ * A **'same' bonus shares the challenge's offset**, so the two run concurrently for the block's
+ * whole span and the calendar paints BOTH on every day of it — rather than the reward vanishing
+ * after day 1. 'first' and 'last' give the bonus its own day at either end of the block.
  */
 function getBlockPhases(round, block) {
   const challenge = { key: 'challenge', activity: 'challenge', offset: block.start };
   if (!round.bonusChallengeId) return [challenge];
 
+  const bonus = (offset) => ({ key: 'bonus', activity: 'bonus', offset });
   const order = round.bonusOrder ?? 'first';
 
   // One day can't hold two sequential challenges — fall back to sharing it.
-  if (order === 'same' || block.days === 1) {
-    return [{ key: 'bonus', activity: 'bonus', offset: block.start }, challenge];
-  }
+  if (order === 'same' || block.days === 1) return [bonus(block.start), challenge];
 
-  if (order === 'last') {
-    return [challenge, { key: 'bonus', activity: 'bonus', offset: block.end, days: 1 }];
-  }
+  if (order === 'last') return [challenge, bonus(block.end)];
+
   challenge.offset = block.start + 1; // 'first'
-  return [{ key: 'bonus', activity: 'bonus', offset: block.start, days: 1 }, challenge];
+  return [bonus(block.start), challenge];
 }
 
 /**
@@ -138,10 +135,10 @@ function getBlockPhases(round, block) {
  *
  * `key` is the stable identifier consumers switch on ('event' | 'bonus' | 'challenge' |
  * 'tribal' | 'speeches' | 'votes'); `activity` is the colour/category token the images use.
- * `days` is optional — when present the phase ends after that many days, otherwise it runs
- * until the next phase begins (which is what paints multi-day marooning).
+ * A phase runs until the next phase begins, which is what paints multi-day marooning — and
+ * why two phases sharing an offset (a live tribal, a same-day reward) run concurrently.
  *
- * @returns {Array<{key: string, activity: string, offset: number, days?: number}>}
+ * @returns {Array<{key: string, activity: string, offset: number}>}
  */
 export function getRoundPhases(round) {
   const type = getRoundType(round);
@@ -296,12 +293,10 @@ export function expandRoundDays(round) {
   const days = [];
   let active = [];
   for (let d = 0; d < duration; d++) {
+    // A phase stays active until the next one starts, so a multi-day marooning keeps painting
+    // and a gap day (tribalDays >= 2) shows the phase it follows rather than rendering blank.
     if (byOffset.has(d)) active = byOffset.get(d);
-    // A phase with an explicit `days` stops after it; one without runs until the next phase
-    // starts. That's how a same-day bonus drops off after day 1 while the main challenge
-    // carries on, and how a multi-day marooning keeps painting until the challenge begins.
-    const live = active.filter(p => p.days == null || d < p.offset + p.days);
-    days.push({ dayOffset: d, phases: live.length ? live : active });
+    days.push({ dayOffset: d, phases: active });
   }
 
   // A phase can fall outside the duration when a later phase has zero length
