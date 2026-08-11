@@ -45847,31 +45847,10 @@ To fix this:
             client
           );
 
-          // Log the player command
-          try {
-            const { logCustomAction } = await import('./safariLogger.js');
-            const userData = req.body.member?.user || {};
+          // Safari log entry comes from executeButtonActions itself — it logs only the
+          // outcomes that survived condition filtering. A second success log here invented
+          // "executed" lines for outcomes that never ran (Hamilton cabinet false-positives).
 
-            await logCustomAction({
-              guildId,
-              userId,
-              username: userData.username || 'Unknown',
-              displayName: req.body.member?.nick || userData.global_name || userData.username || 'Unknown',
-              location: actualLocation || 'global',
-              actionType: 'player_command',
-              actionId: command,
-              executedActions: matchingAction.actions?.map(action => ({
-                type: action.type,
-                config: action.config,
-                result: 'executed'
-              })) || [],
-              success: true,
-              channelName: `#${req.body.channel?.name || (actualLocation || 'unknown').toLowerCase()}`
-            });
-          } catch (logError) {
-            console.error('Error logging player command:', logError);
-          }
-          
           // Edit the deferred response with the result
           await DiscordRequest(`webhooks/${applicationId}/${token}/messages/@original`, {
             method: 'PATCH',
@@ -45922,30 +45901,8 @@ To fix this:
               client
             );
 
-            // Log the player command
-            try {
-              const { logCustomAction } = await import('./safariLogger.js');
-              const userData = req.body.member?.user || {};
-
-              await logCustomAction({
-                guildId,
-                userId,
-                username: userData.username || 'Unknown',
-                displayName: req.body.member?.nick || userData.global_name || userData.username || 'Unknown',
-                location: 'global',
-                actionType: 'player_command',
-                actionId: command,
-                executedActions: matchingAction.actions?.map(action => ({
-                  type: action.type,
-                  config: action.config,
-                  result: 'executed'
-                })) || [],
-                success: true,
-                channelName: `#${req.body.channel?.name || 'unknown'}`
-              });
-            } catch (logError) {
-              console.error('Error logging player command:', logError);
-            }
+            // Safari log entry comes from executeButtonActions itself (see note on the
+            // location path above) — no second success log here.
 
             // Edit the deferred response with the result
             await DiscordRequest(`webhooks/${applicationId}/${token}/messages/@original`, {
