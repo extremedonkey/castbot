@@ -16495,6 +16495,10 @@ To fix this:
           const currentInventoryMode = safariConfig.inventoryVisibilityMode || 'always';
           const currentShowCustomCastlists = safariConfig.showCustomCastlists !== false; // Default true (show all)
           const currentGlobalStoresMode = safariConfig.globalStoresVisibilityMode || 'always';
+          // Checkbox toggles — note the ASYMMETRIC defaults for a server that has never saved this
+          // modal: CastDock defaults ON (`!== false`), Alliances defaults OFF (`=== true`).
+          const currentShowCastDock = safariConfig.showCastDock !== false;
+          const currentShowAlliance = safariConfig.showAllianceButton === true;
 
           // Build sorted store options for global stores select (global first, then non-global by lastModified)
           const currentGlobalStores = safariData[context.guildId]?.globalStores || [];
@@ -16540,26 +16544,42 @@ To fix this:
             components: [
               {
                 type: 18, // Label (Components V2)
-                label: 'Show "Enter Command" button in player /menu?',
-                description: 'Allow players to try commands from their /menu',
+                label: 'Player Menu Buttons',
+                description: 'Tick the buttons players see in /menu. Untick to hide.',
                 component: {
-                  type: 3, // String Select (Components V2)
-                  custom_id: 'enable_global_commands',
-                  placeholder: 'Choose setting...',
-                  min_values: 1,
-                  max_values: 1,
+                  type: 22, // Checkbox Group (Components V2) — ONE component for all boolean
+                  // toggles: extensible without spending another slot of the 5-component cap
+                  // (this modal already hits 5/5 when the Global Store select renders).
+                  custom_id: 'player_menu_toggles',
+                  required: false,
+                  min_values: 0,
+                  max_values: 4,
+                  // `default: true` ONLY on pre-checked options — spread-omitted otherwise, never
+                  // an explicit false (same defensive pattern the Radio Groups pin in tests).
                   options: [
                     {
-                      label: 'Yes - Show button',
-                      value: 'true',
-                      description: 'Players can use global commands from /menu',
-                      default: currentEnabled === true
+                      label: 'Enter Command',
+                      value: 'commands',
+                      description: 'Players can try global commands from /menu',
+                      ...(currentEnabled ? { default: true } : {})
                     },
                     {
-                      label: 'No - Hide button',
-                      value: 'false',
-                      description: 'Hide global command button from /menu',
-                      default: currentEnabled === false
+                      label: 'Custom Castlists',
+                      value: 'custom_castlists',
+                      description: 'Show custom castlists (unticked: default castlist only)',
+                      ...(currentShowCustomCastlists ? { default: true } : {})
+                    },
+                    {
+                      label: 'CastDock',
+                      value: 'castdock',
+                      description: 'Players can pin a public menu to a channel',
+                      ...(currentShowCastDock ? { default: true } : {})
+                    },
+                    {
+                      label: 'Alliance Requests',
+                      value: 'alliance',
+                      description: 'Players can request secret alliance channels (off by default)',
+                      ...(currentShowAlliance ? { default: true } : {})
                     }
                   ]
                 }
@@ -16598,32 +16618,6 @@ To fix this:
                       value: 'never',
                       description: 'Hide, only visible via shop interface',
                       default: currentInventoryMode === 'never'
-                    }
-                  ]
-                }
-              },
-              {
-                type: 18, // Label (Components V2)
-                label: 'Show Custom Castlists in Player Menu?',
-                description: 'Control which castlists appear in player /menu',
-                component: {
-                  type: 3, // String Select (Components V2)
-                  custom_id: 'show_custom_castlists',
-                  placeholder: 'Choose visibility setting...',
-                  min_values: 1,
-                  max_values: 1,
-                  options: [
-                    {
-                      label: 'Show All Castlists',
-                      value: 'true',
-                      description: 'Display default + custom castlists',
-                      default: currentShowCustomCastlists === true
-                    },
-                    {
-                      label: 'Show Default Only',
-                      value: 'false',
-                      description: 'Hide custom castlists from player menu',
-                      default: currentShowCustomCastlists === false
                     }
                   ]
                 }
@@ -44520,8 +44514,9 @@ To fix this:
         let showCustomCastlists = true; // Default true (show all)
         let globalStoresVisibilityMode = 'always';
         let selectedGlobalStores = null; // null = not submitted (field absent when no stores exist)
+        let menuToggles = null; // null = checkbox group absent (a stale pre-2026-08-15 modal draft)
 
-        // Modal has Label components with nested string selects - extract all
+        // Modal has Label components with nested string selects + one Checkbox Group - extract all
         for (const component of components) {
           if (component.component?.type === 3) { // String Select in Label
             const customId = component.component.custom_id;
@@ -44529,17 +44524,27 @@ To fix this:
             const selectedValue = selectedValues[0];
 
             if (customId === 'enable_global_commands') {
-              enableGlobalCommands = selectedValue === 'true';
+              enableGlobalCommands = selectedValue === 'true'; // legacy modal shape only
             } else if (customId === 'inventory_visibility_mode') {
               inventoryVisibilityMode = selectedValue || 'standard';
             } else if (customId === 'show_custom_castlists') {
-              showCustomCastlists = selectedValue === 'true';
+              showCustomCastlists = selectedValue === 'true'; // legacy modal shape only
             } else if (customId === 'global_stores_visibility_mode') {
               globalStoresVisibilityMode = selectedValue || 'always';
             } else if (customId === 'global_stores_select_modal') {
               selectedGlobalStores = selectedValues; // Multi-select — keep all values
             }
+          } else if (component.component?.type === 22 && component.component.custom_id === 'player_menu_toggles') {
+            menuToggles = component.component.values || []; // unticked = absent from values
           }
+        }
+
+        // Checkbox Group toggles (2026-08-15): checked = shown. Only trust it when the group was
+        // actually in the submitted modal — a stale legacy modal must not silently untick
+        // everything (which would flip CastDock off for the whole server).
+        if (menuToggles !== null) {
+          enableGlobalCommands = menuToggles.includes('commands');
+          showCustomCastlists = menuToggles.includes('custom_castlists');
         }
 
         console.log(`🕹️ DEBUG: enableGlobalCommands setting: ${enableGlobalCommands}`);
@@ -44565,6 +44570,12 @@ To fix this:
         safariData[guildId].safariConfig.inventoryVisibilityMode = inventoryVisibilityMode;
         safariData[guildId].safariConfig.showCustomCastlists = showCustomCastlists;
         safariData[guildId].safariConfig.globalStoresVisibilityMode = globalStoresVisibilityMode;
+        // CastDock (default ON when unset) / Alliances (default OFF when unset) — only written
+        // when the checkbox group was present, so a stale legacy modal can't touch them.
+        if (menuToggles !== null) {
+          safariData[guildId].safariConfig.showCastDock = menuToggles.includes('castdock');
+          safariData[guildId].safariConfig.showAllianceButton = menuToggles.includes('alliance');
+        }
         // Only update globalStores if the field was present in the modal (stores exist)
         if (selectedGlobalStores !== null) {
           safariData[guildId].globalStores = selectedGlobalStores.slice(0, MAX_GLOBAL_STORES);

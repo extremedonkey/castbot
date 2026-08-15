@@ -591,6 +591,11 @@ async function calculateVisibility(guildId, targetUserId, playerData, safariData
   // Commands
   const enableGlobalCommands = safariConfig.enableGlobalCommands !== false;
 
+  // Settings → Player Menu checkbox toggles. ASYMMETRIC defaults for servers that never saved
+  // the modal: CastDock defaults ON (`!== false`), Alliances defaults OFF (`=== true`).
+  const showCastDock = safariConfig.showCastDock !== false;
+  const allianceEnabled = safariConfig.showAllianceButton === true;
+
   // Custom inventory terms
   const customTerms = await getCustomTerms(guildId);
 
@@ -645,11 +650,11 @@ async function calculateVisibility(guildId, targetUserId, playerData, safariData
   // === Row 3: Advanced ===
   vis.attributes = { show: isAdmin ? hasAttributesConfigured : hasAttributesConfigured, disabled: isAdmin && !hasTarget, label: 'Stats', emoji: '📊' };
   vis.commands = { show: enableGlobalCommands, disabled: isAdmin && !hasTarget, label: 'Commands', emoji: '🕹️', immediate: true, gatedBy: enableGlobalCommands ? null : 'config' };
-  // Alliance requests (RaP 0892) — request whitelist (NOT the admin list: requesting needs no
-  // authority) while the feature is hidden; the handler re-checks. Player mode only:
-  // targetUserId IS the viewer there.
-  vis.alliance = { show: !isAdmin && ALLIANCE_REQUEST_USER_IDS.includes(String(targetUserId)), disabled: false, label: 'Alliance', emoji: '🤝', immediate: true };
-  vis.castdock = { show: true, disabled: isAdmin && !hasTarget, label: 'CastDock', emoji: formatBotEmoji('castbot_logo') };
+  // Alliance requests (RaP 0892) — per-guild setting (Settings → Player Menu, DEFAULT OFF) AND
+  // the request whitelist (NOT the admin list: requesting needs no authority) while the feature
+  // is hidden; the handler re-checks the whitelist. Player mode only: targetUserId IS the viewer.
+  vis.alliance = { show: !isAdmin && allianceEnabled && ALLIANCE_REQUEST_USER_IDS.includes(String(targetUserId)), disabled: false, label: 'Alliance', emoji: '🤝', immediate: true, gatedBy: allianceEnabled ? null : 'config' };
+  vis.castdock = { show: showCastDock, disabled: isAdmin && !hasTarget, label: 'CastDock', emoji: formatBotEmoji('castbot_logo'), gatedBy: showCastDock ? null : 'config' };
   vis.vanity = { show: isAdmin, disabled: isAdmin && !hasTarget, label: 'Vanity Roles', emoji: '🎭' };
   vis.navigate = { show: !navDisabled && hasTarget && isInitialized && hasMapLocation, disabled: false, label: 'Navigate', emoji: '🗺️', immediate: true, coordinate: currentCoordinate };
 

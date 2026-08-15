@@ -1,6 +1,6 @@
 # CastDock
 
-**Status**: ✅ Active — deployed to production 2026-07-25.
+**Status**: ✅ Active — deployed to production 2026-07-25. Since 2026-08-15 the player-menu CastDock button is toggleable per guild via Settings → 🕹️ Player Menu (checkbox group, **default ON** — unset/null configs keep showing it; only an explicit `safariConfig.showCastDock === false` hides it).
 **Audience for this doc**: written for a zero-context Claude Code agent picking this up cold. If you're modifying CastDock, read this whole file before touching `castDock.js` — the design has several non-obvious constraints that look like bugs if you don't know the reasoning behind them.
 
 ## What CastDock Is
