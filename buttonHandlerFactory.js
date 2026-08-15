@@ -5136,8 +5136,8 @@ export const BUTTON_REGISTRY = {
     parent: 'castbot_premium'
   },
   'entitlements_add': {
-    label: 'Add Guild',
-    description: 'Grant safari_edit to a guild by ID (name auto-fills from the bot cache when blank)',
+    label: 'Add Server',
+    description: 'Grant CastBot Premium to a server by ID — modal with duration (blank = permanent) + reason',
     emoji: '➕',
     style: 'Success',
     requiresModal: true,
@@ -5146,17 +5146,18 @@ export const BUTTON_REGISTRY = {
     parent: 'entitlements_manage'
   },
   'entitlements_add_here': {
-    label: 'This Guild',
-    description: 'Entitle the guild the panel is open in — no modal, name pulled from the bot cache',
+    label: 'This Server',
+    description: 'Grant Premium to the server the panel is open in — opens the grant modal with the ID pre-resolved',
     emoji: '➕',
     style: 'Secondary',
+    requiresModal: true,
     restrictedUser: '391415444084490240',
     category: 'admin',
     parent: 'entitlements_manage'
   },
   'entitlements_revoke': {
-    label: 'Revoke Guild',
-    description: 'Revoke safari_edit from a guild via the select on the Entitlements panel',
+    label: 'Change Access (legacy)',
+    description: 'RETIRED 2026-08-16 — the old second select. Handler falls back to re-rendering the panel for stale messages',
     emoji: '🎟️',
     style: 'Secondary',
     restrictedUser: '391415444084490240',
@@ -5164,9 +5165,36 @@ export const BUTTON_REGISTRY = {
     parent: 'entitlements_manage'
   },
   'entitlements_guild': {
-    label: 'Manage Guild Premium',
-    description: 'Open a guild\'s premium detail screen: tier state, expiry, grant/extend/revoke, test stubs',
+    label: 'Select Server',
+    description: 'The panel\'s single select — re-renders the panel with that server\'s detail pane + contextual actions',
     emoji: '⭐',
+    style: 'Secondary',
+    restrictedUser: '391415444084490240',
+    category: 'admin',
+    parent: 'entitlements_manage'
+  },
+  'entitlements_remove_*': {
+    label: 'Remove Server',
+    description: 'Arm the remove confirmation for a server — full removal: tier, legacy features, Ko-fi link',
+    emoji: '🗑️',
+    style: 'Danger',
+    restrictedUser: '391415444084490240',
+    category: 'admin',
+    parent: 'entitlements_manage'
+  },
+  'entitlements_remove_confirm_*': {
+    label: 'Yes, Remove Server',
+    description: 'Confirmed full removal of a server\'s entitlements entry (premium, features, Ko-fi link all forgotten)',
+    emoji: '🗑️',
+    style: 'Danger',
+    restrictedUser: '391415444084490240',
+    category: 'admin',
+    parent: 'entitlements_manage'
+  },
+  'entitlements_remove_cancel_*': {
+    label: 'Cancel Remove',
+    description: 'Disarm the remove confirmation — back to the server\'s normal detail pane',
+    emoji: '❌',
     style: 'Secondary',
     restrictedUser: '391415444084490240',
     category: 'admin',
@@ -5210,17 +5238,35 @@ export const BUTTON_REGISTRY = {
     parent: 'entitlements_guild'
   },
   'entitlements_tier_revoke_*': {
-    label: 'Revoke Tier',
-    description: 'Remove the premium tier from a guild (its à-la-carte feature grants stay)',
+    label: 'Revoke Premium',
+    description: 'ARMS the revoke confirmation (computed-facts warning, red accent) — nothing destroyed until confirmed',
     emoji: '🗑️',
     style: 'Danger',
     restrictedUser: '391415444084490240',
     category: 'admin',
-    parent: 'entitlements_guild'
+    parent: 'entitlements_manage'
+  },
+  'entitlements_revoke_confirm_*': {
+    label: 'Yes, Revoke Premium',
+    description: 'Confirmed tier revoke: expiry, source, audit trail and Ko-fi link removed; legacy feature grants stay',
+    emoji: '🗑️',
+    style: 'Danger',
+    restrictedUser: '391415444084490240',
+    category: 'admin',
+    parent: 'entitlements_manage'
+  },
+  'entitlements_revoke_cancel_*': {
+    label: 'Cancel Revoke',
+    description: 'Disarm the revoke confirmation — back to the server\'s normal detail pane',
+    emoji: '❌',
+    style: 'Secondary',
+    restrictedUser: '391415444084490240',
+    category: 'admin',
+    parent: 'entitlements_manage'
   },
   'entitlements_back': {
-    label: 'Back',
-    description: 'Return from a guild premium detail screen to the Entitlements panel',
+    label: 'Back (legacy)',
+    description: 'Pre-redesign detail-screen back button — stale messages re-render the single panel, unselected',
     emoji: '⬅️',
     style: 'Secondary',
     restrictedUser: '391415444084490240',

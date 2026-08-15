@@ -110,6 +110,38 @@ export const SEED_GUILD_IDS = [
 
 let _cache = null;
 
+/**
+ * Registry file version. v3 = the 2026-08-16 premium migration: every feature-only entry
+ * (the seeded/comped guilds) was upgraded to a permanent manual Premium tier, because
+ * "in the Entitlements list" and "has Premium" turning out to be different things is
+ * exactly how a comped guild ended up staring at the paywall (SERVIVORG S16). The
+ * version stamp makes the migration ONE-TIME: a guild whose tier Reece later revokes
+ * (features may remain) must NOT be silently re-upgraded on the next boot.
+ */
+export const REGISTRY_VERSION = 3;
+
+/**
+ * Pure v3 migration: grant a permanent manual Premium tier to every entry that has
+ * features but no tier. Mutates and returns `data`; `migrated` = affected guild count.
+ * Exported for tests.
+ */
+export function migrateFeatureOnlyToPremium(data, now = Date.now()) {
+  let migrated = 0;
+  if ((data.version || 2) >= REGISTRY_VERSION) return { data, migrated };
+  for (const entry of Object.values(data.guilds || {})) {
+    if (entry.tier || !entry.features?.length) continue;
+    entry.tier = 'premium';
+    entry.validUntil = null; // permanent
+    entry.source = 'manual';
+    entry.grantedBy = entry.addedBy && entry.addedBy !== 'seed' ? entry.addedBy : null;
+    entry.grantedAt = now;
+    entry.reason = 'Comp — upgraded from feature-only grant (v3 migration)';
+    migrated++;
+  }
+  data.version = REGISTRY_VERSION;
+  return { data, migrated };
+}
+
 /** Shape guard for anything we load or are about to save. */
 function normalize(data) {
   const guilds = (data && typeof data.guilds === 'object' && data.guilds) || {};
@@ -136,7 +168,8 @@ function normalize(data) {
       ...(typeof entry?.kofiEmail === 'string' && entry.kofiEmail ? { kofiEmail: entry.kofiEmail.toLowerCase() } : {})
     };
   }
-  return { guilds: clean };
+  // Carry the version stamp so the one-time v3 migration stays one-time across saves.
+  return { ...(Number.isFinite(data?.version) ? { version: data.version } : {}), guilds: clean };
 }
 
 function seedData() {
@@ -176,9 +209,12 @@ export function loadEntitlementsSync() {
         backfilled++;
       }
     }
-    if (backfilled) {
-      console.log(`🎟️ Entitlements: backfilled ask_castbot for ${backfilled} guild(s)`);
-      saveEntitlements(_cache).catch(e => console.error('🎟️ Entitlements backfill save failed:', e.message));
+    // v3 premium migration (one-time, version-gated — see migrateFeatureOnlyToPremium).
+    const { migrated } = migrateFeatureOnlyToPremium(_cache);
+    if (backfilled || migrated) {
+      if (backfilled) console.log(`🎟️ Entitlements: backfilled ask_castbot for ${backfilled} guild(s)`);
+      if (migrated) console.log(`🎟️ Entitlements: v3 migration — upgraded ${migrated} feature-only guild(s) to permanent manual Premium`);
+      saveEntitlements(_cache).catch(e => console.error('🎟️ Entitlements backfill/migration save failed:', e.message));
     }
   } catch (error) {
     if (error.code !== 'ENOENT') {
@@ -190,6 +226,7 @@ export function loadEntitlementsSync() {
     }
     console.log('🎟️ Entitlements: seeding first-run registry with the Ask CastBot guilds');
     _cache = seedData();
+    migrateFeatureOnlyToPremium(_cache); // seeds are feature-only — stamp them premium in the same load
     saveEntitlements(_cache).catch(e => console.error('🎟️ Entitlements seed save failed:', e.message));
   }
   return _cache;
@@ -271,8 +308,44 @@ export function getGuildEntitlement(guildId) {
     effectiveFeatures: [...new Set([...entry.features, ...tierFeatures])],
     source: entry.source || null,
     grantedBy: entry.grantedBy || null,
-    reason: entry.reason || null
+    grantedAt: entry.grantedAt || null,
+    reason: entry.reason || null,
+    kofiEmail: entry.kofiEmail || null
   };
+}
+
+/**
+ * Set display names on EXISTING entries only — one load, one save, and a guild with no
+ * entry is skipped, never created. This is the panel's name-learning write path;
+ * grantFeature would re-create an entry that a concurrent Remove Server just deleted
+ * (phantom-resurrection race, review 2026-08-16).
+ * @param {Object<string,string>} names - guildId → display name
+ */
+export async function setGuildNames(names) {
+  const data = loadEntitlementsSync();
+  let changed = 0;
+  for (const [guildId, name] of Object.entries(names || {})) {
+    if (data.guilds[guildId] && name && data.guilds[guildId].name !== name) {
+      data.guilds[guildId].name = String(name);
+      changed++;
+    }
+  }
+  if (!changed) return data;
+  console.log(`🎟️ Entitlements: learned ${changed} guild name(s)`);
+  return saveEntitlements(data);
+}
+
+/**
+ * Remove a guild's entry ENTIRELY — tier, features, Ko-fi link, everything. The
+ * Entitlements panel's "Remove Server". Distinct from revokeTier (which keeps
+ * à-la-carte features) — this is the "forget this server" action.
+ */
+export async function removeGuildEntry(guildId) {
+  const data = loadEntitlementsSync();
+  if (!data.guilds[guildId]) return data;
+  delete data.guilds[guildId];
+  console.log(`🎟️ Entitlements: removed guild ${guildId} entirely`);
+  return saveEntitlements(data);
 }
 
 /**
@@ -421,7 +494,9 @@ export async function listEntitledGuilds(feature = null) {
       const tierFeatures = (tierState.state === 'active' || tierState.state === 'grace')
         ? TIERS[tierState.tier].features : [];
       return { guildId, name: entry.name, features: entry.features, tierState,
-               effectiveFeatures: [...new Set([...entry.features, ...tierFeatures])] };
+               effectiveFeatures: [...new Set([...entry.features, ...tierFeatures])],
+               source: entry.source || null, grantedBy: entry.grantedBy || null,
+               kofiEmail: entry.kofiEmail || null };
     })
     .filter(g => !feature || g.effectiveFeatures.includes(feature));
 }

@@ -1,23 +1,30 @@
 /**
- * 🎟️ Entitlements UI — Reece-only admin surface for the runtime feature registry.
+ * 🎟️ Entitlements UI — Reece-only admin surface for the runtime premium registry.
  *
  * Lives in the CastBot Premium menu → Utilities row (menuBuilder.js buildPremiumMenu),
- * red + Reece-only (moved from Reece's Stuff 2026-08-08). This is where "which guilds can
- * use Ask CastBot" is maintained WITHOUT a deploy — the hardcoded ALLOWED_GUILD_IDS array
- * now only seeds this registry on first run.
+ * Reece-only. This is where "which guilds have CastBot Premium" is maintained WITHOUT a
+ * deploy — grants, expiry, revocation, and the expiry test stubs.
  *
- * Two features per guild:
- *   👾 ask_castbot — may use Ask CastBot at all (Q&A)
- *   🛠️ safari_edit — may additionally make changes (admins get preview + Apply)
- * Add grants both (the common case); the per-guild select toggles edit off/on.
+ * SINGLE-SCREEN entity-select pattern (2026-08-16 redesign, mirrors the Alliance Manager /
+ * Castlist Hub): ONE String Select picks a server, the same message re-renders with that
+ * server's detail pane + contextual action rows. Selection is stateless — the chosen option
+ * carries `default: true` and every enabled button bakes the guildId into its custom_id.
+ * This replaced the old two-parallel-selects layout ("pick a guild" + "change access") and
+ * its separate detail screen, which was the "weird component interactions" complaint.
+ *
+ * MODEL (since the v3 migration): a grant IS a premium tier — with an expiry (or permanent),
+ * a source (🖐️ manual by Reece vs 💳 Ko-fi subscription), and an audit trail. À-la-carte
+ * `features` arrays still exist in data as legacy records and display as small print, but
+ * the panel no longer creates feature-only entries — that shape is how a comped guild ended
+ * up staring at the paywall (hasPremiumAccessSync is tier-only, by design).
  *
  * @module entitlementsUI
  */
 
 import { InteractionResponseType, InteractionResponseFlags } from 'discord-interactions';
 import {
-  FEATURES, TIERS, GRACE_MS, grantFeature, revokeFeature, listEntitledGuilds,
-  getGuildEntitlement, grantTier, extendTier, setTierValidUntil, revokeTier, parseDuration
+  TIERS, GRACE_MS, listEntitledGuilds, getGuildEntitlement, setGuildNames,
+  grantTier, extendTier, setTierValidUntil, revokeTier, removeGuildEntry, parseDuration
 } from './entitlements.js';
 
 const ACCENT = 0x9b59b6;
@@ -25,6 +32,80 @@ const OWNER_ID = '391415444084490240';
 
 /** How far ahead "Expiring Soon" looks. Two weeks = enough runway to chase a renewal. */
 export const EXPIRING_SOON_MS = 14 * 24 * 60 * 60 * 1000;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Pure helpers (unit-tested)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** State emoji per tier state — the panel's one visual vocabulary, used everywhere. */
+export function stateEmoji(ts) {
+  if (!ts || ts.state === 'none') return '➖';
+  return { active: '⭐', grace: '🕒', lapsed: '💀' }[ts.state] || '➖';
+}
+
+/** Source label — "how it was set". 💳 Ko-fi subscription vs 🖐️ manual (Reece). */
+export function sourceLabel(g) {
+  if (!g?.tierState || g.tierState.state === 'none') return null;
+  return g.source === 'subscription' ? '💳 Ko-fi' : '🖐️ manual';
+}
+
+/**
+ * Urgency sort for the list AND the select (same order, so the two never disagree):
+ * grace (most urgent) → active dated, soonest first → active permanent → lapsed → no tier.
+ */
+export function sortGuilds(guilds) {
+  const rank = (g) => {
+    const ts = g.tierState;
+    if (!ts || ts.state === 'none') return 4;
+    if (ts.state === 'grace') return 0;
+    if (ts.state === 'active') return ts.permanent ? 2 : 1;
+    return 3; // lapsed
+  };
+  return [...(guilds || [])].sort((a, b) => {
+    const d = rank(a) - rank(b);
+    if (d !== 0) return d;
+    const av = a.tierState?.validUntil ?? Infinity;
+    const bv = b.tierState?.validUntil ?? Infinity;
+    if (av !== bv) return av - bv;
+    return String(a.displayName || a.name).localeCompare(String(b.displayName || b.name));
+  });
+}
+
+/** One list-line per guild: state + name + premium status + source. Pure — unit-tested. */
+export function formatGuildLine(g) {
+  const ts = g.tierState;
+  const name = `**${g.displayName || g.name}**`;
+  const src = sourceLabel(g);
+  const unknown = (g.displayName || g.name) === g.guildId ? ' *(bot not in this server)*' : '';
+  let status;
+  if (!ts || ts.state === 'none') {
+    status = g.features?.length ? 'no premium *(legacy features only)*' : 'no premium';
+  } else if (ts.state === 'active' && ts.permanent) {
+    status = 'permanent';
+  } else if (ts.state === 'active') {
+    status = `until <t:${Math.floor(ts.validUntil / 1000)}:d>`;
+  } else if (ts.state === 'grace') {
+    status = `grace ends <t:${Math.floor(ts.graceUntil / 1000)}:R>`;
+  } else {
+    status = `lapsed <t:${Math.floor(ts.validUntil / 1000)}:R>`;
+  }
+  return `${stateEmoji(ts)} ${name} — ${status}${src ? ` · ${src}` : ''}${unknown} · \`${g.guildId}\``;
+}
+
+/**
+ * Select-option description (Discord renders NO markdown/timestamps there — plain words
+ * with an absolute date). Pure — unit-tested.
+ */
+export function describeOption(g, now = Date.now()) {
+  const ts = g.tierState;
+  if (!ts || ts.state === 'none') return g.features?.length ? 'No premium (legacy features only)' : 'No premium';
+  const src = g.source === 'subscription' ? 'Ko-fi' : 'manual';
+  const date = (ms) => new Date(ms).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+  if (ts.state === 'active' && ts.permanent) return `Permanent · ${src}`;
+  if (ts.state === 'active') return `Until ${date(ts.validUntil)} · ${src}`;
+  if (ts.state === 'grace') return `GRACE until ${date(ts.graceUntil)} · ${src}`;
+  return `Lapsed ${date(ts.validUntil)} · ${src}`;
+}
 
 /**
  * Pure — the guilds worth chasing, soonest first.
@@ -55,148 +136,264 @@ export function formatExpiringLine(g) {
     : `⏳ **${g.displayName}** · ${label} expires <t:${expiry}:R>`;
 }
 
-/** One list-line per guild: feature glyphs + name + tier badge. Pure — unit-tested. */
-export function formatGuildLine(g) {
-  const eff = g.effectiveFeatures || g.features;
-  const ask = eff.includes(FEATURES.ASK_CASTBOT) ? '👾' : '➖';
-  const edit = eff.includes(FEATURES.SAFARI_EDIT) ? '🛠️' : '➖';
-  const ts = g.tierState;
-  let tierBadge = '';
-  if (ts && ts.state !== 'none') {
-    const t = TIERS[ts.tier];
-    if (ts.state === 'active' && ts.permanent) tierBadge = ` · ${t.emoji} ${t.label}`;
-    else if (ts.state === 'active') tierBadge = ` · ${t.emoji} ${t.label} until <t:${Math.floor(ts.validUntil / 1000)}:d>`;
-    else if (ts.state === 'grace') tierBadge = ` · 🕒 ${t.label} GRACE ends <t:${Math.floor(ts.graceUntil / 1000)}:R>`;
-    else tierBadge = ` · 💀 ${t.label} lapsed`;
+/**
+ * Cap a line list to a line count AND a character budget (Discord rejects a message when
+ * its combined Text Display content passes 4000 chars — the whole panel shares that cap,
+ * so the guild list gets an explicit budget instead of a silent 30-line slice). Returns
+ * the kept lines plus an honest "+N more" sentinel when anything was dropped — silent
+ * truncation reads as "that's everyone" (LeanUserInterfaceDesign / alliance precedent).
+ * Pure — unit-tested.
+ */
+export function capLinesToBudget(lines, { maxLines = 25, maxChars = 2800 } = {}) {
+  const kept = [];
+  let used = 0;
+  for (const line of lines || []) {
+    if (kept.length >= maxLines || used + line.length + 1 > maxChars) break;
+    kept.push(line);
+    used += line.length + 1;
   }
-  const unknown = g.displayName === g.guildId ? ' *(bot not in this server)*' : '';
-  return `${ask}${edit} **${g.displayName}**${tierBadge}${unknown} · \`${g.guildId}\``;
+  const hidden = (lines || []).length - kept.length;
+  if (hidden > 0) kept.push(`-# …and ${hidden} more — the select lists the first 25; manage others via Add Server with their guild ID.`);
+  return { lines: kept, hidden };
 }
+
+/** Truncate by CODE POINTS so an astral-plane emoji is never split into a lone surrogate
+ *  (Discord rejects invalid Unicode in modal titles). Pure — unit-tested. */
+export function safeTruncate(str, max) {
+  const points = [...String(str ?? '')];
+  return points.length <= max ? String(str ?? '') : points.slice(0, max - 1).join('') + '…';
+}
+
+/** Header summary counts. Pure — unit-tested. */
+export function summarizeGuilds(guilds) {
+  const c = { total: 0, active: 0, grace: 0, lapsed: 0, none: 0 };
+  for (const g of guilds || []) {
+    c.total++;
+    const s = g.tierState?.state || 'none';
+    c[s in c ? s : 'none']++;
+  }
+  const parts = [`${c.total} server${c.total === 1 ? '' : 's'}`];
+  if (c.active) parts.push(`⭐ ${c.active} premium`);
+  if (c.grace) parts.push(`🕒 ${c.grace} in grace`);
+  if (c.lapsed) parts.push(`💀 ${c.lapsed} lapsed`);
+  if (c.none) parts.push(`➖ ${c.none} none`);
+  return parts.join(' · ');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Name resolution
+// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Resolve display names from the bot's own guild cache and persist any it learns.
- *
- * Seeded/ID-only entries would otherwise read as a wall of snowflakes with no way to
- * fix them by hand. The bot is a member of every entitled guild, so it already knows
- * the names — self-healing beats making the admin type them. Names are written back
- * once (only when the stored name is still the raw ID), so a guild the bot later
- * leaves keeps its last known name.
+ * The bot is a member of every entitled guild, so it already knows the names —
+ * self-healing beats making the admin type them. Names are written back only when the
+ * stored name is still the raw ID, so a guild the bot later leaves keeps its last name.
  */
 async function resolveGuildNames(guilds, client) {
-  const learned = [];
+  const learned = {};
   for (const g of guilds) {
     const cached = client?.guilds?.cache?.get(g.guildId)?.name;
     g.displayName = cached || g.name;
     g.inGuild = !!cached;
-    if (cached && g.name === g.guildId) learned.push(g);
+    if (cached && g.name === g.guildId) {
+      learned[g.guildId] = cached;
+      g.name = cached;
+    }
   }
-  for (const g of learned) {
-    try {
-      await grantFeature(g.guildId, [], { name: g.displayName });
-      g.name = g.displayName;
-    } catch { /* naming is cosmetic — never fail the panel over it */ }
+  if (Object.keys(learned).length) {
+    // ONE existence-guarded save — grantFeature here would re-create an entry a
+    // concurrent Remove Server just deleted (phantom-resurrection race, review 2026-08-16).
+    try { await setGuildNames(learned); } catch { /* naming is cosmetic — never fail the panel */ }
   }
-  if (learned.length) console.log(`🎟️ Entitlements: learned ${learned.length} guild name(s) from the bot cache`);
   return guilds;
 }
 
-/** The management container: entitled-guild list + Add button + per-guild toggle select. */
-export async function buildEntitlementsManageUI(client = null) {
-  const guilds = await resolveGuildNames(await listEntitledGuilds(), client);
-  const lines = guilds.length ? guilds.map(formatGuildLine) : ['*No guilds entitled yet.*'];
+// ─────────────────────────────────────────────────────────────────────────────
+// The panel (single screen)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * COMPUTED destructive-action warning — names what this entry actually holds instead of
+ * a generic disclaimer (LeanUserInterfaceDesign "Unquantified Warnings"). Pure — tested.
+ * @param {'remove'|'revoke'} action
+ */
+export function buildDestructiveWarning(action, e, displayName) {
+  const ts = e.tierState;
+  const held = [];
+  if (ts.state !== 'none') {
+    const life = ts.permanent ? 'permanent' : ts.state === 'active' ? `until <t:${Math.floor(ts.validUntil / 1000)}:d>` : ts.state;
+    held.push(`${TIERS[ts.tier]?.emoji || '⭐'} Premium (${life}, ${e.source === 'subscription' ? 'Ko-fi' : 'manual'})`);
+  }
+  if (e.kofiEmail) held.push('the Ko-fi billing link (renewals will stop landing here)');
+  if (action === 'remove' && e.features?.length) held.push(`${e.features.length} legacy feature grant${e.features.length === 1 ? '' : 's'}`);
+  const what = held.length ? held.join(' · ') : 'an empty entry';
+  return action === 'remove'
+    ? `## ⚠️ Remove **${displayName}**?\nThis forgets: ${what}. The audit trail (who granted it, when, why) is deleted with it.`
+    : `## ⚠️ Revoke Premium from **${displayName}**?\nThis removes: ${what}.${e.features?.length ? ` Legacy feature grants (${e.features.join(', ')}) stay.` : ''}`;
+}
+
+/** Detail-pane lines for the selected guild. Exported for tests. */
+export function buildDetailLines(e, displayName) {
+  const ts = e.tierState;
+  const lines = [`### ${stateEmoji(ts)} ${displayName}`, `\`${e.guildId}\``];
+  if (ts.state === 'none') {
+    lines.push(`**Premium:** ➖ none`);
+  } else if (ts.state === 'active' && ts.permanent) {
+    lines.push(`**Premium:** 🟢 Active — permanent`);
+  } else if (ts.state === 'active') {
+    lines.push(`**Premium:** 🟢 Active — until <t:${Math.floor(ts.validUntil / 1000)}:D> (<t:${Math.floor(ts.validUntil / 1000)}:R>)`);
+    lines.push(`**Grace ends:** <t:${Math.floor(ts.graceUntil / 1000)}:D> (<t:${Math.floor(ts.graceUntil / 1000)}:R>)`);
+  } else if (ts.state === 'grace') {
+    lines.push(`**Premium:** 🕒 IN GRACE — expired <t:${Math.floor(ts.validUntil / 1000)}:R>, features stop <t:${Math.floor(ts.graceUntil / 1000)}:R>`);
+  } else {
+    lines.push(`**Premium:** 💀 LAPSED — expired <t:${Math.floor(ts.validUntil / 1000)}:R>`);
+  }
+  if (ts.state !== 'none') {
+    const when = e.grantedAt ? ` <t:${Math.floor(e.grantedAt / 1000)}:d>` : '';
+    lines.push(e.source === 'subscription'
+      ? `**Source:** 💳 Ko-fi subscription${when}${e.kofiEmail ? ' — email linked, renewals extend automatically' : ''}`
+      : `**Source:** 🖐️ Manual${e.grantedBy ? ` — <@${e.grantedBy}>` : ''}${when}${e.reason ? ` · *"${e.reason}"*` : ''}`);
+  }
+  if (e.features?.length) lines.push(`-# Legacy feature grants (never expire): ${e.features.join(', ')}`);
+  return lines;
+}
+
+/**
+ * The Entitlements panel. Re-rendered in place by every interaction (updateMessage).
+ * @param {Object} client - Discord client (guild-name cache)
+ * @param {string|null} selectedId - guildId to show the detail pane for
+ * @param {{arm?: 'remove'|'revoke'|null}} [opts] - arm = show that destructive confirm row
+ */
+export async function buildEntitlementsManageUI(client = null, selectedId = null, opts = {}) {
+  const guilds = sortGuilds(await resolveGuildNames(await listEntitledGuilds(), client));
+  const selected = selectedId ? guilds.find(g => g.guildId === selectedId) : null;
+  const armed = opts.arm && selected ? opts.arm : null;
 
   const components = [
-    { type: 10, content: `## 🎟️ Entitlements\n${guilds.length} guild${guilds.length === 1 ? '' : 's'} · 👾 = Ask CastBot · 🛠️ = Safari editing` },
-    { type: 10, content: lines.slice(0, 30).join('\n') },
-    { type: 10, content: `-# Names come from the bot's server list automatically. To set one by hand (or fix a server the bot has left), use Add Guild with that same guild ID and type the name.` },
-    { type: 14 },
-    { type: 1, components: [
-      { type: 2, custom_id: 'entitlements_add', label: 'Add Guild', style: 3, emoji: { name: '➕' } },
-      // Skips the modal entirely — the guild ID is already in the interaction and the name
-      // is in the bot cache, so there is nothing left for a human to type.
-      { type: 2, custom_id: 'entitlements_add_here', label: 'This Guild', style: 2, emoji: { name: '➕' } }
-    ]}
+    { type: 10, content: `## 🎟️ Entitlements\n${summarizeGuilds(guilds)}` }
   ];
 
-  // Renewal runway, above everything else — only rendered when something actually needs
-  // chasing, so the panel doesn't grow a permanently-empty heading.
+  // Renewal runway — only rendered when something actually needs chasing.
   const expiring = selectExpiringSoon(guilds);
   if (expiring.length) {
-    components.splice(1, 0,
+    components.push(
       { type: 10, content: '### ```⏳ Expiring Soon```' },
-      { type: 10, content: expiring.slice(0, 10).map(formatExpiringLine).join('\n') },
-      { type: 14 }
+      { type: 10, content: expiring.slice(0, 10).map(formatExpiringLine).join('\n') }
     );
   }
 
+  // Char-budgeted list (the panel's combined Text Display content shares Discord's
+  // 4000-char cap) with an honest "+N more" sentinel — never a silent slice.
+  const listLines = capLinesToBudget(guilds.map(formatGuildLine)).lines;
+  components.push(
+    { type: 10, content: guilds.length ? listLines.join('\n') : '*No servers yet — Add Server to grant the first premium.*' },
+    { type: 14 }
+  );
+
   if (guilds.length) {
-    // Per-guild premium/testing surface — pick a guild, get its detail screen.
     components.push({
       type: 1,
       components: [{
         type: 3,
         custom_id: 'entitlements_guild',
-        placeholder: '⭐ Premium & expiry testing — pick a guild...',
+        placeholder: 'Select a server to view & manage...',
         options: guilds.slice(0, 25).map(g => ({
           label: g.displayName.substring(0, 100),
           value: g.guildId,
-          description: (g.tierState?.state !== 'none'
-            ? `${g.tierState.tier} · ${g.tierState.state}${g.tierState.permanent ? ' (permanent)' : ''}`
-            : 'no tier — feature grants only').substring(0, 100),
-          emoji: { name: g.tierState?.state === 'grace' ? '🕒' : g.tierState?.state === 'lapsed' ? '💀' : '⭐' }
+          description: describeOption(g).substring(0, 100),
+          emoji: { name: stateEmoji(g.tierState) },
+          ...(g.guildId === selected?.guildId ? { default: true } : {})
         }))
-      }]
-    });
-    // One row per action: Discord selects can't mix "which guild" with "which change",
-    // so the value encodes both — `<action>:<guildId>`.
-    components.push({
-      type: 1,
-      components: [{
-        type: 3,
-        custom_id: 'entitlements_revoke',
-        placeholder: 'Change a guild\'s access...',
-        options: guilds.slice(0, 8).flatMap(g => {
-          const hasEdit = g.features.includes(FEATURES.SAFARI_EDIT);
-          return [
-            {
-              label: `Remove all access — ${g.displayName}`.substring(0, 100),
-              value: `remove:${g.guildId}`,
-              description: g.guildId,
-              emoji: { name: '🗑️' }
-            },
-            {
-              label: `${hasEdit ? 'Disable' : 'Enable'} Safari editing — ${g.displayName}`.substring(0, 100),
-              value: `${hasEdit ? 'noedit' : 'edit'}:${g.guildId}`,
-              description: hasEdit ? 'Keeps Q&A, removes change-making' : 'Adds change-making on top of Q&A',
-              emoji: { name: '🛠️' }
-            }
-          ];
-        }).slice(0, 25)
       }]
     });
   }
 
-  const container = { type: 17, accent_color: ACCENT, components };
+  if (selected) {
+    const e = getGuildEntitlement(selected.guildId);
+    if (e.exists) {
+      const ts = e.tierState;
+      components.push({ type: 10, content: buildDetailLines(e, selected.displayName).join('\n') });
+
+      if (armed) {
+        // Armed destructive confirm — Critical Deletion standard: computed facts, separator
+        // above the buttons, Cancel first (❌ Secondary), confirm last (🗑️ Danger). The
+        // container accent flips red below.
+        const cancelId = armed === 'remove' ? `entitlements_remove_cancel_${e.guildId}` : `entitlements_revoke_cancel_${e.guildId}`;
+        const confirmId = armed === 'remove' ? `entitlements_remove_confirm_${e.guildId}` : `entitlements_revoke_confirm_${e.guildId}`;
+        components.push({ type: 10, content: buildDestructiveWarning(armed, e, selected.displayName) });
+        components.push({ type: 14 });
+        components.push({ type: 1, components: [
+          { type: 2, custom_id: cancelId, label: 'Cancel', style: 2, emoji: { name: '❌' } },
+          { type: 2, custom_id: confirmId, label: armed === 'remove' ? 'Yes, Remove Server' : 'Yes, Revoke Premium', style: 4, emoji: { name: '🗑️' } }
+        ]});
+      } else {
+        // Row A — premium lifecycle. Grant/Edit always; +30d only for dated tiers; Revoke
+        // (arms a confirm) only when a tier exists.
+        components.push({ type: 1, components: [
+          { type: 2, custom_id: `entitlements_tier_grant_${e.guildId}`, label: ts.state === 'none' ? 'Grant Premium' : 'Edit Premium', style: 3, emoji: { name: '⭐' } },
+          { type: 2, custom_id: `entitlements_tier_extend_${e.guildId}`, label: '+30 days', style: 2, emoji: { name: '⏳' }, disabled: ts.state === 'none' || ts.permanent },
+          { type: 2, custom_id: `entitlements_tier_revoke_${e.guildId}`, label: 'Revoke Premium', style: 4, emoji: { name: '🗑️' }, disabled: ts.state === 'none' }
+        ]});
+        // Row B — expiry test stubs (real validUntil writes: what expires here is what
+        // expires at scale) + full removal (arms a confirm).
+        components.push({ type: 1, components: [
+          { type: 2, custom_id: `entitlements_tier_expire_${e.guildId}`, label: 'Expire Now', style: 2, emoji: { name: '🧪' }, disabled: ts.state === 'none' },
+          { type: 2, custom_id: `entitlements_tier_lapse_${e.guildId}`, label: 'Lapse Now', style: 2, emoji: { name: '💀' }, disabled: ts.state === 'none' },
+          { type: 2, custom_id: `entitlements_remove_${e.guildId}`, label: 'Remove Server', style: 4, emoji: { name: '🗑️' } }
+        ]});
+      }
+    }
+  } else if (guilds.length) {
+    components.push({ type: 10, content: '-# Select a server above to see its premium status, source and controls. Names auto-learn from the bot cache.' });
+  }
+
+  components.push({ type: 14 });
+  components.push({ type: 1, components: [
+    { type: 2, custom_id: 'entitlements_add', label: 'Add Server', style: 3, emoji: { name: '➕' } },
+    // Skips typing the ID — the guild is already in the interaction; opens the same
+    // Grant Premium modal (duration + reason) as the detail pane's ⭐ button.
+    { type: 2, custom_id: 'entitlements_add_here', label: 'This Server', style: 2, emoji: { name: '➕' } }
+  ]});
+
+  // Armed destructive confirm flips the whole panel to the deletion-standard red.
+  const container = { type: 17, accent_color: armed ? 0xed4245 : ACCENT, components };
   const { countComponents } = await import('./utils.js');
   countComponents([container], { enableLogging: true, verbosity: 'summary', label: 'Entitlements Panel' });
   return container;
 }
 
-/** The Add Guild modal (guild ID + optional display name). */
+// ─────────────────────────────────────────────────────────────────────────────
+// Modals
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Add Server modal — grants a PREMIUM TIER (not feature flags) on submit. */
 export function buildEntitlementsAddModal() {
   return {
     custom_id: 'entitlements_add_modal',
-    title: '🎟️ Add Entitled Guild',
+    title: '🎟️ Add Server — Grant Premium',
     components: [
       {
         type: 18,
-        label: 'Guild ID',
-        description: 'Grants Ask CastBot + Safari editing to this server',
+        label: 'Server ID',
+        description: 'The Discord guild ID to grant CastBot Premium to',
         component: { type: 4, custom_id: 'ent_guild_id', style: 1, required: true, min_length: 5, max_length: 25, placeholder: 'e.g. 1331657596087566398' }
       },
       {
         type: 18,
-        label: 'Guild name (optional)',
+        label: 'Duration',
+        description: 'e.g. 30d · 12h · 2w · 3mo — blank = permanent',
+        component: { type: 4, custom_id: 'ent_tier_duration', style: 1, required: false, max_length: 20, placeholder: 'permanent' }
+      },
+      {
+        type: 18,
+        label: 'Reason (optional)',
+        description: 'Audit note — e.g. "beta tester", "comp for S14"',
+        component: { type: 4, custom_id: 'ent_tier_reason', style: 1, required: false, max_length: 100 }
+      },
+      {
+        type: 18,
+        label: 'Server name (optional)',
         description: 'Leave blank to auto-fill from the bot\'s guild cache',
         component: { type: 4, custom_id: 'ent_guild_name', style: 1, required: false, max_length: 100 }
       }
@@ -204,70 +401,14 @@ export function buildEntitlementsAddModal() {
   };
 }
 
-/**
- * Per-guild detail screen: full tier state + grant/extend/revoke + the expiry TEST
- * STUBS (Expire Now → grace, Lapse Now → past grace). The stubs are real validUntil
- * writes through the real save path — what expires here is what expires at scale.
- */
-export async function buildEntitlementsGuildUI(guildId, client = null) {
-  const e = getGuildEntitlement(guildId);
-  const displayName = client?.guilds?.cache?.get(guildId)?.name || e.name || guildId;
-  if (!e.exists) {
-    return { type: 17, accent_color: ACCENT, components: [
-      { type: 10, content: `## 🎟️ ${displayName}\nNo entitlements entry for \`${guildId}\` (it may have just been fully revoked).` },
-      { type: 14 },
-      { type: 1, components: [{ type: 2, custom_id: 'entitlements_back', label: 'Back', style: 2, emoji: { name: '⬅️' } }] }
-    ]};
-  }
-
-  const ts = e.tierState;
-  const lines = [`## 🎟️ ${displayName}`, `\`${guildId}\``, ''];
-  lines.push(`**Direct feature grants (never expire):** ${e.features.length ? e.features.join(', ') : '*none*'}`);
-  if (ts.state === 'none') {
-    lines.push(`**Tier:** *none*`);
-  } else {
-    const t = TIERS[ts.tier];
-    const stateLabel = { active: '🟢 active', grace: '🕒 IN GRACE', lapsed: '💀 LAPSED' }[ts.state];
-    lines.push(`**Tier:** ${t.emoji} ${t.label} — ${stateLabel}${ts.permanent ? ' (permanent)' : ''}`);
-    if (!ts.permanent) {
-      lines.push(`**Expires:** <t:${Math.floor(ts.validUntil / 1000)}:F> (<t:${Math.floor(ts.validUntil / 1000)}:R>)`);
-      lines.push(`**Grace ends:** <t:${Math.floor(ts.graceUntil / 1000)}:F> (<t:${Math.floor(ts.graceUntil / 1000)}:R>)`);
-    }
-    if (e.grantedBy) lines.push(`-# granted by <@${e.grantedBy}>${e.reason ? ` — ${e.reason}` : ''}`);
-  }
-  lines.push(`**Effective features right now:** ${e.effectiveFeatures.length ? e.effectiveFeatures.join(', ') : '*none*'}`);
-
-  const rows = [];
-  const tierRow = [
-    { type: 2, custom_id: `entitlements_tier_grant_${guildId}`, label: ts.state === 'none' ? 'Grant Premium' : 'Update Premium', style: 3, emoji: { name: '⭐' } }
-  ];
-  if (ts.state !== 'none' && !ts.permanent) {
-    tierRow.push({ type: 2, custom_id: `entitlements_tier_extend_${guildId}`, label: '+30 days', style: 2, emoji: { name: '⏳' } });
-  }
-  if (ts.state !== 'none') {
-    tierRow.push({ type: 2, custom_id: `entitlements_tier_revoke_${guildId}`, label: 'Revoke Tier', style: 4, emoji: { name: '🗑️' } });
-  }
-  rows.push({ type: 1, components: tierRow });
-  if (ts.state !== 'none') {
-    rows.push({ type: 1, components: [
-      { type: 2, custom_id: `entitlements_tier_expire_${guildId}`, label: 'Expire Now (→ grace)', style: 2, emoji: { name: '🧪' } },
-      { type: 2, custom_id: `entitlements_tier_lapse_${guildId}`, label: 'Lapse Now (past grace)', style: 2, emoji: { name: '💀' } }
-    ]});
-  }
-  rows.push({ type: 1, components: [{ type: 2, custom_id: 'entitlements_back', label: 'Back', style: 2, emoji: { name: '⬅️' } }] });
-
-  return { type: 17, accent_color: ACCENT, components: [
-    { type: 10, content: lines.join('\n') },
-    { type: 14 },
-    ...rows
-  ]};
-}
-
-/** The Grant/Update Premium modal (duration + optional reason). */
-export function buildEntitlementsTierModal(guildId) {
+/** The Grant/Edit Premium modal (duration + optional reason) for an existing entry. */
+export function buildEntitlementsTierModal(guildId, guildName = null) {
+  // safeTruncate: a plain substring(0,45) can split an astral-plane emoji in the guild
+  // name into a lone surrogate, which Discord rejects — the modal would never open.
+  const title = safeTruncate(`⭐ Premium — ${guildName || guildId}`, 45);
   return {
     custom_id: `entitlements_tier_modal_${guildId}`,
-    title: '⭐ Grant / Update Premium',
+    title,
     components: [
       {
         type: 18,
@@ -285,9 +426,24 @@ export function buildEntitlementsTierModal(guildId) {
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Handlers
+// ─────────────────────────────────────────────────────────────────────────────
+
+// `ephemeral: true` is LOAD-BEARING here: entitlements_manage (the panel's entry point)
+// is served by this dispatcher as a NEW message, and without the flag the entire premium
+// registry — every guild, state, source, audit note — posts PUBLICLY in the channel
+// (caught by review 2026-08-16; the factory strips the flag on UPDATE_MESSAGE responses,
+// so it is harmless on every other entitlements_* id).
+const panel = async (context, selectedId = null, opts = {}) =>
+  ({ components: [await buildEntitlementsManageUI(context.client, selectedId, opts)], ephemeral: true });
+
 /**
  * Button/select dispatcher for all entitlements_* custom_ids. The app.js branch already
  * hard-gates to Reece; this only picks the response shape per control.
+ * NOTE: `entitlements_remove_confirm_` / `_cancel_` MUST be tested before the bare
+ * `entitlements_remove_` prefix they both share (same for `entitlements_revoke_*` vs the
+ * legacy exact id `entitlements_revoke`, which has no trailing underscore and falls through).
  */
 export async function handleEntitlementsButton(context) {
   const id = context.customId;
@@ -295,48 +451,62 @@ export async function handleEntitlementsButton(context) {
     return { type: 9, data: buildEntitlementsAddModal() }; // InteractionResponseType.MODAL
   }
   if (id === 'entitlements_add_here') {
-    // No modal: the guild ID comes from the interaction, the name from the bot cache.
+    // No typing: the guild ID comes from the interaction — straight to the grant modal.
     const guildId = String(context.guildId || '');
     if (!/^\d{5,}$/.test(guildId)) {
-      return { content: '🎟️ No guild in this interaction — use Add Guild instead.', ephemeral: true };
+      return { content: '🎟️ No guild in this interaction — use Add Server instead.', ephemeral: true };
     }
-    const name = context.client?.guilds?.cache?.get(guildId)?.name || guildId;
-    await grantFeature(guildId, [FEATURES.ASK_CASTBOT, FEATURES.SAFARI_EDIT], { name, addedBy: context.userId });
-    return { components: [await buildEntitlementsManageUI(context.client)] };
-  }
-  if (id === 'entitlements_revoke') {
-    return handleEntitlementsRevoke(context);
+    return { type: 9, data: buildEntitlementsTierModal(guildId, context.client?.guilds?.cache?.get(guildId)?.name) };
   }
   if (id === 'entitlements_guild') {
-    return { components: [await buildEntitlementsGuildUI(String(context.values?.[0] || ''), context.client)] };
+    return panel(context, String(context.values?.[0] || '') || null);
   }
   if (id.startsWith('entitlements_tier_grant_')) {
-    return { type: 9, data: buildEntitlementsTierModal(id.replace('entitlements_tier_grant_', '')) };
+    const guildId = id.replace('entitlements_tier_grant_', '');
+    return { type: 9, data: buildEntitlementsTierModal(guildId, context.client?.guilds?.cache?.get(guildId)?.name) };
   }
   if (id.startsWith('entitlements_tier_extend_')) {
     const guildId = id.replace('entitlements_tier_extend_', '');
     await extendTier(guildId, 30 * 24 * 60 * 60 * 1000);
-    return { components: [await buildEntitlementsGuildUI(guildId, context.client)] };
+    return panel(context, guildId);
   }
   if (id.startsWith('entitlements_tier_expire_')) {
     const guildId = id.replace('entitlements_tier_expire_', '');
     await setTierValidUntil(guildId, Date.now() - 1000); // 1s in the past → grace
-    return { components: [await buildEntitlementsGuildUI(guildId, context.client)] };
+    return panel(context, guildId);
   }
   if (id.startsWith('entitlements_tier_lapse_')) {
     const guildId = id.replace('entitlements_tier_lapse_', '');
     await setTierValidUntil(guildId, Date.now() - GRACE_MS - 1000); // past grace → lapsed
-    return { components: [await buildEntitlementsGuildUI(guildId, context.client)] };
+    return panel(context, guildId);
   }
   if (id.startsWith('entitlements_tier_revoke_')) {
-    const guildId = id.replace('entitlements_tier_revoke_', '');
+    // ARMS the confirm — revoking destroys the expiry, source, audit trail and Ko-fi link,
+    // so it gets the same confirm-before-destroy as Remove (deletion standard).
+    return panel(context, id.replace('entitlements_tier_revoke_', ''), { arm: 'revoke' });
+  }
+  if (id.startsWith('entitlements_revoke_confirm_')) {
+    const guildId = id.replace('entitlements_revoke_confirm_', '');
     await revokeTier(guildId);
-    return { components: [await buildEntitlementsGuildUI(guildId, context.client)] };
+    // The entry may be gone entirely (no legacy features) — panel() ignores a dead selection.
+    return panel(context, guildId);
   }
-  if (id === 'entitlements_back') {
-    return { components: [await buildEntitlementsManageUI(context.client)] };
+  if (id.startsWith('entitlements_revoke_cancel_')) {
+    return panel(context, id.replace('entitlements_revoke_cancel_', ''));
   }
-  return { components: [await buildEntitlementsManageUI(context.client)], ephemeral: true };
+  if (id.startsWith('entitlements_remove_confirm_')) {
+    await removeGuildEntry(id.replace('entitlements_remove_confirm_', ''));
+    return panel(context, null);
+  }
+  if (id.startsWith('entitlements_remove_cancel_')) {
+    return panel(context, id.replace('entitlements_remove_cancel_', ''));
+  }
+  if (id.startsWith('entitlements_remove_')) {
+    return panel(context, id.replace('entitlements_remove_', ''), { arm: 'remove' });
+  }
+  // entitlements_back / legacy entitlements_revoke (old second select) / anything stale →
+  // fresh panel, no selection.
+  return panel(context, null);
 }
 
 /** Tier modal submit (dispatched from app.js MODAL_SUBMIT; owner gate lives HERE). */
@@ -369,13 +539,14 @@ export async function handleEntitlementsTierModal(req, res, client) {
   });
   return res.send({
     type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-    data: { components: [await buildEntitlementsGuildUI(guildId, client)], flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL }
+    data: { components: [await buildEntitlementsManageUI(client, guildId)], flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL }
   });
 }
 
-/** Modal-submit handler (dispatched from app.js MODAL_SUBMIT; owner gate lives HERE). */
+/** Add Server modal submit — grants a PREMIUM TIER (owner gate lives HERE). */
 export async function handleEntitlementsAddModal(req, res, client) {
-  if ((req.body.member?.user?.id || req.body.user?.id) !== OWNER_ID) {
+  const userId = req.body.member?.user?.id || req.body.user?.id;
+  if (userId !== OWNER_ID) {
     return res.send({
       type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
       data: { content: '🎟️ Reece only.', flags: InteractionResponseFlags.EPHEMERAL }
@@ -393,23 +564,24 @@ export async function handleEntitlementsAddModal(req, res, client) {
       data: { content: `🎟️ "${guildId}" doesn't look like a guild ID.`, flags: InteractionResponseFlags.EPHEMERAL }
     });
   }
+  const dur = parseDuration(fields.ent_tier_duration);
+  if (!dur.ok) {
+    return res.send({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: { content: `🎟️ ${dur.error}`, flags: InteractionResponseFlags.EPHEMERAL }
+    });
+  }
   const name = fields.ent_guild_name?.trim()
     || client?.guilds?.cache?.get(guildId)?.name
     || guildId;
-  await grantFeature(guildId, [FEATURES.ASK_CASTBOT, FEATURES.SAFARI_EDIT], { name, addedBy: req.body.member?.user?.id });
+  await grantTier(guildId, 'premium', {
+    addedBy: userId,
+    durationMs: dur.ms,
+    reason: fields.ent_tier_reason?.trim() || undefined,
+    name
+  });
   return res.send({
     type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-    data: { components: [await buildEntitlementsManageUI(client)], flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL }
+    data: { components: [await buildEntitlementsManageUI(client, guildId)], flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL }
   });
-}
-
-/** Access-change select handler (factory context; returns refreshed UI for updateMessage). */
-export async function handleEntitlementsRevoke(context) {
-  const [action, guildId] = String(context.values?.[0] || '').split(':');
-  if (guildId) {
-    if (action === 'remove') await revokeFeature(guildId, [FEATURES.ASK_CASTBOT, FEATURES.SAFARI_EDIT]);
-    else if (action === 'noedit') await revokeFeature(guildId, FEATURES.SAFARI_EDIT);
-    else if (action === 'edit') await grantFeature(guildId, FEATURES.SAFARI_EDIT, { addedBy: context.userId });
-  }
-  return { components: [await buildEntitlementsManageUI(context.client)] };
 }

@@ -216,3 +216,61 @@ describe('Entitlements v2 — parseDuration', () => {
     assert.equal(parseDuration('-5d').ok, false);
   });
 });
+
+// ── v3 premium migration (2026-08-16) ────────────────────────────────────────
+// The SERVIVORG S16 bug: seeded/comped guilds held à-la-carte features but NO tier, and
+// hasPremiumAccessSync is tier-only — so a guild "in the Entitlements list" stared at the
+// paywall. The one-time migration upgrades feature-only entries to permanent manual
+// Premium; the version stamp keeps it one-time.
+import { migrateFeatureOnlyToPremium, REGISTRY_VERSION } from '../entitlements.js';
+
+describe('Entitlements v3 — feature-only → permanent Premium migration', () => {
+  const NOW = 1_800_000_000_000;
+  const featureOnly = (addedBy = 'seed') => ({ name: 'G', features: ['ask_castbot', 'safari_edit'], addedBy, addedAt: 1 });
+
+  it('upgrades a feature-only entry to a permanent manual Premium tier', () => {
+    const data = { guilds: { '974318870057848842': featureOnly() } };
+    const { migrated } = migrateFeatureOnlyToPremium(data, NOW);
+    assert.equal(migrated, 1);
+    const e = data.guilds['974318870057848842'];
+    assert.equal(e.tier, 'premium');
+    assert.equal(e.validUntil, null, 'comp grants are permanent');
+    assert.equal(e.source, 'manual');
+    assert.equal(e.grantedAt, NOW);
+    assert.deepEqual(e.features, ['ask_castbot', 'safari_edit'], 'legacy features stay');
+    assert.equal(data.version, REGISTRY_VERSION);
+    // The actual bug: this entry must now pass the tier-only premium gate.
+    assert.equal(resolveTierState(e, NOW).state, 'active');
+  });
+
+  it('grantedBy carries a real adder but not the "seed" sentinel', () => {
+    const data = { guilds: { '111111': featureOnly('391415444084490240'), '222222': featureOnly('seed') } };
+    migrateFeatureOnlyToPremium(data, NOW);
+    assert.equal(data.guilds['111111'].grantedBy, '391415444084490240');
+    assert.equal(data.guilds['222222'].grantedBy, null);
+  });
+
+  it('leaves entries that already hold a tier untouched', () => {
+    const tiered = { name: 'T', features: [], addedBy: null, addedAt: 1, tier: 'premium', validUntil: 123, source: 'subscription', grantedBy: 'u', grantedAt: 5 };
+    const data = { guilds: { '333333': { ...tiered } } };
+    const { migrated } = migrateFeatureOnlyToPremium(data, NOW);
+    assert.equal(migrated, 0);
+    assert.equal(data.guilds['333333'].validUntil, 123, 'existing expiry must survive');
+    assert.equal(data.guilds['333333'].source, 'subscription');
+  });
+
+  it('is ONE-TIME: a v3 file is never re-migrated — a revoked tier with leftover features must NOT re-premium on next boot', () => {
+    const data = { version: REGISTRY_VERSION, guilds: { '444444': featureOnly() } };
+    const { migrated } = migrateFeatureOnlyToPremium(data, NOW);
+    assert.equal(migrated, 0, 'version stamp gates the migration');
+    assert.equal(data.guilds['444444'].tier, undefined);
+  });
+
+  it('skips entries with no features and no tier (nothing to upgrade)', () => {
+    const data = { guilds: { '555555': { name: 'Empty', features: [], addedBy: null, addedAt: 1 } } };
+    const { migrated } = migrateFeatureOnlyToPremium(data, NOW);
+    assert.equal(migrated, 0);
+    assert.equal(data.guilds['555555'].tier, undefined);
+    assert.equal(data.version, REGISTRY_VERSION, 'file still stamps to v3');
+  });
+});

@@ -10831,8 +10831,8 @@ To fix this:
       })(req, res, client);
 
     } else if (custom_id.startsWith('entitlements_')) {
-      // 🎟️ Entitlements (Reece's Stuff) — runtime feature/tier grants; logic in entitlementsUI.js
-      const entIsModal = custom_id === 'entitlements_add' || custom_id.startsWith('entitlements_tier_grant_');
+      // 🎟️ Entitlements (Premium menu, Reece-only) — premium grants; entitlementsUI.js. Modal-openers below; everything else re-renders the panel in place.
+      const entIsModal = ['entitlements_add', 'entitlements_add_here'].includes(custom_id) || custom_id.startsWith('entitlements_tier_grant_');
       return ButtonHandlerFactory.create({
         id: custom_id,
         requiresModal: entIsModal,
