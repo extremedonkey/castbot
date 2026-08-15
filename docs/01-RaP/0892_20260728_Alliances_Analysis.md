@@ -150,6 +150,14 @@ flowchart TD
 | Modal-submit regex fallthrough misroutes as confessionals | alliance branch inserted BEFORE the legacy regex |
 | app.js line ratchet (1 line headroom) | extract legacy `prod_setup_tycoons` handler (~57 → ~14 lines) as offset |
 
+## 🚨 Addendum 2026-08-15 — servivorg test found two v1 defects (both fixed)
+
+Test run on servivorg (guild `1308581797915005029`, request `msts1pfmpj` → alliance `msts237dr2`):
+
+1. **A permissionless account approved its own request.** The TEST account (`1086246253819613274`) requested an alliance at 02:49:03, clicked 🔍 Review on its own card at 02:49:09, and had the channel created at 02:49:28 — because the ONLY gate on the whole review/approve/exec chain was `CHANNEL_ADMIN_USER_IDS`, a visibility whitelist that included the test account. **Fix**: visibility and authority split into separate layers — `requiresPermission: CHANNEL_ADMIN_PERMISSIONS` (Manage Channels OR Manage Roles) on the `channels_route`/`channels_modal_submit` factory blocks (denies *before* the handler and before any modal), `CHANNEL_ADMIN_USER_IDS` shrunk to Reece-only, and a new `ALLIANCE_REQUEST_USER_IDS` (Reece + test account) gating only the player request flow. Self-approval by a *real* admin remains allowed — an admin can create alliances directly anyway. Static regression tests in `tests/channelsSelector.test.js` pin the whitelists and scan the app.js blocks.
+
+2. **The requester was locked out of their own alliance channel.** The request stored only the Mentionable Select values as members — the requester wasn't auto-included (the modal even said "include yourself if you are in it"). Channel `1538016750325604452` was created with 1 member and no requester. **Fix**: `includeRequester()` (alliancePlan.js, pure, tested) unions the requester in — requester-first, deduped — at request-submit time, so the stored request, the card, the review-modal prefill, and the plan fallback all inherit it. Modal copy now says "you are included automatically".
+
 ## 📎 Related
 
 - [ChannelAdministration.md](../03-features/ChannelAdministration.md) — the framework this extends

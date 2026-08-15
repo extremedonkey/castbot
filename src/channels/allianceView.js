@@ -283,7 +283,7 @@ export function buildAllianceRequestModal({ configId }) {
       {
         type: 18,
         label: 'Alliance Members',
-        description: 'Users and/or roles — include yourself if you are in it.',
+        description: 'Who else is in it? Users and/or roles — you are included automatically.',
         component: {
           type: 7, // Mentionable Select
           custom_id: 'members',

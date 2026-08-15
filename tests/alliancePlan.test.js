@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 
 import {
   newAllianceId, allianceChannelName, assessTribeAlignment, diffMembers,
-  parseAllianceCustomId, normalizeNotify
+  parseAllianceCustomId, normalizeNotify, includeRequester
 } from '../src/channels/alliancePlan.js';
 import { applyDeltas } from '../src/channels/channelRegistry.js';
 import { ensureChannel, removeAccess } from '../src/channels/channelOps.js';
@@ -45,6 +45,28 @@ describe('Alliances — ids and naming', () => {
     assert.equal(normalizeNotify('announce_requestor'), 'announce_requestor');
     assert.equal(normalizeNotify('nonsense'), 'silent');
     assert.equal(normalizeNotify(undefined), 'silent');
+  });
+});
+
+describe('Alliances — includeRequester (servivorg 2026-08-15: requester locked out of own channel)', () => {
+  it('unions the requester in, requester first', () => {
+    assert.deepEqual(includeRequester('req', ['a', 'b']), ['req', 'a', 'b']);
+  });
+
+  it('does not duplicate a self-selected requester', () => {
+    assert.deepEqual(includeRequester('req', ['a', 'req', 'b']), ['a', 'req', 'b']);
+  });
+
+  it('handles an empty/absent selection (validation upstream still requires ≥1 pick)', () => {
+    assert.deepEqual(includeRequester('req', []), ['req']);
+    assert.deepEqual(includeRequester('req', null), ['req']);
+  });
+
+  it('returns a copy, never the caller\'s array', () => {
+    const selected = ['req'];
+    const out = includeRequester('req', selected);
+    assert.notEqual(out, selected);
+    assert.deepEqual(out, selected);
   });
 });
 

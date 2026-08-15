@@ -132,6 +132,16 @@ export function parseAllianceCustomId(customId) {
   return null;
 }
 
+/**
+ * Requesters are ALWAYS members of the alliance they request (servivorg 2026-08-15: a request
+ * that only named others created a channel its own requester couldn't see). Requester-first
+ * ordering so the request card and review modal lead with them; no dupe if self-selected.
+ */
+export function includeRequester(requesterId, selectedIds) {
+  const selected = selectedIds || [];
+  return selected.includes(requesterId) ? [...selected] : [requesterId, ...selected];
+}
+
 /** Notify modes — Radio Group values. Silent is the secrecy-safe default. */
 export const NOTIFY_MODES = ['silent', 'announce', 'announce_requestor'];
 

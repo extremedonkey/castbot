@@ -157,6 +157,7 @@ import {
   createMapExplorerMenu
 } from './mapExplorer.js';
 import { shouldLog } from './src/utils/logConfig.js';
+import { CHANNEL_ADMIN_PERMISSIONS } from './src/channels/channelAdminConfig.js';
 import { installHeapDumpHandler } from './src/monitoring/heapDumpHandler.js';
 
 // Diagnostic: SIGUSR2 → heap snapshot to /tmp. See RaP 0915 (MemoryLeakOOM).
@@ -13739,15 +13740,21 @@ To fix this:
       // 🔐 Channel Administration — hidden Channels tab. Bodies live in src/channels/channelsRouter.js.
       return ButtonHandlerFactory.create({
         id: 'channels_route',
+        // AUTHORITY gate — runs before the handler AND before any modal, so a player clicking
+        // 🔍 Review on a public alliance-request card is denied here (servivorg 2026-08-15: the
+        // whitelist alone let a permissionless account approve its own request).
+        requiresPermission: CHANNEL_ADMIN_PERMISSIONS, // ManageChannels OR ManageRoles (ANY-OF)
+        permissionName: 'Manage Channels or Manage Roles',
         // Action buttons open a modal (a deferred ACK can't be followed by a MODAL); tab/cancel/exec
         // update the message and may run for minutes.
         ...(/^channels_(roles|playerroles|confessionals|subs|1on1s|msg_edit|alliance_new|alliance_edit|alliance_members|alliance_review)_/.test(custom_id)
           ? { requiresModal: true, ephemeral: true }
           : { deferred: true, updateMessage: true }),
         handler: async (context) => {
-          // The real gate — the nav row only HIDES the tab; `restrictedUser` enforces nothing (RaP 0900).
+          // Feature-flag layer (visibility, not authority) — the nav row only HIDES the tab;
+          // `restrictedUser` enforces nothing (RaP 0900). The literal satisfies the security ratchet.
           const CH = await import('./src/channels/channelsRouter.js');
-          if (context.userId !== '391415444084490240' && context.userId !== '1086246253819613274') return CH.channelsDenied();
+          if (context.userId !== '391415444084490240') return CH.channelsDenied();
           return await CH.routeChannelsButton({ context, req });
         }
       })(req, res, client);
@@ -37444,9 +37451,13 @@ To fix this:
         id: 'channels_modal_submit',
         deferred: true,
         ephemeral: true,
+        // AUTHORITY gate — mirrors channels_route; the alliance review-modal submit rides this block.
+        requiresPermission: CHANNEL_ADMIN_PERMISSIONS, // ManageChannels OR ManageRoles (ANY-OF)
+        permissionName: 'Manage Channels or Manage Roles',
         handler: async (context) => {
+          // Feature-flag layer (visibility, not authority) — see channels_route.
           const CH = await import('./src/channels/channelsRouter.js');
-          if (context.userId !== '391415444084490240' && context.userId !== '1086246253819613274') return CH.channelsDenied();
+          if (context.userId !== '391415444084490240') return CH.channelsDenied();
           return await CH.routeChannelsModalSubmit({ context, components, data });
         }
       })(req, res, client);

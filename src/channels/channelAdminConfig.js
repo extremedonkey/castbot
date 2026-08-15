@@ -11,11 +11,23 @@
 import { PermissionFlagsBits } from 'discord.js';
 
 /**
- * Users who can see and use the Channels tab. Display gating (seasonSelector.js) and the
- * inline handler guards both read this. The literal owner ID also satisfies the
- * security-declaration ratchet (tests/securityDeclarations.test.js:52).
+ * Users who can SEE the Channels admin surfaces (feature flag, NOT authority). Display gating
+ * (seasonSelector.js) and the inline handler guards both read this. The literal owner ID also
+ * satisfies the security-declaration ratchet (tests/securityDeclarations.test.js:52).
+ *
+ * Reece-only since 2026-08-15: the test account was on this list and — because the whitelist
+ * was the ONLY gate — could review/approve its own alliance request with zero Discord
+ * permissions (servivorg, request msts1pfmpj). Visibility and authority are now separate
+ * layers: this flag hides the feature; CHANNEL_ADMIN_PERMISSIONS is the authority check.
  */
-export const CHANNEL_ADMIN_USER_IDS = ['391415444084490240', '1086246253819613274'];
+export const CHANNEL_ADMIN_USER_IDS = ['391415444084490240'];
+
+/**
+ * Users who can use the player-facing alliance REQUEST flow while it's v1-hidden (RaP 0892).
+ * Includes the test account deliberately — it plays the non-admin player in test runs.
+ * Requesting is safe for non-admins: nothing is created without an admin's review.
+ */
+export const ALLIANCE_REQUEST_USER_IDS = ['391415444084490240', '1086246253819613274'];
 
 /** Discord guild ceilings. Categories count toward GUILD_CHANNEL_LIMIT. */
 export const GUILD_CHANNEL_LIMIT = 500;
@@ -40,6 +52,16 @@ export const PROGRESS_THROTTLE_MS = 2500;
 export const PLAN_TTL_MS = 10 * 60 * 1000;
 
 const P = PermissionFlagsBits;
+
+/**
+ * The AUTHORITY bar for every admin channel surface (Channels tab, alliance manager, alliance
+ * review/approve/exec). ANY-OF within the mask — memberHasAnyPermission ANDs per argument bit
+ * (utils/effectivePermissions.js), Administrator overrides, and the globalRoleAccess grant
+ * (ManageRoles|ManageChannels) qualifies hosts automatically. Matches the Casting gate.
+ * Enforced via `requiresPermission` on the channels_route / channels_modal_submit factory
+ * blocks in app.js — the whitelist above only hides the feature, it grants nothing.
+ */
+export const CHANNEL_ADMIN_PERMISSIONS = P.ManageChannels | P.ManageRoles;
 
 /** The player in their own confessional/subs/1on1 channel. */
 export const PLAYER_ACCESS = [

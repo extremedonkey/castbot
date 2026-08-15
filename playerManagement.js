@@ -22,7 +22,7 @@ import { getTimeUntilRegeneration } from './pointsManager.js';
 import { getChallengeActions, normalizeLinks, extractActionIds } from './challengeActionCreate.js';
 import { formatBotEmoji } from './botEmojis.js';
 import { getCastDockConfig, buildCastDockSelectRow } from './castDock.js';
-import { CHANNEL_ADMIN_USER_IDS } from './src/channels/channelAdminConfig.js';
+import { ALLIANCE_REQUEST_USER_IDS } from './src/channels/channelAdminConfig.js';
 import { isCurrencyEnabled, isNavigateDisabled } from './safariFeatureFlags.js';
 
 /**
@@ -645,9 +645,10 @@ async function calculateVisibility(guildId, targetUserId, playerData, safariData
   // === Row 3: Advanced ===
   vis.attributes = { show: isAdmin ? hasAttributesConfigured : hasAttributesConfigured, disabled: isAdmin && !hasTarget, label: 'Stats', emoji: '📊' };
   vis.commands = { show: enableGlobalCommands, disabled: isAdmin && !hasTarget, label: 'Commands', emoji: '🕹️', immediate: true, gatedBy: enableGlobalCommands ? null : 'config' };
-  // Alliance requests (RaP 0892) — whitelist-only while the feature is a hidden mockup; the
-  // handler re-checks. Player mode only: targetUserId IS the viewer there.
-  vis.alliance = { show: !isAdmin && CHANNEL_ADMIN_USER_IDS.includes(String(targetUserId)), disabled: false, label: 'Alliance', emoji: '🤝', immediate: true };
+  // Alliance requests (RaP 0892) — request whitelist (NOT the admin list: requesting needs no
+  // authority) while the feature is hidden; the handler re-checks. Player mode only:
+  // targetUserId IS the viewer there.
+  vis.alliance = { show: !isAdmin && ALLIANCE_REQUEST_USER_IDS.includes(String(targetUserId)), disabled: false, label: 'Alliance', emoji: '🤝', immediate: true };
   vis.castdock = { show: true, disabled: isAdmin && !hasTarget, label: 'CastDock', emoji: formatBotEmoji('castbot_logo') };
   vis.vanity = { show: isAdmin, disabled: isAdmin && !hasTarget, label: 'Vanity Roles', emoji: '🎭' };
   vis.navigate = { show: !navDisabled && hasTarget && isInitialized && hasMapLocation, disabled: false, label: 'Navigate', emoji: '🗺️', immediate: true, coordinate: currentCoordinate };

@@ -1,6 +1,6 @@
 # 🔐 Channel Administration
 
-**Status**: Hidden / in development — visible only to `391415444084490240` and `1086246253819613274`
+**Status**: Hidden / in development — admin surfaces visible only to `391415444084490240` (`CHANNEL_ADMIN_USER_IDS`); authority additionally requires **Manage Channels or Manage Roles**. The test account (`1086246253819613274`) keeps only the player-facing alliance *request* flow (`ALLIANCE_REQUEST_USER_IDS`)
 **Entry point**: `/menu` → Production Menu → Season Manager → **🔐 Channels** tab
 **Code**: [`src/channels/`](../../src/channels/)
 **Domain background**: [SurvivorContext.md](../concepts/SurvivorContext.md#the-org-domain)
@@ -24,7 +24,7 @@ The tab clones the Marooning tab's chrome and is expected to absorb the Maroonin
 | 🎙️ **Confessionals** | Create / update / delete `#name-confessional` |
 | 🗳️ **Subs** | Create / update / delete `#name-subs`, or **convert application channels** into subs. Category placement select (RaP 0881, 2026-08-09): **Don't touch** (default, today's behaviour) / **Single category** (custom name, moves misplaced channels in) / **One per tribe** (`Balboa Subs` from the default castlist; tribe-less → fallback; re-run after a swap to migrate). Moves always use `moveChannelSafe` (`lockPermissions: false`) so overwrites survive. Per-tribe registry: `categories.subsByTribe` keyed by tribeRoleId |
 | 🤝 **1 on 1s** | A private channel for every *pair* of players in a tribe |
-| 🤝 **Alliances** | Secret member channels via the Alliance Manager — see [RaP 0892](../01-RaP/0892_20260728_Alliances_Analysis.md). Members + hosts only (**no** Trusted Spectator), name defaults to plain `alliance`, same-tribe warn-only guard, player request flow via /menu → Advanced (whitelist v1). Code: [`alliancePlan.js`](../../src/channels/alliancePlan.js) / [`allianceView.js`](../../src/channels/allianceView.js) / [`allianceHandlers.js`](../../src/channels/allianceHandlers.js) |
+| 🤝 **Alliances** | Secret member channels via the Alliance Manager — see [RaP 0892](../01-RaP/0892_20260728_Alliances_Analysis.md). Members + hosts only (**no** Trusted Spectator), name defaults to plain `alliance`, same-tribe warn-only guard, player request flow via /menu → Advanced (`ALLIANCE_REQUEST_USER_IDS` v1; the **requester is always auto-included** in the members — servivorg 2026-08-15). Review/approve requires Manage Channels/Roles (see Gating). Code: [`alliancePlan.js`](../../src/channels/alliancePlan.js) / [`allianceView.js`](../../src/channels/allianceView.js) / [`allianceHandlers.js`](../../src/channels/allianceHandlers.js) |
 
 ## 🪟 Two surfaces, one row (stage 1, 2026-08-08)
 
@@ -270,10 +270,13 @@ Note the *two different 50s*: 50 categories per guild, and 50 channels per categ
 
 ## 🔒 Gating
 
-Visible only to `CHANNEL_ADMIN_USER_IDS` (`channelAdminConfig.js`). Two layers, because **`restrictedUser` in BUTTON_REGISTRY enforces nothing** (RaP 0900 — it's documentation wearing a security costume):
+**Three layers** since 2026-08-15 (`channelAdminConfig.js`), because **`restrictedUser` in BUTTON_REGISTRY enforces nothing** (RaP 0900 — it's documentation wearing a security costume) and because the whitelist alone let a permissionless account approve its own alliance request (servivorg):
 
-1. **Display**: `buildSeasonNavRow(configId, active, userId)` appends the tab only when whitelisted.
-2. **Enforcement**: an inline ID check inside every handler. This also satisfies the deploy-blocking ratchet in `tests/securityDeclarations.test.js`.
+1. **Display** (visibility, not authority): `buildSeasonNavRow(configId, active, userId)` appends the tab only for `CHANNEL_ADMIN_USER_IDS` — now Reece-only. Same list gates the Premium menu's Channels row (`menuBuilder.js`).
+2. **Authority**: `requiresPermission: CHANNEL_ADMIN_PERMISSIONS` (**Manage Channels OR Manage Roles**, ANY-OF; Administrator and `globalRoleAccess` hosts pass via `memberHasAnyPermission`) on the `channels_route` and `channels_modal_submit` factory blocks in app.js. Enforced centrally *before* the handler and before any modal — this is what stops a random player clicking 🔍 Review on a public alliance-request card.
+3. **Feature flag** (inline owner-ID check inside the handler): satisfies the deploy-blocking ratchet in `tests/securityDeclarations.test.js` and keeps the surfaces hidden while in development.
+
+**The split whitelist**: `ALLIANCE_REQUEST_USER_IDS` (Reece + test account) gates only the player-facing alliance *request* flow — requesting needs no authority because nothing is created without an admin's review. This keeps the test account a pure player-simulant: it can request, but sees no admin surfaces and cannot approve. Pinned by `tests/channelsSelector.test.js`.
 
 The nav row is now **exactly 5 buttons** — Discord's hard per-ActionRow limit. There is no room for a sixth tab.
 

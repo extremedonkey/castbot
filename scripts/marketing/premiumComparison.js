@@ -45,8 +45,8 @@ const ROW_H      = 34;
 const GROUP_H    = 46;
 const FONT       = 'Arial, Helvetica, sans-serif';
 
-/** Longest label that fits the label column at 15px Arial (~0.55em/char). */
-const MAX_LABEL_CHARS = 52;
+/** Longest label that fits the label column (~790px at 15px Arial, ~8.25px/char). */
+const MAX_LABEL_CHARS = 80;
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
   .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
@@ -55,49 +55,52 @@ const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
 // mark: 'free' | 'prem' | 'paid' | 'no'
 const SECTIONS = [
   ['Casting your season', [
-    ['Applications answered inside Discord',            'free', 'no'],
-    ['Score applicants 1-5 with private notes',         'free', 'no'],
-    ['Cast / Tentative / Don’t Cast decisions',    'free', 'no'],
-    ['Do-not-cast conflict detection',                  'free', 'no'],
-    ['Import applicants from a Google Form',            'free', 'no'],
-    ['Private tribe drafting before marooning',         'free', 'no']
+    ['Applications answered inside Discord',                          'free', 'no'],
+    ['Score applicants 1-5 with private notes',                       'free', 'no'],
+    ['Cast / Tentative / Do Not Cast decisions',                      'free', 'no'],
+    ['Do-not-cast conflict detection',                                'free', 'no'],
+    ['Private tribe drafting before marooning',                       'free', 'no']
   ]],
-  ['Your public roster', [
-    ['Live castlist that updates itself',               'free', 'no'],
-    ['Multiple and archived castlists',                 'free', 'no'],
-    ['Generated castlist images',                       'free', 'no'],
-    ['Rank badges and vanity role sorting',             'free', 'no'],
-    ['Self-updating menu pinned to a channel',          'free', 'no'],
-    ['Tribe swap with a dramatic reveal',               'free', 'no']
+  ['Idol Hunts, Escape Rooms, Safaris and Economies', [
+    ['A map players physically move through',                         'free', 'paid'],
+    ['Built from your own image, grid drawn for you',                 'free', 'no'],
+    ['Fog of war',                                                    'free', 'no'],
+    ['Items to find, use and trade',                                  'free', 'paid'],
+    ['Player inventories',                                            'free', 'paid'],
+    ['Currency and balances',                                         'free', 'paid'],
+    ['Players attacking each other with items',                       'free', 'paid'],
+    ['Navigation menus built for every location',                     'free', 'paid'],
+    ['Location and command logs for spectators',                      'free', 'paid'],
+    ['Stores with stock limits and role gating',                      'free', 'no'],
+    ['Crafting recipes',                                              'free', 'no'],
+    ['Conditional rules engine',                                      'free', 'no'],
+    ['Round-based economy and results',                               'free', 'no'],
+    ['Idol hunts only the first finder can claim',                    'free', 'no']
+  ]],
+  ['Automatically create two types of castlist', [
+    ['Dynamic castlist that works directly in Discord',               'free', 'no'],
+    ['Compact castlist that produces a sexy castlist visual',         'free', 'no'],
+    ['Integrates with Applications - no pronouns, age or timezone',   'free', 'no'],
+    ["Winners' gallery and past season castlists",                    'free', 'no'],
+    ['Rank badges and vanity role sorting',                           'free', 'no'],
+    ['Self-updating menu pinned to a channel',                        'free', 'no'],
+    ['Tribe swap with a dramatic reveal',                             'free', 'no']
   ]],
   ['Players look after themselves', [
-    ['Pronoun roles players pick themselves',           'free', 'no'],
-    ['Timezone roles, daylight saving handled',         'free', 'no'],
-    ['A profile menu every player can open',            'free', 'no'],
-    ['Availability polling across timezones',           'free', 'no']
-  ]],
-  ['Idol hunts, maps and economies', [
-    ['A map players physically move through',           'free', 'paid'],
-    ['Built from your own image, grid drawn for you',   'free', 'no'],
-    ['Fog of war',                                      'free', 'no'],
-    ['Items to find, use and trade',                    'free', 'paid'],
-    ['Player inventories',                              'free', 'paid'],
-    ['Currency and balances',                           'free', 'paid'],
-    ['Players attacking each other with items',         'free', 'paid'],
-    ['Navigation menus built for every location',       'free', 'paid'],
-    ['Location and command logs for spectators',        'free', 'paid'],
-    ['Stores with stock limits and role gating',        'free', 'no'],
-    ['Crafting recipes',                                'free', 'no'],
-    ['Enemies to fight',                                'free', 'no'],
-    ['Conditional rules engine',                        'free', 'no'],
-    ['Round-based economy and results',                 'free', 'no'],
-    ['Idol hunts only the first finder can claim',      'free', 'no'],
-    ['Export and re-import your whole build',           'free', 'no']
+    ['Pronoun roles players pick themselves',                         'free', 'no'],
+    ['Timezone roles, daylight saving handled',                       'free', 'no'],
+    ['A profile menu every player can open',                          'free', 'no'],
+    ['Availability polling across timezones',                         'free', 'no']
   ]],
   ['What Premium adds', [
-    ['Ask questions about your server in plain English','prem', 'no'],
-    ['Change your Safari by describing the change',     'prem', 'no'],
-    ['Archive a channel’s history as a web page',  'prem', 'no']
+    ['Ask questions about your server in plain English',              'prem', 'no'],
+    ['Ask CastBot AI to build your escape rooms and safaris for you',  'prem', 'no'],
+    ['Change your Safari by describing the change',                   'prem', 'no'],
+    ['Custom Attributes such as HP, Mana, Strength, etc.',            'prem', 'no'],
+    ['Enemies to fight',                                              'prem', 'no'],
+    ['Export and re-import your whole build',                         'prem', 'no'],
+    ['Channel Archiving - great if you reuse one server per season',  'prem', 'no'],
+    ['Generate 1on1s, confessionals, subs and more',                  'prem', 'paid']
   ]]
 ];
 
@@ -165,25 +168,25 @@ export function buildComparisonSvg() {
   const cardY = 244, cardH = 168, gap = 24;
   const cardW = (CARD_W - gap) / 2;
 
-  // FRAMING NOTE (2026-08-09): the cards deliberately do NOT put $7 next to Kadabra's $3.
-  // Verified US pricing is $3 / $5 / $7 for one / two / three activations, so a head-to-head
-  // price line is a comparison CastBot loses. What CastBot actually wins is the FREE tier —
-  // so the hero number here is $0, and Premium is the secondary line.
+  // FRAMING NOTE (2026-08-11): the hero number is $0, not $2.50 — what CastBot actually wins is
+  // the FREE tier, and a head-to-head $2.50-vs-$3 line invites a price fight instead of a feature
+  // one. Activations were dropped from the Kadabra card entirely: CastBot has no equivalent
+  // concept, so explaining theirs only muddies the comparison.
   p.push(`<rect x="${CARD_X}" y="${cardY}" width="${cardW}" height="${cardH}" rx="10" fill="${CARD_BG}" stroke="${ACCENT}" stroke-width="1.5"/>`);
   p.push(`<rect x="${CARD_X}" y="${cardY}" width="${cardW}" height="4" rx="2" fill="${ACCENT}"/>`);
   p.push(text(CARD_X + 26, cardY + 40, 'CASTBOT', { size: 12, fill: ACCENT, weight: 'bold', spacing: 2.4 }));
   p.push(text(CARD_X + 26, cardY + 92, '$0', { size: 46, weight: 'bold' }));
   p.push(text(CARD_X + 92, cardY + 92, 'for everything below', { size: 17, fill: TEXT_SEC }));
-  p.push(text(CARD_X + 26, cardY + 122, 'Every row marked ✓ — free, in every server.', { size: 15, fill: TEXT_PRI }));
-  p.push(text(CARD_X + 26, cardY + 146, 'Premium ($2.50/mo) adds the three starred rows.', { size: 13.5, fill: TEXT_MUT }));
+  p.push(text(CARD_X + 26, cardY + 122, 'Every row marked with a tick - free, in every server.', { size: 15, fill: TEXT_PRI }));
+  p.push(text(CARD_X + 26, cardY + 146, 'Premium is $2.50 / month and adds the starred rows.', { size: 13.5, fill: ACCENT }));
 
   const kx = CARD_X + cardW + gap;
   p.push(`<rect x="${kx}" y="${cardY}" width="${cardW}" height="${cardH}" rx="10" fill="${CARD_BG}" stroke="${RULE}" stroke-width="1.5"/>`);
   p.push(text(kx + 26, cardY + 40, 'KADABRA', { size: 12, fill: RIVAL, weight: 'bold', spacing: 2.4 }));
   p.push(text(kx + 26, cardY + 92, '$3', { size: 46, weight: 'bold', fill: TEXT_SEC }));
-  p.push(text(kx + 92, cardY + 92, '/ month, 1 activation', { size: 17, fill: TEXT_SEC }));
-  p.push(text(kx + 26, cardY + 122, 'One activation unlocks ORG automation OR Safari.', { size: 15, fill: TEXT_PRI }));
-  p.push(text(kx + 26, cardY + 146, 'Both in one server → 2 activations, $5 / month.', { size: 13.5, fill: TEXT_MUT }));
+  p.push(text(kx + 92, cardY + 92, '/ month', { size: 17, fill: TEXT_SEC }));
+  p.push(text(kx + 26, cardY + 122, 'The free tier is movement only - no items, no economy.', { size: 15, fill: TEXT_PRI }));
+  p.push(text(kx + 26, cardY + 146, 'Items, attacks, logs and 1on1s all need a paid tier.', { size: 13.5, fill: TEXT_MUT }));
 
   // ── Legend ──
   const ly = 436;

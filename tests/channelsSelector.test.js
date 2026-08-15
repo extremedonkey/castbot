@@ -7,21 +7,29 @@
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+import { PermissionFlagsBits } from 'discord.js';
 import { buildSeasonNavRow, seasonManagerHeader, isChannelAdmin } from '../seasonSelector.js';
 import { buildStatusSignals, deriveStatus } from '../playerStatus.js';
 import { ACCEPTED_STATUS_IDS, expandMentionables } from '../src/channels/channelRoster.js';
-import { CHANNEL_ADMIN_USER_IDS } from '../src/channels/channelAdminConfig.js';
+import { CHANNEL_ADMIN_USER_IDS, ALLIANCE_REQUEST_USER_IDS, CHANNEL_ADMIN_PERMISSIONS } from '../src/channels/channelAdminConfig.js';
 
 const REECE = '391415444084490240';
-const OTHER_ADMIN = '1086246253819613274';
+const TEST_ACCOUNT = '1086246253819613274'; // player-simulant: may REQUEST alliances, never admin
 const RANDOM = '999999999999999999';
 const CID = 'config_123';
 
 describe('Channels tab — isChannelAdmin gate', () => {
-  it('admits exactly the two whitelisted IDs', () => {
+  it('admits ONLY Reece — the test account was removed after it approved its own alliance request (servivorg 2026-08-15)', () => {
     assert.equal(isChannelAdmin(REECE), true);
-    assert.equal(isChannelAdmin(OTHER_ADMIN), true);
-    assert.deepEqual(CHANNEL_ADMIN_USER_IDS, [REECE, OTHER_ADMIN]);
+    assert.equal(isChannelAdmin(TEST_ACCOUNT), false);
+    assert.deepEqual(CHANNEL_ADMIN_USER_IDS, [REECE]);
+  });
+
+  it('the split: the test account keeps the player-facing REQUEST flow only', () => {
+    assert.deepEqual(ALLIANCE_REQUEST_USER_IDS, [REECE, TEST_ACCOUNT]);
   });
 
   it('rejects everyone else, including falsy inputs', () => {
@@ -38,6 +46,34 @@ describe('Channels tab — isChannelAdmin gate', () => {
   });
 });
 
+describe('Channels — authority gate (servivorg 2026-08-15 regression)', () => {
+  // The whitelist is a FEATURE FLAG, not authority. Authority is requiresPermission on the two
+  // app.js factory blocks — enforced centrally before the handler AND before any modal, so a
+  // player clicking 🔍 Review on a public alliance-request card is denied there.
+  const __dir = path.dirname(fileURLToPath(import.meta.url));
+  const appSrc = readFileSync(path.join(__dir, '..', 'app.js'), 'utf8');
+  const block = (id) => {
+    const start = appSrc.indexOf(`id: '${id}'`);
+    assert.notEqual(start, -1, `factory block '${id}' not found in app.js`);
+    return appSrc.slice(start, appSrc.indexOf('})(req, res, client)', start));
+  };
+
+  it('the mask is ManageChannels|ManageRoles (ANY-OF via memberHasAnyPermission)', () => {
+    assert.equal(CHANNEL_ADMIN_PERMISSIONS,
+      PermissionFlagsBits.ManageChannels | PermissionFlagsBits.ManageRoles);
+  });
+
+  for (const id of ['channels_route', 'channels_modal_submit']) {
+    it(`${id} declares requiresPermission and carries no test-account literal`, () => {
+      const b = block(id);
+      assert.match(b, /requiresPermission:\s*CHANNEL_ADMIN_PERMISSIONS/,
+        `${id} must gate on the shared authority mask`);
+      assert.ok(!b.includes(TEST_ACCOUNT),
+        `${id} must not whitelist the test account — that literal is how a permissionless user approved an alliance`);
+    });
+  }
+});
+
 describe('Channels tab — nav row visibility', () => {
   it('renders the classic 4 tabs with no userId (every existing caller)', () => {
     const row = buildSeasonNavRow(CID, 'apps');
@@ -51,14 +87,18 @@ describe('Channels tab — nav row visibility', () => {
     assert.ok(!row.components.some(b => b.label === 'Channels'));
   });
 
-  it('shows Channels LAST for a whitelisted user', () => {
-    for (const uid of [REECE, OTHER_ADMIN]) {
-      const row = buildSeasonNavRow(CID, 'apps', uid);
-      assert.equal(row.components.length, 5);
-      assert.equal(row.components[4].label, 'Channels');
-      assert.equal(row.components[4].custom_id, `season_channels_${CID}`);
-      assert.equal(row.components[4].emoji.name, '🔐');
-    }
+  it('shows Channels LAST for the whitelisted admin', () => {
+    const row = buildSeasonNavRow(CID, 'apps', REECE);
+    assert.equal(row.components.length, 5);
+    assert.equal(row.components[4].label, 'Channels');
+    assert.equal(row.components[4].custom_id, `season_channels_${CID}`);
+    assert.equal(row.components[4].emoji.name, '🔐');
+  });
+
+  it('hides Channels from the test account — no shown-but-denied drift (137c6aca class)', () => {
+    const row = buildSeasonNavRow(CID, 'apps', TEST_ACCOUNT);
+    assert.equal(row.components.length, 4);
+    assert.ok(!row.components.some(b => b.label === 'Channels'));
   });
 
   it('NEVER exceeds Discord\'s hard 5-button ActionRow limit', () => {

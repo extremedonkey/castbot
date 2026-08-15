@@ -40,7 +40,7 @@ Private player-to-player conversation. Some servers let players use Discord DMs;
 - ⚠️ **Combinatorial**: n players → n(n−1)/2 channels. A 12-player tribe is 66 channels; 20 players is 190 — against Discord's hard ceiling of **500 channels / 50 categories per guild**.
 
 ### 🤝 Alliances
-A group of players on the same tribe who have agreed to work together. **The existence of an alliance is extremely sensitive game information** — leaking it can decide a season. Any alliance feature must be very closely guarded. CastBot deliberately does **not** model alliances yet.
+A group of players on the same tribe who have agreed to work together. **The existence of an alliance is extremely sensitive game information** — leaking it can decide a season. Any alliance feature must be very closely guarded. CastBot models these since 2026-07-28 (Alliances v1, whitelist-hidden) with that secrecy baked in — generic `alliance` channel names, no Trusted Spectator access, silent-by-default creation. See [ChannelAdministration.md](../03-features/ChannelAdministration.md) and [RaP 0892](../01-RaP/0892_20260728_Alliances_Analysis.md).
 
 ### 🎭 Player Roles
 A Discord role assigned to exactly one player. Its purpose is *removal*: un-assigning one role instantly strips a voted-out player from every alliance channel, 1on1, and confessional at once — no per-channel cleanup.

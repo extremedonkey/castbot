@@ -14,13 +14,13 @@ import { PermissionFlagsBits } from 'discord.js';
 import { loadPlayerData } from '../../storage.js';
 import { getRoleAccessOverwrites } from '../../utils/roleAccessUtils.js';
 import {
-  CHANNEL_ADMIN_USER_IDS, PLAYER_ACCESS, HOST_ACCESS,
+  ALLIANCE_REQUEST_USER_IDS, PLAYER_ACCESS, HOST_ACCESS,
   ALLIANCE_DEFAULTS, ALLIANCE_REQUEST_COOLDOWN_MS
 } from './channelAdminConfig.js';
 import { buildOverwrites, preflightBudget, mostRecentConfigId } from './channelPlan.js';
 import {
   newAllianceId, allianceChannelName, assessTribeAlignment, diffMembers,
-  parseAllianceCustomId, normalizeNotify
+  parseAllianceCustomId, normalizeNotify, includeRequester
 } from './alliancePlan.js';
 import { snapshotGuild, checkBotPermissions, ensureCategory, ensureChannel, deleteChannels, resolvePrincipal, removeAccess } from './channelOps.js';
 import { flushDeltas } from './channelRegistry.js';
@@ -433,8 +433,10 @@ export async function execAlliance({ plan, guild, snapshot, playerData, userId, 
 // Player request flow (PUBLIC entry points — v1 whitelist re-checked here)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** v1: the request feature is whitelist-only while alliances are a hidden mockup. */
-const canRequest = (userId) => CHANNEL_ADMIN_USER_IDS.includes(String(userId));
+/** v1: the request feature is whitelist-only while alliances are hidden. NOT the admin list —
+ *  requesting needs no authority (nothing is created without an admin's review), so the test
+ *  account stays a pure player-simulant here while being off CHANNEL_ADMIN_USER_IDS. */
+const canRequest = (userId) => ALLIANCE_REQUEST_USER_IDS.includes(String(userId));
 
 /** Player menu → Request Alliance button. Returns the request modal (or an ephemeral denial). */
 export async function handleAllianceRequestButton({ guildId, userId }) {
@@ -470,8 +472,14 @@ export async function handleAllianceRequestSubmit({ customId, guildId, userId, d
     }
   }
 
+  if (!(fields.members || []).length) return err('Select at least one other member for your alliance.');
+
   const guild = await client.guilds.fetch(guildId);
-  const { members } = await expandMentionables(guild, resolved, fields.members || []);
+  // The requester IS a member of the alliance they're requesting — union them in (requester
+  // first, deduped). Without this, a request naming only others created a channel the
+  // requester couldn't see (servivorg 2026-08-15). Their ID is never in resolved.roles, so
+  // expandMentionables resolves them like any direct user pick.
+  const { members } = await expandMentionables(guild, resolved, includeRequester(userId, fields.members));
   if (!members.length) return err('No valid members — everyone selected has left the server.');
 
   requestCooldowns.set(userId, Date.now());
