@@ -6,6 +6,7 @@ import { InteractionResponseFlags } from 'discord-interactions';
 import { getBotEmoji } from './botEmojis.js';
 import { hasAskCastBotAccess } from './askCastBot.js';
 import { hasPremiumAccessSync, getGuildEntitlement } from './entitlements.js';
+import { setPremiumOrigin, clearPremiumOrigin } from './src/ui/menuOrigin.js';
 
 const REECE_ID = '391415444084490240';
 
@@ -139,6 +140,9 @@ export class MenuBuilder {
    */
   static buildSetupMenu(menuConfig, context) {
     const isTest = process.env.INSTANCE_ROLE === 'test';
+    // The user is looking at TOOLS now — feature back-buttons (castbot_tools) should come
+    // back here, not to a stale Premium origin (src/ui/menuOrigin.js).
+    clearPremiumOrigin(context?.userId);
 
     // 🔵 Ask CastBot — trusted super-users only, DEV/TEST only (prod has no Claude CLI).
     // Everyone here already passed the Tools menu's Manage Roles gate; this narrows to
@@ -216,6 +220,10 @@ export class MenuBuilder {
    */
   static async buildPremiumMenu(menuConfig, context) {
     const isTest = process.env.INSTANCE_ROLE === 'test';
+    // Feature screens opened from HERE must come back HERE: their hard-coded
+    // `castbot_tools` back buttons are intercepted while this origin is set
+    // (src/ui/menuOrigin.js — same pattern as setChannelsOrigin below).
+    setPremiumOrigin(context?.userId);
 
     // Category Post moved to 📢 Player Engagement (2026-08-08).
     // Import/Export moved under 🦁 Safari Premium (2026-08-08): round-tripping Safari content

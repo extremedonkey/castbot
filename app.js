@@ -777,6 +777,12 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // Track legacy menu usage
   MenuBuilder.trackLegacyMenu('createProductionMenuInterface', 'Main production menu');
 
+  // Back at the root — a later Tools click must open TOOLS, not a stale Premium origin
+  // (src/ui/menuOrigin.js; covers /menu, prod_menu_back and anchor_open_menu, which all
+  // render through here).
+  const { clearPremiumOrigin } = await import('./src/ui/menuOrigin.js');
+  clearPremiumOrigin(userId);
+
   // Check if server has completed initial setup (single source of truth: hasCompletedSetup)
   // If not, show Setup Wizard instead of Production Menu
   const hasSetup = hasCompletedSetup(playerData[guildId]);
@@ -7548,7 +7554,16 @@ To fix this:
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         ephemeral: true,
-        handler: async (context) => MenuBuilder.buildMenuResponse('setup_menu', context, 'Tools Menu (setup_menu)')
+        handler: async (context) => {
+          // Feature screens hard-code castbot_tools as their back button, but the Premium
+          // menu launches the same features — a back-click from a premium-launched screen
+          // returns to PREMIUM, not Tools (src/ui/menuOrigin.js; Reece 2026-08-16).
+          const { isFromPremium } = await import('./src/ui/menuOrigin.js');
+          if (isFromPremium(context.userId)) {
+            return MenuBuilder.buildMenuResponse('premium_menu', context, 'Premium Menu (back-intercept)');
+          }
+          return MenuBuilder.buildMenuResponse('setup_menu', context, 'Tools Menu (setup_menu)');
+        }
       })(req, res, client);
     } else if (custom_id === 'castbot_premium') {
       // ⭐ CastBot Premium — PUBLIC entry (2026-08-08): any admin opens it; non-entitled
