@@ -139,6 +139,43 @@ describe('Channels section — guided walkthrough layout (sections, 2026-08-16)'
   });
 });
 
+describe('🗳️ per_tribe subs — mergeTribeSources (real import, 2026-08-17 pre-reveal fix)', () => {
+  // The bug: private marooning tribes have NO castlist link and NO assigned roles, so the old
+  // default-castlist-only source found nothing and every player fell to the single category.
+  const load = async () => (await import('../src/channels/channelsHandlers.js')).mergeTribeSources;
+
+  it('draft assignments place players even with an EMPTY default castlist (the reported case)', async () => {
+    const merge = await load();
+    const map = merge({ draft: { rFun: ['u1', 'u2'], rDumb: ['u3'] }, nameOf: (rid) => rid === 'rFun' ? 'Fun' : 'Dumb' });
+    assert.deepEqual(map.get('u1'), [{ roleId: 'rFun', name: 'Fun' }]);
+    assert.deepEqual(map.get('u3'), [{ roleId: 'rDumb', name: 'Dumb' }]);
+  });
+
+  it('a drafted player IGNORES castlist role membership — the draft is the current plan', async () => {
+    const merge = await load();
+    const map = merge({
+      draft: { rNew: ['u1'] },
+      castlistTribes: [{ roleId: 'rOld', name: 'Old', members: [{ id: 'u1' }, { id: 'u2' }] }],
+      nameOf: () => 'New'
+    });
+    assert.deepEqual(map.get('u1'), [{ roleId: 'rNew', name: 'New' }], 'draft wins');
+    assert.deepEqual(map.get('u2'), [{ roleId: 'rOld', name: 'Old' }], 'undrafted players still fall back to the castlist');
+  });
+
+  it('dead draft roles are skipped; multi-tribe castlist membership is preserved for the warning', async () => {
+    const merge = await load();
+    const map = merge({
+      draft: { rDead: ['u1'] },
+      castlistTribes: [
+        { roleId: 'rA', name: 'A', members: [{ id: 'u1' }] },
+        { roleId: 'rB', name: 'B', members: [{ id: 'u1' }] }
+      ],
+      roleExists: (rid) => rid !== 'rDead'
+    });
+    assert.deepEqual(map.get('u1').map(t => t.roleId), ['rA', 'rB'], 'dead draft → castlist fallback, both tribes kept (multiTribe warning downstream)');
+  });
+});
+
 describe('🏝️ Tribe Channels — formatTribeChannelName (real import)', () => {
   const load = async () => (await import('../src/channels/channelPlan.js')).formatTribeChannelName;
 

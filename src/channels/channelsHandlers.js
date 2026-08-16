@@ -480,21 +480,56 @@ function emptyRosterMessage(skipped = []) {
 }
 
 /**
- * RaP 0881 — resolve the pure placement planner's tribe inputs.
- * Draft tribes come from the DEFAULT castlist (the same source 1on1s trusts); registry
- * per-tribe categories are live-filtered so a hand-deleted category is recreated, not pointed at.
+ * Pure — merge the two per_tribe membership sources. 💭 Draft assignments WIN per-user: they
+ * are the current plan, exist pre-reveal (private marooning tribes have no castlist link and
+ * no assigned roles), and role membership can be stale mid-swap. Default-castlist role
+ * membership fills in everyone the draft didn't place (servers that skip Draft Tribes).
+ * Exported for tests.
+ * @param {Object<string, string[]>} draft - draftTribes: tribeRoleId → userIds
+ * @param {Array<{roleId: string, name: string, members: Array<{id: string}>}>} castlistTribes
+ * @param {(rid: string) => boolean} roleExists - dead draft roles are skipped
+ * @param {(rid: string) => string} nameOf - tribe name for a draft roleId
+ * @returns {Map<string, Array<{roleId: string, name: string}>>}
  */
-async function subsPlacementInputs({ placement, guildId, client, node, snapshot }) {
+export function mergeTribeSources({ draft = {}, castlistTribes = [], roleExists = () => true, nameOf = () => 'Tribe' }) {
   const tribesByUser = new Map();
+  for (const [rid, userIds] of Object.entries(draft)) {
+    if (!roleExists(rid)) continue;
+    for (const uid of (userIds || [])) {
+      if (!tribesByUser.has(uid)) tribesByUser.set(uid, []);
+      tribesByUser.get(uid).push({ roleId: rid, name: nameOf(rid) });
+    }
+  }
+  const drafted = new Set(tribesByUser.keys());
+  for (const t of castlistTribes) {
+    for (const m of t.members || []) {
+      if (drafted.has(m.id)) continue;
+      if (!tribesByUser.has(m.id)) tribesByUser.set(m.id, []);
+      tribesByUser.get(m.id).push({ roleId: t.roleId, name: t.name });
+    }
+  }
+  return tribesByUser;
+}
+
+/**
+ * RaP 0881 — resolve the pure placement planner's tribe inputs. Membership via
+ * mergeTribeSources (Reece 2026-08-17: per_tribe looked dead on a pre-reveal server — the
+ * tribes were private marooning ones, players placed only via 💭 Draft Tribes, and the old
+ * default-castlist-only source found nothing). Registry per-tribe categories are
+ * live-filtered so a hand-deleted category is recreated, not pointed at.
+ */
+async function subsPlacementInputs({ placement, guildId, configId, client, guild, playerData, node, snapshot }) {
+  let tribesByUser = new Map();
   if (placement === 'per_tribe') {
     const { getTribesForCastlist } = await import('../../castlistDataAccess.js');
-    const tribes = await getTribesForCastlist(guildId, 'default', client).catch(() => []);
-    for (const t of tribes || []) {
-      for (const m of t.members || []) {
-        if (!tribesByUser.has(m.id)) tribesByUser.set(m.id, []);
-        tribesByUser.get(m.id).push({ roleId: t.roleId, name: t.name });
-      }
-    }
+    const castlistTribes = await getTribesForCastlist(guildId, 'default', client).catch(() => []);
+    tribesByUser = mergeTribeSources({
+      draft: playerData[guildId]?.applicationConfigs?.[configId]?.draftTribes || {},
+      castlistTribes: castlistTribes || [],
+      roleExists: (rid) => !guild || guild.roles.cache.has(rid),
+      nameOf: (rid) => guild?.roles.cache.get(rid)?.name
+        || playerData[guildId]?.tribes?.[rid]?.analyticsName || 'Tribe'
+    });
   }
 
   const tribeCategories = {};
@@ -614,7 +649,7 @@ export async function planChannels({ kind, mode, configId, guildId, userId, clie
     let pp = null;
     const base = sanitizeCategoryBase(categoryName, CATEGORY_NAMES.subs);
     if (placement !== 'keep') {
-      const { tribesByUser, tribeCategories } = await subsPlacementInputs({ placement, guildId, client, node, snapshot });
+      const { tribesByUser, tribeCategories } = await subsPlacementInputs({ placement, guildId, configId, client, guild, playerData, node, snapshot });
       const channelsByUser = new Map(items.map((i) => [i.userId, { channelId: i.appChannel.id, parentId: i.appChannel.parentId || null }]));
       const existingCats = (node.categories?.subs || [])
         .map((id) => snapshot.channels.get(id))
@@ -680,7 +715,7 @@ export async function planChannels({ kind, mode, configId, guildId, userId, clie
   let pp = null;
   let buckets;
   if (kind === 'subs') {
-    const { tribesByUser, tribeCategories } = await subsPlacementInputs({ placement, guildId, client, node, snapshot });
+    const { tribesByUser, tribeCategories } = await subsPlacementInputs({ placement, guildId, configId, client, guild, playerData, node, snapshot });
     const channelsByUser = new Map();
     for (const [uid, rec] of Object.entries(registry)) {
       const live = rec?.channelId ? snapshot.channels.get(rec.channelId) : null;
