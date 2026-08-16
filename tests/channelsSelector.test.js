@@ -394,8 +394,9 @@ describe('📨 Msg Category — routing (prefix overlap is the risk here)', () =
 
   it('only modal-opening ids match the requiresModal regex — the rest defer and update', () => {
     // Replica of the app.js:13819 ack-mode regex.
-    const MODAL_RE = /^channels_(roles|playerroles|manualrole|confessionals|subs|1on1s|msg_edit|alliance_new|alliance_edit|alliance_members|alliance_review)_/;
-    assert.ok(MODAL_RE.test(`channels_manualrole_${CID}`), 'Manual Roles must open a modal');
+    const MODAL_RE = /^channels_(roles|playerroles|manualrole|activate|confessionals|subs|1on1s|msg_edit|alliance_new|alliance_edit|alliance_members|alliance_review)_/;
+    assert.ok(MODAL_RE.test(`channels_manualrole_${CID}`), 'Manually Link must open a modal');
+    assert.ok(MODAL_RE.test(`channels_activate_${CID}`), 'Activate must open a modal');
     assert.ok(MODAL_RE.test(`channels_msg_edit_${CID}`), 'edit must open a modal');
     for (const id of [`channels_msg_${CID}`, `channels_msg_send_${CID}`, `channels_msg_targets_${CID}`]) {
       assert.ok(!MODAL_RE.test(id), `${id} must NOT be requiresModal`);
@@ -736,6 +737,67 @@ describe('🔗 Manual Roles — modal + routing (2026-08-16)', () => {
     const id = `channels_manualrole_${CID}`;
     for (const other of ['channels_msg_', 'channels_alliance', 'channels_roles_', 'channels_playerroles_']) {
       assert.ok(!id.startsWith(other), `${id} must not route as ${other}`);
+    }
+  });
+});
+
+describe('🟢 Activate — assign linked player roles (2026-08-16)', () => {
+  const CID = 'config_1751549410029_391415444084490240';
+  const opt = (n) => ({ roleId: `10${n}`, playerName: `Player${n}`, roleName: `Role${n}` });
+
+  it('invertPlayerRoles maps roleId → ALL linked userIds (a double-link assigns both, visibly)', async () => {
+    const { invertPlayerRoles } = await import('../src/channels/channelsHandlers.js');
+    const byRole = invertPlayerRoles({
+      u1: { playerRoleId: 'rA' },
+      u2: { playerRoleId: 'rA' },   // mis-click: two players on one role
+      u3: { playerRoleId: 'rB' },
+      u4: {},                       // unlinked
+      u5: { playerRoleId: null }
+    });
+    assert.deepEqual(byRole.get('rA'), ['u1', 'u2']);
+    assert.deepEqual(byRole.get('rB'), ['u3']);
+    assert.equal(byRole.size, 2);
+    assert.equal(invertPlayerRoles({}).size, 0);
+    assert.equal(invertPlayerRoles(undefined).size, 0);
+  });
+
+  it('the modal warns about the pre-marooning reveal and explains what Activate does', async () => {
+    const { buildActivateModal } = await import('../src/channels/channelsView.js');
+    const modal = buildActivateModal({ configId: CID, options: [opt(1)] });
+    const text = modal.components.filter(c => c.type === 10).map(c => c.content).join('\n');
+    assert.match(text, /assign/i, 'must explain it assigns the configured roles');
+    assert.match(text, /marooning/i, 'must carry the timing warning');
+    assert.match(text, /see who has been cast|reveal/i, 'must explain the exposure consequence');
+  });
+
+  it('the select is multi, capped at Discord limits, options carry player + role', async () => {
+    const { buildActivateModal } = await import('../src/channels/channelsView.js');
+    const many = Array.from({ length: 30 }, (_, i) => opt(i));
+    const modal = buildActivateModal({ configId: CID, options: many, hidden: 5 });
+    const select = modal.components.find(c => c.type === 18).component;
+    assert.equal(select.type, 3, 'String Select — a Role Select cannot be filtered to linked roles');
+    assert.equal(select.options.length, 25, 'Discord hard cap');
+    assert.equal(select.max_values, 25);
+    assert.equal(select.min_values, 1);
+    assert.equal(select.options[0].label, 'Player0');
+    assert.equal(select.options[0].description, '@Role0');
+    const text = modal.components.filter(c => c.type === 10).map(c => c.content).join('\n');
+    assert.match(text, /5 more link/, 'links beyond the cap are named, never silent');
+  });
+
+  it('single-link modal: max_values matches the option count', async () => {
+    const { buildActivateModal } = await import('../src/channels/channelsView.js');
+    const select = buildActivateModal({ configId: CID, options: [opt(1)] }).components.find(c => c.type === 18).component;
+    assert.equal(select.max_values, 1);
+    assert.ok(!buildActivateModal({ configId: CID, options: [opt(1)] }).components
+      .filter(c => c.type === 10).map(c => c.content).join('').includes('more link'), 'no phantom overflow note');
+  });
+
+  it('the submit id dodges the legacy kind regex, and the button id no neighbouring prefix', () => {
+    const legacy = `channels_activate_modal_${CID}`.match(/^channels_(roles|playerroles|confessionals|subs|1on1s|msg)_modal_(.+)$/);
+    assert.equal(legacy, null);
+    for (const other of ['channels_alliance', 'channels_roles_', 'channels_msg_', 'channels_manualrole_']) {
+      assert.ok(!`channels_activate_${CID}`.startsWith(other));
     }
   });
 });

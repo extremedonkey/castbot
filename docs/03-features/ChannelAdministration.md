@@ -20,8 +20,9 @@ The tab clones the Marooning tab's chrome and is expected to absorb the Maroonin
 | Button | What it does |
 |---|---|
 | 🔐 **Roles** | Sets the server's single Trusted Spectator role |
-| 🎭 **Player Roles** | One personal Discord role per player (the voted-out kill switch) |
-| 🔗 **Manual Roles** | Interop (2026-08-16): link ONE player to an EXISTING role (hand-made or another bot's) as their `playerRoleId` — same `{kind:'playerRole'}` delta the exec emits, so `resolvePrincipal`/kill-switch/roster line treat it identically. Applied on modal submit (data-pointer write only — no plan/confirm). **Records the link, never assigns the role** (holding it would expose casting status early) |
+| 🎭 **Auto Create** (was "Player Roles") | One personal Discord role per player (the voted-out kill switch). Creates + records only — assignment is 🟢 Activate's job |
+| 🔗 **Manually Link** (was "Manual Roles") | Interop (2026-08-16): link ONE player to an EXISTING role (hand-made or another bot's) as their `playerRoleId` — same `{kind:'playerRole'}` delta the exec emits, so `resolvePrincipal`/kill-switch/roster line treat it identically. Applied on modal submit (data-pointer write only — no plan/confirm). **Records the link, never assigns the role** |
+| 🟢 **Activate** | The reveal step (2026-08-16): assign linked roles to their players via a multi-select of CastBot-linked roles. Timing warning: before marooning, players/specs can read the member list and see who was cast |
 | 🎙️ **Confessionals** | Create / update / delete `#name-confessional` |
 | 🗳️ **Subs** | Create / update / delete `#name-subs`, or **convert application channels** into subs. Category placement select (RaP 0881, 2026-08-09): **Don't touch** (default, today's behaviour) / **Single category** (custom name, moves misplaced channels in) / **One per tribe** (`Balboa Subs` from the default castlist; tribe-less → fallback; re-run after a swap to migrate). Moves always use `moveChannelSafe` (`lockPermissions: false`) so overwrites survive. Per-tribe registry: `categories.subsByTribe` keyed by tribeRoleId |
 | 🤝 **1 on 1s** | A private channel for every *pair* of players in a tribe |
@@ -175,7 +176,7 @@ flowchart TD
 
 Roles are created with **no permissions and `mentionable: false`** — they are pure access handles, not permission grants. The feature **never deletes** a player role: removal is the host un-assigning it (that's the kill switch), which strips the player from every channel granted to that role at once.
 
-> ⚠️ **Known gap — nothing assigns the role to the member.** There is no `member.roles.add()` anywhere in `src/channels/`. The action provisions the role and records the ID; the host must assign it manually. Until that lands, `resolvePrincipal` will happily permission a channel to a role **nobody holds** — the player then cannot see their own confessional. Either add assignment to `execPlayerRoles` or make the summary screen say "now assign these roles". This is the highest-value unfinished edge in the feature.
+> ✅ **Gap closed (2026-08-16): 🟢 Activate assigns the roles.** Creation (🎭 Auto Create) and linking (🔗 Manually Link) deliberately still do NOT assign — a player suddenly holding their personal role announces their casting status before the season does. **Activate** is the explicit reveal step: a modal String Select of the CastBot-linked roles (a Role Select can't be filtered, so the options ARE the links; ≤25 per pass, overflow named honestly), assigning each selected role to its linked player(s) with per-player failure reporting (`openActivateModal`/`applyActivateRoles`, `channelsHandlers.js`). The tab copy tells hosts to run it during/after marooning. Until Activate runs, `resolvePrincipal` may still permission a channel to a role nobody holds — that's now a deliberate pre-season state, not an accident.
 
 ## 💾 Data model
 

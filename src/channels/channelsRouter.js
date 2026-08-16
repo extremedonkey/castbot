@@ -182,6 +182,16 @@ export async function routeChannelsModalSubmit({ context, components, data }) {
     });
   }
 
+  // 🟢 Activate submit — assigns the selected linked roles (the modal IS the confirm: it
+  // names every role and carries the timing warning). Also BEFORE the legacy regex.
+  if (customId.startsWith('channels_activate_modal_')) {
+    const H = await import('./channelsHandlers.js');
+    return await H.applyActivateRoles({
+      configId: customId.replace('channels_activate_modal_', ''),
+      guildId, userId, client, fields
+    });
+  }
+
   const m = customId.match(/^channels_(roles|playerroles|confessionals|subs|1on1s|msg)_modal_(.+)$/);
   const kind = m?.[1];
   const configId = m?.[2];

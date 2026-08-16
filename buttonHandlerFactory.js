@@ -3491,10 +3491,20 @@ export const BUTTON_REGISTRY = {
     requiresModal: true
   },
   'channels_manualrole_*': {
-    label: 'Manual Roles',
+    label: 'Manually Link',
     description: 'Link ONE player to an EXISTING role (hand-made or another bot\'s) as their personal player role — recorded, never assigned',
     emoji: '🔗',
     style: 'Secondary',
+    parent: 'season_channels',
+    category: 'channel_admin',
+    restrictedUser: true,
+    requiresModal: true
+  },
+  'channels_activate_*': {
+    label: 'Activate',
+    description: 'THE reveal step: assign linked player roles to their players (multi-select of CastBot-linked roles). Warns about pre-marooning exposure',
+    emoji: '🟢',
+    style: 'Success',
     parent: 'season_channels',
     category: 'channel_admin',
     restrictedUser: true,
