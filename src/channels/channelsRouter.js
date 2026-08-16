@@ -62,10 +62,11 @@ export async function routeChannelsButton({ context, req }) {
     const { takePlan, executePlan } = await import('./channelsHandlers.js');
     const plan = takePlan(customId.replace('channels_exec_', ''), userId);
     if (!plan) {
-      // Single-use + 10-min TTL: a double-click or a stale screen lands here rather than
-      // re-running a job against a guild that has since changed.
+      // Single-use + 10-min TTL + in-memory (a bot restart/deploy wipes pending plans — by
+      // design: the exec semantics may have just changed). A double-click or a stale screen
+      // lands here rather than re-running a job against a guild that has since changed.
       return { components: [{ type: 17, accent_color: 0xe74c3c, components: [
-        { type: 10, content: '## ⏰ That plan expired\nRe-open the action and try again — nothing was changed.' }
+        { type: 10, content: '## ⏰ That plan is no longer valid\nIt expired, was already run, or CastBot restarted since the preview. Re-open the action and try again — nothing was changed.' }
       ]}] };
     }
     return await executePlan({
