@@ -658,3 +658,40 @@ describe('Subs modal — placement fields (RaP 0881)', () => {
     assert.deepEqual(placement.options.map((o) => o.value), ['keep', 'single', 'per_tribe']);
   });
 });
+
+describe('🎭 formatPlayerRolesLine — plain-text player→role roster (2026-08-16)', () => {
+  const E = (displayName, username, roleName) => ({ displayName, username, roleName });
+
+  it('names display name, username and role with NO Discord mention syntax', async () => {
+    const { formatPlayerRolesLine } = await import('../src/channels/channelsView.js');
+    const line = formatPlayerRolesLine([E('Reece', 'extremedonkey', 'Winner Reece')]);
+    assert.equal(line, '-# **Player Roles:** Reece (extremedonkey / @Winner Reece)');
+    assert.ok(!line.includes('<@'), 'plain text only — no user/role mentions');
+  });
+
+  it('sorts by display name and joins with commas', async () => {
+    const { formatPlayerRolesLine } = await import('../src/channels/channelsView.js');
+    const line = formatPlayerRolesLine([E('Zed', 'z', 'Z'), E('Amy', 'a', 'A')]);
+    assert.match(line, /Amy \(a \/ @A\), Zed \(z \/ @Z\)/);
+  });
+
+  it('caps at 15 with an honest +N more', async () => {
+    const { formatPlayerRolesLine } = await import('../src/channels/channelsView.js');
+    const many = Array.from({ length: 20 }, (_, i) => E(`P${String(i).padStart(2, '0')}`, `u${i}`, `R${i}`));
+    const line = formatPlayerRolesLine(many);
+    assert.ok(line.includes(', +5 more'));
+    assert.ok(!line.includes('P16'), 'entries past the cap are not listed');
+  });
+
+  it('returns null when nobody holds a player role (no empty heading)', async () => {
+    const { formatPlayerRolesLine } = await import('../src/channels/channelsView.js');
+    assert.equal(formatPlayerRolesLine([]), null);
+    assert.equal(formatPlayerRolesLine(null), null);
+  });
+
+  it('degrades honestly: departed member and deleted role read as such', async () => {
+    const { formatPlayerRolesLine } = await import('../src/channels/channelsView.js');
+    const line = formatPlayerRolesLine([E('Ghost', 'left server', 'role deleted')]);
+    assert.match(line, /Ghost \(left server \/ @role deleted\)/);
+  });
+});

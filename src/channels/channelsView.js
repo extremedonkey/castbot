@@ -82,6 +82,21 @@ export function buildChannelsSection(configId) {
 }
 
 /**
+ * The 🎭 Player Roles status line — names every player→role link as PLAIN TEXT (no <@>
+ * mentions, Reece 2026-08-16): `Reece (extremedonkey / @Winner Reece), …`. Replaces the
+ * bare `player_roles: N created` counter, which said nothing about WHO got linked to WHAT.
+ * @param {Array<{displayName: string, username: string, roleName: string}>} entries
+ * @returns {string|null} the -# line, or null when nobody holds a player role
+ */
+export function formatPlayerRolesLine(entries, max = 15) {
+  if (!entries?.length) return null;
+  const sorted = [...entries].sort((a, b) => String(a.displayName).localeCompare(String(b.displayName)));
+  const shown = sorted.slice(0, max).map((e) => `${e.displayName} (${e.username} / @${e.roleName})`);
+  const more = sorted.length - shown.length;
+  return `-# **Player Roles:** ${shown.join(', ')}${more > 0 ? `, +${more} more` : ''}`;
+}
+
+/**
  * The Channels tab.
  * @param {Object} p - { configId, guildId, playerData, seasonName, guild, userId }
  * @returns {Promise<Object>} { components: [container] }
@@ -123,9 +138,36 @@ export async function buildChannelsView({ configId, guildId, playerData, seasonN
     `> **Trusted Spectator:** ${specLine}`
   ].join('\n');
 
+  // 🎭 Player Roles roster (guild-scoped, like playerRoleId itself) — names each link as
+  // plain text. Best-effort: a Discord hiccup must not take the tab down with it.
+  let playerRolesLine = null;
+  try {
+    const linked = Object.entries(playerData?.[guildId]?.players || {})
+      .filter(([, p]) => p?.playerRoleId);
+    if (linked.length && guild) {
+      // One bulk fetch so usernames are real, not cache-luck ("left server" must mean left).
+      await guild.members.fetch({ user: linked.map(([uid]) => uid) }).catch(() => {});
+      playerRolesLine = formatPlayerRolesLine(linked.map(([uid, p]) => {
+        const role = guild.roles.cache.get(p.playerRoleId) || null;
+        const member = guild.members.cache.get(uid) || null;
+        return {
+          displayName: member?.displayName || role?.name || uid,
+          username: member?.user?.username || 'left server',
+          roleName: role?.name || 'role deleted'
+        };
+      }));
+    }
+  } catch (e) {
+    console.warn(`⚠️ [CHANNEL_ADMIN] Player-roles line failed: ${e.message}`);
+  }
+
   const lastRun = season.lastRun || {};
   const lastRunLine = Object.entries(lastRun)
+    // The roster line REPLACES the bare player_roles counter — unless the run had failures,
+    // which the roster line can't express.
+    .filter(([action, s]) => !(action === 'player_roles' && playerRolesLine && !s?.failed))
     .map(([action, s]) => `-# ${action}: ${s?.created ?? 0} created · ${s?.skipped ?? 0} unchanged${s?.failed ? ` · ${s.failed} failed` : ''}`)
+    .concat(playerRolesLine ? [playerRolesLine] : [])
     .join('\n');
 
   const container = {
