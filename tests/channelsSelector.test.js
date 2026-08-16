@@ -394,7 +394,8 @@ describe('📨 Msg Category — routing (prefix overlap is the risk here)', () =
 
   it('only modal-opening ids match the requiresModal regex — the rest defer and update', () => {
     // Replica of the app.js:13819 ack-mode regex.
-    const MODAL_RE = /^channels_(roles|playerroles|confessionals|subs|1on1s|msg_edit|alliance_new|alliance_edit|alliance_members|alliance_review)_/;
+    const MODAL_RE = /^channels_(roles|playerroles|manualrole|confessionals|subs|1on1s|msg_edit|alliance_new|alliance_edit|alliance_members|alliance_review)_/;
+    assert.ok(MODAL_RE.test(`channels_manualrole_${CID}`), 'Manual Roles must open a modal');
     assert.ok(MODAL_RE.test(`channels_msg_edit_${CID}`), 'edit must open a modal');
     for (const id of [`channels_msg_${CID}`, `channels_msg_send_${CID}`, `channels_msg_targets_${CID}`]) {
       assert.ok(!MODAL_RE.test(id), `${id} must NOT be requiresModal`);
@@ -447,6 +448,7 @@ describe('Channels modals — Discord structural limits', () => {
       ['roles', V.buildRolesModal({ configId: CID, currentRoleId: '123', currentRoleName: 'Spec' })],
       ['roles-empty', V.buildRolesModal({ configId: CID, currentRoleId: null, currentRoleName: null })],
       ['playerroles', V.buildPlayerRolesModal({ configId: CID })],
+      ['manualrole', V.buildManualRoleModal({ configId: CID })],
       ['confessionals', V.buildConfessionalsModal({ configId: CID })],
       ['subs', V.buildSubsModal({ configId: CID })],
       ['1on1s', V.buildOneOnOnesModal({ configId: CID, defaultTribeRoleIds: ['r1', 'r2'], tribeNames: 'Kansas, Oregon' })],
@@ -454,16 +456,19 @@ describe('Channels modals — Discord structural limits', () => {
     ];
   };
 
-  it('every modal has ≤5 top-level components, all Label (type 18)', async () => {
+  it('every modal has ≤5 top-level components, all Label (18) or Text Display (10)', async () => {
+    // Text Display is a valid top-level modal component (alliance request modal precedent);
+    // everything interactive must still ride inside a Label.
     for (const [name, m] of await allModals()) {
       assert.ok(m.components.length <= 5, `${name}: ${m.components.length} top-level components`);
-      for (const c of m.components) assert.equal(c.type, 18, `${name}: non-Label top-level component`);
+      for (const c of m.components) assert.ok([10, 18].includes(c.type), `${name}: invalid top-level component type ${c.type}`);
     }
   });
 
   it('every Label description is ≤100 chars (an over-long one rejects the whole modal)', async () => {
     for (const [name, m] of await allModals()) {
       for (const c of m.components) {
+        if (c.type !== 18) continue;
         if (c.description) assert.ok(c.description.length <= 100, `${name} / "${c.label}": description ${c.description.length} > 100`);
         assert.ok(c.label.length <= 45, `${name}: label "${c.label}" > 45`);
       }
@@ -474,6 +479,7 @@ describe('Channels modals — Discord structural limits', () => {
     for (const [name, m] of await allModals()) {
       assert.ok(m.custom_id.length <= 100, `${name}: custom_id ${m.custom_id.length} > 100`);
       for (const c of m.components) {
+        if (c.type !== 18) continue; // Text Displays carry no custom_id
         assert.ok(c.component.custom_id.length <= 100, `${name}: field custom_id too long`);
       }
     }
@@ -693,5 +699,43 @@ describe('🎭 formatPlayerRolesLine — plain-text player→role roster (2026-0
     const { formatPlayerRolesLine } = await import('../src/channels/channelsView.js');
     const line = formatPlayerRolesLine([E('Ghost', 'left server', 'role deleted')]);
     assert.match(line, /Ghost \(left server \/ @role deleted\)/);
+  });
+});
+
+describe('🔗 Manual Roles — modal + routing (2026-08-16)', () => {
+  const CID = 'config_1751549410029_391415444084490240';
+
+  it('the modal explains link-only semantics: records the role, never assigns it', async () => {
+    const { buildManualRoleModal } = await import('../src/channels/channelsView.js');
+    const modal = buildManualRoleModal({ configId: CID });
+    const text = modal.components.filter(c => c.type === 10).map(c => c.content).join('\n');
+    assert.match(text, /already created by hand or by another bot/i, 'must explain the interop use case');
+    assert.match(text, /does NOT assign/i, 'must warn the role is not assigned');
+    assert.match(text, /casting status/i, 'must explain WHY — assignment would expose casting status');
+  });
+
+  it('exactly ONE User Select and ONE Role Select, both single-pick and required', async () => {
+    const { buildManualRoleModal } = await import('../src/channels/channelsView.js');
+    const inputs = buildManualRoleModal({ configId: CID }).components.filter(c => c.type === 18).map(c => c.component);
+    assert.deepEqual(inputs.map(i => i.type).sort(), [5, 6], 'User Select (5) + Role Select (6), nothing else');
+    for (const i of inputs) {
+      assert.equal(i.min_values, 1, `${i.custom_id}: single-pick`);
+      assert.equal(i.max_values, 1, `${i.custom_id}: single-pick`);
+      assert.equal(i.required, true, `${i.custom_id}: required`);
+    }
+  });
+
+  it('the submit id routes as a manualrole submit, never into the legacy confessionals regex', () => {
+    const submitId = `channels_manualrole_modal_${CID}`;
+    assert.ok(submitId.startsWith('channels_manualrole_modal_'), 'dispatcher prefix');
+    const legacy = submitId.match(/^channels_(roles|playerroles|confessionals|subs|1on1s|msg)_modal_(.+)$/);
+    assert.equal(legacy, null, 'must not match the legacy kind regex at all');
+  });
+
+  it('the button id is NOT swallowed by neighbouring prefixes', () => {
+    const id = `channels_manualrole_${CID}`;
+    for (const other of ['channels_msg_', 'channels_alliance', 'channels_roles_', 'channels_playerroles_']) {
+      assert.ok(!id.startsWith(other), `${id} must not route as ${other}`);
+    }
   });
 });

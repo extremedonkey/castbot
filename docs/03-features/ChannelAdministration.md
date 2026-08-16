@@ -21,6 +21,7 @@ The tab clones the Marooning tab's chrome and is expected to absorb the Maroonin
 |---|---|
 | 🔐 **Roles** | Sets the server's single Trusted Spectator role |
 | 🎭 **Player Roles** | One personal Discord role per player (the voted-out kill switch) |
+| 🔗 **Manual Roles** | Interop (2026-08-16): link ONE player to an EXISTING role (hand-made or another bot's) as their `playerRoleId` — same `{kind:'playerRole'}` delta the exec emits, so `resolvePrincipal`/kill-switch/roster line treat it identically. Applied on modal submit (data-pointer write only — no plan/confirm). **Records the link, never assigns the role** (holding it would expose casting status early) |
 | 🎙️ **Confessionals** | Create / update / delete `#name-confessional` |
 | 🗳️ **Subs** | Create / update / delete `#name-subs`, or **convert application channels** into subs. Category placement select (RaP 0881, 2026-08-09): **Don't touch** (default, today's behaviour) / **Single category** (custom name, moves misplaced channels in) / **One per tribe** (`Balboa Subs` from the default castlist; tribe-less → fallback; re-run after a swap to migrate). Moves always use `moveChannelSafe` (`lockPermissions: false`) so overwrites survive. Per-tribe registry: `categories.subsByTribe` keyed by tribeRoleId |
 | 🤝 **1 on 1s** | A private channel for every *pair* of players in a tribe |

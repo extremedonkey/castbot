@@ -113,6 +113,37 @@ export async function setTrustedSpectator({ guildId, roleId }) {
   };
 }
 
+/**
+ * 🔗 Manual Roles — link ONE player to an EXISTING role (interop with hand-made or
+ * other-bot roles, 2026-08-16). Writes the same {kind:'playerRole'} delta the Player Roles
+ * exec emits, so everything downstream (resolvePrincipal, the kill switch, the roster line)
+ * treats the foreign role exactly like a CastBot-created one. Deliberately does NOT assign
+ * the role to the member — holding it could expose their casting status early.
+ */
+export async function applyManualRole({ configId, guildId, userId, client, fields }) {
+  const err = (msg) => ({ components: [{ type: 17, accent_color: 0xe74c3c, components: [
+    { type: 10, content: `## ❌ ${msg}` }
+  ]}] });
+
+  const targetUserId = fields.user?.[0];
+  const roleId = fields.role?.[0];
+  if (!targetUserId || !roleId) return err('Pick both a player and a role.');
+
+  const guild = await client.guilds.fetch(guildId);
+  const role = guild.roles.cache.get(roleId) || (await guild.roles.fetch(roleId).catch(() => null));
+  if (!role) return err('That role no longer exists.');
+  if (role.managed) return err('That role belongs to an integration/bot and cannot be assigned to players — pick a normal role.');
+  if (role.id === guildId) return err('@everyone cannot be a personal player role.');
+
+  const playerData = await loadPlayerData();
+  const previous = playerData[guildId]?.players?.[targetUserId]?.playerRoleId || null;
+  await flushDeltas(guildId, [{ kind: 'playerRole', userId: targetUserId, roleId }]);
+  console.log(`🔗 [CHANNEL_ADMIN] Manual role link: ${targetUserId} → role ${roleId} (${role.name})${previous ? ` (replaced ${previous})` : ''} by ${userId} in guild ${guildId}`);
+
+  // The Channels tab is the confirmation — its Player Roles roster line now names the link.
+  return await handleChannelsTab({ configId, guildId, userId, client });
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 📨 Msg Category — broadcast composer
 // ─────────────────────────────────────────────────────────────────────────────

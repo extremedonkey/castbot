@@ -126,6 +126,12 @@ export async function routeChannelsButton({ context, req }) {
     return await A.openAllianceModal({ customId, guildId });
   }
 
+  // 🔗 Manual Roles — link a player to an EXISTING role (interop, 2026-08-16).
+  if (customId.startsWith('channels_manualrole_')) {
+    const { buildManualRoleModal } = await import('./channelsView.js');
+    return { type: 9, data: buildManualRoleModal({ configId: customId.replace('channels_manualrole_', '') }) };
+  }
+
   // One of the 5 action buttons → its modal.
   const { buildChannelsModal } = await import('./channelsModalRouter.js');
   return await buildChannelsModal({ customId, guildId, client });
@@ -157,6 +163,17 @@ export async function routeChannelsModalSubmit({ context, components, data }) {
   if (customId.startsWith('channels_alliance_modal_')) {
     const A = await import('./allianceHandlers.js');
     return await A.planAlliance({ customId, guildId, userId, client, fields, resolved: data?.resolved || {} });
+  }
+
+  // 🔗 Manual Roles submit — APPLIES directly (data-pointer write only, no plan/confirm:
+  // the two-phase ceremony exists for big irreversible Discord jobs, and this is neither).
+  // Also BEFORE the legacy regex, which would misroute it as a confessionals plan.
+  if (customId.startsWith('channels_manualrole_modal_')) {
+    const H = await import('./channelsHandlers.js');
+    return await H.applyManualRole({
+      configId: customId.replace('channels_manualrole_modal_', ''),
+      guildId, userId, client, fields
+    });
   }
 
   const m = customId.match(/^channels_(roles|playerroles|confessionals|subs|1on1s|msg)_modal_(.+)$/);

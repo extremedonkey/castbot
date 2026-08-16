@@ -3482,6 +3482,16 @@ export const BUTTON_REGISTRY = {
     restrictedUser: true,
     requiresModal: true
   },
+  'channels_manualrole_*': {
+    label: 'Manual Roles',
+    description: 'Link ONE player to an EXISTING role (hand-made or another bot\'s) as their personal player role — recorded, never assigned',
+    emoji: '🔗',
+    style: 'Secondary',
+    parent: 'season_channels',
+    category: 'channel_admin',
+    restrictedUser: true,
+    requiresModal: true
+  },
   'channels_confessionals_*': {
     label: 'Confessionals',
     description: 'Bulk create/update/delete per-player confessional channels',

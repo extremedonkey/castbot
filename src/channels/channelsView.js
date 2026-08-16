@@ -180,7 +180,10 @@ export async function buildChannelsView({ configId, guildId, playerData, seasonN
       { type: 10, content: '### ```🔐 Roles```\n-# Server-wide roles used to gate channel access.' },
       { type: 1, components: [
         { type: 2, custom_id: `channels_roles_${configId}`, label: 'Roles', style: 2, emoji: { name: '🔐' } },
-        { type: 2, custom_id: `channels_playerroles_${configId}`, label: 'Player Roles', style: 2, emoji: { name: '🎭' } }
+        { type: 2, custom_id: `channels_playerroles_${configId}`, label: 'Player Roles', style: 2, emoji: { name: '🎭' } },
+        // Interop: link ONE player to a role that already exists (hand-made or another bot's) —
+        // Player Roles only ever creates fresh roles (resolve-by-stored-ID, never by name).
+        { type: 2, custom_id: `channels_manualrole_${configId}`, label: 'Manual Roles', style: 2, emoji: { name: '🔗' } }
       ]},
       { type: 14 },
       ...buildChannelsSection(configId),
@@ -277,6 +280,42 @@ export function buildMsgModal({ configId, draft = {}, imageUploadMode }) {
 }
 
 /** Roles modal — sets the guild's single Trusted Spectator role. */
+/**
+ * 🔗 Manual Roles modal — link ONE player to an EXISTING role (interop with hand-made or
+ * other-bot roles, Reece 2026-08-16). Atomic by design: one player, one role, applied on
+ * submit (a data-pointer write only — no channels touched, so no plan/confirm ceremony).
+ * The link is recorded WITHOUT assigning the role: a player suddenly holding their personal
+ * role would announce their casting status before the season does.
+ */
+export function buildManualRoleModal({ configId }) {
+  return {
+    custom_id: `channels_manualrole_modal_${configId}`,
+    title: '🔗 Manual Player Role',
+    components: [
+      {
+        type: 10, // Text Display
+        content: '### Link a player to an existing role\nUse this when player roles were already created by hand or by another bot. CastBot records the link and uses that role for confessionals, subs, 1on1s and alliances — exactly as if 🎭 Player Roles had created it.'
+      },
+      {
+        type: 18, // Label
+        label: 'Player',
+        description: 'Who this personal role belongs to',
+        component: { type: 5, custom_id: 'user', required: true, min_values: 1, max_values: 1, placeholder: 'Select the player...' }
+      },
+      {
+        type: 18, // Label
+        label: 'Existing role',
+        description: 'Their personal role. Replaces any previously linked role for this player.',
+        component: { type: 6, custom_id: 'role', required: true, min_values: 1, max_values: 1, placeholder: 'Select their role...' }
+      },
+      {
+        type: 10, // Text Display
+        content: '-# ⚠️ CastBot only **records** the link — it does NOT assign the role to the player. Holding their personal role could expose their casting status before the season reveals it. Assign it yourself when the time is right.'
+      }
+    ]
+  };
+}
+
 export function buildRolesModal({ configId, currentRoleId, currentRoleName }) {
   return {
     custom_id: `channels_roles_modal_${configId}`,
