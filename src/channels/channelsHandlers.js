@@ -722,10 +722,10 @@ export async function planChannels({ kind, mode, configId, guildId, userId, clie
       `> Estimated time: **~${formatEta(budget.etaSeconds + moveCount)}**`,
       ...(placement !== 'keep' ? placementLines(pp, base) : []),
       '',
-      ...(kind === 'confessional'
-        ? ['> Player gets access via their **player role** where one exists, else directly.',
-           '> Trusted Spectators can **read + react** (not post).']
-        : ['> **Both** the player and their player role get access.']),
+      // Same model both kinds since 2026-08-16 — the direct user grant is what lets players in
+      // BEFORE their role is assigned via 🟢 Activate (confessionals are made pre-reveal).
+      '> **Both** the player and their player role get access.',
+      ...(kind === 'confessional' ? ['> Trusted Spectators can **read + react** (not post).'] : []),
       ...rosterLines(members, { creating: creatingIds }),
       ...(dropped.length ? ['', `-# Dropped (left the server): ${dropped.slice(0, 10).map((d) => `<@${d.userId}>`).join(', ')}${dropped.length > 10 ? ` …and ${dropped.length - 10} more` : ''}`] : []),
       ...(skipped.length ? ['', `-# ${skipped.length} applicant(s) skipped (not accepted / withdrawn).`] : [])
@@ -1239,17 +1239,20 @@ async function execOneOnOnes({ plan, guild, snapshot, playerData, buffer, flush,
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Confessional = role XOR user. Subs/1on1 = role AND user (subs deliberately; 1on1 uses
- * role-preferred-else-user per player).
+ * Confessional/Subs = role AND user — the user directly AS WELL AS the role. Confessionals
+ * were role XOR user until 2026-08-16 (Reece): hosts create confessionals BEFORE the cast
+ * reveal, when player roles exist but are not yet assigned (that's 🟢 Activate), so the
+ * role-only grant locked every player out of their own confessional pre-reveal. The direct
+ * user grant is what admits them before Activate runs. 1on1 stays role-preferred-else-user
+ * per player. Exported for tests.
  */
-function principalsFor(kind, item, snapshot, buffer) {
+export function principalsFor(kind, item, snapshot, buffer) {
   const { entry, delta } = resolvePrincipal({
     userId: item.userId, playerRoleId: item.playerRoleId, snapshot, allow: PLAYER_ACCESS
   });
   if (delta) buffer.push(delta); // the stored role is dead — clear it
 
-  if (kind === 'subs' && entry.id !== item.userId) {
-    // Belt-and-braces: the user directly AS WELL AS the role.
+  if ((kind === 'subs' || kind === 'confessional') && entry.id !== item.userId) {
     return [entry, { id: item.userId, allow: PLAYER_ACCESS }];
   }
   return [entry];

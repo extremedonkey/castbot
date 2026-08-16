@@ -816,6 +816,41 @@ describe('🟢 Activate — assign linked player roles (2026-08-16)', () => {
   });
 });
 
+describe('🔑 principalsFor — confessionals now role AND user, like subs (2026-08-16)', () => {
+  // Real import. The old XOR locked players out of confessionals made BEFORE the cast reveal
+  // (roles exist but are unassigned until 🟢 Activate) — the direct user grant fixes that.
+  const load = async () => (await import('../src/channels/channelsHandlers.js')).principalsFor;
+  const item = { userId: 'u1', playerRoleId: 'r1' };
+  const snap = (live) => ({ hasRole: (id) => live.includes(id) });
+
+  it('confessional + live role → BOTH the role and the user', async () => {
+    const principals = (await load())('confessional', item, snap(['r1']), []);
+    assert.deepEqual(principals.map(p => p.id), ['r1', 'u1']);
+  });
+
+  it('subs behave identically (unchanged)', async () => {
+    const principals = (await load())('subs', item, snap(['r1']), []);
+    assert.deepEqual(principals.map(p => p.id), ['r1', 'u1']);
+  });
+
+  it('no role linked → the user directly, once', async () => {
+    const principals = (await load())('confessional', { userId: 'u1', playerRoleId: null }, snap([]), []);
+    assert.deepEqual(principals.map(p => p.id), ['u1']);
+  });
+
+  it('dead role → user directly + a cleanup delta, never a dead-role overwrite', async () => {
+    const buffer = [];
+    const principals = (await load())('confessional', item, snap([]), buffer);
+    assert.deepEqual(principals.map(p => p.id), ['u1']);
+    assert.equal(buffer.length, 1, 'the dead playerRoleId pointer gets a clearing delta');
+  });
+
+  it('1on1 stays role-preferred — no extra user grant', async () => {
+    const principals = (await load())('oneonone', item, snap(['r1']), []);
+    assert.deepEqual(principals.map(p => p.id), ['r1']);
+  });
+});
+
 describe('🟢 Activate — classifyActivation, the confirm screen\'s data source (2026-08-16)', () => {
   // Real import — this is the exact function planActivate feeds the confirm card from.
   const load = async () => (await import('../src/channels/channelsHandlers.js')).classifyActivation;

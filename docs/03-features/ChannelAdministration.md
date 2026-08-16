@@ -135,7 +135,7 @@ The registry is flushed **every 5 items** (between Discord batches, never during
 
 | Channel | Player | Trusted Spectator | Host (`globalRoleAccess`) |
 |---|---|---|---|
-| 🎙️ Confessional | player role **XOR** user | ✅ read + react, **no posting** | ✅ |
+| 🎙️ Confessional | player role **AND** user (was XOR until 2026-08-16 — the role-only grant locked players out pre-Activate, since confessionals are made before the cast reveal) | ✅ read + react, **no posting** | ✅ |
 | 🗳️ Subs | player role **AND** user | ❌ | ✅ |
 | 🤝 1on1 | both players, role-preferred | ❌ | ✅ |
 
