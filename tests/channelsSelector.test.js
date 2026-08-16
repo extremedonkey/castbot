@@ -79,8 +79,8 @@ describe('Channels section — guided walkthrough layout (sections, 2026-08-16)'
 
   it('heading, 6 Sections with dividers BETWEEN, then the trailing management row', () => {
     const parts = build();
-    assert.deepEqual(parts.map(p => p.type), [10, 9, 14, 9, 14, 9, 14, 9, 14, 9, 14, 9, 14, 1],
-      'dividers interleave the Sections; Swap/Merge + Alliances park in a compact row (40-cap trade)');
+    assert.deepEqual(parts.map(p => p.type), [10, 9, 14, 9, 14, 9, 14, 9, 14, 9, 14, 9, 1],
+      'dividers interleave the Sections only; the trailing row follows the last Section directly — that missing divider IS the 40-cap slack');
     for (const s of parts.filter(p => p.type === 9)) {
       assert.equal(s.components.length, 1, 'Section takes exactly ONE child');
       assert.equal(s.components[0].type, 10);
@@ -130,10 +130,12 @@ describe('Channels section — guided walkthrough layout (sections, 2026-08-16)'
       ['castlist_swap_merge_default', `premium_locked_channels_alliances_${CID}`]);
   });
 
-  it('costs exactly 28 components — the tab sits at 40/40 around this, zero headroom', () => {
+  it('costs exactly 27 components — the tab sits at 40/40 around this, zero headroom', () => {
+    // 41/40 broke the tab SILENTLY on 2026-08-16 (Discord drops an over-limit PATCH with no
+    // interaction error) — this pin is the tripwire.
     const parts = build();
     const count = parts.reduce((n, p) => n + 1 + (p.components?.length || 0) + (p.accessory ? 1 : 0), 0);
-    assert.equal(count, 28);
+    assert.equal(count, 27);
   });
 });
 

@@ -108,8 +108,10 @@ export function buildChannelsSection(configId, { entitled = true, layout = 'row'
   // mid-game management actions (Swap/Merge · Alliances) — numbered Sections for those two
   // would blow Discord's 40-component cap. Bulk creation is a high-anxiety task; the
   // guidance (and the reminder that every action previews before running) is the point.
-  // Component cost: 28 (heading + 6 × [Section + Text + accessory] + 6 dividers + row + 2
-  // buttons) — buildChannelsView budgets around this.
+  // Component cost: 27 (heading + 6 × [Section + Text + accessory] + 5 dividers + row + 2
+  // buttons) — buildChannelsView budgets around this. NO divider before the trailing row:
+  // that single component is what keeps the tab at 40/40 (the 41st broke the tab silently —
+  // Discord drops an over-limit PATCH without an interaction error, 2026-08-16).
   const section = (text, button) => ({ type: 9, components: [{ type: 10, content: text }], accessory: button });
   const sections = [
     section('**1 · Create Player Roles** — one personal role per accepted player: the elimination kill switch. Safe to run early — nobody is given theirs until step 4.', BTN.createRoles),
@@ -122,7 +124,6 @@ export function buildChannelsSection(configId, { entitled = true, layout = 'row'
   return [
     { type: 10, content: '### ```#️⃣ Create Channels & Roles```\n-# The standard ORG channels and player roles, in the order a season runs them. Nothing changes on click — every action shows you exactly what it will do first.' },
     ...sections.flatMap((s, i) => (i === 0 ? [s] : [{ type: 14 }, s])),
-    { type: 14 },
     { type: 1, components: [BTN.swapMerge, BTN.alliances] }
   ];
 }
@@ -187,8 +188,11 @@ export async function buildChannelsView({ configId, guildId, playerData, seasonN
     ]
   };
 
-  const { countComponents } = await import('../../utils.js');
+  const { countComponents, validateComponentLimit } = await import('../../utils.js');
   countComponents([container], { verbosity: 'summary', label: `Channels - ${seasonName}` });
+  // Throws >40: an over-limit tab must fail LOUDLY (factory error message), not the silent
+  // Discord PATCH-drop that shipped 41/40 with a green suite on 2026-08-16.
+  validateComponentLimit([container], `Channels - ${seasonName}`);
 
   return { components: [container] };
 }
