@@ -62,6 +62,16 @@ export async function getAcceptedCast(guildId, configId, guild) {
   const rankOf = (app) => (app?.configId && ranks.has(app.configId)) ? ranks.get(app.configId) : LAST;
   const channelAdmin = playerData[guildId]?.channelAdmin || {};
 
+  // ONE bulk channel refresh, then cache-only lookups. The old per-app fallback
+  // (`guild.channels.fetch(channelId)` on a cache miss) was a SEQUENTIAL, guaranteed-404
+  // REST call for every DELETED application channel — the cache is gateway-complete, so a
+  // miss means deleted — with no negative caching, repeated on every render. On prod S16
+  // (a mid-season guild with a season of deleted app channels, roster spanning ALL seasons)
+  // that took the Channels tab past a MINUTE per click (2026-08-16). One GET /guilds/:id/
+  // channels refreshes everything; a miss after it IS a deleted channel ('' → deriveStatus
+  // falls back to the data-field signals, exactly as before).
+  await guild.channels.fetch().catch(() => {});
+
   // ── Collapse APPLICATIONS to PLAYERS first ──
   // One user can hold SEVERAL application records in a single season (verified on the test box:
   // 3 records, all the same userId). Channels are per-PLAYER, so counting per application would
@@ -74,9 +84,7 @@ export async function getAcceptedCast(guildId, configId, guild) {
     if (!channelId || !app?.userId) continue;
 
     // The LIVE name carries the ✖️/☑️ markers; app.channelName is stale (never updated on rename).
-    const liveChannelName = guild.channels.cache.get(channelId)?.name
-      || (await guild.channels.fetch(channelId).catch(() => null))?.name
-      || '';
+    const liveChannelName = guild.channels.cache.get(channelId)?.name || '';
 
     const status = deriveStatus(buildStatusSignals({ app, liveChannelName }));
     const prev = byUser.get(app.userId);
@@ -89,6 +97,15 @@ export async function getAcceptedCast(guildId, configId, guild) {
 
   const roster = [];
   const skipped = [];
+
+  // ONE bulk member fetch for the accepted set — the per-member REST fallback below is then
+  // a cold-cache safety net, not a sequential N-call default (same disease as the channel
+  // storm above, smaller dose: ~20 accepted × ~200ms was still seconds per render).
+  const acceptedIds = [...byUser.entries()]
+    .filter(([, v]) => ACCEPTED_STATUS_IDS.has(v.status.statusId))
+    .map(([userId]) => userId)
+    .filter((userId) => !guild.members.cache.has(userId));
+  if (acceptedIds.length) await guild.members.fetch({ user: acceptedIds }).catch(() => {});
 
   for (const [userId, { app, status, channelId, liveChannelName }] of byUser) {
     if (!ACCEPTED_STATUS_IDS.has(status.statusId)) {
