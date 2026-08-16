@@ -37,18 +37,18 @@ describe('Channels section — premium lock-swap (2026-08-16)', () => {
   const ids = (entitled) => buildChannelsSection(CID, { entitled })
     .find(c => c.type === 1).components.map(b => b.custom_id);
 
-  it('entitled guilds get the real custom_ids', () => {
+  it('entitled guilds get the real custom_ids, in season order', () => {
     assert.deepEqual(ids(true), [
-      `channels_confessionals_${CID}`, `channels_subs_${CID}`, `channels_1on1s_${CID}`,
-      `channels_alliances_${CID}`, 'castlist_swap_merge_default'
+      `channels_subs_${CID}`, `channels_confessionals_${CID}`, `channels_1on1s_${CID}`,
+      'castlist_swap_merge_default', `channels_alliances_${CID}`
     ]);
   });
 
   it('unentitled guilds lock-swap EXACTLY the four fabrication buttons — Swap/Merge stays live', () => {
     assert.deepEqual(ids(false), [
-      `premium_locked_channels_confessionals_${CID}`, `premium_locked_channels_subs_${CID}`,
-      `premium_locked_channels_1on1s_${CID}`, `premium_locked_channels_alliances_${CID}`,
-      'castlist_swap_merge_default'
+      `premium_locked_channels_subs_${CID}`, `premium_locked_channels_confessionals_${CID}`,
+      `premium_locked_channels_1on1s_${CID}`, 'castlist_swap_merge_default',
+      `premium_locked_channels_alliances_${CID}`
     ]);
   });
 
@@ -58,7 +58,7 @@ describe('Channels section — premium lock-swap (2026-08-16)', () => {
 
   it('locked buttons keep their label and emoji — the lock is the click, not the look', () => {
     const locked = buildChannelsSection(CID, { entitled: false }).find(c => c.type === 1).components;
-    assert.deepEqual(locked.map(b => b.label), ['Confessionals', 'Subs', '1 on 1s', 'Alliances', 'Swap/Merge']);
+    assert.deepEqual(locked.map(b => b.label), ['Subs', 'Confessionals', '1 on 1s', 'Swap/Merge', 'Alliances']);
     assert.ok(locked.every(b => b.emoji?.name));
   });
 
@@ -69,6 +69,57 @@ describe('Channels section — premium lock-swap (2026-08-16)', () => {
     for (const id of ['channels_roles_', 'channels_playerroles_', 'channels_manualrole_', 'channels_activate_']) {
       assert.match(src, new RegExp(`custom_id: \`${id}\\$\\{configId\\}\``), `${id} must render ungated`);
     }
+  });
+});
+
+describe('Channels section — guided walkthrough layout (sections, 2026-08-16)', () => {
+  // The Season tab's shape: bulk channel creation is high-anxiety, so each action gets a
+  // numbered Section (Text Display + button accessory) walking the season's actual order.
+  const build = (entitled = true) => buildChannelsSection(CID, { entitled, layout: 'sections' });
+
+  it('heading + 5 Sections, each ONE Text Display child + a button accessory', () => {
+    const parts = build();
+    assert.equal(parts[0].type, 10, 'heading leads');
+    const sections = parts.slice(1);
+    assert.equal(sections.length, 5);
+    for (const s of sections) {
+      assert.equal(s.type, 9);
+      assert.equal(s.components.length, 1, 'Section takes exactly ONE child');
+      assert.equal(s.components[0].type, 10);
+      assert.equal(s.accessory.type, 2);
+    }
+  });
+
+  it('numbered 1–5 in season order: Subs → Confessionals → 1on1s → Swap/Merge → Alliances', () => {
+    const sections = build().slice(1);
+    assert.deepEqual(sections.map(s => s.accessory.label), ['Subs', 'Confessionals', '1 on 1s', 'Swap/Merge', 'Alliances']);
+    sections.forEach((s, i) => assert.match(s.components[0].content, new RegExp(`^\\*\\*${i + 1} · `), `section ${i} numbering`));
+  });
+
+  it('the guidance tells the story: accept → pre-reveal → Marooning → tribes → game', () => {
+    const [subs, confessionals, oneOnOnes] = build().slice(1).map(s => s.components[0].content);
+    assert.match(subs, /accept their casting/);
+    assert.match(confessionals, /before the cast reveal/i);
+    assert.match(oneOnOnes, /Marooning/, 'the announcement sits between confessionals and 1on1s');
+  });
+
+  it('the intro de-fangs the click — nothing is created without the preview/confirm', () => {
+    assert.match(build()[0].content, /Nothing is created on click/);
+  });
+
+  it('lock-swap applies to the accessories; Swap/Merge stays live', () => {
+    const ids = build(false).slice(1).map(s => s.accessory.custom_id);
+    assert.deepEqual(ids, [
+      `premium_locked_channels_subs_${CID}`, `premium_locked_channels_confessionals_${CID}`,
+      `premium_locked_channels_1on1s_${CID}`, 'castlist_swap_merge_default',
+      `premium_locked_channels_alliances_${CID}`
+    ]);
+  });
+
+  it('costs exactly 16 components — the tab budgets ~38/40 around this', () => {
+    const parts = build();
+    const count = parts.reduce((n, p) => n + 1 + (p.components?.length || 0) + (p.accessory ? 1 : 0), 0);
+    assert.equal(count, 16);
   });
 });
 

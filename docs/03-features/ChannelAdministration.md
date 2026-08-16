@@ -30,12 +30,14 @@ The tab clones the Marooning tab's chrome and is expected to absorb the Maroonin
 
 ## 🪟 Two surfaces, one row (stage 1, 2026-08-08)
 
-The 💬 Channels row now renders in **two** places from **one** definition — `buildChannelsSection(configId)` in [`channelsView.js`](../../src/channels/channelsView.js):
+The #️⃣ Channels section renders in **two** places from **one** definition — `buildChannelsSection(configId, { entitled, layout })` in [`channelsView.js`](../../src/channels/channelsView.js) — in two layouts (2026-08-16), both in **season order** (Subs → Confessionals → 1on1s → Swap/Merge → Alliances):
 
-| Surface | Entry | How it gets a `configId` |
-|---|---|---|
-| Season Manager → 🔐 Channels | `season_channels_{configId}` | From the tab's own id |
-| ⭐ CastBot Premium | rendered inline in `MenuBuilder.buildPremiumMenu` | `mostRecentConfigId(playerData, guildId)` — **no seasons → the row is omitted**, not broken |
+| Surface | Entry | Layout | How it gets a `configId` |
+|---|---|---|---|
+| Season Manager → #️⃣ Channels | `season_channels_{configId}` | `sections` — numbered guided walkthrough, one Section (guidance text + button accessory) per action; bulk creation is high-anxiety, the text sells the order + the always-previews-first guarantee | From the tab's own id |
+| ⭐ CastBot Premium | rendered inline in `MenuBuilder.buildPremiumMenu` | `row` — compact 5-button ActionRow | `mostRecentConfigId(playerData, guildId)` — **no seasons → the row is omitted**, not broken |
+
+📨 **Msg Category** lives ONLY on Premium's 📢 Player Engagement row since 2026-08-16 (dropped from the Season tab; no user gate, premium lock-swap only).
 
 **Nothing about the custom_ids, handlers, planners or storage changed.** That is the point of stage 1: the same ids work from both surfaces, so there is no second code path to keep in sync. `tests/premiumMenu.test.js` fails if the Premium menu ever hardcodes one of the row's ids instead of calling the shared builder.
 

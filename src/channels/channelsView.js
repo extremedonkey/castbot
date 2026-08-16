@@ -68,7 +68,7 @@ export function rosterLines(members, { creating = null, limit = 25 } = {}) {
  *   custom_id (Stage 1 of the migration keeps ids untouched — see RaP 0885 / ChannelAdministration.md)
  * @returns {Array} [Text Display, ActionRow] — 7 components
  */
-export function buildChannelsSection(configId, { entitled = true } = {}) {
+export function buildChannelsSection(configId, { entitled = true, layout = 'row' } = {}) {
   // 💎 Premium (Reece 2026-08-16): the four channel-fabrication buttons lock-swap to
   // premium_locked_* for unentitled guilds — the Premium menu's convention, so the ONE
   // upsell handler (app.js premium_locked_) serves the click. Swap/Merge stays live (a
@@ -76,15 +76,40 @@ export function buildChannelsSection(configId, { entitled = true } = {}) {
   // buildChannelsView is deliberately free too. The Premium menu passes the default
   // (entitled: true) because lockPremiumComponents already locks its whole container.
   const gate = (id) => (entitled ? id : `premium_locked_${id}`);
+
+  // SEASON order (Reece 2026-08-16) — the buttons walk the timeline a season actually runs:
+  // subs as castings are accepted → confessionals pre-reveal → (🚣 Marooning announces) →
+  // 1on1s once tribes exist → swap/merge mid-game → alliances as the game runs.
+  const BTN = {
+    subs: { type: 2, custom_id: gate(`channels_subs_${configId}`), label: 'Subs', style: 2, emoji: { name: '🗳️' } },
+    confessionals: { type: 2, custom_id: gate(`channels_confessionals_${configId}`), label: 'Confessionals', style: 2, emoji: { name: '🎙️' } },
+    oneOnOnes: { type: 2, custom_id: gate(`channels_1on1s_${configId}`), label: '1 on 1s', style: 2, emoji: { name: '👥' } },
+    swapMerge: { type: 2, custom_id: 'castlist_swap_merge_default', label: 'Swap/Merge', style: 2, emoji: { name: '🔀' } },
+    alliances: { type: 2, custom_id: gate(`channels_alliances_${configId}`), label: 'Alliances', style: 2, emoji: { name: '🤝' } }
+  };
+
+  if (layout === 'row') {
+    // Compact — the Premium menu's shape (its container is already dense; the walkthrough
+    // guidance lives on the Season Manager tab, where the work is actually staged from).
+    return [
+      { type: 10, content: '### ```#️⃣ Channels```\n-# Bulk create / update the standard ORG channels.' },
+      { type: 1, components: [BTN.subs, BTN.confessionals, BTN.oneOnOnes, BTN.swapMerge, BTN.alliances] }
+    ];
+  }
+
+  // 'sections' — the Season tab's guided walkthrough: one Section (Text Display + button
+  // accessory) per action, numbered in season order. Bulk channel creation is a high-anxiety
+  // task; the guidance (and the reminder that every action previews before running) is the
+  // point. Component cost: 16 (heading + 5 × [Section + Text + accessory]) vs the row's 7 —
+  // buildChannelsView budgets for this.
+  const section = (text, button) => ({ type: 9, components: [{ type: 10, content: text }], accessory: button });
   return [
-    { type: 10, content: '### ```#️⃣ Channels```\n-# Bulk create / update the standard ORG channels.' },
-    { type: 1, components: [
-      { type: 2, custom_id: gate(`channels_confessionals_${configId}`), label: 'Confessionals', style: 2, emoji: { name: '🎙️' } },
-      { type: 2, custom_id: gate(`channels_subs_${configId}`), label: 'Subs', style: 2, emoji: { name: '🗳️' } },
-      { type: 2, custom_id: gate(`channels_1on1s_${configId}`), label: '1 on 1s', style: 2, emoji: { name: '👥' } },
-      { type: 2, custom_id: gate(`channels_alliances_${configId}`), label: 'Alliances', style: 2, emoji: { name: '🤝' } },
-      { type: 2, custom_id: 'castlist_swap_merge_default', label: 'Swap/Merge', style: 2, emoji: { name: '🔀' } }
-    ]}
+    { type: 10, content: '### ```#️⃣ Channels```\n-# The standard ORG channels, in the order a season runs them. Nothing is created on click — every action shows you exactly what it will do first.' },
+    section('**1 · Subs** — as players accept their casting: convert each application channel into their private player↔host subs channel (or create fresh ones).', BTN.subs),
+    section('**2 · Confessionals** — before the cast reveal: every player\'s private diary room. Players get access straight away; Trusted Spectators read along.', BTN.confessionals),
+    section('**3 · 1 on 1s** — after 🚣 Marooning announces the tribes: one private channel per pair of tribemates, so hosts can watch player-to-player chat.', BTN.oneOnOnes),
+    section('**4 · Swap/Merge** — at a tribe swap or merge: archives the old tribes as a castlist and moves everyone onto the new ones.', BTN.swapMerge),
+    section('**5 · Alliances** — as the game runs: secret channels for alliances. Their existence is season-deciding info — no spectators, generic names.', BTN.alliances)
   ];
 }
 
@@ -202,12 +227,10 @@ export async function buildChannelsView({ configId, guildId, playerData, seasonN
         { type: 2, custom_id: `channels_activate_${configId}`, label: 'Activate', style: 3, emoji: { name: '🟢' } }
       ]},
       { type: 14 },
-      ...buildChannelsSection(configId, { entitled }),
-      // Msg Category kept on the tab after leaving the shared row (2026-08-08) — the shared
-      // row's slot went to Swap/Merge, and Premium renders this button in 📢 Player Engagement.
-      { type: 1, components: [
-        { type: 2, custom_id: `channels_msg_${configId}`, label: 'Msg Category', style: 2, emoji: { name: '📨' } }
-      ]},
+      // Guided walkthrough layout (16 components — the tab sits ~38/40 with it; anything new
+      // here must re-count). Msg Category left the tab entirely 2026-08-16 (Reece) — it lives
+      // on ⭐ Premium's 📢 Player Engagement row only.
+      ...buildChannelsSection(configId, { entitled, layout: 'sections' }),
       { type: 14 },
       { type: 10, content: body + (lastRunLine ? `\n\n${lastRunLine}` : '') },
       { type: 14 },

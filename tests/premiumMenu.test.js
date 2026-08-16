@@ -202,7 +202,7 @@ describe('Premium menu clone — stays wired in menuBuilder.js', () => {
 });
 
 describe('Channels row — one definition, two surfaces (RaP 0885 stage 1)', () => {
-  it('buildChannelsSection returns the heading + the 5-button row (Swap/Merge replaced Msg Category 2026-08-08)', async () => {
+  it('buildChannelsSection (row layout, Premium) — heading + 5-button row in SEASON order', async () => {
     const { buildChannelsSection } = await import('../src/channels/channelsView.js');
     const section = buildChannelsSection('config_123_456');
 
@@ -211,25 +211,26 @@ describe('Channels row — one definition, two surfaces (RaP 0885 stage 1)', () 
     assert.equal(section[1].type, 1);
 
     const ids = section[1].components.map(b => b.custom_id);
+    // Season order since 2026-08-16: subs → confessionals → 1on1s → swap → alliances,
+    // matching the tab's numbered walkthrough so the two surfaces read the same.
     assert.deepEqual(ids, [
-      'channels_confessionals_config_123_456',
       'channels_subs_config_123_456',
+      'channels_confessionals_config_123_456',
       'channels_1on1s_config_123_456',
-      'channels_alliances_config_123_456',
       // A straight copy of the Castlist Hub button — deliberately NOT configId-keyed.
-      'castlist_swap_merge_default'
+      'castlist_swap_merge_default',
+      'channels_alliances_config_123_456'
     ]);
     // Discord's hard per-ActionRow cap — a sixth action needs a second row, not a squeeze.
     assert.ok(section[1].components.length <= 5);
   });
 
-  it('Msg Category survives on both surfaces after leaving the shared row', () => {
-    // Season Manager tab: its own row under the shared section.
+  it('Msg Category lives ONLY on Premium since 2026-08-16 — dropped from the Season tab', () => {
     const viewSource = readFileSync(
       path.join(__dirname, '..', 'src', 'channels', 'channelsView.js'), 'utf8');
-    assert.ok(/channels_msg_\$\{configId\}/.test(viewSource),
-      'the Channels tab lost its Msg Category button');
-    // Premium: hardcoded in 📢 Player Engagement, gated like the Channels section.
+    assert.ok(!/channels_msg_\$\{configId\}/.test(viewSource),
+      'the Channels tab grew a Msg Category button back');
+    // Premium: hardcoded in 📢 Player Engagement, premium-lock-swapped, no user gate.
     const menuSource = readFileSync(MENU_BUILDER_JS, 'utf8');
     const premiumSection = menuSource.slice(menuSource.search(PREMIUM_DEF), menuSource.indexOf('static buildReecesStuffMenu'));
     assert.ok(premiumSection.includes('Player Engagement'), 'Premium menu lost the 📢 Player Engagement section');
@@ -240,8 +241,8 @@ describe('Channels row — one definition, two surfaces (RaP 0885 stage 1)', () 
   it('the Season Manager tab renders the SAME builder (no forked copy)', async () => {
     const viewSource = readFileSync(
       path.join(__dirname, '..', 'src', 'channels', 'channelsView.js'), 'utf8');
-    // Since 2026-08-16 the tab passes { entitled } for its own premium lock-swap — still the shared builder.
-    assert.ok(/\.\.\.buildChannelsSection\(configId, \{ entitled \}\)/.test(viewSource),
+    // The tab uses the guided sections layout + its own premium lock-swap — still the shared builder.
+    assert.ok(/\.\.\.buildChannelsSection\(configId, \{ entitled, layout: 'sections' \}\)/.test(viewSource),
       'buildChannelsView stopped spreading buildChannelsSection — the surfaces can now drift');
   });
 });

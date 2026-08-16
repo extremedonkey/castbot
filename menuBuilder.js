@@ -260,8 +260,8 @@ export class MenuBuilder {
     // OPEN TO EVERY ADMIN since 2026-08-16 (Reece: a premium server's other admins saw no
     // Channels section — it was whitelist-gated). Access control is layered elsewhere: this
     // menu is ManageRoles-gated, unentitled guilds lock-swap every button to the upsell, and
-    // the channels handlers enforce ManageChannels|ManageRoles. The Season Manager 🔐 tab
-    // stays whitelist-hidden (dev surface).
+    // the channels handlers enforce ManageChannels|ManageRoles. The Season Manager #️⃣ tab is
+    // open to everyone too (2026-08-16) — same builder, guided 'sections' layout there.
     //
     // Season-less surface: the buttons' handlers all parse a configId off the custom_id, so one
     // is resolved lazily here by recency. No seasons → no configId → the section is omitted
@@ -300,7 +300,8 @@ export class MenuBuilder {
       ...channelsSection,
       // 📢 Player Engagement — host→player broadcast tools (2026-08-08): Category Post moved
       // out of Special Features; Msg Category moved out of the shared Channels row (its slot
-      // went to Swap/Merge) and is whitelist-gated like the Channels section above.
+      // went to Swap/Merge) and since 2026-08-16 lives ONLY here — dropped from the Season
+      // tab. No user-ID gate; unentitled guilds premium-lock-swap it like the rest of the menu.
       { type: 10, content: `### \`\`\`📢 Player Engagement\`\`\`` },
       { type: 1, components: [
         { type: 2, custom_id: 'category_post', label: 'Category Post', style: 2, emoji: { name: '🖼️' } },
