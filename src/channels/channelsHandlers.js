@@ -18,7 +18,7 @@ import {
 } from './channelAdminConfig.js';
 import {
   channelName, assignChannelNames, buildOverwrites, preflightBudget, planCategoryBuckets, pairKey,
-  planSubsPlacement, sanitizeCategoryBase, formatTribeChannelName
+  planSubsPlacement, sanitizeCategoryBase, formatTribeChannelName, viewOnlyOverwrites
 } from './channelPlan.js';
 import {
   snapshotGuild, checkBotPermissions, ensureCategory, ensureChannel,
@@ -898,6 +898,43 @@ export async function planOneOnOnes({ mode, configId, guildId, userId, client, v
   const node = playerData[guildId]?.channelAdmin || {};
   const registry = node.oneOnOnes || {};
 
+  // ── Archive (view-only) ─────────────────────────────────────────────────────
+  // REGISTRY-driven, never castlist-derived (Reece 2026-08-17): each recorded pair carries the
+  // tribeRoleId it was created under, so archiving still works after a swap has rewritten the
+  // castlist — exactly when hosts archive. Runs BEFORE getTribePairs, which would error out on
+  // a castlist that no longer contains the old tribes. Empty selection = every recorded pair.
+  if (mode === 'archive') {
+    const wanted = values?.length ? new Set(values) : null;
+    const targets = [];
+    for (const [pk, rec] of Object.entries(registry)) {
+      if (!rec?.channelId || !snapshot.channels.get(rec.channelId)) continue;
+      if (wanted && !wanted.has(rec.tribeRoleId)) continue;
+      targets.push({ pairKey: pk, channelId: rec.channelId, name: snapshot.channels.get(rec.channelId)?.name || rec.name, tribeRoleId: rec.tribeRoleId });
+    }
+    if (!targets.length) return err('No recorded 1on1 channels for the selected tribes.');
+
+    const perTribe = new Map();
+    for (const t of targets) {
+      const label = guild.roles.cache.get(t.tribeRoleId)?.name || 'former tribe (role deleted)';
+      perTribe.set(label, (perTribe.get(label) || 0) + 1);
+    }
+
+    const token = stashPlan(userId, { type: 'oneonone_archive', configId, guildId, channels: targets });
+    return buildConfirmScreen({
+      token,
+      configId,
+      title: `🗃️ Archive ${targets.length} 1on1 channel${targets.length > 1 ? 's' : ''}?`,
+      lines: [
+        '> Channels go **view-only**: players can read and react but no longer send messages.',
+        '> Hosts keep full access. Nothing is deleted.',
+        ...[...perTribe.entries()].map(([name, n]) => `> **${name}** — ${n} pair channel${n > 1 ? 's' : ''}`),
+        '',
+        '-# Registry-driven: works even after a swap has changed the castlist. Safe to re-run.'
+      ],
+      confirmLabel: `Archive ${targets.length} channel${targets.length > 1 ? 's' : ''}`
+    });
+  }
+
   const tribes = await getTribePairs(guildId, values, client, guild);
   if (!tribes.length) return err('No tribes found. Add tribes to the Active Castlist first (/menu → Castlist Manager → Active Castlist).');
 
@@ -1030,6 +1067,7 @@ export async function executePlan({ plan, guildId, userId, client, interactionTo
     else if (plan.type === 'player_roles') summary = await execPlayerRoles({ plan, guild, snapshot, buffer, flush, progress });
     else if (plan.type === 'activate') summary = await execActivate({ plan, guild, buffer, flush, progress });
     else if (plan.type === 'tribe_channels') summary = await execTribeChannels({ plan, guild, snapshot, playerData, buffer, flush, progress });
+    else if (plan.type === 'oneonone_archive') summary = await execArchiveOneOnOnes({ plan, guild, playerData, progress });
     else if (plan.type === 'convert') summary = await execConvert({ plan, guild, snapshot, playerData, buffer, flush, progress });
     else if (plan.type === 'oneonone') summary = await execOneOnOnes({ plan, guild, snapshot, playerData, buffer, flush, progress });
     else summary = await execCreate({ plan, guild, snapshot, playerData, buffer, flush, progress });
@@ -1336,6 +1374,39 @@ async function execTribeChannels({ plan, guild, snapshot, playerData, buffer, fl
   });
 }
 
+/**
+ * 🗃️ Archive 1on1s exec — ONE permissionOverwrites.set per channel via viewOnlyOverwrites
+ * (channelPlan.js): SendMessages moves allow→deny on every non-host overwrite. Editing the
+ * existing principal overwrites is load-bearing — a member-level allow beats an @everyone
+ * deny, so a blanket deny would silently fail for user-granted pairs. Discord-only mutation
+ * (no registry writes: the channel's perms ARE the archive state; idempotent re-runs).
+ */
+async function execArchiveOneOnOnes({ plan, guild, playerData, progress }) {
+  const { roleAccessEntries } = await accessContext(guild, playerData);
+  const hostIds = new Set(roleAccessEntries.map((e) => e.id));
+  const SEND = PermissionFlagsBits.SendMessages;
+
+  return await runPacedJob({
+    items: plan.channels,
+    pace: PACE_SEND,
+    progress,
+    step: async (t) => {
+      const ch = guild.channels.cache.get(t.channelId) || (await guild.channels.fetch(t.channelId).catch(() => null));
+      if (!ch) return { ok: false, error: `#${t.name} — channel no longer exists` };
+      try {
+        const current = [...ch.permissionOverwrites.cache.values()]
+          .map((ow) => ({ id: ow.id, type: ow.type, allow: ow.allow.bitfield, deny: ow.deny.bitfield }));
+        const next = viewOnlyOverwrites(current, hostIds, SEND);
+        const unchanged = current.every((ow, i) => ow.allow === next[i].allow && ow.deny === next[i].deny);
+        if (!unchanged) await ch.permissionOverwrites.set(next, 'CastBot 1on1 archive — view only');
+        return { ok: true, skipped: unchanged, label: `#${ch.name}` };
+      } catch (e) {
+        return { ok: false, error: `#${t.name} — ${e.message}` };
+      }
+    }
+  });
+}
+
 async function execOneOnOnes({ plan, guild, snapshot, playerData, buffer, flush, progress }) {
   const { everyoneId, roleAccessEntries } = await accessContext(guild, playerData);
   const registry = playerData[plan.guildId]?.channelAdmin?.oneOnOnes || {};
@@ -1436,7 +1507,7 @@ function planAction(plan) {
   if (plan.type?.startsWith('alliance_')) return ACTIONS.ALLIANCES;
   // Activate shares the player-roles lock: creating and assigning the same roles must not interleave.
   if (plan.type === 'player_roles' || plan.type === 'activate') return ACTIONS.PLAYER_ROLES;
-  if (plan.type === 'oneonone' || plan.kind === 'oneonone') return ACTIONS.ONE_ON_ONES;
+  if (plan.type === 'oneonone' || plan.type === 'oneonone_archive' || plan.kind === 'oneonone') return ACTIONS.ONE_ON_ONES;
   if (plan.type === 'tribe_channels') return ACTIONS.TRIBE_CHANNELS;
   if (plan.kind === 'subs') return ACTIONS.SUBS;
   return ACTIONS.CONFESSIONALS;
@@ -1450,6 +1521,7 @@ function planTitle(plan) {
   if (plan.type === 'activate') return '🟢 Activating player roles';
   if (plan.type === 'convert') return '🗳️ Converting applications to subs';
   if (plan.type === 'oneonone') return '👥 Creating 1on1 channels';
+  if (plan.type === 'oneonone_archive') return '🗃️ Archiving 1on1 channels';
   if (plan.type === 'tribe_channels') return '🏝️ Creating tribe channels';
   return plan.kind === 'subs' ? '🗳️ Creating subs channels' : '🎙️ Creating confessionals';
 }
@@ -1494,10 +1566,11 @@ function etaRefusal(budget, configId) {
 function renderSummary(plan, s) {
   const isBroadcast = plan.type === 'broadcast';
   const isActivate = plan.type === 'activate';
-  const verb = isBroadcast ? 'posted' : (s.deleted ? 'deleted' : (isActivate ? 'assigned' : 'created/updated'));
+  const isArchive = plan.type === 'oneonone_archive';
+  const verb = isBroadcast ? 'posted' : (s.deleted ? 'deleted' : (isActivate ? 'assigned' : (isArchive ? 'archived (view-only)' : 'created/updated')));
   const lines = [
     `> ✅ **${s.created}** ${verb}`,
-    ...(isBroadcast || isActivate ? [] : [`> ⏭️ **${s.skipped}** ${s.deleted ? 'protected (skipped)' : 'already correct'}`]),
+    ...(isBroadcast || isActivate ? [] : [`> ⏭️ **${s.skipped}** ${s.deleted ? 'protected (skipped)' : (isArchive ? 'already view-only' : 'already correct')}`]),
     ...(s.failed ? [`> ❌ **${s.failed}** failed`] : []),
     ...(s.aborted ? ['> ⚠️ Aborted early'] : []),
     ...(s.protectedIds?.length ? ['', '-# The channel you ran this from was skipped — delete it manually or re-run from elsewhere.'] : []),
@@ -1509,7 +1582,9 @@ function renderSummary(plan, s) {
       ? '-# ⚠️ Already sent — running this again posts **another** copy to every channel.'
       : (isActivate
         ? '-# Roles are now visible on player profiles. To remove one (the elimination kill switch), edit the role in Discord.'
-        : '-# Safe to re-run: existing channels are reused, not duplicated.')
+        : (isArchive
+          ? '-# Players can read but no longer post. Hosts keep full access. Safe to re-run.'
+          : '-# Safe to re-run: existing channels are reused, not duplicated.'))
   ];
   return {
     components: [{

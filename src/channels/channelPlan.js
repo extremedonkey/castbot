@@ -291,6 +291,23 @@ export function planCategoryBuckets(items, { baseName, capacity = MAX_CHANNELS_P
  * this is NOT channel-slugging — just whitespace collapse + a length cap that leaves room for
  * overflow suffixes (' 2') and tribe-name prefixes under Discord's 100-char channel-name limit.
  */
+/**
+ * 🗃️ Archive — transform a channel's permission overwrites to view-only: SendMessages moves
+ * from allow to deny on EVERY overwrite except the host-access entries. Editing the existing
+ * principal overwrites is the only correct mechanism: a member-level SendMessages ALLOW beats
+ * any @everyone deny, so a blanket deny would silently not work for user-granted pairs.
+ * Pure — exported for tests. Bitfields are BigInts.
+ * @param {Array<{id: string, type: number, allow: bigint, deny: bigint}>} overwrites
+ * @param {Set<string>} hostIds - overwrite ids left untouched (hosts keep posting)
+ * @param {bigint} sendBit - PermissionFlagsBits.SendMessages
+ * @returns {Array<{id: string, type: number, allow: bigint, deny: bigint}>}
+ */
+export function viewOnlyOverwrites(overwrites, hostIds, sendBit) {
+  return (overwrites || []).map((ow) => hostIds.has(ow.id)
+    ? ow
+    : { ...ow, allow: ow.allow & ~sendBit, deny: ow.deny | sendBit });
+}
+
 export function sanitizeCategoryBase(input, fallback = 'Subs') {
   const s = String(input || '').replace(/\s+/g, ' ').trim().slice(0, 60);
   return s || fallback;

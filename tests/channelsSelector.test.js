@@ -139,6 +139,58 @@ describe('Channels section — guided walkthrough layout (sections, 2026-08-16)'
   });
 });
 
+describe('🗃️ Archive 1on1s — view-only transform + registry-driven targeting (2026-08-17)', () => {
+  const SEND = 1n << 11n; // PermissionFlagsBits.SendMessages
+
+  it('viewOnlyOverwrites (real): SendMessages moves allow→deny on every non-host overwrite', async () => {
+    const { viewOnlyOverwrites } = await import('../src/channels/channelPlan.js');
+    const VIEW = 1n << 10n;
+    const out = viewOnlyOverwrites([
+      { id: 'everyone', type: 0, allow: 0n, deny: VIEW },
+      { id: 'player', type: 1, allow: VIEW | SEND, deny: 0n },
+      { id: 'hostRole', type: 0, allow: VIEW | SEND, deny: 0n }
+    ], new Set(['hostRole']), SEND);
+    assert.deepEqual(out[0], { id: 'everyone', type: 0, allow: 0n, deny: VIEW | SEND });
+    assert.deepEqual(out[1], { id: 'player', type: 1, allow: VIEW, deny: SEND }, 'member-level allow is the one that MUST be stripped');
+    assert.deepEqual(out[2], { id: 'hostRole', type: 0, allow: VIEW | SEND, deny: 0n }, 'hosts keep posting');
+  });
+
+  it('viewOnlyOverwrites is idempotent — re-archiving changes nothing', async () => {
+    const { viewOnlyOverwrites } = await import('../src/channels/channelPlan.js');
+    const once = viewOnlyOverwrites([{ id: 'p', type: 1, allow: SEND, deny: 0n }], new Set(), SEND);
+    assert.deepEqual(viewOnlyOverwrites(once, new Set(), SEND), once);
+  });
+
+  it('targets come from the REGISTRY, not the castlist — swap-resilient (replica of the plan branch)', () => {
+    // Mirrors planOneOnOnes mode === 'archive': recorded tribeRoleId is the filter key, so a
+    // tribe long gone from the default castlist still selects its old pair channels.
+    const registry = {
+      p1: { channelId: 'c1', tribeRoleId: 'rOldTribe', name: 'a-b' },
+      p2: { channelId: 'c2', tribeRoleId: 'rOtherTribe', name: 'c-d' },
+      p3: { channelId: 'cDead', tribeRoleId: 'rOldTribe', name: 'e-f' }, // deleted in Discord
+      p4: { tribeRoleId: 'rOldTribe' } // never recorded a channel
+    };
+    const live = new Set(['c1', 'c2']);
+    const pick = (values) => {
+      const wanted = values?.length ? new Set(values) : null;
+      return Object.values(registry)
+        .filter((r) => r?.channelId && live.has(r.channelId) && (!wanted || wanted.has(r.tribeRoleId)))
+        .map((r) => r.channelId);
+    };
+    assert.deepEqual(pick(['rOldTribe']), ['c1'], 'old tribe still selectable; dead channels skipped');
+    assert.deepEqual(pick([]), ['c1', 'c2'], 'empty selection = every recorded pair');
+  });
+
+  it('the 1on1s modal offers archive as the MIDDLE action, within Discord limits', async () => {
+    const { buildOneOnOnesModal } = await import('../src/channels/channelsView.js');
+    const options = buildOneOnOnesModal({ configId: CID }).components
+      .find(l => l.component.custom_id === 'mode').component.options;
+    assert.deepEqual(options.map(o => o.value), ['create', 'archive', 'delete']);
+    assert.match(options[1].label, /Archive 1on1s/);
+    for (const o of options) assert.ok([...o.description].length <= 100, o.description);
+  });
+});
+
 describe('🗳️ per_tribe subs — mergeTribeSources (real import, 2026-08-17 pre-reveal fix)', () => {
   // The bug: private marooning tribes have NO castlist link and NO assigned roles, so the old
   // default-castlist-only source found nothing and every player fell to the single category.

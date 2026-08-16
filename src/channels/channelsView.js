@@ -602,6 +602,8 @@ export function buildOneOnOnesModal({ configId, defaultTribeRoleIds = [], tribeN
           required: true,
           options: [
             { label: 'Create / update 1on1s', value: 'create', description: 'Safe to re-run — existing pair channels are left alone', default: true },
+            // Registry-driven (works after a swap has rewritten the castlist) — see planOneOnOnes.
+            { label: '🗃️ Archive 1on1s', value: 'archive', description: 'Sets the selected tribes\' pair channels to view-only — you will confirm first' },
             { label: '⚠️ Delete 1on1s', value: 'delete', description: 'Deletes the selected tribes\' pair channels — you will confirm first' }
           ]
         }
