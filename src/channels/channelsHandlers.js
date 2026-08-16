@@ -144,6 +144,119 @@ export async function applyManualRole({ configId, guildId, userId, client, field
   return await handleChannelsTab({ configId, guildId, userId, client });
 }
 
+/**
+ * Pure — invert players[*].playerRoleId into roleId → [userIds]. An ARRAY per role because a
+ * mis-click in Manually Link can point two players at one role; Activate must then assign
+ * both (and the summary makes the duplication visible) rather than silently picking one.
+ * Exported for tests.
+ */
+export function invertPlayerRoles(players) {
+  const byRole = new Map();
+  for (const [userId, p] of Object.entries(players || {})) {
+    if (!p?.playerRoleId) continue;
+    if (!byRole.has(p.playerRoleId)) byRole.set(p.playerRoleId, []);
+    byRole.get(p.playerRoleId).push(userId);
+  }
+  return byRole;
+}
+
+/**
+ * 🟢 Activate button → the modal (or an explanation when there is nothing to activate).
+ * Options are resolved HERE (live roles + member names) because a modal can't filter a
+ * Role Select — the String Select's options ARE the linked roles.
+ */
+export async function openActivateModal({ configId, guildId, client }) {
+  const err = (msg) => ({ components: [{ type: 17, accent_color: 0xf39c12, components: [
+    { type: 10, content: `## 🟢 Nothing to activate\n${msg}` }
+  ]}] });
+
+  const playerData = await loadPlayerData();
+  const byRole = invertPlayerRoles(playerData[guildId]?.players);
+  if (!byRole.size) return err('No player roles are linked yet — run 🎭 Auto Create or 🔗 Manually Link first.');
+
+  const guild = await client.guilds.fetch(guildId);
+  const allIds = [...byRole.values()].flat();
+  await guild.members.fetch({ user: allIds }).catch(() => {});
+
+  const options = [];
+  for (const [roleId, userIds] of byRole) {
+    const role = guild.roles.cache.get(roleId);
+    if (!role) continue; // deleted since linking — resolvePrincipal self-heals it on the next run
+    for (const userId of userIds) {
+      const member = guild.members.cache.get(userId);
+      options.push({
+        roleId,
+        playerName: member?.displayName || role.name,
+        roleName: role.name
+      });
+    }
+  }
+  if (!options.length) return err('Every linked role has been deleted in Discord — re-run 🎭 Auto Create.');
+
+  options.sort((a, b) => a.playerName.localeCompare(b.playerName));
+  const { buildActivateModal } = await import('./channelsView.js');
+  return { type: 9, data: buildActivateModal({ configId, options, hidden: Math.max(0, options.length - 25) }) };
+}
+
+/**
+ * 🟢 Activate submit — ASSIGNS the selected linked roles to their players. Discord-only
+ * mutation (no storage writes → no lock); sequential adds, per-player failures reported,
+ * never aborting the batch. This closes ChannelAdministration.md's "role nobody holds" gap.
+ */
+export async function applyActivateRoles({ configId, guildId, userId, client, fields }) {
+  const picked = fields.activate_roles || [];
+  if (!picked.length) {
+    return { components: [{ type: 17, accent_color: 0xe74c3c, components: [
+      { type: 10, content: '## ❌ Nothing selected\nPick at least one player role to assign.' }
+    ]}] };
+  }
+
+  const playerData = await loadPlayerData();
+  const byRole = invertPlayerRoles(playerData[guildId]?.players);
+  const guild = await client.guilds.fetch(guildId);
+  await guild.members.fetch({ user: [...byRole.values()].flat() }).catch(() => {});
+
+  const ok = [];
+  const failed = [];
+  for (const roleId of picked) {
+    const role = guild.roles.cache.get(roleId);
+    const userIds = byRole.get(roleId) || [];
+    if (!role) { failed.push(`> ❌ \`${roleId}\` — role no longer exists`); continue; }
+    if (!userIds.length) { failed.push(`> ❌ @${role.name} — no longer linked to a player`); continue; }
+    for (const uid of userIds) {
+      const member = guild.members.cache.get(uid) || (await guild.members.fetch(uid).catch(() => null));
+      if (!member) { failed.push(`> ❌ @${role.name} — player left the server`); continue; }
+      if (member.roles.cache.has(roleId)) { ok.push(`> ✅ ${member.displayName} — @${role.name} *(already assigned)*`); continue; }
+      try {
+        await member.roles.add(roleId, `CastBot player-role activation by ${userId}`);
+        ok.push(`> ✅ ${member.displayName} — @${role.name}`);
+      } catch (e) {
+        // Most common cause: the role sits ABOVE CastBot's highest role.
+        failed.push(`> ❌ ${member.displayName} — @${role.name} (${e.message?.includes('Missing Permissions') ? 'role is above CastBot in the role list' : e.message})`);
+      }
+    }
+  }
+  console.log(`🟢 [CHANNEL_ADMIN] Activate: ${ok.length} assigned, ${failed.length} failed by ${userId} in guild ${guildId}`);
+
+  return { components: [{
+    type: 17,
+    accent_color: failed.length ? 0xf39c12 : 0x2ecc71,
+    components: [{
+      type: 10,
+      content: [
+        `## 🟢 Player roles activated`,
+        `**${ok.length}** assigned${failed.length ? ` · **${failed.length}** failed` : ''}`,
+        '',
+        ...ok.slice(0, 20),
+        ...(ok.length > 20 ? [`> -# …and ${ok.length - 20} more`] : []),
+        ...failed.slice(0, 10),
+        '',
+        '-# The roles are now visible on player profiles. Removing a role (the elimination kill switch) is done in Discord.'
+      ].join('\n')
+    }]
+  }]};
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 📨 Msg Category — broadcast composer
 // ─────────────────────────────────────────────────────────────────────────────

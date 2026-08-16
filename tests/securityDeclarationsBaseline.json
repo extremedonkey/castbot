@@ -240,7 +240,6 @@
   "app.js::timer_post",
   "app.js::tips_nav",
   "app.js::tips_shared_nav",
-  "app.js::tribe_add_modal|*${origin ? ",
   "app.js::tribe_edit_modal|*|*",
   "app.js::whisper_player_select",
   "app.js::whisper_read",

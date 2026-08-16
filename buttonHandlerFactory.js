@@ -2009,6 +2009,14 @@ export const BUTTON_REGISTRY = {
     category: 'castlist',
     requiresModal: true
   },
+  'tribe_existing_button_*': {
+    label: 'Existing Tribe',
+    description: 'Register an existing Discord role as a tribe',
+    emoji: '➕',
+    style: 'Secondary',
+    category: 'castlist',
+    requiresModal: true
+  },
   'castlist_create_season': {
     label: 'From Season',
     description: 'Create castlist from season applications',

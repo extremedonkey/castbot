@@ -587,6 +587,15 @@ describe('New Tribe — context-aware origin routing', () => {
     const id = buildModalCustomId('default', 'marooning_config_1783203296677_391415444084490240');
     assert.ok(id.length < 100, `len ${id.length}`);
   });
+
+  it('Existing Tribe (tribe_existing_modal|) shares the routing contract — origin in the same slot', () => {
+    // Different prefix, same |castlistId|origin shape: the submit's origin parse (split('|')[2])
+    // must land on Marooning exactly like tribe_add_modal's. See tests/existingTribe.test.js for
+    // the modal itself.
+    const id = 'tribe_existing_modal|default|marooning_config_1783203296677_391415444084490240';
+    assert.deepEqual(routeTribeAddSubmit(id), { target: 'marooning', configId: 'config_1783203296677_391415444084490240' });
+    assert.ok(id.length < 100, `len ${id.length}`);
+  });
 });
 
 describe('Marooning — deleted Discord roles are gracefully ignored', () => {

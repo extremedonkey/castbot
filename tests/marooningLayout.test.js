@@ -43,6 +43,7 @@ function buildMarooningContainer({ configId = CONFIG_ID, body = '-# No applicant
       { type: 10, content: `### \`\`\`🏕️ Tribes\`\`\`\n${TRIBES_INTRO}` },
       { type: 1, components: [
         { type: 2, custom_id: `tribe_add_button|default|marooning_${configId}`, label: 'New Tribe', style: 2, emoji: { name: '🏕️' } },
+        { type: 2, custom_id: `tribe_existing_button|default|marooning_${configId}`, label: 'Existing Tribe', style: 2, emoji: { name: '➕' } },
         { type: 2, custom_id: `marooning_draft_tribes_${configId}`, label: 'Draft Tribes', style: 2, emoji: { name: '💭' }, disabled: !canDraft }
       ]},
       { type: 10, content: tribesLine },
@@ -150,6 +151,14 @@ describe('Marooning buttons — Add Cast left of Bulk Offers', () => {
     const newTribe = allButtons(c).find(b => b.label === 'New Tribe');
     assert.equal(newTribe.custom_id, `tribe_add_button|default|marooning_${CONFIG_ID}`);
     assert.equal(newTribe.custom_id.split('|')[2], `marooning_${CONFIG_ID}`);
+  });
+
+  it('puts Existing Tribe between New Tribe and Draft Tribes, with the same origin', () => {
+    const row = c.components.find(x => x.type === 1 && x.components.some(b => b.label === 'New Tribe'));
+    assert.deepEqual(row.components.map(b => b.label), ['New Tribe', 'Existing Tribe', 'Draft Tribes']);
+    const existing = row.components[1];
+    assert.equal(existing.custom_id, `tribe_existing_button|default|marooning_${CONFIG_ID}`);
+    assert.equal(existing.custom_id.split('|')[2], `marooning_${CONFIG_ID}`, 'origin routes the submit refresh back to Marooning');
   });
 });
 

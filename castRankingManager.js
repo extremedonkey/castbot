@@ -1688,6 +1688,10 @@ export async function buildMarooningView({ configId, guildId, playerData, season
         // does double duty: the modal SUBMIT refreshes THIS Marooning message, AND the tribe is created
         // PRIVATELY (no members assigned, not linked to a castlist) — see app.js tribe_add_button/modal.
         { type: 2, custom_id: `tribe_add_button|default|marooning_${configId}`, label: 'New Tribe', style: 2, emoji: { name: '🏕️' } },
+        // Existing Tribe = same modal family with a Role Select instead of Tribe Name: registers a
+        // role that already exists (hand-made, or already a tribe) — never creates one, and only
+        // recolors it when a color was actively chosen. Submit: registerExistingTribe below.
+        { type: 2, custom_id: `tribe_existing_button|default|marooning_${configId}`, label: 'Existing Tribe', style: 2, emoji: { name: '➕' } },
         { type: 2, custom_id: `marooning_draft_tribes_${configId}`, label: 'Draft Tribes', style: 2, emoji: { name: '💭' }, disabled: !canDraft }
       ]},
       { type: 10, content: tribesLine },
@@ -1714,6 +1718,88 @@ export async function renderMarooningRejectsToggle(customId, guildId, userId, gu
   const configId = customId.replace(showRejects ? 'marooning_show_rejects_' : 'marooning_hide_rejects_', '');
   const seasonName = playerData[guildId]?.applicationConfigs?.[configId]?.seasonName || `Season ${configId}`;
   return buildMarooningView({ configId, guildId, playerData, seasonName, guild, userId, showRejects });
+}
+
+/**
+ * ➕ Existing Tribe (Marooning) — register an ALREADY-EXISTING Discord role as a private tribe.
+ * The tribe_add_modal twin minus role creation: the role is only EDITED (color) when the host
+ * actively chose one (preset from the list, or Custom + a valid hex). Marooning-only, so the
+ * tribe is always private — but unlike tribe_add_modal's unconditional castlist strip, prior
+ * associations are PRESERVED: the selected role may already be a tribe on a public castlist,
+ * and re-registering it must not un-publish it (nor may populateTribeData append 'default'
+ * and silently publish it).
+ *
+ * Discord work (role fetch + recolor) happens BEFORE the storage lock; only the
+ * load→mutate→save cycle runs inside it (withStorageLock rules — nothing slow in the lock).
+ *
+ * @param {Object} p
+ * @param {string} p.guildId
+ * @param {string} p.roleId - from the modal's Role Select (tribe_role)
+ * @param {string} p.emojiInput - raw Tribe Emoji field value
+ * @param {string} p.colorPreset - tribe_color_preset value ('' | '#RRGGBB' | 'custom')
+ * @param {string} p.colorCustom - tribe_color_custom raw text
+ * @param {Object} p.client - Discord client
+ * @returns {Promise<{ok: true, roleName: string, recolored: boolean} | {ok: false, message: string}>}
+ */
+export async function registerExistingTribe({ guildId, roleId, emojiInput, colorPreset, colorCustom, client }) {
+  const { populateTribeData, validateHexColor, hexToColorInt } = await import('./utils/tribeDataUtils.js');
+  const { withStorageLock, savePlayerData } = await import('./storage.js');
+
+  const guild = await client.guilds.fetch(guildId);
+  const role = await guild.roles.fetch(roleId).catch(() => null);
+  if (!role) return { ok: false, message: '❌ That role no longer exists — refresh and try again.' };
+  if (role.id === guildId) return { ok: false, message: '❌ @everyone can\'t be a tribe — pick the tribe\'s own role.' };
+  if (role.managed) return { ok: false, message: `❌ **${role.name}** is managed by an integration (bot/booster role), so it can't be assigned to players or used as a tribe.` };
+
+  // Same color resolution as tribe_add_modal: preset ≠ custom → preset; custom + valid hex → that; else null.
+  let processedColor = null;
+  if (colorPreset === 'custom' && colorCustom?.trim()) {
+    processedColor = validateHexColor(colorCustom.trim());
+  } else if (colorPreset && colorPreset !== 'custom') {
+    processedColor = colorPreset.toUpperCase();
+  }
+
+  // Same emoji validation as tribe_add_modal.
+  let processedEmoji = null;
+  if (emojiInput) {
+    const trimmed = emojiInput.trim();
+    const customEmojiMatch = trimmed.match(/<a?:(\w+):(\d{17,19})>/);
+    if (customEmojiMatch) {
+      processedEmoji = trimmed;
+    } else if (trimmed.length <= 8 && /[^\x00-\x7F]/u.test(trimmed)) {
+      processedEmoji = trimmed;
+    }
+  }
+
+  // Recolor ONLY on an active choice; no color picked = role untouched. Non-fatal — the bot may
+  // sit below a hand-made role, and the tribe registration is still worth completing.
+  let recolored = false;
+  if (processedColor) {
+    try {
+      await role.edit({ color: hexToColorInt(processedColor), reason: 'CastBot tribe color update (Existing Tribe)' });
+      recolored = true;
+    } catch (err) {
+      console.warn(`[EXISTING TRIBE] Recolor of "${role.name}" (${roleId}) failed (bot below role?): ${err.message}`);
+    }
+  }
+
+  await withStorageLock(async () => {
+    const playerData = await loadPlayerData();
+    if (!playerData[guildId]) playerData[guildId] = {};
+    if (!playerData[guildId].tribes) playerData[guildId].tribes = {};
+    const existing = playerData[guildId].tribes[roleId];
+    const tribe = populateTribeData(existing || {}, role, 'default', 'default');
+    // Restore associations EXACTLY: brand-new entry → none (private); already a tribe → unchanged.
+    tribe.castlistIds = existing?.castlistIds || [];
+    if (existing?.castlist) tribe.castlist = existing.castlist; else delete tribe.castlist;
+    if (processedEmoji) tribe.emoji = processedEmoji;
+    if (processedColor) tribe.color = processedColor;
+    playerData[guildId].tribes[roleId] = tribe;
+    await savePlayerData(playerData);
+  });
+
+  console.log(`[EXISTING TRIBE] 🔒 Registered existing role "${role.name}" (${roleId}) as private tribe${recolored ? ' + recolored' : ''}`);
+  return { ok: true, roleName: role.name, recolored };
 }
 
 /**

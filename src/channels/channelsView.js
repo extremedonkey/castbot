@@ -177,13 +177,16 @@ export async function buildChannelsView({ configId, guildId, playerData, seasonN
       seasonManagerHeader('channels', seasonName),
       buildSeasonNavRow(configId, 'channels', userId),
       { type: 14 },
-      { type: 10, content: '### ```🔐 Roles```\n-# Server-wide roles used to gate channel access.' },
+      { type: 10, content: '### ```🎭 Player Roles```\n-# Automatically create Player Roles for easy removal of players when eliminated. You can safely create player roles before your season starts — they\'re only assigned (and visible to players and specs) when 🟢 Activate is used, which we recommend doing during or after marooning.' },
       { type: 1, components: [
         { type: 2, custom_id: `channels_roles_${configId}`, label: 'Roles', style: 2, emoji: { name: '🔐' } },
-        { type: 2, custom_id: `channels_playerroles_${configId}`, label: 'Player Roles', style: 2, emoji: { name: '🎭' } },
+        { type: 2, custom_id: `channels_playerroles_${configId}`, label: 'Auto Create', style: 2, emoji: { name: '🎭' } },
         // Interop: link ONE player to a role that already exists (hand-made or another bot's) —
-        // Player Roles only ever creates fresh roles (resolve-by-stored-ID, never by name).
-        { type: 2, custom_id: `channels_manualrole_${configId}`, label: 'Manual Roles', style: 2, emoji: { name: '🔗' } }
+        // Auto Create only ever makes fresh roles (resolve-by-stored-ID, never by name).
+        { type: 2, custom_id: `channels_manualrole_${configId}`, label: 'Manually Link', style: 2, emoji: { name: '🔗' } },
+        // The reveal step: assigns linked roles to their players (closes the "role nobody
+        // holds" gap — until now the host had to hand-assign every role in Discord).
+        { type: 2, custom_id: `channels_activate_${configId}`, label: 'Activate', style: 3, emoji: { name: '🟢' } }
       ]},
       { type: 14 },
       ...buildChannelsSection(configId),
@@ -311,6 +314,51 @@ export function buildManualRoleModal({ configId }) {
       {
         type: 10, // Text Display
         content: '-# ⚠️ CastBot only **records** the link — it does NOT assign the role to the player. Holding their personal role could expose their casting status before the season reveals it. Assign it yourself when the time is right.'
+      }
+    ]
+  };
+}
+
+/**
+ * 🟢 Activate modal — THE reveal step: assign previously linked player roles to their
+ * players. A Role Select can't be filtered, so the picker is a String Select whose options
+ * ARE the CastBot-linked roles (players[*].playerRoleId, live roles only, ≤25).
+ * @param {Object} p
+ * @param {string} p.configId
+ * @param {Array<{roleId: string, playerName: string, roleName: string}>} p.options - resolved links
+ * @param {number} [p.hidden] - links beyond Discord's 25-option cap (named honestly, never silent)
+ */
+export function buildActivateModal({ configId, options, hidden = 0 }) {
+  return {
+    custom_id: `channels_activate_modal_${configId}`,
+    title: '🟢 Activate Player Roles',
+    components: [
+      {
+        type: 10, // Text Display
+        content: '### Assign player roles to their players\nEach selected role is added to the player it\'s linked to in CastBot. Roles created by 🎭 Auto Create or linked with 🔗 Manually Link are listed below.'
+      },
+      {
+        type: 18, // Label
+        label: 'Player roles to assign',
+        description: 'Only roles linked in CastBot are listed. Pick everyone, or stagger it.',
+        component: {
+          type: 3, // String Select (multi) — options are the linked roles
+          custom_id: 'activate_roles',
+          required: true,
+          min_values: 1,
+          max_values: Math.min(options.length, 25),
+          placeholder: 'Select the player roles to assign...',
+          options: options.slice(0, 25).map((o) => ({
+            label: o.playerName.substring(0, 100),
+            value: o.roleId,
+            description: `@${o.roleName}`.substring(0, 100),
+            emoji: { name: '🎭' }
+          }))
+        }
+      },
+      {
+        type: 10, // Text Display
+        content: `-# ⚠️ **Timing matters.** Once assigned, the role appears on the player's profile — players and specs can read the member list and see who has been cast. Don't activate before marooning unless you intend that reveal.${hidden ? `\n-# …${hidden} more link${hidden === 1 ? '' : 's'} beyond Discord's 25-option cap — run Activate again for the rest.` : ''}`
       }
     ]
   };

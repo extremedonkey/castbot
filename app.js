@@ -13274,101 +13274,28 @@ To fix this:
         id: custom_id,
         updateMessage: false, // Returns modal
         handler: async (context) => {
-          const { TRIBE_COLOR_PRESETS } = await import('./utils/tribeDataUtils.js');
-          const { resolveEmoji: resolveEmojiUtil } = await import('./utils/emojiUtils.js');
-
-          // 🔒 PRIVATE MODE — launched from the 🚣 Marooning tab, where tribes are a PLANNING tool.
-          // The Tribe Members select is dropped entirely: assigning a real Discord role there would
-          // broadcast an in-flux casting decision to every spectator and cast member the instant it's
-          // picked. Populate privately via 💭 Draft Tribes instead. The submit handler enforces the
-          // same rule (skips roles.add AND the castlist link) — this just removes the temptation.
-          const isPrivateTribe = !!origin?.startsWith('marooning_');
-
-          return {
-            type: 9, // MODAL
-            data: {
-              custom_id: `tribe_add_modal|${castlistId}${origin ? `|${origin}` : ''}`,
-              title: 'Add New Tribe',
-              components: [
-                {
-                  type: 18, // Label
-                  label: 'Tribe Name',
-                  description: isPrivateTribe
-                    ? 'Creates the Discord role only — no members assigned, not added to a castlist.'
-                    : 'CastBot will create the Discord role for you. Already have the role? Add via previous screen.',
-                  component: {
-                    type: 4, // Text Input
-                    custom_id: 'tribe_name',
-                    style: 1,
-                    placeholder: 'e.g. Mana Tribe',
-                    required: true,
-                    min_length: 1,
-                    max_length: 100
-                  }
-                },
-                {
-                  type: 18, // Label
-                  label: 'Tribe Emoji',
-                  description: 'Unicode or Discord custom emoji for this tribe',
-                  component: {
-                    type: 4, // Text Input
-                    custom_id: 'tribe_emoji',
-                    style: 1,
-                    placeholder: '🔥 or <:custom:123>',
-                    required: false,
-                    max_length: 60
-                  }
-                },
-                // Omitted in private mode — see isPrivateTribe above.
-                ...(isPrivateTribe ? [] : [{
-                  type: 18, // Label
-                  label: 'Tribe Members',
-                  description: 'Selected users will be assigned this role automatically after creation.',
-                  component: {
-                    type: 5, // User Select
-                    custom_id: 'tribe_members',
-                    placeholder: 'Select members to assign...',
-                    required: false,
-                    min_values: 0,
-                    max_values: 25
-                  }
-                }]),
-                {
-                  type: 18, // Label
-                  label: 'Tribe Color',
-                  description: 'Sets the Discord role color and tribe accent color',
-                  component: {
-                    type: 3, // String Select
-                    custom_id: 'tribe_color_preset',
-                    placeholder: 'Pick a color...',
-                    required: false,
-                    min_values: 0,
-                    max_values: 1,
-                    options: TRIBE_COLOR_PRESETS.map(preset => ({
-                      label: preset.label,
-                      value: preset.value,
-                      description: preset.value === 'custom' ? 'Enter hex code below' : preset.value,
-                      emoji: resolveEmojiUtil(preset.emoji, '🎨'),
-                      default: false
-                    }))
-                  }
-                },
-                {
-                  type: 18, // Label
-                  label: 'Custom Color (optional)',
-                  description: 'Only used when "Custom..." is selected above. Format: #RRGGBB',
-                  component: {
-                    type: 4, // Text Input
-                    custom_id: 'tribe_color_custom',
-                    style: 1,
-                    placeholder: '#FF5733',
-                    required: false,
-                    max_length: 7
-                  }
-                }
-              ]
-            }
-          };
+          if (!hasCastRankingPermissions(context.member, context.guildId)) {
+            return { content: '❌ You need Manage Roles or Manage Channels permissions to add tribes.', ephemeral: true };
+          }
+          // Shared builder (also serves tribe_existing_button|). Private mode (marooning origin)
+          // drops the Tribe Members select — see buildTribeAddModal for why.
+          const { buildTribeAddModal } = await import('./utils/tribeDataUtils.js');
+          return buildTribeAddModal({ castlistId, origin });
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('tribe_existing_button|')) {
+      // ➕ Existing Tribe (Marooning): tribe_add_button|'s Role Select twin — registers an EXISTING role, never creates one. Submit: tribe_existing_modal|.
+      const [, castlistId, origin] = custom_id.split('|');
+      return ButtonHandlerFactory.create({
+        id: 'tribe_existing_button',
+        updateMessage: false, // Returns modal
+        handler: async (context) => {
+          if (!castlistId) return { content: '❌ Error: Missing castlist ID', ephemeral: true };
+          if (!hasCastRankingPermissions(context.member, context.guildId)) {
+            return { content: '❌ You need Manage Roles or Manage Channels permissions to add tribes.', ephemeral: true };
+          }
+          const { buildTribeAddModal } = await import('./utils/tribeDataUtils.js');
+          return buildTribeAddModal({ castlistId, origin, existing: true });
         }
       })(req, res, client);
     } else if (custom_id.startsWith('edit_placement_')) {
@@ -40754,6 +40681,65 @@ To fix this:
         console.error('[TRIBE ADD] Error creating tribe:', error);
         return updateDeferredResponse(token, {
           components: [{ type: 17, components: [{ type: 10, content: `❌ Error creating tribe: ${error.message}` }] }]
+        });
+      }
+    } else if (custom_id.startsWith('tribe_existing_modal|')) {
+      // ➕ Existing Tribe (Marooning) — tribe_add_modal's twin for a role that ALREADY exists:
+      // no role creation, recolor only on an active color choice, prior castlist links preserved.
+      // Registration (guards, recolor, locked storage write) lives in castRankingManager.
+      const token = req.body.token;
+      res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
+
+      try {
+        const submitOrigin = custom_id.split('|')[2]; // always 'marooning_{configId}' — Marooning is the only surface
+        const guildId = req.body.guild_id;
+        const components = req.body.data.components;
+
+        const getFieldValue = (customId) => {
+          for (const row of (components || [])) {
+            if (row?.type === 18 && row?.component?.custom_id === customId) {
+              return row.component.value ?? row.component.values ?? '';
+            }
+          }
+          return '';
+        };
+
+        const roleRaw = getFieldValue('tribe_role');
+        const roleId = Array.isArray(roleRaw) ? roleRaw[0] : '';
+        if (!roleId) {
+          return updateDeferredResponse(token, {
+            components: [{ type: 17, components: [{ type: 10, content: '❌ No role selected.' }] }]
+          });
+        }
+        const colorPresetRaw = getFieldValue('tribe_color_preset');
+
+        const { registerExistingTribe, buildMarooningView } = await import('./castRankingManager.js');
+        const result = await registerExistingTribe({
+          guildId,
+          roleId,
+          emojiInput: getFieldValue('tribe_emoji'),
+          colorPreset: Array.isArray(colorPresetRaw) ? colorPresetRaw[0] : (colorPresetRaw || ''),
+          colorCustom: getFieldValue('tribe_color_custom'),
+          client
+        });
+        if (!result.ok) {
+          return updateDeferredResponse(token, {
+            components: [{ type: 17, components: [{ type: 10, content: result.message }] }]
+          });
+        }
+
+        // Refresh the parent Marooning message (same shape as tribe_add_modal's marooning branch).
+        const marooningConfigId = submitOrigin.slice('marooning_'.length);
+        const fresh = await loadPlayerData();
+        const seasonName = fresh[guildId]?.applicationConfigs?.[marooningConfigId]?.seasonName || `Season ${marooningConfigId}`;
+        const guild = await client.guilds.fetch(guildId);
+        const view = await buildMarooningView({ configId: marooningConfigId, guildId, playerData: fresh, seasonName, guild, userId: req.body.member.user.id });
+        await updateDeferredResponse(token, { components: view.components });
+        return null;
+      } catch (error) {
+        console.error('[EXISTING TRIBE] Error registering tribe:', error);
+        return updateDeferredResponse(token, {
+          components: [{ type: 17, components: [{ type: 10, content: `❌ Error registering tribe: ${error.message}` }] }]
         });
       }
     } else if (custom_id.startsWith('tribe_edit_modal|')) {

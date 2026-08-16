@@ -53,6 +53,132 @@ export function populateTribeData(existingData = {}, role, castlistId, castlistN
 }
 
 /**
+ * The Add New Tribe / Add Existing Tribe modal — ONE builder for both flavors, shared by
+ * app.js tribe_add_button| and tribe_existing_button|. Lives here (not app.js) so tests can
+ * import the REAL payload and assert Discord's modal limits (Label ≤45, description ≤100,
+ * ≤5 top-level components — any overflow silently kills the whole modal, see
+ * ComponentsV2Issues.md §16). Deliberately dependency-free beyond colorUtils: preset emoji
+ * are all static Unicode, so a plain { name } wrap matches what resolveEmoji would return
+ * without dragging emojiUtils→storage.js into test imports.
+ *
+ * @param {string} castlistId - target castlist ('default' from Marooning)
+ * @param {string|null} [origin] - 'marooning_{configId}' → PRIVATE tribe (no members select,
+ *   submit skips castlist link + role assignment) and tells the submit which view to refresh
+ * @param {boolean} [existing] - true → register an existing role: Role Select replaces the
+ *   Tribe Name input and the submit skips role creation (tribe_existing_modal|)
+ * @returns {Object} full interaction response: { type: 9, data: { custom_id, title, components } }
+ */
+export function buildTribeAddModal({ castlistId, origin = null, existing = false }) {
+  const isPrivate = !!origin?.startsWith('marooning_');
+  const modalPrefix = existing ? 'tribe_existing_modal' : 'tribe_add_modal';
+
+  const nameOrRole = existing
+    ? {
+        type: 18, // Label
+        label: 'Tribe Role',
+        description: 'Select the role this tribe already uses — in CastBot or not. No role yet? New Tribe creates it.',
+        component: {
+          type: 6, // Role Select
+          custom_id: 'tribe_role',
+          placeholder: 'Select the tribe\'s existing role...',
+          required: true,
+          min_values: 1,
+          max_values: 1
+        }
+      }
+    : {
+        type: 18, // Label
+        label: 'Tribe Name',
+        description: isPrivate
+          ? 'Creates the Discord role only — no members assigned, not added to a castlist.'
+          : 'CastBot will create the Discord role for you. Already have the role? Add via previous screen.',
+        component: {
+          type: 4, // Text Input
+          custom_id: 'tribe_name',
+          style: 1,
+          placeholder: 'e.g. Mana Tribe',
+          required: true,
+          min_length: 1,
+          max_length: 100
+        }
+      };
+
+  return {
+    type: 9, // MODAL
+    data: {
+      custom_id: `${modalPrefix}|${castlistId}${origin ? `|${origin}` : ''}`,
+      title: existing ? 'Add Existing Tribe' : 'Add New Tribe',
+      components: [
+        nameOrRole,
+        {
+          type: 18, // Label
+          label: 'Tribe Emoji',
+          description: 'Unicode or Discord custom emoji for this tribe',
+          component: {
+            type: 4, // Text Input
+            custom_id: 'tribe_emoji',
+            style: 1,
+            placeholder: '🔥 or <:custom:123>',
+            required: false,
+            max_length: 60
+          }
+        },
+        // Members select: NEW public flow only. Private (marooning) tribes must not broadcast
+        // in-flux casting via a real role; existing mode never assigns members at all.
+        ...(existing || isPrivate ? [] : [{
+          type: 18, // Label
+          label: 'Tribe Members',
+          description: 'Selected users will be assigned this role automatically after creation.',
+          component: {
+            type: 5, // User Select
+            custom_id: 'tribe_members',
+            placeholder: 'Select members to assign...',
+            required: false,
+            min_values: 0,
+            max_values: 25
+          }
+        }]),
+        {
+          type: 18, // Label
+          label: 'Tribe Color',
+          description: existing
+            ? 'Only recolors the role if you pick something here'
+            : 'Sets the Discord role color and tribe accent color',
+          component: {
+            type: 3, // String Select
+            custom_id: 'tribe_color_preset',
+            placeholder: 'Pick a color...',
+            required: false,
+            min_values: 0,
+            max_values: 1,
+            options: TRIBE_COLOR_PRESETS.map(preset => ({
+              label: preset.label,
+              value: preset.value,
+              description: preset.value === 'custom' ? 'Enter hex code below' : preset.value,
+              emoji: { name: preset.emoji || '🎨' },
+              default: false
+            }))
+          }
+        },
+        {
+          type: 18, // Label
+          label: 'Custom Color (optional)',
+          description: 'Only used when "Custom..." is selected above. Format: #RRGGBB',
+          component: {
+            type: 4, // Text Input
+            custom_id: 'tribe_color_custom',
+            style: 1,
+            placeholder: '#FF5733',
+            required: false,
+            max_length: 7
+          }
+        }
+      ]
+    }
+  };
+}
+
+/**
  * Format player list for tribe display
  * @param {Array} members - Array of member objects
  * @param {number} maxLength - Maximum character length (default 38)

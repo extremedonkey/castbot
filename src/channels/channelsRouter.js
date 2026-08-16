@@ -132,6 +132,12 @@ export async function routeChannelsButton({ context, req }) {
     return { type: 9, data: buildManualRoleModal({ configId: customId.replace('channels_manualrole_', '') }) };
   }
 
+  // 🟢 Activate — assign linked player roles to their players (the reveal step).
+  if (customId.startsWith('channels_activate_')) {
+    const { openActivateModal } = await import('./channelsHandlers.js');
+    return await openActivateModal({ configId: customId.replace('channels_activate_', ''), guildId, client });
+  }
+
   // One of the 5 action buttons → its modal.
   const { buildChannelsModal } = await import('./channelsModalRouter.js');
   return await buildChannelsModal({ customId, guildId, client });
