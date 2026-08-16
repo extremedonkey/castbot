@@ -3471,9 +3471,9 @@ export const BUTTON_REGISTRY = {
     restrictedUser: true
   },
   'channels_roles_*': {
-    label: 'Roles',
-    description: 'Set the server\'s Trusted Spectator role (read + react access to confessionals)',
-    emoji: '🔐',
+    label: 'Trusted',
+    description: 'Set the server\'s Trusted Spectator role (read + react access to confessionals) — walkthrough step 2',
+    emoji: '🛡️',
     style: 'Secondary',
     parent: 'season_channels',
     category: 'channel_admin',

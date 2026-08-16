@@ -87,6 +87,8 @@ export function buildChannelsSection(configId, { entitled = true, layout = 'row'
   // premium-gated (Reece: roles stuff stays free) — only the four channel fabricators.
   const BTN = {
     createRoles: { type: 2, custom_id: `channels_playerroles_${configId}`, label: 'Create', style: 2, emoji: { name: '🎭' } },
+    // Ungated (roles family). Moved up from the bottom row + renamed Roles → Trusted (2026-08-17).
+    trusted: { type: 2, custom_id: `channels_roles_${configId}`, label: 'Trusted', style: 2, emoji: { name: '🛡️' } },
     subs: { type: 2, custom_id: gate(`channels_subs_${configId}`), label: 'Subs', style: 2, emoji: { name: '🗳️' } },
     confessionals: { type: 2, custom_id: gate(`channels_confessionals_${configId}`), label: 'Confessionals', style: 2, emoji: { name: '🎙️' } },
     assignRoles: { type: 2, custom_id: `channels_activate_${configId}`, label: 'Activate', style: 2, emoji: { name: '🟢' } },
@@ -114,19 +116,21 @@ export function buildChannelsSection(configId, { entitled = true, layout = 'row'
   // Swap/Merge + Alliances left the tab 2026-08-17 — Swap/Merge lives in the Castlist Hub,
   // Alliances on ⭐ Premium). Bulk creation is a high-anxiety task; the guidance (and the
   // reminder that every action previews before running) is the point.
-  // Component cost per FULL page: 27 (heading + 6 × [Section + Text + accessory] + 5
-  // dividers + row + 2 buttons) — buildChannelsView budgets around this at exactly 40/40.
-  // NO divider before the pagination row: that single component is the 40-cap slack (a 41st
-  // broke the tab silently — Discord drops an over-limit PATCH, 2026-08-16).
+  // Component cost per FULL page: 28 (heading + 6 × [Section + Text + accessory] + 5
+  // dividers + pagination row + 2 buttons + trailing divider) — buildChannelsView budgets
+  // around this at exactly 40/40 (a 41st broke the tab silently — Discord drops an
+  // over-limit PATCH, 2026-08-16). The trailing divider under the pagination row was paid
+  // for by moving 🛡️ Trusted out of the bottom row and into step 2 (Reece 2026-08-17).
   const section = (text, button) => ({ type: 9, components: [{ type: 10, content: text }], accessory: button });
   const sections = [
-    section('**1 · Create Player Roles** — one personal role per accepted player: the elimination kill switch. Safe to run early — nobody is given theirs until step 4.', BTN.createRoles),
-    section('**2 · Subs** — as players accept their casting: convert each application channel into their private player↔host subs channel (or create fresh ones).', BTN.subs),
-    section('**3 · Confessionals** — before the cast reveal: every player\'s private diary room. Players get access straight away; Trusted Spectators read along.', BTN.confessionals),
-    section('**4 · Assign Player Roles** — at 🚣 Marooning: hand each player their role. This is the reveal — profiles now show who was cast. You review every change first.', BTN.assignRoles),
-    section('**5 · Set up Castlist** — once the tribes are announced: add them to the Active Castlist to publish the season\'s /castlist. The per-tribe steps below read from it.', BTN.castlists),
-    section('**6 · Tribe Channels** — once tribes exist: a category per tribe holding its 💬 chat (players + Trusted Specs) and 🏃 challenges channel (players only).', BTN.tribeChannels),
-    section('**7 · 1 on 1s** — once the tribes are announced: one private channel per pair of tribemates, so hosts can watch player-to-player chat.', BTN.oneOnOnes)
+    section('**1 · Create Player Roles** — one personal role per accepted player: the elimination kill switch. Safe to run early — nobody is given theirs until step 5.', BTN.createRoles),
+    section('**2 · Assign Trusted Spectator** — pick the server\'s single vouched-viewer role. Confessionals grant it read access, so set it before creating them.', BTN.trusted),
+    section('**3 · Subs** — as players accept their casting: convert each application channel into their private player↔host subs channel (or create fresh ones).', BTN.subs),
+    section('**4 · Confessionals** — before the cast reveal: every player\'s private diary room. Players get access straight away; Trusted Spectators read along.', BTN.confessionals),
+    section('**5 · Assign Player Roles** — at 🚣 Marooning: hand each player their role. This is the reveal — profiles now show who was cast. You review every change first.', BTN.assignRoles),
+    section('**6 · Set up Castlist** — once the tribes are announced: add them to the Active Castlist to publish the season\'s /castlist. The per-tribe steps below read from it.', BTN.castlists),
+    section('**7 · Tribe Channels** — once tribes exist: a category per tribe holding its 💬 chat (players + Trusted Specs) and 🏃 challenges channel (players only).', BTN.tribeChannels),
+    section('**8 · 1 on 1s** — once the tribes are announced: one private channel per pair of tribemates, so hosts can watch player-to-player chat.', BTN.oneOnOnes)
   ];
 
   const totalPages = Math.ceil(sections.length / WALKTHROUGH_PAGE_SIZE);
@@ -141,7 +145,8 @@ export function buildChannelsSection(configId, { entitled = true, layout = 'row'
     { type: 1, components: [
       { type: 2, custom_id: `channels_wtpage_${p - 1}_${configId}`, label: '◀', style: prevDisabled ? 2 : 1, disabled: prevDisabled },
       { type: 2, custom_id: `channels_wtpage_${p + 1}_${configId}`, label: '▶', style: nextDisabled ? 2 : 1, disabled: nextDisabled }
-    ]}
+    ]},
+    { type: 14 }
   ];
 }
 
@@ -189,17 +194,15 @@ export async function buildChannelsView({ configId, guildId, playerData, seasonN
     components: [
       seasonManagerHeader('channels', seasonName),
       buildSeasonNavRow(configId, 'channels', userId),
-      // ⚠️ 40/40 — EXACTLY at Discord's component cap. The walkthrough (28 components) holds
-      // the whole sequence: player-role steps 1/4 (absorbed 2026-08-16) and 🏝️ Tribe Channels
-      // as step 5; BOTH outer separators were reclaimed to pay for it (the code-block heading
-      // and the stacked management rows delineate the edges). Adding ANYTHING here means
+      // ⚠️ 40/40 — EXACTLY at Discord's component cap. The walkthrough (28 components incl.
+      // its trailing divider) holds the whole 8-step sequence paginated 6/page; BOTH outer
+      // separators were reclaimed long ago and 🛡️ Trusted moved INTO step 2 to pay for the
+      // divider under the pagination row (Reece 2026-08-17). Adding ANYTHING here means
       // removing something first. Msg Category left the tab — ⭐ Premium's 📢 row only.
       ...buildChannelsSection(configId, { entitled, layout: 'sections', page }),
-      // 🔐 Roles (Trusted Spectator) + 🔗 Manually Link (interop: point a player at a
-      // hand-made/other-bot role — records the link, never assigns) are config odd-jobs,
-      // not sequence steps — parked right of Edit (Reece 2026-08-16).
+      // 🔗 Manually Link (interop: point a player at a hand-made/other-bot role — records the
+      // link, never assigns) is a config odd-job, not a sequence step — parked right of Edit.
       buildSeasonBottomRow(configId, 'channels', [
-        { type: 2, custom_id: `channels_roles_${configId}`, label: 'Roles', style: 2, emoji: { name: '🔐' } },
         { type: 2, custom_id: `channels_manualrole_${configId}`, label: 'Manually Link', style: 2, emoji: { name: '🔗' } }
       ])
     ]
