@@ -2012,7 +2012,7 @@ export const BUTTON_REGISTRY = {
   'tribe_existing_button_*': {
     label: 'Existing Tribe',
     description: 'Register an existing Discord role as a tribe',
-    emoji: '➕',
+    emoji: '⛺',
     style: 'Secondary',
     category: 'castlist',
     requiresModal: true

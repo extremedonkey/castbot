@@ -43,7 +43,7 @@ function buildMarooningContainer({ configId = CONFIG_ID, body = '-# No applicant
       { type: 10, content: `### \`\`\`🏕️ Tribes\`\`\`\n${TRIBES_INTRO}` },
       { type: 1, components: [
         { type: 2, custom_id: `tribe_add_button|default|marooning_${configId}`, label: 'New Tribe', style: 2, emoji: { name: '🏕️' } },
-        { type: 2, custom_id: `tribe_existing_button|default|marooning_${configId}`, label: 'Existing Tribe', style: 2, emoji: { name: '➕' } },
+        { type: 2, custom_id: `tribe_existing_button|default|marooning_${configId}`, label: 'Existing Tribe', style: 2, emoji: { name: '⛺' } },
         { type: 2, custom_id: `marooning_draft_tribes_${configId}`, label: 'Draft Tribes', style: 2, emoji: { name: '💭' }, disabled: !canDraft }
       ]},
       { type: 10, content: tribesLine },

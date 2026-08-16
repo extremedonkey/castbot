@@ -1354,11 +1354,11 @@ export async function generateDncOverviewUI({ guildId, configId, guild }) {
  *   (a) it is on the DEFAULT castlist (all three storage formats checked: castlistIds[] /
  *       castlistId / legacy `castlist` string), OR
  *   (b) it carries `tribePlanner: true` — stamped when the Marooning screen's 🏕️ New Tribe or
- *       ➕ Existing Tribe creates/registers it.
+ *       ⛺ Existing Tribe creates/registers it.
  * Everything else is hidden: archive-season castlists, promo castlists, legacy debug-flow tribes
  * (this replaces the 2026-07-25 show-EVERY-known-tribe existence check, which surfaced years of
  * old seasons — e.g. 8 archive tribes on one prod guild). The escape hatch for a hidden tribe is
- * deliberate and cheap: register its role via ➕ Existing Tribe, which sets the flag.
+ * deliberate and cheap: register its role via ⛺ Existing Tribe, which sets the flag.
  * Null entries (prod data really contains them) and deleted-role tribes are still filtered.
  * Exported for tests.
  * @param {Object} playerData
@@ -1699,7 +1699,7 @@ export async function buildMarooningView({ configId, guildId, playerData, season
         // Existing Tribe = same modal family with a Role Select instead of Tribe Name: registers a
         // role that already exists (hand-made, or already a tribe) — never creates one, and only
         // recolors it when a color was actively chosen. Submit: registerExistingTribe below.
-        { type: 2, custom_id: `tribe_existing_button|default|marooning_${configId}`, label: 'Existing Tribe', style: 2, emoji: { name: '➕' } },
+        { type: 2, custom_id: `tribe_existing_button|default|marooning_${configId}`, label: 'Existing Tribe', style: 2, emoji: { name: '⛺' } },
         { type: 2, custom_id: `marooning_draft_tribes_${configId}`, label: 'Draft Tribes', style: 2, emoji: { name: '💭' }, disabled: !canDraft }
       ]},
       { type: 10, content: tribesLine },
@@ -1729,7 +1729,7 @@ export async function renderMarooningRejectsToggle(customId, guildId, userId, gu
 }
 
 /**
- * ➕ Existing Tribe (Marooning) — register an ALREADY-EXISTING Discord role as a private tribe.
+ * ⛺ Existing Tribe (Marooning) — register an ALREADY-EXISTING Discord role as a private tribe.
  * The tribe_add_modal twin minus role creation: the role is only EDITED (color) when the host
  * actively chose one (preset from the list, or Custom + a valid hex). Marooning-only, so the
  * tribe is always private — but unlike tribe_add_modal's unconditional castlist strip, prior
@@ -1802,7 +1802,7 @@ export async function registerExistingTribe({ guildId, roleId, emojiInput, color
     if (existing?.castlist) tribe.castlist = existing.castlist; else delete tribe.castlist;
     if (processedEmoji) tribe.emoji = processedEmoji;
     if (processedColor) tribe.color = processedColor;
-    // Planner-eligibility flag (getMarooningTribeRoleIds). Registering via ➕ Existing Tribe is
+    // Planner-eligibility flag (getMarooningTribeRoleIds). Registering via ⛺ Existing Tribe is
     // ALSO the escape hatch that re-admits a tribe hidden by the default-castlist-or-flag rule.
     tribe.tribePlanner = true;
     playerData[guildId].tribes[roleId] = tribe;

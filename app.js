@@ -13284,7 +13284,7 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id.startsWith('tribe_existing_button|')) {
-      // ➕ Existing Tribe (Marooning): tribe_add_button|'s Role Select twin — registers an EXISTING role, never creates one. Submit: tribe_existing_modal|.
+      // ⛺ Existing Tribe (Marooning): tribe_add_button|'s Role Select twin — registers an EXISTING role, never creates one. Submit: tribe_existing_modal|.
       const [, castlistId, origin] = custom_id.split('|');
       return ButtonHandlerFactory.create({
         id: 'tribe_existing_button',
@@ -40687,7 +40687,7 @@ To fix this:
         });
       }
     } else if (custom_id.startsWith('tribe_existing_modal|')) {
-      // ➕ Existing Tribe (Marooning) — tribe_add_modal's twin for a role that ALREADY exists:
+      // ⛺ Existing Tribe (Marooning) — tribe_add_modal's twin for a role that ALREADY exists:
       // no role creation, recolor only on an active color choice, prior castlist links preserved.
       // Registration (guards, recolor, locked storage write) lives in castRankingManager.
       const token = req.body.token;

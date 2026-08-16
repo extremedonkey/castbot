@@ -1,4 +1,4 @@
-// Tests for ➕ Existing Tribe (Marooning → Tribes) and the shared Add Tribe modal builder.
+// Tests for ⛺ Existing Tribe (Marooning → Tribes) and the shared Add Tribe modal builder.
 //
 // Two kinds of coverage:
 //  1. THE REAL MODAL — buildTribeAddModal was extracted to utils/tribeDataUtils.js precisely so
