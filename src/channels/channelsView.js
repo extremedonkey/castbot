@@ -119,8 +119,10 @@ export function buildChannelsSection(configId, { entitled = true, layout = 'row'
 
 /**
  * The 🎭 Player Roles status line — names every player→role link as PLAIN TEXT (no <@>
- * mentions, Reece 2026-08-16): `Reece (extremedonkey / @Winner Reece), …`. Replaces the
- * bare `player_roles: N created` counter, which said nothing about WHO got linked to WHAT.
+ * mentions, Reece 2026-08-16): `Reece (extremedonkey / @Winner Reece), …`.
+ * ⚠️ NOT rendered anywhere since 2026-08-16 — the tab's whole stats body was cut (Reece:
+ * the confirm screens carry the numbers). Kept exported + tested for the likely revival
+ * on a dedicated status surface; delete it if that never lands.
  * @param {Array<{displayName: string, username: string, roleName: string}>} entries
  * @returns {string|null} the -# line, or null when nobody holds a player role
  */
@@ -139,7 +141,6 @@ export function formatPlayerRolesLine(entries, max = 15) {
  */
 export async function buildChannelsView({ configId, guildId, playerData, seasonName, guild, userId }) {
   const { buildSeasonNavRow, seasonManagerHeader, buildSeasonBottomRow } = await import('../../seasonSelector.js');
-  const { getAcceptedCast } = await import('./channelRoster.js');
   // Dynamic import (not top-level): channelsHandlers imports buildConfirmScreen from THIS file,
   // so a static import here would close the cycle at module-init time.
   const { setChannelsOrigin } = await import('./channelsHandlers.js');
@@ -151,67 +152,9 @@ export async function buildChannelsView({ configId, guildId, playerData, seasonN
   const { hasPremiumAccessSync } = await import('../../entitlements.js');
   const entitled = hasPremiumAccessSync(guildId) || String(userId) === '391415444084490240';
 
-  const node = playerData?.[guildId]?.channelAdmin || {};
-  const season = node[configId] || {};
-  const confessionals = Object.keys(season.confessionals || {}).length;
-  const subs = Object.keys(season.subs || {}).length;
-  const oneOnOnes = Object.keys(node.oneOnOnes || {}).length;
-  const alliances = Object.keys(node.alliances || {}).length;
-
-  const specRoleId = playerData?.[guildId]?.permissions?.trustedSpectatorRoleId || null;
-  const specLine = specRoleId ? `<@&${specRoleId}>` : '*not set*';
-
-  // Roster is best-effort: the tab must still render if Discord is unhappy.
-  let rosterCount = 0;
-  let missingRoles = 0;
-  try {
-    const { roster } = await getAcceptedCast(guildId, configId, guild);
-    rosterCount = roster.length;
-    missingRoles = roster.filter((r) => !r.playerRoleId).length;
-  } catch (e) {
-    console.warn(`⚠️ [CHANNEL_ADMIN] Roster preview failed: ${e.message}`);
-  }
-
-  const body = [
-    // "Accepted cast" is now guild-wide (every season, deduped) — say so, or the number looks
-    // wrong to a host who is looking at one season's tab.
-    `> **Accepted cast (all seasons):** ${rosterCount}${missingRoles ? ` (${missingRoles} without a player role)` : ''}`,
-    `> **Confessionals:** ${confessionals} | **Subs:** ${subs} | **1on1s:** ${oneOnOnes} | **Alliances:** ${alliances}`,
-    `> **Trusted Spectator:** ${specLine}`
-  ].join('\n');
-
-  // 🎭 Player Roles roster (guild-scoped, like playerRoleId itself) — names each link as
-  // plain text. Best-effort: a Discord hiccup must not take the tab down with it.
-  let playerRolesLine = null;
-  try {
-    const linked = Object.entries(playerData?.[guildId]?.players || {})
-      .filter(([, p]) => p?.playerRoleId);
-    if (linked.length && guild) {
-      // One bulk fetch so usernames are real, not cache-luck ("left server" must mean left).
-      await guild.members.fetch({ user: linked.map(([uid]) => uid) }).catch(() => {});
-      playerRolesLine = formatPlayerRolesLine(linked.map(([uid, p]) => {
-        const role = guild.roles.cache.get(p.playerRoleId) || null;
-        const member = guild.members.cache.get(uid) || null;
-        return {
-          displayName: member?.displayName || role?.name || uid,
-          username: member?.user?.username || 'left server',
-          roleName: role?.name || 'role deleted'
-        };
-      }));
-    }
-  } catch (e) {
-    console.warn(`⚠️ [CHANNEL_ADMIN] Player-roles line failed: ${e.message}`);
-  }
-
-  const lastRun = season.lastRun || {};
-  const lastRunLine = Object.entries(lastRun)
-    // The roster line REPLACES the bare player_roles counter — unless the run had failures,
-    // which the roster line can't express.
-    .filter(([action, s]) => !(action === 'player_roles' && playerRolesLine && !s?.failed))
-    .map(([action, s]) => `-# ${action}: ${s?.created ?? 0} created · ${s?.skipped ?? 0} unchanged${s?.failed ? ` · ${s.failed} failed` : ''}`)
-    .concat(playerRolesLine ? [playerRolesLine] : [])
-    .join('\n');
-
+  // The stats body (accepted-cast/channel counts, Trusted Spectator, lastRun lines, the
+  // Player Roles roster) was REMOVED 2026-08-16 (Reece) — the confirm screens already show
+  // every number that matters at decision time, and the block ate a third of the tab.
   const container = {
     type: 17,
     accent_color: 0x9B59B6, // Purple — matches the rest of Season Manager
@@ -230,13 +173,12 @@ export async function buildChannelsView({ configId, guildId, playerData, seasonN
         // holds" gap — until now the host had to hand-assign every role in Discord).
         { type: 2, custom_id: `channels_activate_${configId}`, label: 'Activate', style: 3, emoji: { name: '🟢' } }
       ]},
-      // ⚠️ 40/40 — the walkthrough (20 components incl. its internal dividers) puts this tab
-      // EXACTLY at Discord's component cap. The block's outer separators were sacrificed for
-      // the internal ones (its heading + the stats quote-block delineate the edges); adding
-      // ANY component here means removing one first. Msg Category left the tab entirely
-      // 2026-08-16 (Reece) — it lives on ⭐ Premium's 📢 Player Engagement row only.
+      // ⚠️ 39/40 — the walkthrough (20 components incl. its internal dividers) leaves this tab
+      // ONE component under Discord's cap (the stats body's removal bought the slot back).
+      // Its outer separators were sacrificed for the internal ones; re-count before adding
+      // anything. Msg Category left the tab entirely 2026-08-16 (Reece) — it lives on
+      // ⭐ Premium's 📢 Player Engagement row only.
       ...buildChannelsSection(configId, { entitled, layout: 'sections' }),
-      { type: 10, content: body + (lastRunLine ? `\n\n${lastRunLine}` : '') },
       { type: 14 },
       buildSeasonBottomRow(configId, 'channels')
     ]
