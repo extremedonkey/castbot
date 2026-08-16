@@ -92,24 +92,28 @@ export function buildChannelsSection(configId, { entitled = true, layout = 'row'
     // Compact — the Premium menu's shape (its container is already dense; the walkthrough
     // guidance lives on the Season Manager tab, where the work is actually staged from).
     return [
-      { type: 10, content: '### ```#️⃣ Channels```\n-# Bulk create / update the standard ORG channels.' },
+      { type: 10, content: '### ```#️⃣ Create Channels```\n-# Bulk create / update the standard ORG channels.' },
       { type: 1, components: [BTN.subs, BTN.confessionals, BTN.oneOnOnes, BTN.swapMerge, BTN.alliances] }
     ];
   }
 
   // 'sections' — the Season tab's guided walkthrough: one Section (Text Display + button
-  // accessory) per action, numbered in season order. Bulk channel creation is a high-anxiety
+  // accessory) per action, numbered in season order, a divider BETWEEN each (never on the
+  // outside — the caller owns the block's edges). Bulk channel creation is a high-anxiety
   // task; the guidance (and the reminder that every action previews before running) is the
-  // point. Component cost: 16 (heading + 5 × [Section + Text + accessory]) vs the row's 7 —
-  // buildChannelsView budgets for this.
+  // point. Component cost: 20 (heading + 5 × [Section + Text + accessory] + 4 dividers) vs
+  // the row's 7 — buildChannelsView budgets for this and sits at the 40 cap.
   const section = (text, button) => ({ type: 9, components: [{ type: 10, content: text }], accessory: button });
-  return [
-    { type: 10, content: '### ```#️⃣ Channels```\n-# The standard ORG channels, in the order a season runs them. Nothing is created on click — every action shows you exactly what it will do first.' },
+  const sections = [
     section('**1 · Subs** — as players accept their casting: convert each application channel into their private player↔host subs channel (or create fresh ones).', BTN.subs),
     section('**2 · Confessionals** — before the cast reveal: every player\'s private diary room. Players get access straight away; Trusted Spectators read along.', BTN.confessionals),
     section('**3 · 1 on 1s** — after 🚣 Marooning announces the tribes: one private channel per pair of tribemates, so hosts can watch player-to-player chat.', BTN.oneOnOnes),
     section('**4 · Swap/Merge** — at a tribe swap or merge: archives the old tribes as a castlist and moves everyone onto the new ones.', BTN.swapMerge),
     section('**5 · Alliances** — as the game runs: secret channels for alliances. Their existence is season-deciding info — no spectators, generic names.', BTN.alliances)
+  ];
+  return [
+    { type: 10, content: '### ```#️⃣ Create Channels```\n-# The standard ORG channels, in the order a season runs them. Nothing is created on click — every action shows you exactly what it will do first.' },
+    ...sections.flatMap((s, i) => (i === 0 ? [s] : [{ type: 14 }, s]))
   ];
 }
 
@@ -226,12 +230,12 @@ export async function buildChannelsView({ configId, guildId, playerData, seasonN
         // holds" gap — until now the host had to hand-assign every role in Discord).
         { type: 2, custom_id: `channels_activate_${configId}`, label: 'Activate', style: 3, emoji: { name: '🟢' } }
       ]},
-      { type: 14 },
-      // Guided walkthrough layout (16 components — the tab sits ~38/40 with it; anything new
-      // here must re-count). Msg Category left the tab entirely 2026-08-16 (Reece) — it lives
-      // on ⭐ Premium's 📢 Player Engagement row only.
+      // ⚠️ 40/40 — the walkthrough (20 components incl. its internal dividers) puts this tab
+      // EXACTLY at Discord's component cap. The block's outer separators were sacrificed for
+      // the internal ones (its heading + the stats quote-block delineate the edges); adding
+      // ANY component here means removing one first. Msg Category left the tab entirely
+      // 2026-08-16 (Reece) — it lives on ⭐ Premium's 📢 Player Engagement row only.
       ...buildChannelsSection(configId, { entitled, layout: 'sections' }),
-      { type: 14 },
       { type: 10, content: body + (lastRunLine ? `\n\n${lastRunLine}` : '') },
       { type: 14 },
       buildSeasonBottomRow(configId, 'channels')

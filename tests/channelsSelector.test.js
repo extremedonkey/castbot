@@ -77,13 +77,11 @@ describe('Channels section — guided walkthrough layout (sections, 2026-08-16)'
   // numbered Section (Text Display + button accessory) walking the season's actual order.
   const build = (entitled = true) => buildChannelsSection(CID, { entitled, layout: 'sections' });
 
-  it('heading + 5 Sections, each ONE Text Display child + a button accessory', () => {
+  it('heading, then Sections with a divider BETWEEN each — never on the outside', () => {
     const parts = build();
-    assert.equal(parts[0].type, 10, 'heading leads');
-    const sections = parts.slice(1);
-    assert.equal(sections.length, 5);
-    for (const s of sections) {
-      assert.equal(s.type, 9);
+    assert.deepEqual(parts.map(p => p.type), [10, 9, 14, 9, 14, 9, 14, 9, 14, 9],
+      'dividers interleave the 5 Sections only; the caller owns the block edges');
+    for (const s of parts.filter(p => p.type === 9)) {
       assert.equal(s.components.length, 1, 'Section takes exactly ONE child');
       assert.equal(s.components[0].type, 10);
       assert.equal(s.accessory.type, 2);
@@ -91,13 +89,13 @@ describe('Channels section — guided walkthrough layout (sections, 2026-08-16)'
   });
 
   it('numbered 1–5 in season order: Subs → Confessionals → 1on1s → Swap/Merge → Alliances', () => {
-    const sections = build().slice(1);
+    const sections = build().filter(p => p.type === 9);
     assert.deepEqual(sections.map(s => s.accessory.label), ['Subs', 'Confessionals', '1 on 1s', 'Swap/Merge', 'Alliances']);
     sections.forEach((s, i) => assert.match(s.components[0].content, new RegExp(`^\\*\\*${i + 1} · `), `section ${i} numbering`));
   });
 
   it('the guidance tells the story: accept → pre-reveal → Marooning → tribes → game', () => {
-    const [subs, confessionals, oneOnOnes] = build().slice(1).map(s => s.components[0].content);
+    const [subs, confessionals, oneOnOnes] = build().filter(p => p.type === 9).map(s => s.components[0].content);
     assert.match(subs, /accept their casting/);
     assert.match(confessionals, /before the cast reveal/i);
     assert.match(oneOnOnes, /Marooning/, 'the announcement sits between confessionals and 1on1s');
@@ -108,7 +106,7 @@ describe('Channels section — guided walkthrough layout (sections, 2026-08-16)'
   });
 
   it('lock-swap applies to the accessories; Swap/Merge stays live', () => {
-    const ids = build(false).slice(1).map(s => s.accessory.custom_id);
+    const ids = build(false).filter(p => p.type === 9).map(s => s.accessory.custom_id);
     assert.deepEqual(ids, [
       `premium_locked_channels_subs_${CID}`, `premium_locked_channels_confessionals_${CID}`,
       `premium_locked_channels_1on1s_${CID}`, 'castlist_swap_merge_default',
@@ -116,10 +114,10 @@ describe('Channels section — guided walkthrough layout (sections, 2026-08-16)'
     ]);
   });
 
-  it('costs exactly 16 components — the tab budgets ~38/40 around this', () => {
+  it('costs exactly 20 components — the tab sits at 40/40 around this, zero headroom', () => {
     const parts = build();
     const count = parts.reduce((n, p) => n + 1 + (p.components?.length || 0) + (p.accessory ? 1 : 0), 0);
-    assert.equal(count, 16);
+    assert.equal(count, 20);
   });
 });
 
