@@ -240,7 +240,8 @@ describe('Channels row — one definition, two surfaces (RaP 0885 stage 1)', () 
   it('the Season Manager tab renders the SAME builder (no forked copy)', async () => {
     const viewSource = readFileSync(
       path.join(__dirname, '..', 'src', 'channels', 'channelsView.js'), 'utf8');
-    assert.ok(/\.\.\.buildChannelsSection\(configId\)/.test(viewSource),
+    // Since 2026-08-16 the tab passes { entitled } for its own premium lock-swap — still the shared builder.
+    assert.ok(/\.\.\.buildChannelsSection\(configId, \{ entitled \}\)/.test(viewSource),
       'buildChannelsView stopped spreading buildChannelsSection — the surfaces can now drift');
   });
 });

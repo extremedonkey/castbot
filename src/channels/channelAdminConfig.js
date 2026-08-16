@@ -10,17 +10,9 @@
  */
 import { PermissionFlagsBits } from 'discord.js';
 
-/**
- * Users who can SEE the Channels admin surfaces (feature flag, NOT authority). Display gating
- * (seasonSelector.js) and the inline handler guards both read this. The literal owner ID also
- * satisfies the security-declaration ratchet (tests/securityDeclarations.test.js:52).
- *
- * Reece-only since 2026-08-15: the test account was on this list and — because the whitelist
- * was the ONLY gate — could review/approve its own alliance request with zero Discord
- * permissions (servivorg, request msts1pfmpj). Visibility and authority are now separate
- * layers: this flag hides the feature; CHANNEL_ADMIN_PERMISSIONS is the authority check.
- */
-export const CHANNEL_ADMIN_USER_IDS = ['391415444084490240'];
+// CHANNEL_ADMIN_USER_IDS (the see-the-feature whitelist) was RETIRED 2026-08-16: every surface
+// is now open to admins — authority is CHANNEL_ADMIN_PERMISSIONS on the factory blocks, and the
+// four channel-fabrication buttons premium-lock-swap for unentitled guilds (buildChannelsSection).
 
 /**
  * Users who can use the player-facing alliance REQUEST flow while it's v1-hidden (RaP 0892).

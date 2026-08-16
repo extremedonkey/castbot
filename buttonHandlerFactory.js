@@ -3458,7 +3458,7 @@ export const BUTTON_REGISTRY = {
     parent: 'season_marooning',
     category: 'application_management'
   },
-  // ── 🔐 Channel Administration (hidden tab — CHANNEL_ADMIN_USER_IDS only) ──
+  // ── #️⃣ Channel Administration (open to admins since 2026-08-16; premium lock-swap on the channel buttons) ──
   // Gating is an inline user-ID check in each handler; `restrictedUser` here enforces NOTHING
   // (RaP 0900) and is recorded for documentation only.
   'season_channels_*': {

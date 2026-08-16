@@ -41243,13 +41243,11 @@ To fix this:
             const guild = await client.guilds.fetch(guildId).catch(() => null);
             originView = await buildMarooningView({ configId, guildId, playerData: fresh, seasonName: freshConfig.seasonName, guild, userId: editUserId });
           } else if (originMode === 'channels') {
-            // Hidden tab — re-check the whitelist here; the nav row only HIDES it (RaP 0900).
-            const { isChannelAdmin } = await import('./seasonSelector.js');
-            if (isChannelAdmin(editUserId)) {
-              const { buildChannelsView } = await import('./src/channels/channelsView.js');
-              const guild = await client.guilds.fetch(guildId).catch(() => null);
-              originView = await buildChannelsView({ configId, guildId, playerData: fresh, seasonName: freshConfig.seasonName, guild, userId: editUserId });
-            }
+            // Open to every admin since 2026-08-16 — authority is the factory requiresPermission
+            // on the channels blocks; premium gating is the tab's own button lock-swap.
+            const { buildChannelsView } = await import('./src/channels/channelsView.js');
+            const guild = await client.guilds.fetch(guildId).catch(() => null);
+            originView = await buildChannelsView({ configId, guildId, playerData: fresh, seasonName: freshConfig.seasonName, guild, userId: editUserId });
           }
 
           if (originView) {

@@ -5,14 +5,15 @@
  *   modal submit → PLAN (pure preflight, mutates nothing) → confirm screen
  *   confirm      → EXECUTE (paced, streamed, upserting)
  *
- * Nothing here trusts the caller: each entry point re-checks the whitelist, because
- * BUTTON_REGISTRY's `restrictedUser` enforces nothing (RaP 0900).
+ * Authority is the factory requiresPermission (CHANNEL_ADMIN_PERMISSIONS) on the app.js
+ * channels blocks — the old per-entry whitelist re-checks are gone with the whitelist itself
+ * (2026-08-16). Premium gating is the buildChannelsSection lock-swap, display-side.
  */
 import { PermissionFlagsBits } from 'discord.js';
 import { loadPlayerData } from '../../storage.js';
 import { getRoleAccessOverwrites } from '../../utils/roleAccessUtils.js';
 import {
-  CHANNEL_ADMIN_USER_IDS, PLAYER_ACCESS, SPECTATOR_ACCESS, HOST_ACCESS,
+  PLAYER_ACCESS, SPECTATOR_ACCESS, HOST_ACCESS,
   CATEGORY_NAMES, ACTIONS, PLAN_TTL_MS, MAX_JOB_SECONDS, PACE_DELETE, PACE_SEND
 } from './channelAdminConfig.js';
 import {
@@ -27,11 +28,6 @@ import { runPacedJob, acquireJobLock, releaseJobLock, JobBusyError, renderProgre
 import { makeDeltaBuffer, flushDeltas } from './channelRegistry.js';
 import { getAcceptedCast, expandMentionables, getTribePairs } from './channelRoster.js';
 import { buildConfirmScreen, rosterLines } from './channelsView.js';
-
-/** Whitelist check. Mirrors seasonSelector.isChannelAdmin (display) — this one is enforcement. */
-export function isChannelAdmin(userId) {
-  return !!userId && CHANNEL_ADMIN_USER_IDS.includes(String(userId));
-}
 
 /**
  * Pending plans, keyed by a short token. The plan CANNOT live in the custom_id (100-char limit).

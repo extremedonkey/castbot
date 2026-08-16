@@ -433,9 +433,9 @@ export async function execAlliance({ plan, guild, snapshot, playerData, userId, 
 // Player request flow (PUBLIC entry points — v1 whitelist re-checked here)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** v1: the request feature is whitelist-only while alliances are hidden. NOT the admin list —
+/** v1: the request feature is whitelist-only while it's being trialled. NOT an admin gate —
  *  requesting needs no authority (nothing is created without an admin's review), so the test
- *  account stays a pure player-simulant here while being off CHANNEL_ADMIN_USER_IDS. */
+ *  account stays a pure player-simulant here with no Discord permissions. */
 const canRequest = (userId) => ALLIANCE_REQUEST_USER_IDS.includes(String(userId));
 
 /** Player menu → Request Alliance button. Returns the request modal (or an ephemeral denial). */

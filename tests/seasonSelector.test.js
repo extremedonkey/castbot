@@ -339,7 +339,9 @@ function buildSeasonNavRow(configId, active) {
       tab('apps', `planner_apps_${configId}`, 'Apps', '📝'),
       tab('planner', `apps_planner_${configId}`, 'Planner', '📅'),
       tab('ranking', `season_app_ranking_${configId}`, 'Casting', '🏆'),
-      tab('marooning', `season_marooning_${configId}`, 'Marooning', '🚣')
+      tab('marooning', `season_marooning_${configId}`, 'Marooning', '🚣'),
+      // Channels open to everyone since 2026-08-16 (whitelist retired) — 5 tabs, the row cap.
+      tab('channels', `season_channels_${configId}`, 'Channels', '#️⃣')
     ]
   };
 }
@@ -358,12 +360,12 @@ function buildSeasonBottomRow(configId, active, extraButtons = []) {
 describe('Season Manager — nav row (buildSeasonNavRow)', () => {
   const CID = 'config_123';
 
-  it('has exactly 4 peer tabs in order Apps · Planner · Casting · Marooning', () => {
+  it('has exactly 5 peer tabs in order Apps · Planner · Casting · Marooning · Channels', () => {
     const row = buildSeasonNavRow(CID, 'ranking');
     assert.equal(row.type, 1);
-    assert.equal(row.components.length, 4);
-    assert.deepEqual(row.components.map(b => b.label), ['Apps', 'Planner', 'Casting', 'Marooning']);
-    assert.deepEqual(row.components.map(b => b.emoji.name), ['📝', '📅', '🏆', '🚣']);
+    assert.equal(row.components.length, 5);
+    assert.deepEqual(row.components.map(b => b.label), ['Apps', 'Planner', 'Casting', 'Marooning', 'Channels']);
+    assert.deepEqual(row.components.map(b => b.emoji.name), ['📝', '📅', '🏆', '🚣', '#️⃣']);
   });
 
   it('emits the correct custom_id per tab (Marooning → season_marooning_*)', () => {
@@ -372,7 +374,8 @@ describe('Season Manager — nav row (buildSeasonNavRow)', () => {
       `planner_apps_${CID}`,
       `apps_planner_${CID}`,
       `season_app_ranking_${CID}`,
-      `season_marooning_${CID}`
+      `season_marooning_${CID}`,
+      `season_channels_${CID}`
     ]);
   });
 

@@ -68,14 +68,21 @@ export function rosterLines(members, { creating = null, limit = 25 } = {}) {
  *   custom_id (Stage 1 of the migration keeps ids untouched — see RaP 0885 / ChannelAdministration.md)
  * @returns {Array} [Text Display, ActionRow] — 7 components
  */
-export function buildChannelsSection(configId) {
+export function buildChannelsSection(configId, { entitled = true } = {}) {
+  // 💎 Premium (Reece 2026-08-16): the four channel-fabrication buttons lock-swap to
+  // premium_locked_* for unentitled guilds — the Premium menu's convention, so the ONE
+  // upsell handler (app.js premium_locked_) serves the click. Swap/Merge stays live (a
+  // castlist feature, not channel fabrication), and the Player Roles row rendered by
+  // buildChannelsView is deliberately free too. The Premium menu passes the default
+  // (entitled: true) because lockPremiumComponents already locks its whole container.
+  const gate = (id) => (entitled ? id : `premium_locked_${id}`);
   return [
     { type: 10, content: '### ```#️⃣ Channels```\n-# Bulk create / update the standard ORG channels.' },
     { type: 1, components: [
-      { type: 2, custom_id: `channels_confessionals_${configId}`, label: 'Confessionals', style: 2, emoji: { name: '🎙️' } },
-      { type: 2, custom_id: `channels_subs_${configId}`, label: 'Subs', style: 2, emoji: { name: '🗳️' } },
-      { type: 2, custom_id: `channels_1on1s_${configId}`, label: '1 on 1s', style: 2, emoji: { name: '👥' } },
-      { type: 2, custom_id: `channels_alliances_${configId}`, label: 'Alliances', style: 2, emoji: { name: '🤝' } },
+      { type: 2, custom_id: gate(`channels_confessionals_${configId}`), label: 'Confessionals', style: 2, emoji: { name: '🎙️' } },
+      { type: 2, custom_id: gate(`channels_subs_${configId}`), label: 'Subs', style: 2, emoji: { name: '🗳️' } },
+      { type: 2, custom_id: gate(`channels_1on1s_${configId}`), label: '1 on 1s', style: 2, emoji: { name: '👥' } },
+      { type: 2, custom_id: gate(`channels_alliances_${configId}`), label: 'Alliances', style: 2, emoji: { name: '🤝' } },
       { type: 2, custom_id: 'castlist_swap_merge_default', label: 'Swap/Merge', style: 2, emoji: { name: '🔀' } }
     ]}
   ];
@@ -108,6 +115,12 @@ export async function buildChannelsView({ configId, guildId, playerData, seasonN
   // so a static import here would close the cycle at module-init time.
   const { setChannelsOrigin } = await import('./channelsHandlers.js');
   setChannelsOrigin(userId, 'season'); // Cancel / ← Back from here returns to this tab
+
+  // 💎 Premium: Confessionals/Subs/1on1s/Alliances lock-swap for unentitled guilds — the same
+  // entitled rule as menuBuilder's Premium menu, owner-bypass included so dev servers stay
+  // usable. The 🎭 Player Roles row and Swap/Merge stay free (Reece 2026-08-16).
+  const { hasPremiumAccessSync } = await import('../../entitlements.js');
+  const entitled = hasPremiumAccessSync(guildId) || String(userId) === '391415444084490240';
 
   const node = playerData?.[guildId]?.channelAdmin || {};
   const season = node[configId] || {};
@@ -189,7 +202,7 @@ export async function buildChannelsView({ configId, guildId, playerData, seasonN
         { type: 2, custom_id: `channels_activate_${configId}`, label: 'Activate', style: 3, emoji: { name: '🟢' } }
       ]},
       { type: 14 },
-      ...buildChannelsSection(configId),
+      ...buildChannelsSection(configId, { entitled }),
       // Msg Category kept on the tab after leaving the shared row (2026-08-08) — the shared
       // row's slot went to Swap/Merge, and Premium renders this button in 📢 Player Engagement.
       { type: 1, components: [

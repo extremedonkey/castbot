@@ -109,7 +109,7 @@
 ├─ 📅 Planner     apps_planner_{configId}
 ├─ 🏆 Casting     season_app_ranking_{configId}
 ├─ 🚣 Marooning   season_marooning_{configId}
-├─ 🔐 Channels    season_channels_{configId}   🔒 CHANNEL_ADMIN_USER_IDS only
+├─ #️⃣ Channels    season_channels_{configId}   open to all; Confessionals/Subs/1on1s/Alliances 💎-lock for unentitled guilds
 └─ ← Seasons · ✏️ Edit
 -# Active tab renders [Primary]; nav row is at the hard 5-button cap — no room for a 6th tab.
 ```

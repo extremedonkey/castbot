@@ -8,17 +8,6 @@
 
 import { StringSelectMenuBuilder } from 'discord.js';
 import { loadPlayerData } from './storage.js';
-import { CHANNEL_ADMIN_USER_IDS } from './src/channels/channelAdminConfig.js';
-
-/**
- * Whether a viewer may see/use the hidden Channels tab.
- * Shared by the display gate here and the handler guards in app.js so the two cannot drift.
- * @param {string} [userId]
- * @returns {boolean}
- */
-export function isChannelAdmin(userId) {
-  return !!userId && CHANNEL_ADMIN_USER_IDS.includes(String(userId));
-}
 
 /**
  * Get emoji for season stage
@@ -93,16 +82,15 @@ export function seasonConfigIndicators(configId, season, guildData) {
  * Primary (blue, still clickable — reloads), the rest Secondary (grey). All four are peer TABS (views).
  * Edit is NOT here — it's an action, living in the shared bottom row (buildSeasonBottomRow) next to
  * ← Seasons. Adopts the Player Manager active-button convention. Single source of truth so it can't drift.
- * A FIFTH tab — 🔐 Channels — appears only for CHANNEL_ADMIN_USER_IDS while Channel Administration
- * is being built out. That makes the row exactly 5 buttons, Discord's HARD per-ActionRow limit:
- * there is no room for a sixth tab (Channels is expected to absorb Marooning later). `userId` is
- * optional and omitting it yields the classic 4 tabs, so every existing caller/test is unaffected.
- * This is DISPLAY only — the handlers re-check (menuBuilder.js:76 convention), because
- * BUTTON_REGISTRY's `restrictedUser` enforces nothing (RaP 0900).
+ * The FIFTH tab — #️⃣ Channels — is open to every viewer since 2026-08-16 (it was whitelist-hidden
+ * while Channel Administration was built out). That makes the row exactly 5 buttons, Discord's HARD
+ * per-ActionRow limit: there is no room for a sixth tab (Channels is expected to absorb Marooning
+ * later). Authority lives on the handlers (requiresPermission: CHANNEL_ADMIN_PERMISSIONS); premium
+ * gating lives on the tab's own buttons (buildChannelsSection lock-swap), never here.
  *
  * @param {string} configId
  * @param {'apps'|'planner'|'ranking'|'marooning'|'channels'} active
- * @param {string} [userId] - viewer; gates the hidden Channels tab
+ * @param {string} [userId] - accepted (and ignored) so the many existing call sites stay valid
  * @returns {Object} a type-1 ActionRow
  */
 export function buildSeasonNavRow(configId, active, userId = null) {
@@ -111,16 +99,13 @@ export function buildSeasonNavRow(configId, active, userId = null) {
     style: active === key ? 1 : 2, // Primary (blue) when this is the current view, else Secondary (grey)
     emoji: { name: emoji }
   });
-  const tabs = [
+  return { type: 1, components: [
     tab('apps', `planner_apps_${configId}`, 'Apps', '📝'),
     tab('planner', `apps_planner_${configId}`, 'Planner', '📅'),
     tab('ranking', `season_app_ranking_${configId}`, 'Casting', '🏆'),
-    tab('marooning', `season_marooning_${configId}`, 'Marooning', '🚣')
-  ];
-  if (isChannelAdmin(userId)) {
-    tabs.push(tab('channels', `season_channels_${configId}`, 'Channels', '#️⃣'));
-  }
-  return { type: 1, components: tabs };
+    tab('marooning', `season_marooning_${configId}`, 'Marooning', '🚣'),
+    tab('channels', `season_channels_${configId}`, 'Channels', '#️⃣')
+  ]};
 }
 
 /**

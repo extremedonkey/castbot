@@ -11,38 +11,64 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { PermissionFlagsBits } from 'discord.js';
-import { buildSeasonNavRow, seasonManagerHeader, isChannelAdmin } from '../seasonSelector.js';
+import { buildSeasonNavRow, seasonManagerHeader } from '../seasonSelector.js';
 import { buildStatusSignals, deriveStatus } from '../playerStatus.js';
 import { ACCEPTED_STATUS_IDS, expandMentionables } from '../src/channels/channelRoster.js';
-import { CHANNEL_ADMIN_USER_IDS, ALLIANCE_REQUEST_USER_IDS, CHANNEL_ADMIN_PERMISSIONS } from '../src/channels/channelAdminConfig.js';
+import { ALLIANCE_REQUEST_USER_IDS, CHANNEL_ADMIN_PERMISSIONS } from '../src/channels/channelAdminConfig.js';
+import { buildChannelsSection } from '../src/channels/channelsView.js';
 
 const REECE = '391415444084490240';
 const TEST_ACCOUNT = '1086246253819613274'; // player-simulant: may REQUEST alliances, never admin
 const RANDOM = '999999999999999999';
 const CID = 'config_123';
 
-describe('Channels tab — isChannelAdmin gate', () => {
-  it('admits ONLY Reece — the test account was removed after it approved its own alliance request (servivorg 2026-08-15)', () => {
-    assert.equal(isChannelAdmin(REECE), true);
-    assert.equal(isChannelAdmin(TEST_ACCOUNT), false);
-    assert.deepEqual(CHANNEL_ADMIN_USER_IDS, [REECE]);
+describe('Channels — the see-the-feature whitelist is RETIRED (2026-08-16)', () => {
+  it('seasonSelector no longer exports isChannelAdmin — nothing can quietly re-gate the tab', async () => {
+    const mod = await import('../seasonSelector.js');
+    assert.equal('isChannelAdmin' in mod, false);
   });
 
-  it('the split: the test account keeps the player-facing REQUEST flow only', () => {
+  it('the test account keeps the player-facing alliance REQUEST flow only', () => {
     assert.deepEqual(ALLIANCE_REQUEST_USER_IDS, [REECE, TEST_ACCOUNT]);
   });
+});
 
-  it('rejects everyone else, including falsy inputs', () => {
-    assert.equal(isChannelAdmin(RANDOM), false);
-    assert.equal(isChannelAdmin(undefined), false);
-    assert.equal(isChannelAdmin(null), false);
-    assert.equal(isChannelAdmin(''), false);
-    assert.equal(isChannelAdmin('0'), false);
+describe('Channels section — premium lock-swap (2026-08-16)', () => {
+  const ids = (entitled) => buildChannelsSection(CID, { entitled })
+    .find(c => c.type === 1).components.map(b => b.custom_id);
+
+  it('entitled guilds get the real custom_ids', () => {
+    assert.deepEqual(ids(true), [
+      `channels_confessionals_${CID}`, `channels_subs_${CID}`, `channels_1on1s_${CID}`,
+      `channels_alliances_${CID}`, 'castlist_swap_merge_default'
+    ]);
   });
 
-  it('does not admit a numeric near-miss or a substring', () => {
-    assert.equal(isChannelAdmin('39141544408449024'), false);  // one digit short
-    assert.equal(isChannelAdmin(`${REECE}0`), false);
+  it('unentitled guilds lock-swap EXACTLY the four fabrication buttons — Swap/Merge stays live', () => {
+    assert.deepEqual(ids(false), [
+      `premium_locked_channels_confessionals_${CID}`, `premium_locked_channels_subs_${CID}`,
+      `premium_locked_channels_1on1s_${CID}`, `premium_locked_channels_alliances_${CID}`,
+      'castlist_swap_merge_default'
+    ]);
+  });
+
+  it('defaults to entitled — the Premium menu calls it bare and locks its own container', () => {
+    assert.deepEqual(buildChannelsSection(CID).find(c => c.type === 1).components.map(b => b.custom_id), ids(true));
+  });
+
+  it('locked buttons keep their label and emoji — the lock is the click, not the look', () => {
+    const locked = buildChannelsSection(CID, { entitled: false }).find(c => c.type === 1).components;
+    assert.deepEqual(locked.map(b => b.label), ['Confessionals', 'Subs', '1 on 1s', 'Alliances', 'Swap/Merge']);
+    assert.ok(locked.every(b => b.emoji?.name));
+  });
+
+  it('the Player Roles row is NEVER premium-gated (Reece: roles stuff stays free)', async () => {
+    const { readFileSync } = await import('node:fs');
+    const src = readFileSync(new URL('../src/channels/channelsView.js', import.meta.url), 'utf8');
+    // The roles-row ids must be written bare in buildChannelsView — no gate() wrapper, no premium_locked_.
+    for (const id of ['channels_roles_', 'channels_playerroles_', 'channels_manualrole_', 'channels_activate_']) {
+      assert.match(src, new RegExp(`custom_id: \`${id}\\$\\{configId\\}\``), `${id} must render ungated`);
+    }
   });
 });
 
@@ -74,50 +100,38 @@ describe('Channels — authority gate (servivorg 2026-08-15 regression)', () => 
   }
 });
 
-describe('Channels tab — nav row visibility', () => {
-  it('renders the classic 4 tabs with no userId (every existing caller)', () => {
+describe('Channels tab — nav row shows it to EVERYONE (whitelist retired 2026-08-16)', () => {
+  it('renders 5 tabs for every viewer — userId, no userId, randoms, the test account', () => {
+    for (const uid of [undefined, REECE, TEST_ACCOUNT, RANDOM]) {
+      const row = buildSeasonNavRow(CID, 'apps', uid);
+      assert.deepEqual(row.components.map(b => b.label),
+        ['Apps', 'Planner', 'Casting', 'Marooning', 'Channels'], `viewer ${uid}`);
+    }
+  });
+
+  it('Channels sits LAST with the #️⃣ emoji and the season_channels_ id', () => {
     const row = buildSeasonNavRow(CID, 'apps');
-    assert.equal(row.components.length, 4);
-    assert.deepEqual(row.components.map(b => b.label), ['Apps', 'Planner', 'Casting', 'Marooning']);
-  });
-
-  it('hides Channels from a non-whitelisted admin', () => {
-    const row = buildSeasonNavRow(CID, 'apps', RANDOM);
-    assert.equal(row.components.length, 4);
-    assert.ok(!row.components.some(b => b.label === 'Channels'));
-  });
-
-  it('shows Channels LAST for the whitelisted admin', () => {
-    const row = buildSeasonNavRow(CID, 'apps', REECE);
-    assert.equal(row.components.length, 5);
-    assert.equal(row.components[4].label, 'Channels');
     assert.equal(row.components[4].custom_id, `season_channels_${CID}`);
-    assert.equal(row.components[4].emoji.name, '#️⃣', 'matches the #️⃣ Channels section heading (was 🔐, changed 2026-08-16)');
-  });
-
-  it('hides Channels from the test account — no shown-but-denied drift (137c6aca class)', () => {
-    const row = buildSeasonNavRow(CID, 'apps', TEST_ACCOUNT);
-    assert.equal(row.components.length, 4);
-    assert.ok(!row.components.some(b => b.label === 'Channels'));
+    assert.equal(row.components[4].emoji.name, '#️⃣', 'matches the #️⃣ Channels section heading');
   });
 
   it('NEVER exceeds Discord\'s hard 5-button ActionRow limit', () => {
     for (const active of ['apps', 'planner', 'ranking', 'marooning', 'channels']) {
-      assert.ok(buildSeasonNavRow(CID, active, REECE).components.length <= 5, `${active} row overflowed`);
+      assert.equal(buildSeasonNavRow(CID, active).components.length, 5, `${active} row`);
     }
   });
 
   it('shades the active Channels tab Primary and the rest Secondary', () => {
-    const row = buildSeasonNavRow(CID, 'channels', REECE);
+    const row = buildSeasonNavRow(CID, 'channels');
     const channels = row.components.find(b => b.label === 'Channels');
     assert.equal(channels.style, 1, 'active tab is Primary/blue');
     assert.deepEqual(row.components.filter(b => b.label !== 'Channels').map(b => b.style), [2, 2, 2, 2]);
   });
 
-  it('keeps the tab order stable — Channels never displaces an existing tab', () => {
-    const four = buildSeasonNavRow(CID, 'apps').components.map(b => b.custom_id);
-    const five = buildSeasonNavRow(CID, 'apps', REECE).components.map(b => b.custom_id);
-    assert.deepEqual(five.slice(0, 4), four);
+  it('keeps the tab order stable regardless of viewer', () => {
+    const anon = buildSeasonNavRow(CID, 'apps').components.map(b => b.custom_id);
+    const named = buildSeasonNavRow(CID, 'apps', REECE).components.map(b => b.custom_id);
+    assert.deepEqual(named, anon);
   });
 });
 
