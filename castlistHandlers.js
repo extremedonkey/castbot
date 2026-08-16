@@ -88,7 +88,44 @@ function deduplicateInteraction(guildId, castlistId) {
  * Extracted for reuse by both handleCastlistButton and auto-open on empty castlist.
  * @returns {Object} Full modal response ({ type: 9, data: { custom_id, title, components } })
  */
-export async function buildEditInfoModal(guildId, castlistId) {
+/**
+ * Materialize the default castlist entity + migrate legacy-format default tribes so they show
+ * as linked in the Tribe Roles select. Extracted from the castlist_select handler (2026-08-17)
+ * for reuse by the Channels tab's 📋 Castlists step. Idempotent.
+ */
+export async function ensureDefaultCastlistMaterialized(guildId) {
+  await castlistManager.updateCastlist(guildId, 'default', {});
+
+  const playerData = await loadPlayerData();
+  const tribes = playerData[guildId]?.tribes || {};
+  let migratedCount = 0;
+  for (const [roleId, tribe] of Object.entries(tribes)) {
+    if (!tribe) continue;
+    if (tribe.castlist === 'default' && (!tribe.castlistIds || !tribe.castlistIds.includes('default'))) {
+      console.log(`[CASTLIST] Migrating tribe ${roleId} to new format`);
+      if (!tribe.castlistIds) tribe.castlistIds = [];
+      if (!tribe.castlistIds.includes('default')) tribe.castlistIds.push('default');
+      tribe.castlist = 'default';
+      migratedCount++;
+    }
+  }
+  if (migratedCount > 0) {
+    await savePlayerData(playerData);
+    console.log(`[CASTLIST] Migrated ${migratedCount} default tribes to new format`);
+  }
+}
+
+/**
+ * #️⃣ Channels tab → 📋 Castlists (walkthrough "Set up Castlist" step): the SAME first-run
+ * modal castlist_select auto-opens for the default castlist, but stamped with a channels
+ * origin so the submit webhook-updates the Channels tab instead of opening the Castlist Hub.
+ */
+export async function openDefaultCastlistSetupModal(guildId, configId) {
+  await ensureDefaultCastlistMaterialized(guildId);
+  return await buildEditInfoModal(guildId, 'default', { origin: `channels_${configId}` });
+}
+
+export async function buildEditInfoModal(guildId, castlistId, { origin = null } = {}) {
   const castlist = await castlistManager.getCastlist(guildId, castlistId);
   if (!castlist) return null;
 
@@ -209,7 +246,9 @@ export async function buildEditInfoModal(guildId, castlistId) {
   return {
     type: 9,
     data: {
-      custom_id: `castlist_edit_info_modal_${castlistId}`,
+      // Optional |origin suffix (e.g. 'channels_{configId}') — the submit re-renders that
+      // surface instead of the Castlist Hub. Castlist ids never contain '|'.
+      custom_id: `castlist_edit_info_modal_${castlistId}${origin ? `|${origin}` : ''}`,
       title: isDefaultCastlist ? 'Manage Default Castlist' : 'Manage Castlist Info',
       components: modalComponents
     }
@@ -447,33 +486,8 @@ export async function handleCastlistSelect(req, res, client) {
         console.log(`[CASTLIST] Ensuring default castlist exists on selection`);
 
         try {
-          // This creates the default entity if it doesn't exist
-          await castlistManager.updateCastlist(context.guildId, 'default', {});
-
-          // Also migrate any existing default tribes to new format NOW
-          const playerData = await loadPlayerData();
-          const tribes = playerData[context.guildId]?.tribes || {};
-          let migratedCount = 0;
-
-          for (const [roleId, tribe] of Object.entries(tribes)) {
-            if (!tribe) continue;
-            if (tribe.castlist === 'default' && (!tribe.castlistIds || !tribe.castlistIds.includes('default'))) {
-              console.log(`[CASTLIST] Migrating tribe ${roleId} to new format`);
-              if (!tribe.castlistIds) {
-                tribe.castlistIds = [];
-              }
-              if (!tribe.castlistIds.includes('default')) {
-                tribe.castlistIds.push('default');
-              }
-              tribe.castlist = 'default';
-              migratedCount++;
-            }
-          }
-
-          if (migratedCount > 0) {
-            await savePlayerData(playerData);
-            console.log(`[CASTLIST] Migrated ${migratedCount} default tribes to new format`);
-          }
+          // Shared with the Channels tab's 📋 Castlists step (extracted 2026-08-17).
+          await ensureDefaultCastlistMaterialized(context.guildId);
         } catch (error) {
           console.error('[CASTLIST] ❌ Default creation failed:', error);
           return {
@@ -1030,7 +1044,9 @@ export function handleCastlistDeleteConfirm(req, res, client, custom_id) {
  * Handle Edit Info modal submission
  */
 export function handleEditInfoModal(req, res, client, custom_id) {
-  const castlistId = custom_id.replace('castlist_edit_info_modal_', '');
+  // '{castlistId}[|origin]' — a channels_{configId} origin re-renders the Channels tab on
+  // submit (webhook PATCH of the parent message) instead of opening the Castlist Hub.
+  const [castlistId, submitOrigin] = custom_id.replace('castlist_edit_info_modal_', '').split('|');
   const components = req.body.data.components;
 
   const token = req.body.token;
@@ -1143,6 +1159,21 @@ export function handleEditInfoModal(req, res, client, custom_id) {
             console.log(`[CASTLIST] ✅ Removed tribe ${roleId} via edit modal`);
           }
         }
+      }
+
+      // Origin-aware refresh: launched from the Channels tab's 📋 Castlists step → PATCH the
+      // parent Channels message (the deferred update already targets it). Hub flow unchanged.
+      if (submitOrigin?.startsWith('channels_')) {
+        const configId = submitOrigin.slice('channels_'.length);
+        const { loadPlayerData: loadPD } = await import('./storage.js');
+        const fresh = await loadPD();
+        const seasonName = fresh[guildId]?.applicationConfigs?.[configId]?.seasonName || `Season ${configId}`;
+        const guild = await client.guilds.fetch(guildId).catch(() => null);
+        const { buildChannelsView } = await import('./src/channels/channelsView.js');
+        const view = await buildChannelsView({ configId, guildId, playerData: fresh, seasonName, guild, userId });
+        const { updateDeferredResponse } = await import('./buttonHandlerFactory.js');
+        await updateDeferredResponse(token, { components: view.components });
+        return;
       }
 
       // Two-phase response: fast hub then full member data

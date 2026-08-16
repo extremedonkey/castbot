@@ -84,12 +84,12 @@ export function getChannelsOrigin(userId) {
 const err = (msg) => ({ components: [{ type: 17, accent_color: 0xe74c3c, components: [{ type: 10, content: `## ❌ ${msg}` }] }] });
 
 /** The Channels tab itself. */
-export async function handleChannelsTab({ configId, guildId, userId, client }) {
+export async function handleChannelsTab({ configId, guildId, userId, client, page = 0 }) {
   const { buildChannelsView } = await import('./channelsView.js');
   const guild = await client.guilds.fetch(guildId);
   const playerData = await loadPlayerData();
   const seasonName = playerData[guildId]?.applicationConfigs?.[configId]?.seasonName || `Season ${configId}`;
-  return await buildChannelsView({ configId, guildId, playerData, seasonName, guild, userId });
+  return await buildChannelsView({ configId, guildId, playerData, seasonName, guild, userId, page });
 }
 
 /** Roles modal submit — the one action with no bulk work, so it applies immediately. */

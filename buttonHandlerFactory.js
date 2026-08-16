@@ -3499,6 +3499,23 @@ export const BUTTON_REGISTRY = {
     category: 'channel_admin',
     requiresModal: true
   },
+  'channels_castlist_*': {
+    label: 'Castlists',
+    description: 'Walkthrough "Set up Castlist" step — opens the default-castlist setup modal; its submit re-renders the Channels tab',
+    emoji: '📋',
+    style: 'Secondary',
+    parent: 'season_channels',
+    category: 'channel_admin',
+    requiresModal: true
+  },
+  'channels_wtpage_*': {
+    label: 'Walkthrough Page',
+    description: '◀ ▶ pagination for the Channels walkthrough sections (channels_wtpage_{page}_{configId})',
+    emoji: '▶',
+    style: 'Secondary',
+    parent: 'season_channels',
+    category: 'channel_admin'
+  },
   'channels_manualrole_*': {
     label: 'Manually Link',
     description: 'Link ONE player to an EXISTING role (hand-made or another bot\'s) as their personal player role — recorded, never assigned',

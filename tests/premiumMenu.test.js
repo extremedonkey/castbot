@@ -241,8 +241,8 @@ describe('Channels row — one definition, two surfaces (RaP 0885 stage 1)', () 
   it('the Season Manager tab renders the SAME builder (no forked copy)', async () => {
     const viewSource = readFileSync(
       path.join(__dirname, '..', 'src', 'channels', 'channelsView.js'), 'utf8');
-    // The tab uses the guided sections layout + its own premium lock-swap — still the shared builder.
-    assert.ok(/\.\.\.buildChannelsSection\(configId, \{ entitled, layout: 'sections' \}\)/.test(viewSource),
+    // The tab uses the guided sections layout + pagination + its own premium lock-swap — still the shared builder.
+    assert.ok(/\.\.\.buildChannelsSection\(configId, \{ entitled, layout: 'sections', page \}\)/.test(viewSource),
       'buildChannelsView stopped spreading buildChannelsSection — the surfaces can now drift');
   });
 });

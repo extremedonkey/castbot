@@ -77,10 +77,12 @@ describe('Channels section — guided walkthrough layout (sections, 2026-08-16)'
   // numbered Section (Text Display + button accessory) walking the season's actual order.
   const build = (entitled = true) => buildChannelsSection(CID, { entitled, layout: 'sections' });
 
-  it('heading, 6 Sections with dividers BETWEEN, then the trailing management row', () => {
+  const paged = (page, entitled = true) => buildChannelsSection(CID, { entitled, layout: 'sections', page });
+
+  it('page 0: heading, 6 Sections with dividers BETWEEN, then the ◀ ▶ pagination row', () => {
     const parts = build();
     assert.deepEqual(parts.map(p => p.type), [10, 9, 14, 9, 14, 9, 14, 9, 14, 9, 14, 9, 1],
-      'dividers interleave the Sections only; the trailing row follows the last Section directly — that missing divider IS the 40-cap slack');
+      'dividers interleave the Sections only; the pagination row follows the last Section directly — that missing divider IS the 40-cap slack');
     for (const s of parts.filter(p => p.type === 9)) {
       assert.equal(s.components.length, 1, 'Section takes exactly ONE child');
       assert.equal(s.components[0].type, 10);
@@ -88,27 +90,50 @@ describe('Channels section — guided walkthrough layout (sections, 2026-08-16)'
     }
   });
 
-  it('numbered 1–6: Create Roles → Subs → Confessionals → Assign Roles → Tribe Channels → 1on1s; row = Swap/Merge · Alliances', () => {
-    const sections = build().filter(p => p.type === 9);
-    assert.deepEqual(sections.map(s => s.accessory.label), ['Create', 'Subs', 'Confessionals', 'Activate', 'Tribe Channels', '1 on 1s']);
-    sections.forEach((s, i) => assert.match(s.components[0].content, new RegExp(`^\\*\\*${i + 1} · `), `section ${i} numbering`));
-    const row = build().find(p => p.type === 1);
-    assert.deepEqual(row.components.map(b => b.label), ['Swap/Merge', 'Alliances']);
+  it('page 0 = steps 1–6 (Castlists is the new 5th); page 1 = step 7 (1on1s), numbers ABSOLUTE', () => {
+    const p0 = paged(0).filter(p => p.type === 9);
+    assert.deepEqual(p0.map(s => s.accessory.label), ['Create', 'Subs', 'Confessionals', 'Activate', 'Castlists', 'Tribe Channels']);
+    p0.forEach((s, i) => assert.match(s.components[0].content, new RegExp(`^\\*\\*${i + 1} · `), `section ${i} numbering`));
+
+    const p1 = paged(1).filter(p => p.type === 9);
+    assert.deepEqual(p1.map(s => s.accessory.label), ['1 on 1s']);
+    assert.match(p1[0].components[0].content, /^\*\*7 · 1 on 1s/, 'numbering survives pagination');
   });
 
-  it('Assign (Activate) is grey now — the walkthrough numbering carries the emphasis', () => {
-    const assign = build().filter(p => p.type === 9)[3].accessory;
-    assert.equal(assign.custom_id, `channels_activate_${CID}`);
-    assert.equal(assign.style, 2);
+  it('pagination follows the Apps-tab convention: ◀ ▶, Primary when live, grey+disabled at the edges', () => {
+    const row0 = paged(0).find(p => p.type === 1);
+    assert.deepEqual(row0.components.map(b => [b.label, b.disabled, b.style]), [['◀', true, 2], ['▶', false, 1]]);
+    assert.equal(row0.components[1].custom_id, `channels_wtpage_1_${CID}`);
+
+    const row1 = paged(1).find(p => p.type === 1);
+    assert.deepEqual(row1.components.map(b => [b.label, b.disabled, b.style]), [['◀', false, 1], ['▶', true, 2]]);
+    assert.equal(row1.components[0].custom_id, `channels_wtpage_0_${CID}`);
+    // The router's parse for a live click:
+    const m = row1.components[0].custom_id.match(/^channels_wtpage_(\d+)_(.+)$/);
+    assert.deepEqual([Number(m[1]), m[2]], [0, CID]);
   });
 
-  it('the guidance tells the story: roles early → accept → pre-reveal → Marooning reveal → tribes', () => {
-    const [createRoles, subs, confessionals, assignRoles] = build().filter(p => p.type === 9).map(s => s.components[0].content);
+  it('an out-of-range page clamps instead of rendering an empty screen', () => {
+    assert.deepEqual(paged(99).filter(p => p.type === 9).map(s => s.accessory.label), ['1 on 1s']);
+    assert.deepEqual(paged(-5).filter(p => p.type === 9)[0].accessory.label, 'Create');
+  });
+
+  it('Swap/Merge and Alliances are OFF the tab (Hub and Premium keep them)', () => {
+    for (const page of [0, 1]) {
+      const ids = JSON.stringify(paged(page));
+      assert.ok(!ids.includes('castlist_swap_merge_default'), `page ${page}`);
+      assert.ok(!ids.includes(`channels_alliances_${CID}`), `page ${page}`);
+    }
+  });
+
+  it('the guidance tells the story: roles early → accept → pre-reveal → reveal → castlist → tribes', () => {
+    const [createRoles, subs, confessionals, assignRoles, castlists] = paged(0).filter(p => p.type === 9).map(s => s.components[0].content);
     assert.match(createRoles, /kill switch/, 'the old 🎭 section blurb lives here now');
     assert.match(createRoles, /until step 4/, 'creating early is safe — assignment is step 4');
     assert.match(subs, /accept their casting/);
     assert.match(confessionals, /before the cast reveal/i);
     assert.match(assignRoles, /Marooning/, 'assignment IS the reveal moment');
+    assert.match(castlists, /Active Castlist/, 'castlist setup names the destination');
   });
 
   it('the intro de-fangs the click — nothing changes without the preview/confirm', () => {
@@ -116,26 +141,27 @@ describe('Channels section — guided walkthrough layout (sections, 2026-08-16)'
     assert.match(build()[0].content, /Create Channels & Roles/);
   });
 
-  it('lock-swap hits ONLY the five fabricators — both role steps and Swap/Merge stay live', () => {
-    const parts = build(false);
-    const ids = parts.filter(p => p.type === 9).map(s => s.accessory.custom_id);
-    assert.deepEqual(ids, [
+  it('lock-swap hits ONLY the five fabricators — role steps, Castlists and pagination stay live', () => {
+    const ids0 = paged(0, false).filter(p => p.type === 9).map(s => s.accessory.custom_id);
+    assert.deepEqual(ids0, [
       `channels_playerroles_${CID}`, // roles stuff is never premium-gated
       `premium_locked_channels_subs_${CID}`, `premium_locked_channels_confessionals_${CID}`,
       `channels_activate_${CID}`,
-      `premium_locked_channels_tribes_${CID}`,
-      `premium_locked_channels_1on1s_${CID}`
+      `channels_castlist_${CID}`, // castlists are a free core feature
+      `premium_locked_channels_tribes_${CID}`
     ]);
-    assert.deepEqual(parts.find(p => p.type === 1).components.map(b => b.custom_id),
-      ['castlist_swap_merge_default', `premium_locked_channels_alliances_${CID}`]);
+    assert.deepEqual(paged(1, false).filter(p => p.type === 9).map(s => s.accessory.custom_id),
+      [`premium_locked_channels_1on1s_${CID}`]);
+    assert.ok(paged(0, false).find(p => p.type === 1).components.every(b => !b.custom_id.startsWith('premium_locked_')),
+      'pagination is never locked');
   });
 
-  it('costs exactly 27 components — the tab sits at 40/40 around this, zero headroom', () => {
+  it('a FULL page costs exactly 27 components — the tab sits at 40/40 around this, zero headroom', () => {
     // 41/40 broke the tab SILENTLY on 2026-08-16 (Discord drops an over-limit PATCH with no
-    // interaction error) — this pin is the tripwire.
-    const parts = build();
-    const count = parts.reduce((n, p) => n + 1 + (p.components?.length || 0) + (p.accessory ? 1 : 0), 0);
-    assert.equal(count, 27);
+    // interaction error) — this pin is the tripwire. Page size changes must re-check the math.
+    const count = (parts) => parts.reduce((n, p) => n + 1 + (p.components?.length || 0) + (p.accessory ? 1 : 0), 0);
+    assert.equal(count(paged(0)), 27);
+    assert.ok(count(paged(1)) < 27, 'a partial page is always cheaper');
   });
 });
 

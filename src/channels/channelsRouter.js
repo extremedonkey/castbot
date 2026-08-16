@@ -127,6 +127,21 @@ export async function routeChannelsButton({ context, req }) {
     return await A.openAllianceModal({ customId, guildId });
   }
 
+  // ◀ ▶ Walkthrough pagination (Apps-tab convention) — re-render the tab at the target page.
+  if (customId.startsWith('channels_wtpage_')) {
+    const m = customId.match(/^channels_wtpage_(\d+)_(.+)$/);
+    const { handleChannelsTab } = await import('./channelsHandlers.js');
+    return await handleChannelsTab({ configId: m?.[2], guildId, userId, client, page: Number(m?.[1] || 0) });
+  }
+
+  // 📋 Castlists — the walkthrough's "Set up Castlist" step: the SAME first-run modal the
+  // Castlist Hub auto-opens for the default castlist, origin-stamped so its submit
+  // webhook-updates THIS tab instead of opening the hub.
+  if (customId.startsWith('channels_castlist_')) {
+    const { openDefaultCastlistSetupModal } = await import('../../castlistHandlers.js');
+    return await openDefaultCastlistSetupModal(guildId, customId.replace('channels_castlist_', ''));
+  }
+
   // 🔗 Manual Roles — link a player to an EXISTING role (interop, 2026-08-16).
   if (customId.startsWith('channels_manualrole_')) {
     const { buildManualRoleModal } = await import('./channelsView.js');

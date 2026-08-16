@@ -13689,7 +13689,7 @@ To fix this:
         permissionName: 'Manage Channels or Manage Roles',
         // Action buttons open a modal (a deferred ACK can't be followed by a MODAL); tab/cancel/exec
         // update the message and may run for minutes.
-        ...(/^channels_(roles|playerroles|manualrole|activate|tribes|confessionals|subs|1on1s|msg_edit|alliance_new|alliance_edit|alliance_members|alliance_review)_/.test(custom_id)
+        ...(/^channels_(roles|playerroles|manualrole|activate|tribes|castlist|confessionals|subs|1on1s|msg_edit|alliance_new|alliance_edit|alliance_members|alliance_review)_/.test(custom_id)
           ? { requiresModal: true, ephemeral: true }
           : { deferred: true, updateMessage: true }),
         handler: async (context) => {

@@ -68,7 +68,10 @@ export function rosterLines(members, { creating = null, limit = 25 } = {}) {
  *   custom_id (Stage 1 of the migration keeps ids untouched — see RaP 0885 / ChannelAdministration.md)
  * @returns {Array} [Text Display, ActionRow] — 7 components
  */
-export function buildChannelsSection(configId, { entitled = true, layout = 'row' } = {}) {
+/** One knob for the walkthrough's page size (Reece: dynamically encoded, 6 for now). */
+export const WALKTHROUGH_PAGE_SIZE = 6;
+
+export function buildChannelsSection(configId, { entitled = true, layout = 'row', page = 0 } = {}) {
   // 💎 Premium (Reece 2026-08-16): the four channel-fabrication buttons lock-swap to
   // premium_locked_* for unentitled guilds — the Premium menu's convention, so the ONE
   // upsell handler (app.js premium_locked_) serves the click. Swap/Merge stays live (a
@@ -87,6 +90,8 @@ export function buildChannelsSection(configId, { entitled = true, layout = 'row'
     subs: { type: 2, custom_id: gate(`channels_subs_${configId}`), label: 'Subs', style: 2, emoji: { name: '🗳️' } },
     confessionals: { type: 2, custom_id: gate(`channels_confessionals_${configId}`), label: 'Confessionals', style: 2, emoji: { name: '🎙️' } },
     assignRoles: { type: 2, custom_id: `channels_activate_${configId}`, label: 'Activate', style: 2, emoji: { name: '🟢' } },
+    // Ungated: castlists are a free core feature, not channel fabrication.
+    castlists: { type: 2, custom_id: `channels_castlist_${configId}`, label: 'Castlists', style: 2, emoji: { name: '📋' } },
     tribeChannels: { type: 2, custom_id: gate(`channels_tribes_${configId}`), label: 'Tribe Channels', style: 2, emoji: { name: '🏝️' } },
     oneOnOnes: { type: 2, custom_id: gate(`channels_1on1s_${configId}`), label: '1 on 1s', style: 2, emoji: { name: '👥' } },
     swapMerge: { type: 2, custom_id: 'castlist_swap_merge_default', label: 'Swap/Merge', style: 2, emoji: { name: '🔀' } },
@@ -103,28 +108,40 @@ export function buildChannelsSection(configId, { entitled = true, layout = 'row'
   }
 
   // 'sections' — the Season tab's guided walkthrough: one Section (Text Display + button
-  // accessory) per action, numbered in season order, a divider BETWEEN each (never on the
-  // outside — the caller owns the block's edges), then a compact trailing row for the
-  // mid-game management actions (Swap/Merge · Alliances) — numbered Sections for those two
-  // would blow Discord's 40-component cap. Bulk creation is a high-anxiety task; the
-  // guidance (and the reminder that every action previews before running) is the point.
-  // Component cost: 27 (heading + 6 × [Section + Text + accessory] + 5 dividers + row + 2
-  // buttons) — buildChannelsView budgets around this. NO divider before the trailing row:
-  // that single component is what keeps the tab at 40/40 (the 41st broke the tab silently —
-  // Discord drops an over-limit PATCH without an interaction error, 2026-08-16).
+  // accessory) per step, numbered in ABSOLUTE season order (numbers survive pagination), a
+  // divider BETWEEN each (never on the outside — the caller owns the block's edges), then a
+  // ◀ ▶ pagination row (Apps-tab convention: Primary when live, grey+disabled at the edges;
+  // Swap/Merge + Alliances left the tab 2026-08-17 — Swap/Merge lives in the Castlist Hub,
+  // Alliances on ⭐ Premium). Bulk creation is a high-anxiety task; the guidance (and the
+  // reminder that every action previews before running) is the point.
+  // Component cost per FULL page: 27 (heading + 6 × [Section + Text + accessory] + 5
+  // dividers + row + 2 buttons) — buildChannelsView budgets around this at exactly 40/40.
+  // NO divider before the pagination row: that single component is the 40-cap slack (a 41st
+  // broke the tab silently — Discord drops an over-limit PATCH, 2026-08-16).
   const section = (text, button) => ({ type: 9, components: [{ type: 10, content: text }], accessory: button });
   const sections = [
     section('**1 · Create Player Roles** — one personal role per accepted player: the elimination kill switch. Safe to run early — nobody is given theirs until step 4.', BTN.createRoles),
     section('**2 · Subs** — as players accept their casting: convert each application channel into their private player↔host subs channel (or create fresh ones).', BTN.subs),
     section('**3 · Confessionals** — before the cast reveal: every player\'s private diary room. Players get access straight away; Trusted Spectators read along.', BTN.confessionals),
     section('**4 · Assign Player Roles** — at 🚣 Marooning: hand each player their role. This is the reveal — profiles now show who was cast. You review every change first.', BTN.assignRoles),
-    section('**5 · Tribe Channels** — once tribes exist: a category per tribe holding its 💬 chat (players + Trusted Specs) and 🏃 challenges channel (players only).', BTN.tribeChannels),
-    section('**6 · 1 on 1s** — once the tribes are announced: one private channel per pair of tribemates, so hosts can watch player-to-player chat.', BTN.oneOnOnes)
+    section('**5 · Set up Castlist** — once the tribes are announced: add them to the Active Castlist to publish the season\'s /castlist. The per-tribe steps below read from it.', BTN.castlists),
+    section('**6 · Tribe Channels** — once tribes exist: a category per tribe holding its 💬 chat (players + Trusted Specs) and 🏃 challenges channel (players only).', BTN.tribeChannels),
+    section('**7 · 1 on 1s** — once the tribes are announced: one private channel per pair of tribemates, so hosts can watch player-to-player chat.', BTN.oneOnOnes)
   ];
+
+  const totalPages = Math.ceil(sections.length / WALKTHROUGH_PAGE_SIZE);
+  const p = Math.min(Math.max(page, 0), totalPages - 1);
+  const shown = sections.slice(p * WALKTHROUGH_PAGE_SIZE, (p + 1) * WALKTHROUGH_PAGE_SIZE);
+  const prevDisabled = p === 0;
+  const nextDisabled = p === totalPages - 1;
+
   return [
     { type: 10, content: '### ```#️⃣ Create Channels & Roles```\n-# The standard ORG channels and player roles, in the order a season runs them. Nothing changes on click — every action shows you exactly what it will do first.' },
-    ...sections.flatMap((s, i) => (i === 0 ? [s] : [{ type: 14 }, s])),
-    { type: 1, components: [BTN.swapMerge, BTN.alliances] }
+    ...shown.flatMap((s, i) => (i === 0 ? [s] : [{ type: 14 }, s])),
+    { type: 1, components: [
+      { type: 2, custom_id: `channels_wtpage_${p - 1}_${configId}`, label: '◀', style: prevDisabled ? 2 : 1, disabled: prevDisabled },
+      { type: 2, custom_id: `channels_wtpage_${p + 1}_${configId}`, label: '▶', style: nextDisabled ? 2 : 1, disabled: nextDisabled }
+    ]}
   ];
 }
 
@@ -150,7 +167,7 @@ export function formatPlayerRolesLine(entries, max = 15) {
  * @param {Object} p - { configId, guildId, playerData, seasonName, guild, userId }
  * @returns {Promise<Object>} { components: [container] }
  */
-export async function buildChannelsView({ configId, guildId, playerData, seasonName, guild, userId }) {
+export async function buildChannelsView({ configId, guildId, playerData, seasonName, guild, userId, page = 0 }) {
   const { buildSeasonNavRow, seasonManagerHeader, buildSeasonBottomRow } = await import('../../seasonSelector.js');
   // Dynamic import (not top-level): channelsHandlers imports buildConfirmScreen from THIS file,
   // so a static import here would close the cycle at module-init time.
@@ -177,7 +194,7 @@ export async function buildChannelsView({ configId, guildId, playerData, seasonN
       // as step 5; BOTH outer separators were reclaimed to pay for it (the code-block heading
       // and the stacked management rows delineate the edges). Adding ANYTHING here means
       // removing something first. Msg Category left the tab — ⭐ Premium's 📢 row only.
-      ...buildChannelsSection(configId, { entitled, layout: 'sections' }),
+      ...buildChannelsSection(configId, { entitled, layout: 'sections', page }),
       // 🔐 Roles (Trusted Spectator) + 🔗 Manually Link (interop: point a player at a
       // hand-made/other-bot role — records the link, never assigns) are config odd-jobs,
       // not sequence steps — parked right of Edit (Reece 2026-08-16).
