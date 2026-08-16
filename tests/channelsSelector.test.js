@@ -186,7 +186,7 @@ describe('Channels tab — nav row shows it to EVERYONE (whitelist retired 2026-
 
 describe('Channels tab — header', () => {
   it('has its own title (else it falls back to the generic Season Manager)', () => {
-    assert.equal(seasonManagerHeader('channels', 'S15').content, '## 🔐 Channels\n> ### S15');
+    assert.equal(seasonManagerHeader('channels', 'S15').content, '## #️⃣ Channels\n> ### S15');
   });
 
   it('still renders the other tabs\' titles', () => {

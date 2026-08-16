@@ -1,5 +1,5 @@
 /**
- * Channel Administration — the 🔐 Channels tab + its modals and confirm screens.
+ * Channel Administration — the #️⃣ Channels tab + its modals and confirm screens.
  *
  * Chrome is a deliberate clone of buildMarooningView (castRankingManager.js:1004): same
  * Container type 17 / purple accent / shared header + nav + bottom row, so the hidden tab is

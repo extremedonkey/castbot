@@ -146,7 +146,7 @@ export function seasonManagerHeader(active, seasonName) {
     planner: '📅 Season Planner',
     ranking: '🏆 Casting',
     marooning: '🚣 Marooning',
-    channels: '🔐 Channels'
+    channels: '#️⃣ Channels'
   };
   const title = titles[active] || '📋 Season Manager';
   return { type: 10, content: `## ${title}\n> ### ${seasonName}` };
