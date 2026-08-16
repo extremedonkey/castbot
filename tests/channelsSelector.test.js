@@ -77,10 +77,10 @@ describe('Channels section — guided walkthrough layout (sections, 2026-08-16)'
   // numbered Section (Text Display + button accessory) walking the season's actual order.
   const build = (entitled = true) => buildChannelsSection(CID, { entitled, layout: 'sections' });
 
-  it('heading, then Sections with a divider BETWEEN each — never on the outside', () => {
+  it('heading, 5 Sections with dividers BETWEEN, then the trailing management row', () => {
     const parts = build();
-    assert.deepEqual(parts.map(p => p.type), [10, 9, 14, 9, 14, 9, 14, 9, 14, 9],
-      'dividers interleave the 5 Sections only; the caller owns the block edges');
+    assert.deepEqual(parts.map(p => p.type), [10, 9, 14, 9, 14, 9, 14, 9, 14, 9, 14, 1],
+      'dividers interleave the Sections; Swap/Merge + Alliances park in a compact row (40-cap trade)');
     for (const s of parts.filter(p => p.type === 9)) {
       assert.equal(s.components.length, 1, 'Section takes exactly ONE child');
       assert.equal(s.components[0].type, 10);
@@ -88,36 +88,51 @@ describe('Channels section — guided walkthrough layout (sections, 2026-08-16)'
     }
   });
 
-  it('numbered 1–5 in season order: Subs → Confessionals → 1on1s → Swap/Merge → Alliances', () => {
+  it('numbered 1–5: Create Roles → Subs → Confessionals → Assign Roles → 1on1s; row = Swap/Merge · Alliances', () => {
     const sections = build().filter(p => p.type === 9);
-    assert.deepEqual(sections.map(s => s.accessory.label), ['Subs', 'Confessionals', '1 on 1s', 'Swap/Merge', 'Alliances']);
+    assert.deepEqual(sections.map(s => s.accessory.label), ['Create', 'Subs', 'Confessionals', 'Activate', '1 on 1s']);
     sections.forEach((s, i) => assert.match(s.components[0].content, new RegExp(`^\\*\\*${i + 1} · `), `section ${i} numbering`));
+    const row = build().find(p => p.type === 1);
+    assert.deepEqual(row.components.map(b => b.label), ['Swap/Merge', 'Alliances']);
   });
 
-  it('the guidance tells the story: accept → pre-reveal → Marooning → tribes → game', () => {
-    const [subs, confessionals, oneOnOnes] = build().filter(p => p.type === 9).map(s => s.components[0].content);
+  it('Assign (Activate) is grey now — the walkthrough numbering carries the emphasis', () => {
+    const assign = build().filter(p => p.type === 9)[3].accessory;
+    assert.equal(assign.custom_id, `channels_activate_${CID}`);
+    assert.equal(assign.style, 2);
+  });
+
+  it('the guidance tells the story: roles early → accept → pre-reveal → Marooning reveal → tribes', () => {
+    const [createRoles, subs, confessionals, assignRoles] = build().filter(p => p.type === 9).map(s => s.components[0].content);
+    assert.match(createRoles, /kill switch/, 'the old 🎭 section blurb lives here now');
+    assert.match(createRoles, /until step 4/, 'creating early is safe — assignment is step 4');
     assert.match(subs, /accept their casting/);
     assert.match(confessionals, /before the cast reveal/i);
-    assert.match(oneOnOnes, /Marooning/, 'the announcement sits between confessionals and 1on1s');
+    assert.match(assignRoles, /Marooning/, 'assignment IS the reveal moment');
   });
 
-  it('the intro de-fangs the click — nothing is created without the preview/confirm', () => {
-    assert.match(build()[0].content, /Nothing is created on click/);
+  it('the intro de-fangs the click — nothing changes without the preview/confirm', () => {
+    assert.match(build()[0].content, /Nothing changes on click/);
+    assert.match(build()[0].content, /Create Channels & Roles/);
   });
 
-  it('lock-swap applies to the accessories; Swap/Merge stays live', () => {
-    const ids = build(false).filter(p => p.type === 9).map(s => s.accessory.custom_id);
+  it('lock-swap hits ONLY the four fabricators — both role steps and Swap/Merge stay live', () => {
+    const parts = build(false);
+    const ids = parts.filter(p => p.type === 9).map(s => s.accessory.custom_id);
     assert.deepEqual(ids, [
+      `channels_playerroles_${CID}`, // roles stuff is never premium-gated
       `premium_locked_channels_subs_${CID}`, `premium_locked_channels_confessionals_${CID}`,
-      `premium_locked_channels_1on1s_${CID}`, 'castlist_swap_merge_default',
-      `premium_locked_channels_alliances_${CID}`
+      `channels_activate_${CID}`,
+      `premium_locked_channels_1on1s_${CID}`
     ]);
+    assert.deepEqual(parts.find(p => p.type === 1).components.map(b => b.custom_id),
+      ['castlist_swap_merge_default', `premium_locked_channels_alliances_${CID}`]);
   });
 
-  it('costs exactly 20 components — the tab sits at 40/40 around this, zero headroom', () => {
+  it('costs exactly 24 components — the tab budgets 39/40 around this', () => {
     const parts = build();
     const count = parts.reduce((n, p) => n + 1 + (p.components?.length || 0) + (p.accessory ? 1 : 0), 0);
-    assert.equal(count, 20);
+    assert.equal(count, 24);
   });
 });
 

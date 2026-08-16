@@ -78,11 +78,15 @@ export function buildChannelsSection(configId, { entitled = true, layout = 'row'
   const gate = (id) => (entitled ? id : `premium_locked_${id}`);
 
   // SEASON order (Reece 2026-08-16) — the buttons walk the timeline a season actually runs:
-  // subs as castings are accepted → confessionals pre-reveal → (🚣 Marooning announces) →
-  // 1on1s once tribes exist → swap/merge mid-game → alliances as the game runs.
+  // create player roles early → subs as castings are accepted → confessionals pre-reveal →
+  // assign the roles at 🚣 Marooning (the reveal) → 1on1s once tribes exist; swap/merge and
+  // alliances are mid-game management, parked in a trailing row. The role buttons are NEVER
+  // premium-gated (Reece: roles stuff stays free) — only the four channel fabricators.
   const BTN = {
+    createRoles: { type: 2, custom_id: `channels_playerroles_${configId}`, label: 'Create', style: 2, emoji: { name: '🎭' } },
     subs: { type: 2, custom_id: gate(`channels_subs_${configId}`), label: 'Subs', style: 2, emoji: { name: '🗳️' } },
     confessionals: { type: 2, custom_id: gate(`channels_confessionals_${configId}`), label: 'Confessionals', style: 2, emoji: { name: '🎙️' } },
+    assignRoles: { type: 2, custom_id: `channels_activate_${configId}`, label: 'Activate', style: 2, emoji: { name: '🟢' } },
     oneOnOnes: { type: 2, custom_id: gate(`channels_1on1s_${configId}`), label: '1 on 1s', style: 2, emoji: { name: '👥' } },
     swapMerge: { type: 2, custom_id: 'castlist_swap_merge_default', label: 'Swap/Merge', style: 2, emoji: { name: '🔀' } },
     alliances: { type: 2, custom_id: gate(`channels_alliances_${configId}`), label: 'Alliances', style: 2, emoji: { name: '🤝' } }
@@ -99,21 +103,25 @@ export function buildChannelsSection(configId, { entitled = true, layout = 'row'
 
   // 'sections' — the Season tab's guided walkthrough: one Section (Text Display + button
   // accessory) per action, numbered in season order, a divider BETWEEN each (never on the
-  // outside — the caller owns the block's edges). Bulk channel creation is a high-anxiety
-  // task; the guidance (and the reminder that every action previews before running) is the
-  // point. Component cost: 20 (heading + 5 × [Section + Text + accessory] + 4 dividers) vs
-  // the row's 7 — buildChannelsView budgets for this and sits at the 40 cap.
+  // outside — the caller owns the block's edges), then a compact trailing row for the
+  // mid-game management actions (Swap/Merge · Alliances) — numbered Sections for those two
+  // would blow Discord's 40-component cap. Bulk creation is a high-anxiety task; the
+  // guidance (and the reminder that every action previews before running) is the point.
+  // Component cost: 24 (heading + 5 × [Section + Text + accessory] + 5 dividers + row + 2
+  // buttons) — buildChannelsView budgets around this.
   const section = (text, button) => ({ type: 9, components: [{ type: 10, content: text }], accessory: button });
   const sections = [
-    section('**1 · Subs** — as players accept their casting: convert each application channel into their private player↔host subs channel (or create fresh ones).', BTN.subs),
-    section('**2 · Confessionals** — before the cast reveal: every player\'s private diary room. Players get access straight away; Trusted Spectators read along.', BTN.confessionals),
-    section('**3 · 1 on 1s** — after 🚣 Marooning announces the tribes: one private channel per pair of tribemates, so hosts can watch player-to-player chat.', BTN.oneOnOnes),
-    section('**4 · Swap/Merge** — at a tribe swap or merge: archives the old tribes as a castlist and moves everyone onto the new ones.', BTN.swapMerge),
-    section('**5 · Alliances** — as the game runs: secret channels for alliances. Their existence is season-deciding info — no spectators, generic names.', BTN.alliances)
+    section('**1 · Create Player Roles** — one personal role per accepted player: the elimination kill switch. Safe to run early — nobody is given theirs until step 4.', BTN.createRoles),
+    section('**2 · Subs** — as players accept their casting: convert each application channel into their private player↔host subs channel (or create fresh ones).', BTN.subs),
+    section('**3 · Confessionals** — before the cast reveal: every player\'s private diary room. Players get access straight away; Trusted Spectators read along.', BTN.confessionals),
+    section('**4 · Assign Player Roles** — at 🚣 Marooning: hand each player their role. This is the reveal — profiles now show who was cast. You review every change first.', BTN.assignRoles),
+    section('**5 · 1 on 1s** — once the tribes are announced: one private channel per pair of tribemates, so hosts can watch player-to-player chat.', BTN.oneOnOnes)
   ];
   return [
-    { type: 10, content: '### ```#️⃣ Create Channels```\n-# The standard ORG channels, in the order a season runs them. Nothing is created on click — every action shows you exactly what it will do first.' },
-    ...sections.flatMap((s, i) => (i === 0 ? [s] : [{ type: 14 }, s]))
+    { type: 10, content: '### ```#️⃣ Create Channels & Roles```\n-# The standard ORG channels and player roles, in the order a season runs them. Nothing changes on click — every action shows you exactly what it will do first.' },
+    ...sections.flatMap((s, i) => (i === 0 ? [s] : [{ type: 14 }, s])),
+    { type: 14 },
+    { type: 1, components: [BTN.swapMerge, BTN.alliances] }
   ];
 }
 
@@ -162,25 +170,19 @@ export async function buildChannelsView({ configId, guildId, playerData, seasonN
       seasonManagerHeader('channels', seasonName),
       buildSeasonNavRow(configId, 'channels', userId),
       { type: 14 },
-      { type: 10, content: '### ```🎭 Player Roles```\n-# Automatically create Player Roles for easy removal of players when eliminated. You can safely create player roles before your season starts — they\'re only assigned (and visible to players and specs) when 🟢 Activate is used, which we recommend doing during or after marooning.' },
-      { type: 1, components: [
-        { type: 2, custom_id: `channels_roles_${configId}`, label: 'Roles', style: 2, emoji: { name: '🔐' } },
-        { type: 2, custom_id: `channels_playerroles_${configId}`, label: 'Auto Create', style: 2, emoji: { name: '🎭' } },
-        // Interop: link ONE player to a role that already exists (hand-made or another bot's) —
-        // Auto Create only ever makes fresh roles (resolve-by-stored-ID, never by name).
-        { type: 2, custom_id: `channels_manualrole_${configId}`, label: 'Manually Link', style: 2, emoji: { name: '🔗' } },
-        // The reveal step: assigns linked roles to their players (closes the "role nobody
-        // holds" gap — until now the host had to hand-assign every role in Discord).
-        { type: 2, custom_id: `channels_activate_${configId}`, label: 'Activate', style: 3, emoji: { name: '🟢' } }
-      ]},
-      // ⚠️ 39/40 — the walkthrough (20 components incl. its internal dividers) leaves this tab
-      // ONE component under Discord's cap (the stats body's removal bought the slot back).
-      // Its outer separators were sacrificed for the internal ones; re-count before adding
-      // anything. Msg Category left the tab entirely 2026-08-16 (Reece) — it lives on
-      // ⭐ Premium's 📢 Player Engagement row only.
+      // ⚠️ 39/40 — the walkthrough (24 components) absorbed the whole 🎭 Player Roles section
+      // (Reece 2026-08-16): Create/Assign are steps 1 and 4 of the sequence now, and the old
+      // section's blurb lives in their guidance text. Re-count before adding ANYTHING here.
+      // Msg Category left the tab entirely — ⭐ Premium's 📢 Player Engagement row only.
       ...buildChannelsSection(configId, { entitled, layout: 'sections' }),
       { type: 14 },
-      buildSeasonBottomRow(configId, 'channels')
+      // 🔐 Roles (Trusted Spectator) + 🔗 Manually Link (interop: point a player at a
+      // hand-made/other-bot role — records the link, never assigns) are config odd-jobs,
+      // not sequence steps — parked right of Edit (Reece 2026-08-16).
+      buildSeasonBottomRow(configId, 'channels', [
+        { type: 2, custom_id: `channels_roles_${configId}`, label: 'Roles', style: 2, emoji: { name: '🔐' } },
+        { type: 2, custom_id: `channels_manualrole_${configId}`, label: 'Manually Link', style: 2, emoji: { name: '🔗' } }
+      ])
     ]
   };
 
