@@ -188,8 +188,11 @@ export async function buildChannelsView({ configId, guildId, playerData, seasonN
     ]
   };
 
+  // Full per-component breakdown, the /menu convention for major screens (Production Menu,
+  // Map Explorer, Challenges) — this tab lives at 40/40, so when it overflows the tree dump
+  // is what names the culprit instantly.
   const { countComponents, validateComponentLimit } = await import('../../utils.js');
-  countComponents([container], { verbosity: 'summary', label: `Channels - ${seasonName}` });
+  countComponents([container], { enableLogging: true, verbosity: 'full', label: `Channels - ${seasonName}` });
   // Throws >40: an over-limit tab must fail LOUDLY (factory error message), not the silent
   // Discord PATCH-drop that shipped 41/40 with a green suite on 2026-08-16.
   validateComponentLimit([container], `Channels - ${seasonName}`);
