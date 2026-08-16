@@ -13766,10 +13766,10 @@ To fix this:
           ? { requiresModal: true, ephemeral: true }
           : { deferred: true, updateMessage: true }),
         handler: async (context) => {
-          // Feature-flag layer (visibility, not authority) — the nav row only HIDES the tab;
-          // `restrictedUser` enforces nothing (RaP 0900). The literal satisfies the security ratchet.
+          // No user whitelist since 2026-08-16 — the Premium menu surfaces these buttons to
+          // every admin (unentitled guilds lock-swap them); requiresPermission above is the
+          // authority gate AND the security-ratchet declaration.
           const CH = await import('./src/channels/channelsRouter.js');
-          if (context.userId !== '391415444084490240') return CH.channelsDenied();
           return await CH.routeChannelsButton({ context, req });
         }
       })(req, res, client);
@@ -37464,9 +37464,9 @@ To fix this:
         requiresPermission: CHANNEL_ADMIN_PERMISSIONS, // ManageChannels OR ManageRoles (ANY-OF)
         permissionName: 'Manage Channels or Manage Roles',
         handler: async (context) => {
-          // Feature-flag layer (visibility, not authority) — see channels_route.
+          // No user whitelist since 2026-08-16 — see channels_route; requiresPermission above
+          // is the authority gate and the ratchet declaration.
           const CH = await import('./src/channels/channelsRouter.js');
-          if (context.userId !== '391415444084490240') return CH.channelsDenied();
           return await CH.routeChannelsModalSubmit({ context, components, data });
         }
       })(req, res, client);

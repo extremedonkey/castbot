@@ -1,6 +1,6 @@
 # 🔐 Channel Administration
 
-**Status**: Hidden / in development — admin surfaces visible only to `391415444084490240` (`CHANNEL_ADMIN_USER_IDS`); authority additionally requires **Manage Channels or Manage Roles**. The test account (`1086246253819613274`) keeps only the player-facing alliance *request* flow (`ALLIANCE_REQUEST_USER_IDS`)
+**Status**: Live on the **CastBot Premium** surface (2026-08-16) — any **Manage Channels/Manage Roles** admin of a premium guild; unentitled guilds see lock-swapped buttons. The Season Manager 🔐 tab remains a dev surface visible only to `391415444084490240` (`CHANNEL_ADMIN_USER_IDS`). The test account (`1086246253819613274`) keeps only the player-facing alliance *request* flow (`ALLIANCE_REQUEST_USER_IDS`)
 **Entry point**: `/menu` → Production Menu → Season Manager → **🔐 Channels** tab
 **Code**: [`src/channels/`](../../src/channels/)
 **Domain background**: [SurvivorContext.md](../concepts/SurvivorContext.md#the-org-domain)
@@ -270,11 +270,11 @@ Note the *two different 50s*: 50 categories per guild, and 50 channels per categ
 
 ## 🔒 Gating
 
-**Three layers** since 2026-08-15 (`channelAdminConfig.js`), because **`restrictedUser` in BUTTON_REGISTRY enforces nothing** (RaP 0900 — it's documentation wearing a security costume) and because the whitelist alone let a permissionless account approve its own alliance request (servivorg):
+**Two enforcement models by surface** since 2026-08-16, because **`restrictedUser` in BUTTON_REGISTRY enforces nothing** (RaP 0900 — it's documentation wearing a security costume) and because the whitelist alone let a permissionless account approve its own alliance request (servivorg, 2026-08-15):
 
-1. **Display** (visibility, not authority): `buildSeasonNavRow(configId, active, userId)` appends the tab only for `CHANNEL_ADMIN_USER_IDS` — now Reece-only. Same list gates the Premium menu's Channels row (`menuBuilder.js`).
-2. **Authority**: `requiresPermission: CHANNEL_ADMIN_PERMISSIONS` (**Manage Channels OR Manage Roles**, ANY-OF; Administrator and `globalRoleAccess` hosts pass via `memberHasAnyPermission`) on the `channels_route` and `channels_modal_submit` factory blocks in app.js. Enforced centrally *before* the handler and before any modal — this is what stops a random player clicking 🔍 Review on a public alliance-request card.
-3. **Feature flag** (inline owner-ID check inside the handler): satisfies the deploy-blocking ratchet in `tests/securityDeclarations.test.js` and keeps the surfaces hidden while in development.
+1. **Authority — everywhere**: `requiresPermission: CHANNEL_ADMIN_PERMISSIONS` (**Manage Channels OR Manage Roles**, ANY-OF; Administrator and `globalRoleAccess` hosts pass via `memberHasAnyPermission`) on the `channels_route` and `channels_modal_submit` factory blocks in app.js. Enforced centrally *before* the handler and before any modal — this is what stops a random player clicking 🔍 Review on a public alliance-request card. It also satisfies the deploy-blocking ratchet in `tests/securityDeclarations.test.js`. There is **no user whitelist on the handlers** anymore (removed 2026-08-16 — it was blocking a premium server's other admins from features they could see).
+2. **Premium surface** (`menuBuilder.buildPremiumMenu`): the Channels section renders for **every admin** of a guild with seasons — the menu itself is ManageRoles-gated, and unentitled guilds lock-swap every button to the upsell (`premium_locked_*`). This is the public path to Channel Administration.
+3. **Season Manager 🔐 tab** (dev surface): still display-gated to `CHANNEL_ADMIN_USER_IDS` (Reece-only) via `buildSeasonNavRow` and the Edit-origin round trip — hidden, but no longer the only path.
 
 **The split whitelist**: `ALLIANCE_REQUEST_USER_IDS` (Reece + test account) gates only the player-facing alliance *request* flow — requesting needs no authority because nothing is created without an admin's review. This keeps the test account a pure player-simulant: it can request, but sees no admin surfaces and cannot approve. Pinned by `tests/channelsSelector.test.js`.
 

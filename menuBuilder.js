@@ -257,12 +257,17 @@ export class MenuBuilder {
     // Imported dynamically so this menu, built on every /menu open, doesn't drag the whole
     // channel-admin stack (discord.js + storage + ops) into the startup import graph.
     //
+    // OPEN TO EVERY ADMIN since 2026-08-16 (Reece: a premium server's other admins saw no
+    // Channels section — it was whitelist-gated). Access control is layered elsewhere: this
+    // menu is ManageRoles-gated, unentitled guilds lock-swap every button to the upsell, and
+    // the channels handlers enforce ManageChannels|ManageRoles. The Season Manager 🔐 tab
+    // stays whitelist-hidden (dev surface).
+    //
     // Season-less surface: the buttons' handlers all parse a configId off the custom_id, so one
     // is resolved lazily here by recency. No seasons → no configId → the section is omitted
     // rather than rendering buttons that would fail on click.
     let channelsConfigId = null;
-    const { CHANNEL_ADMIN_USER_IDS } = await import('./src/channels/channelAdminConfig.js');
-    if (CHANNEL_ADMIN_USER_IDS.includes(String(context?.userId)) && context?.guildId) {
+    if (context?.guildId) {
       const { loadPlayerData } = await import('./storage.js');
       const { mostRecentConfigId } = await import('./src/channels/channelPlan.js');
       channelsConfigId = mostRecentConfigId(await loadPlayerData(), context.guildId);

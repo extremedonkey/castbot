@@ -190,11 +190,14 @@ describe('Premium menu clone — stays wired in menuBuilder.js', () => {
     }
   });
 
-  it('the Channels row stays whitelist-gated on the Premium surface', () => {
+  it('the Channels row is NOT user-whitelisted on the Premium surface (open to every admin, 2026-08-16)', () => {
+    // Reece on a fresh premium TEST server: other admins saw NO Channels section because the
+    // row was gated on CHANNEL_ADMIN_USER_IDS. Access control lives elsewhere — the menu is
+    // ManageRoles-gated, unentitled guilds lock-swap, handlers require ManageChannels|ManageRoles.
     const premiumStart = source.search(PREMIUM_DEF);
     const premiumSection = source.slice(premiumStart, source.indexOf('static buildReecesStuffMenu'));
-    assert.ok(premiumSection.includes('CHANNEL_ADMIN_USER_IDS'),
-      'Channels row lost its whitelist gate on the Premium menu — it is still a hidden feature');
+    assert.ok(!premiumSection.includes('CHANNEL_ADMIN_USER_IDS'),
+      'Premium Channels row must not be user-whitelisted — every admin of a premium guild sees it');
   });
 });
 
