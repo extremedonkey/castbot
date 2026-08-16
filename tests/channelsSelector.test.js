@@ -801,3 +801,122 @@ describe('🟢 Activate — assign linked player roles (2026-08-16)', () => {
     }
   });
 });
+
+describe('🟢 Activate — classifyActivation, the confirm screen\'s data source (2026-08-16)', () => {
+  // Real import — this is the exact function planActivate feeds the confirm card from.
+  const load = async () => (await import('../src/channels/channelsHandlers.js')).classifyActivation;
+  const base = () => ({
+    picked: ['rA'],
+    byRole: new Map([['rA', ['u1']]]),
+    roles: new Map([['rA', 'Alice ✂'], ['rOld', 'Old Alice']]),
+    members: new Map([['u1', { displayName: 'Alice', roleIds: new Set() }]]),
+    previous: new Map()
+  });
+
+  it('a plain link becomes a ➕ gain item', async () => {
+    const classify = await load();
+    const { items, already, notes } = classify(base());
+    assert.deepEqual(items, [{ userId: 'u1', displayName: 'Alice', roleId: 'rA', roleName: 'Alice ✂', oldRoleId: null, oldRoleName: null }]);
+    assert.equal(already.length + notes.length, 0);
+  });
+
+  it('a re-linked player still wearing the old role becomes a 🔁 move (old role named)', async () => {
+    const classify = await load();
+    const input = base();
+    input.members.get('u1').roleIds = new Set(['rOld']);
+    input.previous = new Map([['u1', 'rOld']]);
+    const { items } = classify(input);
+    assert.equal(items[0].oldRoleId, 'rOld');
+    assert.equal(items[0].oldRoleName, 'Old Alice');
+  });
+
+  it('no move when the old role is not held, was deleted, or equals the new role', async () => {
+    const classify = await load();
+
+    const notHeld = base();
+    notHeld.previous = new Map([['u1', 'rOld']]); // marker exists but the player never got the role
+    assert.equal(classify(notHeld).items[0].oldRoleId, null);
+
+    const deleted = base();
+    deleted.members.get('u1').roleIds = new Set(['rGone']);
+    deleted.previous = new Map([['u1', 'rGone']]);
+    deleted.roles.delete('rGone');
+    assert.equal(classify(deleted).items[0].oldRoleId, null, 'a deleted old role cannot be removed — plain gain');
+
+    const same = base();
+    same.members.get('u1').roleIds = new Set();
+    same.previous = new Map([['u1', 'rA']]); // stale marker pointing at the CURRENT link
+    assert.equal(classify(same).items[0].oldRoleId, null);
+  });
+
+  it('already-held roles are ✅ no-change, never plan items', async () => {
+    const classify = await load();
+    const input = base();
+    input.members.get('u1').roleIds = new Set(['rA']);
+    const { items, already } = classify(input);
+    assert.equal(items.length, 0);
+    assert.deepEqual(already, [{ displayName: 'Alice', roleName: 'Alice ✂' }]);
+  });
+
+  it('deleted roles, unlinked roles and departed players become ❌ notes, never silent drops', async () => {
+    const classify = await load();
+    const { items, notes } = classify({
+      picked: ['rGone', 'rEmpty', 'rA'],
+      byRole: new Map([['rEmpty', []], ['rA', ['uLeft']]]),
+      roles: new Map([['rEmpty', 'Nobody'], ['rA', 'Alice ✂']]),
+      members: new Map(), // uLeft is not in the guild
+      previous: new Map()
+    });
+    assert.equal(items.length, 0);
+    assert.equal(notes.length, 3);
+    assert.match(notes[0], /role no longer exists/);
+    assert.match(notes[1], /no longer linked/);
+    assert.match(notes[2], /left the server/);
+  });
+
+  it('a double-link produces one item per player — both assignments visible', async () => {
+    const classify = await load();
+    const input = base();
+    input.byRole = new Map([['rA', ['u1', 'u2']]]);
+    input.members.set('u2', { displayName: 'Bob', roleIds: new Set() });
+    assert.equal(classify(input).items.length, 2);
+  });
+});
+
+describe('🟢 Activate — playerRole delta remembers re-links (real applyDeltas)', () => {
+  const CID_G = 'g1';
+  const fresh = () => ({ [CID_G]: { players: { u1: { playerRoleId: 'rOld' } } } });
+
+  it('re-linking to a DIFFERENT role stashes the old id as previousPlayerRoleId', async () => {
+    const { applyDeltas } = await import('../src/channels/channelRegistry.js');
+    const pd = fresh();
+    applyDeltas(pd, CID_G, [{ kind: 'playerRole', userId: 'u1', roleId: 'rNew' }]);
+    assert.equal(pd[CID_G].players.u1.playerRoleId, 'rNew');
+    assert.equal(pd[CID_G].players.u1.previousPlayerRoleId, 'rOld');
+  });
+
+  it('re-linking to the SAME role, or a first link, leaves no marker', async () => {
+    const { applyDeltas } = await import('../src/channels/channelRegistry.js');
+    const pd = fresh();
+    applyDeltas(pd, CID_G, [{ kind: 'playerRole', userId: 'u1', roleId: 'rOld' }]);
+    assert.equal('previousPlayerRoleId' in pd[CID_G].players.u1, false);
+    applyDeltas(pd, CID_G, [{ kind: 'playerRole', userId: 'u2', roleId: 'rFirst' }]);
+    assert.equal('previousPlayerRoleId' in pd[CID_G].players.u2, false);
+  });
+
+  it('clearPrevious drops ONLY the marker — the live link is untouched', async () => {
+    const { applyDeltas } = await import('../src/channels/channelRegistry.js');
+    const pd = fresh();
+    applyDeltas(pd, CID_G, [{ kind: 'playerRole', userId: 'u1', roleId: 'rNew' }]);
+    applyDeltas(pd, CID_G, [{ kind: 'playerRole', userId: 'u1', clearPrevious: true }]);
+    assert.equal(pd[CID_G].players.u1.playerRoleId, 'rNew');
+    assert.equal('previousPlayerRoleId' in pd[CID_G].players.u1, false);
+  });
+
+  it('null roleId still clears a dead link (pre-existing semantics intact)', async () => {
+    const { applyDeltas } = await import('../src/channels/channelRegistry.js');
+    const pd = fresh();
+    applyDeltas(pd, CID_G, [{ kind: 'playerRole', userId: 'u1', roleId: null }]);
+    assert.equal('playerRoleId' in pd[CID_G].players.u1, false);
+  });
+});

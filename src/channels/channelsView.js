@@ -335,7 +335,7 @@ export function buildActivateModal({ configId, options, hidden = 0 }) {
     components: [
       {
         type: 10, // Text Display
-        content: '### Assign player roles to their players\nEach selected role is added to the player it\'s linked to in CastBot. Roles created by 🎭 Auto Create or linked with 🔗 Manually Link are listed below.'
+        content: '### Assign player roles to their players\nEach selected role is assigned to the player it\'s linked to in CastBot (via 🎭 Auto Create or 🔗 Manually Link). **Nothing happens yet** — you\'ll review every change first, including any role moves from a re-link.'
       },
       {
         type: 18, // Label
@@ -360,6 +360,8 @@ export function buildActivateModal({ configId, options, hidden = 0 }) {
         type: 10, // Text Display
         content: `-# ⚠️ **Timing matters.** Once assigned, the role appears on the player's profile — players and specs can read the member list and see who has been cast. Don't activate before marooning unless you intend that reveal.${hidden ? `\n-# …${hidden} more link${hidden === 1 ? '' : 's'} beyond Discord's 25-option cap — run Activate again for the rest.` : ''}`
       }
+      // The confirm screen (planActivate) repeats the reveal warning next to the exact change
+      // list — the modal alone is never the last stop anymore.
     ]
   };
 }

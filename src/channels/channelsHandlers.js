@@ -199,62 +199,145 @@ export async function openActivateModal({ configId, guildId, client }) {
 }
 
 /**
- * 🟢 Activate submit — ASSIGNS the selected linked roles to their players. Discord-only
- * mutation (no storage writes → no lock); sequential adds, per-player failures reported,
- * never aborting the batch. This closes ChannelAdministration.md's "role nobody holds" gap.
+ * Pure — classify what Activate will do per (role, player) link. Exported for tests.
+ * @param {string[]} picked - roleIds chosen in the modal
+ * @param {Map<string, string[]>} byRole - invertPlayerRoles output
+ * @param {Map<string, string>} roles - ALL live roleId → name (old-role lookups need non-picked roles)
+ * @param {Map<string, {displayName: string, roleIds: Set<string>}>} members - live members only
+ * @param {Map<string, string>} previous - userId → previousPlayerRoleId (the re-link marker)
+ * @returns {{items: Array, already: Array, notes: string[]}} items = what exec will do
+ *   ({userId, displayName, roleId, roleName, oldRoleId, oldRoleName} — oldRole* set only when the
+ *   player still HOLDS a different, still-live previous player role: the @old → @new move).
  */
-export async function applyActivateRoles({ configId, guildId, userId, client, fields }) {
-  const picked = fields.activate_roles || [];
-  if (!picked.length) {
-    return { components: [{ type: 17, accent_color: 0xe74c3c, components: [
-      { type: 10, content: '## ❌ Nothing selected\nPick at least one player role to assign.' }
-    ]}] };
-  }
-
-  const playerData = await loadPlayerData();
-  const byRole = invertPlayerRoles(playerData[guildId]?.players);
-  const guild = await client.guilds.fetch(guildId);
-  await guild.members.fetch({ user: [...byRole.values()].flat() }).catch(() => {});
-
-  const ok = [];
-  const failed = [];
+export function classifyActivation({ picked, byRole, roles, members, previous }) {
+  const items = [];
+  const already = [];
+  const notes = [];
   for (const roleId of picked) {
-    const role = guild.roles.cache.get(roleId);
+    const roleName = roles.get(roleId);
     const userIds = byRole.get(roleId) || [];
-    if (!role) { failed.push(`> ❌ \`${roleId}\` — role no longer exists`); continue; }
-    if (!userIds.length) { failed.push(`> ❌ @${role.name} — no longer linked to a player`); continue; }
+    if (!roleName) { notes.push(`> ❌ \`${roleId}\` — role no longer exists`); continue; }
+    if (!userIds.length) { notes.push(`> ❌ @${roleName} — no longer linked to a player`); continue; }
     for (const uid of userIds) {
-      const member = guild.members.cache.get(uid) || (await guild.members.fetch(uid).catch(() => null));
-      if (!member) { failed.push(`> ❌ @${role.name} — player left the server`); continue; }
-      if (member.roles.cache.has(roleId)) { ok.push(`> ✅ ${member.displayName} — @${role.name} *(already assigned)*`); continue; }
-      try {
-        await member.roles.add(roleId, `CastBot player-role activation by ${userId}`);
-        ok.push(`> ✅ ${member.displayName} — @${role.name}`);
-      } catch (e) {
-        // Most common cause: the role sits ABOVE CastBot's highest role.
-        failed.push(`> ❌ ${member.displayName} — @${role.name} (${e.message?.includes('Missing Permissions') ? 'role is above CastBot in the role list' : e.message})`);
-      }
+      const m = members.get(uid);
+      if (!m) { notes.push(`> ❌ @${roleName} — linked player left the server`); continue; }
+      if (m.roleIds.has(roleId)) { already.push({ displayName: m.displayName, roleName }); continue; }
+      const prev = previous.get(uid);
+      const oldRoleName = (prev && prev !== roleId && m.roleIds.has(prev)) ? (roles.get(prev) || null) : null;
+      items.push({
+        userId: uid, displayName: m.displayName, roleId, roleName,
+        oldRoleId: oldRoleName ? prev : null, oldRoleName
+      });
     }
   }
-  console.log(`🟢 [CHANNEL_ADMIN] Activate: ${ok.length} assigned, ${failed.length} failed by ${userId} in guild ${guildId}`);
+  return { items, already, notes };
+}
 
-  return { components: [{
-    type: 17,
-    accent_color: failed.length ? 0xf39c12 : 0x2ecc71,
-    components: [{
-      type: 10,
-      content: [
-        `## 🟢 Player roles activated`,
-        `**${ok.length}** assigned${failed.length ? ` · **${failed.length}** failed` : ''}`,
+/**
+ * 🟢 Activate submit → PLAN. Nothing is assigned here — the classification becomes a confirm
+ * screen naming every change (➕ gains / 🔁 @old → @new move / ✅ no change), and only
+ * channels_exec_* touches Discord, matching every other Channels action. Moves come from
+ * previousPlayerRoleId (stamped by the playerRole delta when a link is re-pointed);
+ * executing a move removes the old role too, so the player never wears both.
+ */
+export async function planActivate({ configId, guildId, userId, client, fields }) {
+  const picked = fields.activate_roles || [];
+  if (!picked.length) return err('Pick at least one player role to assign.');
+
+  const playerData = await loadPlayerData();
+  const players = playerData[guildId]?.players || {};
+  const byRole = invertPlayerRoles(players);
+  const guild = await client.guilds.fetch(guildId);
+  const linkedIds = [...byRole.values()].flat();
+  await guild.members.fetch({ user: linkedIds }).catch(() => {});
+
+  const { items, already, notes } = classifyActivation({
+    picked,
+    byRole,
+    roles: new Map(guild.roles.cache.map((r) => [r.id, r.name])),
+    members: new Map(linkedIds
+      .map((uid) => [uid, guild.members.cache.get(uid)])
+      .filter(([, m]) => m)
+      .map(([uid, m]) => [uid, { displayName: m.displayName, roleIds: new Set(m.roles.cache.keys()) }])),
+    previous: new Map(Object.entries(players)
+      .filter(([, p]) => p?.previousPlayerRoleId)
+      .map(([uid, p]) => [uid, p.previousPlayerRoleId]))
+  });
+
+  // Every change on ONE screen, exact and per-player — the confirm IS the data-change review.
+  const changeLines = [
+    ...items.map((it) => it.oldRoleId
+      ? `> 🔁 **${it.displayName}** — @${it.oldRoleName} → @${it.roleName} *(old role removed)*`
+      : `> ➕ **${it.displayName}** — gains @${it.roleName}`),
+    ...already.map((a) => `> ✅ **${a.displayName}** — @${a.roleName} *(already assigned — no change)*`),
+    ...notes
+  ];
+  const shown = changeLines.slice(0, 20);
+  const overflow = changeLines.length - shown.length;
+
+  if (!items.length) {
+    return buildConfirmScreen({
+      configId,
+      blocked: true,
+      title: 'Nothing to assign',
+      lines: [
+        ...shown,
+        ...(overflow > 0 ? [`> -# …and ${overflow} more`] : []),
         '',
-        ...ok.slice(0, 20),
-        ...(ok.length > 20 ? [`> -# …and ${ok.length - 20} more`] : []),
-        ...failed.slice(0, 10),
-        '',
-        '-# The roles are now visible on player profiles. Removing a role (the elimination kill switch) is done in Discord.'
-      ].join('\n')
-    }]
-  }]};
+        '-# Every selected role is already where it should be — nothing would change.'
+      ],
+      confirmLabel: ''
+    });
+  }
+
+  const moves = items.filter((it) => it.oldRoleId).length;
+  const token = stashPlan(userId, { type: 'activate', configId, guildId, items });
+  return buildConfirmScreen({
+    token,
+    configId,
+    title: `🟢 Activate ${items.length} player role${items.length > 1 ? 's' : ''}?`,
+    lines: [
+      `> **${items.length}** to assign${moves ? ` · **${moves}** move${moves > 1 ? 's' : ''}` : ''}${already.length ? ` · **${already.length}** already assigned` : ''}`,
+      '',
+      '**Changes:**',
+      ...shown,
+      ...(overflow > 0 ? [`> -# …and ${overflow} more`] : []),
+      '',
+      "-# ⚠️ **This is the reveal.** Assigned roles appear on player profiles — players and specs can see who has been cast. Don't run this before marooning unless you intend that."
+    ],
+    confirmLabel: `Assign ${items.length} role${items.length > 1 ? 's' : ''}`
+  });
+}
+
+/**
+ * 🟢 Activate exec — the ONLY step that touches Discord. Paced role edits; a move also removes
+ * the old role, then drops the previousPlayerRoleId marker (buffered delta — runPacedJob flushes
+ * between batches, never inside the API loop). Idempotent: an already-held role is left alone.
+ */
+async function execActivate({ plan, guild, buffer, flush, progress }) {
+  await guild.members.fetch({ user: plan.items.map((it) => it.userId) }).catch(() => {});
+
+  return await runPacedJob({
+    items: plan.items,
+    buffer, flush, progress,
+    step: async (it) => {
+      const member = guild.members.cache.get(it.userId) || (await guild.members.fetch(it.userId).catch(() => null));
+      if (!member) return { ok: false, error: `${it.displayName} — left the server` };
+      try {
+        if (!member.roles.cache.has(it.roleId)) {
+          await member.roles.add(it.roleId, 'CastBot player-role activation');
+        }
+        if (it.oldRoleId && member.roles.cache.has(it.oldRoleId)) {
+          await member.roles.remove(it.oldRoleId, 'CastBot player-role move — old role superseded');
+        }
+        if (it.oldRoleId) buffer.push({ kind: 'playerRole', userId: it.userId, clearPrevious: true });
+        return { ok: true, label: `${it.displayName} — @${it.roleName}` };
+      } catch (e) {
+        // Most common cause: the role sits ABOVE CastBot's highest role.
+        return { ok: false, error: `${it.displayName} — @${it.roleName} (${e.message?.includes('Missing Permissions') ? 'role is above CastBot in the role list' : e.message})` };
+      }
+    }
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -848,6 +931,7 @@ export async function executePlan({ plan, guildId, userId, client, interactionTo
     else if (plan.type?.startsWith('alliance_')) summary = await (await import('./allianceHandlers.js')).execAlliance({ plan, guild, snapshot, playerData, userId, invokedChannelId });
     else if (plan.type === 'delete') summary = await execDelete({ plan, guild, buffer, flush, progress, invokedChannelId });
     else if (plan.type === 'player_roles') summary = await execPlayerRoles({ plan, guild, snapshot, buffer, flush, progress });
+    else if (plan.type === 'activate') summary = await execActivate({ plan, guild, buffer, flush, progress });
     else if (plan.type === 'convert') summary = await execConvert({ plan, guild, snapshot, playerData, buffer, flush, progress });
     else if (plan.type === 'oneonone') summary = await execOneOnOnes({ plan, guild, snapshot, playerData, buffer, flush, progress });
     else summary = await execCreate({ plan, guild, snapshot, playerData, buffer, flush, progress });
@@ -1193,7 +1277,8 @@ function keyForChannel(plan, channelId) {
 function planAction(plan) {
   if (plan.type === 'broadcast') return ACTIONS.BROADCAST;
   if (plan.type?.startsWith('alliance_')) return ACTIONS.ALLIANCES;
-  if (plan.type === 'player_roles') return ACTIONS.PLAYER_ROLES;
+  // Activate shares the player-roles lock: creating and assigning the same roles must not interleave.
+  if (plan.type === 'player_roles' || plan.type === 'activate') return ACTIONS.PLAYER_ROLES;
   if (plan.type === 'oneonone' || plan.kind === 'oneonone') return ACTIONS.ONE_ON_ONES;
   if (plan.kind === 'subs') return ACTIONS.SUBS;
   return ACTIONS.CONFESSIONALS;
@@ -1204,6 +1289,7 @@ function planTitle(plan) {
   if (plan.type?.startsWith('alliance_')) return '🤝 Alliances';
   if (plan.type === 'delete') return '🗑️ Deleting channels';
   if (plan.type === 'player_roles') return '🎭 Creating player roles';
+  if (plan.type === 'activate') return '🟢 Activating player roles';
   if (plan.type === 'convert') return '🗳️ Converting applications to subs';
   if (plan.type === 'oneonone') return '👥 Creating 1on1 channels';
   return plan.kind === 'subs' ? '🗳️ Creating subs channels' : '🎙️ Creating confessionals';
@@ -1248,10 +1334,11 @@ function etaRefusal(budget, configId) {
 
 function renderSummary(plan, s) {
   const isBroadcast = plan.type === 'broadcast';
-  const verb = isBroadcast ? 'posted' : (s.deleted ? 'deleted' : 'created/updated');
+  const isActivate = plan.type === 'activate';
+  const verb = isBroadcast ? 'posted' : (s.deleted ? 'deleted' : (isActivate ? 'assigned' : 'created/updated'));
   const lines = [
     `> ✅ **${s.created}** ${verb}`,
-    ...(isBroadcast ? [] : [`> ⏭️ **${s.skipped}** ${s.deleted ? 'protected (skipped)' : 'already correct'}`]),
+    ...(isBroadcast || isActivate ? [] : [`> ⏭️ **${s.skipped}** ${s.deleted ? 'protected (skipped)' : 'already correct'}`]),
     ...(s.failed ? [`> ❌ **${s.failed}** failed`] : []),
     ...(s.aborted ? ['> ⚠️ Aborted early'] : []),
     ...(s.protectedIds?.length ? ['', '-# The channel you ran this from was skipped — delete it manually or re-run from elsewhere.'] : []),
@@ -1261,7 +1348,9 @@ function renderSummary(plan, s) {
     // copy. Never tell the host it's safe to re-run.
     isBroadcast
       ? '-# ⚠️ Already sent — running this again posts **another** copy to every channel.'
-      : '-# Safe to re-run: existing channels are reused, not duplicated.'
+      : (isActivate
+        ? '-# Roles are now visible on player profiles. To remove one (the elimination kill switch), edit the role in Discord.'
+        : '-# Safe to re-run: existing channels are reused, not duplicated.')
   ];
   return {
     components: [{

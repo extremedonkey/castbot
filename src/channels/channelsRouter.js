@@ -182,11 +182,12 @@ export async function routeChannelsModalSubmit({ context, components, data }) {
     });
   }
 
-  // 🟢 Activate submit — assigns the selected linked roles (the modal IS the confirm: it
-  // names every role and carries the timing warning). Also BEFORE the legacy regex.
+  // 🟢 Activate submit — PLANS only, like every other Channels action: the confirm screen
+  // names each change (➕ gains / 🔁 @old → @new / ✅ no change) and channels_exec_* assigns.
+  // Also BEFORE the legacy regex.
   if (customId.startsWith('channels_activate_modal_')) {
     const H = await import('./channelsHandlers.js');
-    return await H.applyActivateRoles({
+    return await H.planActivate({
       configId: customId.replace('channels_activate_modal_', ''),
       guildId, userId, client, fields
     });

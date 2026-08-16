@@ -15,7 +15,10 @@
  *   { kind: 'oneonone', pairKey, channelId, name, a, b, tribeRoleId }
  *   { kind: 'category', bucket: 'confessional'|'subs'|'oneonone', configId?, categoryId }
  *   { kind: 'tribeCategory', configId, tribeRoleId, categoryId }  // per-tribe subs (RaP 0881)
- *   { kind: 'playerRole', userId, roleId }            // roleId null clears a dead role
+ *   { kind: 'playerRole', userId, roleId }            // roleId null clears a dead role; re-linking to a
+ *                                                     // DIFFERENT role stashes the old id as previousPlayerRoleId
+ *                                                     // (Activate shows the @old → @new move); clearPrevious: true
+ *                                                     // (no roleId) drops that marker after Activate completes it
  *   { kind: 'trustedSpectator', roleId }
  *   { kind: 'appConvert', channelId, completedAt?, preConvertChannelName?, convertedToSubsAt? }
  *   { kind: 'remove', bucket: 'confessional'|'subs'|'oneonone', configId?, key }
@@ -125,8 +128,15 @@ export function applyDeltas(playerData, guildId, deltas) {
       case 'playerRole': {
         const players = ((playerData[guildId].players ||= {}));
         const p = (players[d.userId] ||= {});
-        if (d.roleId) p.playerRoleId = d.roleId;
-        else delete p.playerRoleId; // the role was deleted in Discord — stop referencing it
+        if (d.clearPrevious) { delete p.previousPlayerRoleId; applied++; break; }
+        if (d.roleId) {
+          // Re-linking over a DIFFERENT live link remembers the old role, so 🟢 Activate can
+          // show (and complete) the @old → @new move instead of leaving both roles on the player.
+          if (p.playerRoleId && p.playerRoleId !== d.roleId) p.previousPlayerRoleId = p.playerRoleId;
+          p.playerRoleId = d.roleId;
+        } else {
+          delete p.playerRoleId; // the role was deleted in Discord — stop referencing it
+        }
         applied++;
         break;
       }
