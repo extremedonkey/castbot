@@ -841,7 +841,7 @@ export async function planTribeChannels({ configId, guildId, userId, client, fie
   const all = await getTribesForCastlist(guildId, 'default', client).catch(() => []);
   const wanted = fields.tribes?.length ? new Set(fields.tribes) : null;
   const tribes = (all || []).filter((t) => t.roleId && (!wanted || wanted.has(t.roleId)));
-  if (!tribes.length) return err('No tribes found. Add tribes to the default castlist first (Marooning → New Tribe).');
+  if (!tribes.length) return err('No tribes found. Add tribes to the Active Castlist first (/menu → Castlist Manager → Active Castlist).');
 
   const chatFormat = fields.chat_format?.[0]?.trim() || '💬%tribe%-chat';
   const challengesFormat = fields.challenges_format?.[0]?.trim() || '🏃%tribe%-challenges';
@@ -899,7 +899,7 @@ export async function planOneOnOnes({ mode, configId, guildId, userId, client, v
   const registry = node.oneOnOnes || {};
 
   const tribes = await getTribePairs(guildId, values, client, guild);
-  if (!tribes.length) return err('No tribes found. Add tribes to the default castlist first (Marooning → New Tribe).');
+  if (!tribes.length) return err('No tribes found. Add tribes to the Active Castlist first (/menu → Castlist Manager → Active Castlist).');
 
   const allPairs = tribes.flatMap((t) => t.pairs.map((p) => ({ ...p, tribeRoleId: t.tribeRoleId, tribeName: t.tribeName })));
   if (!allPairs.length) return err('The selected tribes have fewer than 2 members each — no pairs to create.');
