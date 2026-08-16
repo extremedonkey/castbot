@@ -3490,6 +3490,15 @@ export const BUTTON_REGISTRY = {
     restrictedUser: true,
     requiresModal: true
   },
+  'channels_tribes_*': {
+    label: 'Tribe Channels',
+    description: 'Per tribe: a category with its 💬 chat (tribe + Trusted Specs) and 🏃 challenges channel (tribe only), named via %tribe% templates',
+    emoji: '🏝️',
+    style: 'Secondary',
+    parent: 'season_channels',
+    category: 'channel_admin',
+    requiresModal: true
+  },
   'channels_manualrole_*': {
     label: 'Manually Link',
     description: 'Link ONE player to an EXISTING role (hand-made or another bot\'s) as their personal player role — recorded, never assigned',

@@ -77,9 +77,9 @@ describe('Channels section — guided walkthrough layout (sections, 2026-08-16)'
   // numbered Section (Text Display + button accessory) walking the season's actual order.
   const build = (entitled = true) => buildChannelsSection(CID, { entitled, layout: 'sections' });
 
-  it('heading, 5 Sections with dividers BETWEEN, then the trailing management row', () => {
+  it('heading, 6 Sections with dividers BETWEEN, then the trailing management row', () => {
     const parts = build();
-    assert.deepEqual(parts.map(p => p.type), [10, 9, 14, 9, 14, 9, 14, 9, 14, 9, 14, 1],
+    assert.deepEqual(parts.map(p => p.type), [10, 9, 14, 9, 14, 9, 14, 9, 14, 9, 14, 9, 14, 1],
       'dividers interleave the Sections; Swap/Merge + Alliances park in a compact row (40-cap trade)');
     for (const s of parts.filter(p => p.type === 9)) {
       assert.equal(s.components.length, 1, 'Section takes exactly ONE child');
@@ -88,9 +88,9 @@ describe('Channels section — guided walkthrough layout (sections, 2026-08-16)'
     }
   });
 
-  it('numbered 1–5: Create Roles → Subs → Confessionals → Assign Roles → 1on1s; row = Swap/Merge · Alliances', () => {
+  it('numbered 1–6: Create Roles → Subs → Confessionals → Assign Roles → Tribe Channels → 1on1s; row = Swap/Merge · Alliances', () => {
     const sections = build().filter(p => p.type === 9);
-    assert.deepEqual(sections.map(s => s.accessory.label), ['Create', 'Subs', 'Confessionals', 'Activate', '1 on 1s']);
+    assert.deepEqual(sections.map(s => s.accessory.label), ['Create', 'Subs', 'Confessionals', 'Activate', 'Tribe Channels', '1 on 1s']);
     sections.forEach((s, i) => assert.match(s.components[0].content, new RegExp(`^\\*\\*${i + 1} · `), `section ${i} numbering`));
     const row = build().find(p => p.type === 1);
     assert.deepEqual(row.components.map(b => b.label), ['Swap/Merge', 'Alliances']);
@@ -116,23 +116,95 @@ describe('Channels section — guided walkthrough layout (sections, 2026-08-16)'
     assert.match(build()[0].content, /Create Channels & Roles/);
   });
 
-  it('lock-swap hits ONLY the four fabricators — both role steps and Swap/Merge stay live', () => {
+  it('lock-swap hits ONLY the five fabricators — both role steps and Swap/Merge stay live', () => {
     const parts = build(false);
     const ids = parts.filter(p => p.type === 9).map(s => s.accessory.custom_id);
     assert.deepEqual(ids, [
       `channels_playerroles_${CID}`, // roles stuff is never premium-gated
       `premium_locked_channels_subs_${CID}`, `premium_locked_channels_confessionals_${CID}`,
       `channels_activate_${CID}`,
+      `premium_locked_channels_tribes_${CID}`,
       `premium_locked_channels_1on1s_${CID}`
     ]);
     assert.deepEqual(parts.find(p => p.type === 1).components.map(b => b.custom_id),
       ['castlist_swap_merge_default', `premium_locked_channels_alliances_${CID}`]);
   });
 
-  it('costs exactly 24 components — the tab budgets 39/40 around this', () => {
+  it('costs exactly 28 components — the tab sits at 40/40 around this, zero headroom', () => {
     const parts = build();
     const count = parts.reduce((n, p) => n + 1 + (p.components?.length || 0) + (p.accessory ? 1 : 0), 0);
-    assert.equal(count, 24);
+    assert.equal(count, 28);
+  });
+});
+
+describe('🏝️ Tribe Channels — formatTribeChannelName (real import)', () => {
+  const load = async () => (await import('../src/channels/channelPlan.js')).formatTribeChannelName;
+
+  it('substitutes %tribe%, lowercases, and dashes spaces', async () => {
+    const fmt = await load();
+    assert.equal(fmt('💬%tribe%-chat', 'Balboa'), '💬balboa-chat');
+    assert.equal(fmt('🏃%tribe%-challenges', 'Balboa Tribe'), '🏃balboa-tribe-challenges');
+  });
+
+  it('keeps emoji, collapses dash runs, trims edges', async () => {
+    const fmt = await load();
+    assert.equal(fmt('  %tribe%--chat- ', 'Balboa'), 'balboa-chat');
+    assert.equal(fmt('%tribe% - chat', 'Balboa'), 'balboa-chat');
+  });
+
+  it('a template WITHOUT %tribe% gets the tribe appended — two tribes never share a name', async () => {
+    const fmt = await load();
+    assert.equal(fmt('tribe-chat', 'Balboa'), 'tribe-chat-balboa');
+    assert.notEqual(fmt('tribe-chat', 'Balboa'), fmt('tribe-chat', 'Chapera'));
+  });
+
+  it('templates contributing nothing of their own fall back to {tribe}-{suffix} — chat and challenges must never collide', async () => {
+    const fmt = await load();
+    assert.equal(fmt('', 'Balboa', { fallbackSuffix: 'chat' }), 'balboa-chat');
+    assert.equal(fmt('###', 'Balboa', { fallbackSuffix: 'challenges' }), 'balboa-challenges');
+    // A bare %tribe% in BOTH boxes would resolve both channels to 'balboa' — adopt-by-name
+    // would then merge them. The suffix fallback keeps the pair distinct.
+    assert.equal(fmt('%tribe%', 'Balboa', { fallbackSuffix: 'chat' }), 'balboa-chat');
+    assert.equal(fmt('', '', {}), 'tribe-chat', 'even a nameless tribe yields a legal name');
+  });
+
+  it('strips the characters Discord/markdown choke on and caps at 100', async () => {
+    const fmt = await load();
+    assert.equal(fmt('#%tribe%:chat', 'Bal"boa'), 'balboachat');
+    assert.ok(fmt('%tribe%-chat', 'x'.repeat(200)).length <= 100);
+  });
+});
+
+describe('🏝️ Tribe Channels — modal (real builder) + routing', () => {
+  it('3 Labels: tribe Role Select (pre-filled) + two %tribe% templates with defaults', async () => {
+    const { buildTribeChannelsModal } = await import('../src/channels/channelsView.js');
+    const m = buildTribeChannelsModal({ configId: CID, defaultTribeRoleIds: ['r1'], tribeNames: 'Balboa' });
+    assert.equal(m.custom_id, `channels_tribes_modal_${CID}`);
+    assert.ok([...m.title].length <= 45);
+    assert.equal(m.components.length, 3, '≤5 modal cap, with room');
+    const [tribes, chat, challenges] = m.components.map(l => l.component);
+    assert.equal(tribes.type, 6);
+    assert.deepEqual(tribes.default_values, [{ id: 'r1', type: 'role' }]);
+    assert.equal(chat.value, '💬%tribe%-chat');
+    assert.equal(challenges.value, '🏃%tribe%-challenges');
+    for (const l of m.components) {
+      assert.ok([...l.label].length <= 45);
+      assert.ok([...l.description].length <= 100, `${[...l.description].length}: ${l.description}`);
+    }
+  });
+
+  it('last-used formats pre-fill over the defaults', async () => {
+    const { buildTribeChannelsModal } = await import('../src/channels/channelsView.js');
+    const m = buildTribeChannelsModal({ configId: CID, formats: { chatFormat: '🌊%tribe%', challengesFormat: '%tribe%-comps' } });
+    assert.equal(m.components[1].component.value, '🌊%tribe%');
+    assert.equal(m.components[2].component.value, '%tribe%-comps');
+  });
+
+  it('the submit id dodges the legacy kind regex; the button id no neighbouring prefix', () => {
+    assert.equal(`channels_tribes_modal_${CID}`.match(/^channels_(roles|playerroles|confessionals|subs|1on1s|msg)_modal_(.+)$/), null);
+    for (const other of ['channels_alliance', 'channels_roles_', 'channels_msg_', 'channels_manualrole_', 'channels_activate_']) {
+      assert.ok(!`channels_tribes_${CID}`.startsWith(other));
+    }
   });
 });
 
@@ -472,9 +544,10 @@ describe('📨 Msg Category — routing (prefix overlap is the risk here)', () =
 
   it('only modal-opening ids match the requiresModal regex — the rest defer and update', () => {
     // Replica of the app.js:13819 ack-mode regex.
-    const MODAL_RE = /^channels_(roles|playerroles|manualrole|activate|confessionals|subs|1on1s|msg_edit|alliance_new|alliance_edit|alliance_members|alliance_review)_/;
+    const MODAL_RE = /^channels_(roles|playerroles|manualrole|activate|tribes|confessionals|subs|1on1s|msg_edit|alliance_new|alliance_edit|alliance_members|alliance_review)_/;
     assert.ok(MODAL_RE.test(`channels_manualrole_${CID}`), 'Manually Link must open a modal');
     assert.ok(MODAL_RE.test(`channels_activate_${CID}`), 'Activate must open a modal');
+    assert.ok(MODAL_RE.test(`channels_tribes_${CID}`), 'Tribe Channels must open a modal');
     assert.ok(MODAL_RE.test(`channels_msg_edit_${CID}`), 'edit must open a modal');
     for (const id of [`channels_msg_${CID}`, `channels_msg_send_${CID}`, `channels_msg_targets_${CID}`]) {
       assert.ok(!MODAL_RE.test(id), `${id} must NOT be requiresModal`);

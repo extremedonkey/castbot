@@ -182,6 +182,16 @@ export async function routeChannelsModalSubmit({ context, components, data }) {
     });
   }
 
+  // 🏝️ Tribe Channels submit — PLANS only; channels_exec_* creates. BEFORE the legacy regex
+  // (which would otherwise misroute it as a confessionals plan).
+  if (customId.startsWith('channels_tribes_modal_')) {
+    const H = await import('./channelsHandlers.js');
+    return await H.planTribeChannels({
+      configId: customId.replace('channels_tribes_modal_', ''),
+      guildId, userId, client, fields
+    });
+  }
+
   // 🟢 Activate submit — PLANS only, like every other Channels action: the confirm screen
   // names each change (➕ gains / 🔁 @old → @new / ✅ no change) and channels_exec_* assigns.
   // Also BEFORE the legacy regex.

@@ -15,6 +15,8 @@
  *   { kind: 'oneonone', pairKey, channelId, name, a, b, tribeRoleId }
  *   { kind: 'category', bucket: 'confessional'|'subs'|'oneonone', configId?, categoryId }
  *   { kind: 'tribeCategory', configId, tribeRoleId, categoryId }  // per-tribe subs (RaP 0881)
+ *   { kind: 'tribeChannels', configId, tribeRoleId, patch: { categoryId?, chatId?, challengesId? } } // 🏝️ per-tribe category+chat+challenges
+ *   { kind: 'tribeChannelFormats', configId, chatFormat, challengesFormat } // last-used 🏝️ templates (modal pre-fill)
  *   { kind: 'playerRole', userId, roleId }            // roleId null clears a dead role; re-linking to a
  *                                                     // DIFFERENT role stashes the old id as previousPlayerRoleId
  *                                                     // (Activate shows the @old → @new move); clearPrevious: true
@@ -121,6 +123,25 @@ export function applyDeltas(playerData, guildId, deltas) {
         const season = ensureSeason(node, d.configId);
         const map = (season.categories.subsByTribe ||= {});
         map[d.tribeRoleId] = d.categoryId;
+        applied++;
+        break;
+      }
+
+      case 'tribeChannels': {
+        // 🏝️ Tribe Channels: category + chat + challenges per tribe, keyed by tribeRoleId
+        // (same duplicate-name hazard as above). Guild-scoped like oneOnOnes — a tribe outlives
+        // any one season's configId, which is recorded on the entry for future Swap/Merge
+        // archiving. Patch-merged so a partial run only fills what it created.
+        const map = (node.tribeChannels ||= {});
+        map[d.tribeRoleId] = { ...(map[d.tribeRoleId] || {}), ...d.patch, configId: d.configId };
+        applied++;
+        break;
+      }
+
+      case 'tribeChannelFormats': {
+        // Last-used 🏝️ name templates — pre-fills the next modal open.
+        const season = ensureSeason(node, d.configId);
+        season.tribeChannelFormats = { chatFormat: d.chatFormat, challengesFormat: d.challengesFormat };
         applied++;
         break;
       }

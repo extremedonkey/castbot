@@ -46,6 +46,44 @@ export function toSlug(displayName, { max = 80, userId = '' } = {}) {
 }
 
 /**
+ * 🏝️ Tribe Channels — resolve a host-supplied name template into a valid Discord channel name.
+ * `%tribe%` is replaced with the tribe's name, then the WHOLE result is normalised: lowercase,
+ * whitespace runs → single dash, dash runs collapsed, edges trimmed, ≤100 chars. Unlike toSlug,
+ * emoji/unicode are KEPT — `💬%tribe%-chat` is the whole point of the template (Discord channel
+ * names accept emoji; only spaces/uppercase are illegal). A template without `%tribe%` gets the
+ * tribe appended — two tribes must never resolve to one name (adopt-by-name would merge them).
+ * A template that normalises to nothing falls back to `{tribe}-{fallbackSuffix}`.
+ * @param {string} template - e.g. '💬%tribe%-chat'
+ * @param {string} tribeName - e.g. 'Balboa Tribe'
+ * @param {Object} [opts]
+ * @param {string} [opts.fallbackSuffix='chat'] - used when the template is empty/garbage
+ * @returns {string} a non-empty, Discord-legal channel name
+ */
+export function formatTribeChannelName(template, tribeName, { fallbackSuffix = 'chat' } = {}) {
+  const normalise = (s) => String(s ?? '')
+    .toLowerCase()
+    .replace(/\s+/g, '-')            // spaces (incl. runs) → single dash
+    .replace(/[#@:`"'<>]/g, '')      // the characters Discord/markdown actually choke on
+    .replace(/-+/g, '-')             // collapse dash runs
+    .replace(/^-|-$/g, '')           // trim edges
+    .slice(0, 100)
+    .replace(/-$/, '');
+
+  const tpl = String(template ?? '').trim();
+
+  const tribe = String(tribeName ?? '').trim() || 'tribe';
+  const fallback = () => normalise(`${tribe}-${fallbackSuffix}`) || `tribe-${fallbackSuffix}`;
+
+  // A template that contributes NOTHING of its own ('', '###', bare '%tribe%') would resolve
+  // chat and challenges to the SAME name — and adopt-by-name would then merge the two channels.
+  // Force the per-kind fallback instead, which keeps the pair distinct.
+  if (!normalise(tpl.replaceAll('%tribe%', ''))) return fallback();
+
+  const withTribe = tpl.includes('%tribe%') ? tpl.replaceAll('%tribe%', tribe) : `${tpl}-${tribe}`;
+  return normalise(withTribe) || fallback();
+}
+
+/**
  * Build a channel name for a given kind, guaranteed ≤100 chars (Discord's hard limit).
  * @param {'confessional'|'subs'|'oneonone'} kind
  * @param {Array<{displayName: string, userId: string}>} parts - 1 member, or 2 for a 1on1

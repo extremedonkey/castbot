@@ -25,6 +25,7 @@ The tab clones the Marooning tab's chrome and is expected to absorb the Maroonin
 | 🟢 **Activate** | The reveal step (2026-08-16): assign linked roles to their players via a multi-select of CastBot-linked roles, then a **confirm screen listing every change** (gains, @old → @new moves, no-ops) before anything is assigned. Timing warning: before marooning, players/specs can read the member list and see who was cast |
 | 🎙️ **Confessionals** | Create / update / delete `#name-confessional` |
 | 🗳️ **Subs** | Create / update / delete `#name-subs`, or **convert application channels** into subs. Category placement select (RaP 0881, 2026-08-09): **Don't touch** (default, today's behaviour) / **Single category** (custom name, moves misplaced channels in) / **One per tribe** (`Balboa Subs` from the default castlist; tribe-less → fallback; re-run after a swap to migrate). Moves always use `moveChannelSafe` (`lockPermissions: false`) so overwrites survive. Per-tribe registry: `categories.subsByTribe` keyed by tribeRoleId |
+| 🏝️ **Tribe Channels** | Per tribe (default castlist): a category with its 💬 chat + 🏃 challenges channels, named via host-editable `%tribe%` templates (`formatTribeChannelName`, channelPlan.js — templates persisted per season for the next pre-fill). Registry `channelAdmin.tribeChannels[tribeRoleId]` = `{categoryId, chatId, challengesId, configId}` — the key future Swap/Merge archiving needs. Create-only v1 |
 | 🤝 **1 on 1s** | A private channel for every *pair* of players in a tribe |
 | 🤝 **Alliances** | Secret member channels via the Alliance Manager — see [RaP 0892](../01-RaP/0892_20260728_Alliances_Analysis.md). Members + hosts only (**no** Trusted Spectator), name defaults to plain `alliance`, same-tribe warn-only guard, player request flow via /menu → Advanced (`ALLIANCE_REQUEST_USER_IDS` v1; the **requester is always auto-included** in the members — servivorg 2026-08-15). The player button is additionally gated per guild by Settings → 🕹️ Player Menu → Alliance Requests checkbox (`safariConfig.showAllianceButton`, **default OFF** — only an explicit `true` shows it). Review/approve requires Manage Channels/Roles (see Gating). Code: [`alliancePlan.js`](../../src/channels/alliancePlan.js) / [`allianceView.js`](../../src/channels/allianceView.js) / [`allianceHandlers.js`](../../src/channels/allianceHandlers.js) |
 
@@ -139,6 +140,8 @@ The registry is flushed **every 5 items** (between Discord batches, never during
 |---|---|---|---|
 | 🎙️ Confessional | player role **AND** user (was XOR until 2026-08-16 — the role-only grant locked players out pre-Activate, since confessionals are made before the cast reveal) | ✅ read + react, **no posting** | ✅ |
 | 🗳️ Subs | player role **AND** user | ❌ | ✅ |
+| 🏝️ Tribe chat | tribe role | ✅ read + react, **no posting** | ✅ |
+| 🏃 Tribe challenges | tribe role | ❌ | ✅ |
 | 🤝 1on1 | both players, role-preferred | ❌ | ✅ |
 
 - **Role-preferred** means: use the player's `playerRoleId` if that role is live, else grant the user directly (and clear the dead pointer). That's what makes removing one role strip a voted-out player from everything.

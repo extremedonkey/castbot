@@ -87,6 +87,7 @@ export function buildChannelsSection(configId, { entitled = true, layout = 'row'
     subs: { type: 2, custom_id: gate(`channels_subs_${configId}`), label: 'Subs', style: 2, emoji: { name: '🗳️' } },
     confessionals: { type: 2, custom_id: gate(`channels_confessionals_${configId}`), label: 'Confessionals', style: 2, emoji: { name: '🎙️' } },
     assignRoles: { type: 2, custom_id: `channels_activate_${configId}`, label: 'Activate', style: 2, emoji: { name: '🟢' } },
+    tribeChannels: { type: 2, custom_id: gate(`channels_tribes_${configId}`), label: 'Tribe Channels', style: 2, emoji: { name: '🏝️' } },
     oneOnOnes: { type: 2, custom_id: gate(`channels_1on1s_${configId}`), label: '1 on 1s', style: 2, emoji: { name: '👥' } },
     swapMerge: { type: 2, custom_id: 'castlist_swap_merge_default', label: 'Swap/Merge', style: 2, emoji: { name: '🔀' } },
     alliances: { type: 2, custom_id: gate(`channels_alliances_${configId}`), label: 'Alliances', style: 2, emoji: { name: '🤝' } }
@@ -107,7 +108,7 @@ export function buildChannelsSection(configId, { entitled = true, layout = 'row'
   // mid-game management actions (Swap/Merge · Alliances) — numbered Sections for those two
   // would blow Discord's 40-component cap. Bulk creation is a high-anxiety task; the
   // guidance (and the reminder that every action previews before running) is the point.
-  // Component cost: 24 (heading + 5 × [Section + Text + accessory] + 5 dividers + row + 2
+  // Component cost: 28 (heading + 6 × [Section + Text + accessory] + 6 dividers + row + 2
   // buttons) — buildChannelsView budgets around this.
   const section = (text, button) => ({ type: 9, components: [{ type: 10, content: text }], accessory: button });
   const sections = [
@@ -115,7 +116,8 @@ export function buildChannelsSection(configId, { entitled = true, layout = 'row'
     section('**2 · Subs** — as players accept their casting: convert each application channel into their private player↔host subs channel (or create fresh ones).', BTN.subs),
     section('**3 · Confessionals** — before the cast reveal: every player\'s private diary room. Players get access straight away; Trusted Spectators read along.', BTN.confessionals),
     section('**4 · Assign Player Roles** — at 🚣 Marooning: hand each player their role. This is the reveal — profiles now show who was cast. You review every change first.', BTN.assignRoles),
-    section('**5 · 1 on 1s** — once the tribes are announced: one private channel per pair of tribemates, so hosts can watch player-to-player chat.', BTN.oneOnOnes)
+    section('**5 · Tribe Channels** — once tribes exist: a category per tribe holding its 💬 chat (players + Trusted Specs) and 🏃 challenges channel (players only).', BTN.tribeChannels),
+    section('**6 · 1 on 1s** — once the tribes are announced: one private channel per pair of tribemates, so hosts can watch player-to-player chat.', BTN.oneOnOnes)
   ];
   return [
     { type: 10, content: '### ```#️⃣ Create Channels & Roles```\n-# The standard ORG channels and player roles, in the order a season runs them. Nothing changes on click — every action shows you exactly what it will do first.' },
@@ -169,13 +171,12 @@ export async function buildChannelsView({ configId, guildId, playerData, seasonN
     components: [
       seasonManagerHeader('channels', seasonName),
       buildSeasonNavRow(configId, 'channels', userId),
-      { type: 14 },
-      // ⚠️ 39/40 — the walkthrough (24 components) absorbed the whole 🎭 Player Roles section
-      // (Reece 2026-08-16): Create/Assign are steps 1 and 4 of the sequence now, and the old
-      // section's blurb lives in their guidance text. Re-count before adding ANYTHING here.
-      // Msg Category left the tab entirely — ⭐ Premium's 📢 Player Engagement row only.
+      // ⚠️ 40/40 — EXACTLY at Discord's component cap. The walkthrough (28 components) holds
+      // the whole sequence: player-role steps 1/4 (absorbed 2026-08-16) and 🏝️ Tribe Channels
+      // as step 5; BOTH outer separators were reclaimed to pay for it (the code-block heading
+      // and the stacked management rows delineate the edges). Adding ANYTHING here means
+      // removing something first. Msg Category left the tab — ⭐ Premium's 📢 row only.
       ...buildChannelsSection(configId, { entitled, layout: 'sections' }),
-      { type: 14 },
       // 🔐 Roles (Trusted Spectator) + 🔗 Manually Link (interop: point a player at a
       // hand-made/other-bot role — records the link, never assigns) are config odd-jobs,
       // not sequence steps — parked right of Edit (Reece 2026-08-16).
@@ -346,6 +347,67 @@ export function buildActivateModal({ configId, options, hidden = 0 }) {
       }
       // The confirm screen (planActivate) repeats the reveal warning next to the exact change
       // list — the modal alone is never the last stop anymore.
+    ]
+  };
+}
+
+/**
+ * 🏝️ Tribe Channels modal — per-tribe category + chat + challenges. The name templates use
+ * %tribe% as the placeholder (formatTribeChannelName, channelPlan.js); last-used formats are
+ * pre-filled via `value`. Tribe pre-fill mirrors buildOneOnOnesModal (default_values is
+ * unreliable in modals, so tribe names ALSO ride the Label description).
+ * @param {Object} p
+ * @param {string} p.configId
+ * @param {string[]} [p.defaultTribeRoleIds] - tribes of the default castlist
+ * @param {string} [p.tribeNames] - human-readable list for the description
+ * @param {{chatFormat?: string, challengesFormat?: string}} [p.formats] - last-used templates
+ */
+export function buildTribeChannelsModal({ configId, defaultTribeRoleIds = [], tribeNames = '', formats = {} }) {
+  return {
+    custom_id: `channels_tribes_modal_${configId}`,
+    title: '🏝️ Tribe Channels',
+    components: [
+      {
+        type: 18,
+        label: 'Tribes',
+        description: tribeNames
+          ? `Default castlist: ${tribeNames}. Leave empty to use all of them.`
+          : 'No tribes found in the default castlist — pick roles manually.',
+        component: {
+          type: 6, // Role Select
+          custom_id: 'tribes',
+          required: false,
+          min_values: 0,
+          max_values: 10,
+          ...(defaultTribeRoleIds.length ? { default_values: defaultTribeRoleIds.slice(0, 10).map((id) => ({ id, type: 'role' })) } : {})
+        }
+      },
+      {
+        type: 18,
+        label: 'Tribe Chat Format',
+        description: "%tribe% becomes the tribe's name. Spaces turn into dashes automatically.",
+        component: {
+          type: 4, // Text Input
+          custom_id: 'chat_format',
+          style: 1,
+          required: false,
+          max_length: 80,
+          value: formats.chatFormat || '💬%tribe%-chat'
+        }
+      },
+      {
+        type: 18,
+        label: 'Challenge Channel Format',
+        description: 'Same %tribe% placeholder. Trusted Spectators are NOT added to challenge channels.',
+        component: {
+          type: 4, // Text Input
+          custom_id: 'challenges_format',
+          style: 1,
+          required: false,
+          max_length: 80,
+          value: formats.challengesFormat || '🏃%tribe%-challenges'
+        }
+      }
     ]
   };
 }

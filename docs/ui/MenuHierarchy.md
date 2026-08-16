@@ -109,7 +109,7 @@
 ├─ 📅 Planner     apps_planner_{configId}
 ├─ 🏆 Casting     season_app_ranking_{configId}
 ├─ 🚣 Marooning   season_marooning_{configId}
-├─ #️⃣ Channels    season_channels_{configId}   open to all; guided Sections in season order (Subs→Conf→1on1s→Swap→Alliances), the four fabrication buttons 💎-lock for unentitled guilds; Msg Category is Premium-only
+├─ #️⃣ Channels    season_channels_{configId}   open to all; guided Sections 1-6 (CreateRoles→Subs→Conf→Assign→TribeChannels→1on1s) + [Swap/Merge · Alliances] row; the five fabrication buttons 💎-lock for unentitled guilds; Msg Category is Premium-only
 └─ ← Seasons · ✏️ Edit
 -# Active tab renders [Primary]; nav row is at the hard 5-button cap — no room for a 6th tab.
 ```

@@ -18,7 +18,7 @@ import {
 } from './channelAdminConfig.js';
 import {
   channelName, assignChannelNames, buildOverwrites, preflightBudget, planCategoryBuckets, pairKey,
-  planSubsPlacement, sanitizeCategoryBase
+  planSubsPlacement, sanitizeCategoryBase, formatTribeChannelName
 } from './channelPlan.js';
 import {
   snapshotGuild, checkBotPermissions, ensureCategory, ensureChannel,
@@ -786,6 +786,72 @@ export async function planPlayerRoles({ mode, configId, guildId, userId, client,
   });
 }
 
+/**
+ * Plan the 🏝️ Tribe Channels action: a category per tribe holding its 💬 chat (tribe role +
+ * Trusted Spectators read/react + hosts) and 🏃 challenges channel (tribe role + hosts only).
+ * Names come from host-editable %tribe% templates (formatTribeChannelName). Registry-aware:
+ * a tribe whose recorded category/channels are still live is "already exists, left alone".
+ */
+export async function planTribeChannels({ configId, guildId, userId, client, fields }) {
+  const guild = await client.guilds.fetch(guildId);
+  const perms = await checkBotPermissions(guild);
+  if (!perms.ok) return err(`CastBot is missing the **${perms.missing.join('** and **')}** permission${perms.missing.length > 1 ? 's' : ''}.`);
+
+  const snapshot = await snapshotGuild(guild);
+  const playerData = await loadPlayerData();
+  const registry = playerData[guildId]?.channelAdmin?.tribeChannels || {};
+  const tribesData = playerData[guildId]?.tribes || {};
+
+  const { getTribesForCastlist } = await import('../../castlistDataAccess.js');
+  const all = await getTribesForCastlist(guildId, 'default', client).catch(() => []);
+  const wanted = fields.tribes?.length ? new Set(fields.tribes) : null;
+  const tribes = (all || []).filter((t) => t.roleId && (!wanted || wanted.has(t.roleId)));
+  if (!tribes.length) return err('No tribes found. Add tribes to the default castlist first (Marooning → New Tribe).');
+
+  const chatFormat = fields.chat_format?.[0]?.trim() || '💬%tribe%-chat';
+  const challengesFormat = fields.challenges_format?.[0]?.trim() || '🏃%tribe%-challenges';
+
+  const items = tribes.map((t) => {
+    const emoji = tribesData[t.roleId]?.emoji || '🏕️';
+    const known = registry[t.roleId] || {};
+    return {
+      tribeRoleId: t.roleId,
+      tribeName: t.name,
+      emoji,
+      categoryName: sanitizeCategoryBase(`${emoji} ${t.name}`, t.name || 'Tribe'),
+      chatName: formatTribeChannelName(chatFormat, t.name, { fallbackSuffix: 'chat' }),
+      challengesName: formatTribeChannelName(challengesFormat, t.name, { fallbackSuffix: 'challenges' }),
+      // Live-checked registry pointers — a hand-deleted channel is recreated, never pointed at.
+      categoryId: known.categoryId && snapshot.channels.get(known.categoryId) ? known.categoryId : null,
+      chatId: known.chatId && snapshot.channels.get(known.chatId) ? known.chatId : null,
+      challengesId: known.challengesId && snapshot.channels.get(known.challengesId) ? known.challengesId : null
+    };
+  });
+
+  const newCategories = items.filter((i) => !i.categoryId).length;
+  const newChannels = items.reduce((n, i) => n + (i.chatId ? 0 : 1) + (i.challengesId ? 0 : 1), 0);
+  const budget = preflightBudget({ existing: snapshot.counts, create: { categories: newCategories, channels: newChannels } });
+  if (!budget.ok) return budgetRefusal(budget, configId, true);
+
+  const token = stashPlan(userId, { type: 'tribe_channels', configId, guildId, chatFormat, challengesFormat, items });
+  const shown = items.slice(0, 10);
+  return buildConfirmScreen({
+    token,
+    configId,
+    title: `Create tribe channels for ${items.length} tribe${items.length > 1 ? 's' : ''}?`,
+    lines: [
+      `> **${newCategories}** new categor${newCategories === 1 ? 'y' : 'ies'} · **${newChannels}** new channel${newChannels === 1 ? '' : 's'} · guild after: **${budget.after.channels}/500** channels, **${budget.after.categories}/50** categories`,
+      '',
+      ...shown.map((i) => `> ${i.emoji} **${i.tribeName}** — #${i.chatName} · #${i.challengesName}${i.categoryId && i.chatId && i.challengesId ? ' *(already exist)*' : ''}`),
+      ...(items.length > shown.length ? [`> -# …and ${items.length - shown.length} more`] : []),
+      '',
+      '> 💬 chat: tribe + Trusted Spectators (read + react) · 🏃 challenges: tribe only. Hosts see both.',
+      '-# Safe to re-run — existing tribe channels are left alone.'
+    ],
+    confirmLabel: newChannels ? `Create ${newChannels} channel${newChannels > 1 ? 's' : ''}` : 'Re-apply permissions'
+  });
+}
+
 /** Plan the 1on1 action. */
 export async function planOneOnOnes({ mode, configId, guildId, userId, client, values }) {
   const guild = await client.guilds.fetch(guildId);
@@ -928,6 +994,7 @@ export async function executePlan({ plan, guildId, userId, client, interactionTo
     else if (plan.type === 'delete') summary = await execDelete({ plan, guild, buffer, flush, progress, invokedChannelId });
     else if (plan.type === 'player_roles') summary = await execPlayerRoles({ plan, guild, snapshot, buffer, flush, progress });
     else if (plan.type === 'activate') summary = await execActivate({ plan, guild, buffer, flush, progress });
+    else if (plan.type === 'tribe_channels') summary = await execTribeChannels({ plan, guild, snapshot, playerData, buffer, flush, progress });
     else if (plan.type === 'convert') summary = await execConvert({ plan, guild, snapshot, playerData, buffer, flush, progress });
     else if (plan.type === 'oneonone') summary = await execOneOnOnes({ plan, guild, snapshot, playerData, buffer, flush, progress });
     else summary = await execCreate({ plan, guild, snapshot, playerData, buffer, flush, progress });
@@ -1178,6 +1245,62 @@ async function execConvert({ plan, guild, snapshot, playerData, buffer, flush, p
   });
 }
 
+/**
+ * 🏝️ Tribe Channels exec — per tribe: ensure the category, then the chat + challenges channels
+ * (adopt-by-registry-id first, name second). The category mirrors the CHAT overwrites (its most
+ * open child) so Discord's permission sync behaves; both channels still set their own explicitly.
+ * ⚠️ Two tribes with the SAME name share a category via adopt-by-name on first creation —
+ * registry-id reuse prevents drift on re-runs, and tribe names are near-always unique in practice.
+ */
+async function execTribeChannels({ plan, guild, snapshot, playerData, buffer, flush, progress }) {
+  const { everyoneId, roleAccessEntries } = await accessContext(guild, playerData);
+  const specRoleId = playerData[plan.guildId]?.permissions?.trustedSpectatorRoleId || null;
+
+  // Remember the templates for the next modal open (pre-fill).
+  buffer.push({ kind: 'tribeChannelFormats', configId: plan.configId, chatFormat: plan.chatFormat, challengesFormat: plan.challengesFormat });
+
+  return await runPacedJob({
+    items: plan.items,
+    buffer, flush, progress,
+    step: async (it) => {
+      const principals = [{ id: it.tribeRoleId, allow: PLAYER_ACCESS }];
+      const chatOverwrites = buildOverwrites({
+        everyoneId, principals, spectatorRoleId: specRoleId, spectatorAccess: SPECTATOR_ACCESS,
+        roleAccessEntries, viewChannelBit: PermissionFlagsBits.ViewChannel
+      });
+      const challengesOverwrites = buildOverwrites({
+        everyoneId, principals, roleAccessEntries, viewChannelBit: PermissionFlagsBits.ViewChannel
+      });
+
+      let parentId = it.categoryId;
+      if (!parentId) {
+        const { category } = await ensureCategory(guild, it.categoryName, { snapshot, overwrites: chatOverwrites });
+        parentId = category.id;
+      }
+
+      const chat = await ensureChannel(guild, {
+        registryId: it.chatId, name: it.chatName, parentId, overwrites: chatOverwrites,
+        topic: `Tribe chat — ${it.tribeName}`, snapshot
+      });
+      const challenges = await ensureChannel(guild, {
+        registryId: it.challengesId, name: it.challengesName, parentId, overwrites: challengesOverwrites,
+        topic: `Tribe challenges — ${it.tribeName}`, snapshot
+      });
+
+      buffer.push({
+        kind: 'tribeChannels', configId: plan.configId, tribeRoleId: it.tribeRoleId,
+        patch: { categoryId: parentId, chatId: chat.channel.id, challengesId: challenges.channel.id }
+      });
+
+      return {
+        ok: true,
+        skipped: !!it.categoryId && chat.action === 'reused' && challenges.action === 'reused',
+        label: `${it.emoji} ${it.tribeName}`
+      };
+    }
+  });
+}
+
 async function execOneOnOnes({ plan, guild, snapshot, playerData, buffer, flush, progress }) {
   const { everyoneId, roleAccessEntries } = await accessContext(guild, playerData);
   const registry = playerData[plan.guildId]?.channelAdmin?.oneOnOnes || {};
@@ -1279,6 +1402,7 @@ function planAction(plan) {
   // Activate shares the player-roles lock: creating and assigning the same roles must not interleave.
   if (plan.type === 'player_roles' || plan.type === 'activate') return ACTIONS.PLAYER_ROLES;
   if (plan.type === 'oneonone' || plan.kind === 'oneonone') return ACTIONS.ONE_ON_ONES;
+  if (plan.type === 'tribe_channels') return ACTIONS.TRIBE_CHANNELS;
   if (plan.kind === 'subs') return ACTIONS.SUBS;
   return ACTIONS.CONFESSIONALS;
 }
@@ -1291,6 +1415,7 @@ function planTitle(plan) {
   if (plan.type === 'activate') return '🟢 Activating player roles';
   if (plan.type === 'convert') return '🗳️ Converting applications to subs';
   if (plan.type === 'oneonone') return '👥 Creating 1on1 channels';
+  if (plan.type === 'tribe_channels') return '🏝️ Creating tribe channels';
   return plan.kind === 'subs' ? '🗳️ Creating subs channels' : '🎙️ Creating confessionals';
 }
 

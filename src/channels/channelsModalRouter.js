@@ -6,7 +6,8 @@
  */
 import { loadPlayerData } from '../../storage.js';
 import {
-  buildRolesModal, buildPlayerRolesModal, buildConfessionalsModal, buildSubsModal, buildOneOnOnesModal
+  buildRolesModal, buildPlayerRolesModal, buildConfessionalsModal, buildSubsModal, buildOneOnOnesModal,
+  buildTribeChannelsModal
 } from './channelsView.js';
 
 /**
@@ -17,7 +18,7 @@ import {
  */
 export async function buildChannelsModal({ customId, guildId, client }) {
   const modal = (data) => ({ type: 9, data });
-  const parsed = customId.match(/^channels_(roles|playerroles|confessionals|subs|1on1s)_(.+)$/);
+  const parsed = customId.match(/^channels_(roles|playerroles|confessionals|subs|1on1s|tribes)_(.+)$/);
   const kind = parsed?.[1];
   const configId = parsed?.[2];
 
@@ -40,8 +41,8 @@ export async function buildChannelsModal({ customId, guildId, client }) {
   if (kind === 'confessionals') return modal(buildConfessionalsModal({ configId }));
   if (kind === 'subs') return modal(buildSubsModal({ configId }));
 
-  // 1on1s — pre-fill the tribes of the default castlist. default_values is unreliable in modals,
-  // so the tribe names also go in the Label description.
+  // 1on1s + tribes — both pre-fill the default castlist's tribes. default_values is unreliable
+  // in modals, so the tribe names also go in the Label description.
   const { getDefaultCastlistTribeRoleIds } = await import('./channelRoster.js');
   const guild = await client.guilds.fetch(guildId).catch(() => null);
   const tribeRoleIds = await getDefaultCastlistTribeRoleIds(guildId, client).catch(() => []);
@@ -49,5 +50,12 @@ export async function buildChannelsModal({ customId, guildId, client }) {
     .map((id) => guild?.roles.cache.get(id)?.name)
     .filter(Boolean)
     .join(', ');
+
+  if (kind === 'tribes') {
+    const playerData = await loadPlayerData();
+    const formats = playerData[guildId]?.channelAdmin?.[configId]?.tribeChannelFormats || {};
+    return modal(buildTribeChannelsModal({ configId, defaultTribeRoleIds: tribeRoleIds, tribeNames, formats }));
+  }
+
   return modal(buildOneOnOnesModal({ configId, defaultTribeRoleIds: tribeRoleIds, tribeNames }));
 }

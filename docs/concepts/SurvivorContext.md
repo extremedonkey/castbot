@@ -39,6 +39,12 @@ Private player-to-player conversation. Some servers let players use Discord DMs;
 - **Naming**: `#reece-bob`, `#reece-sarah`, `#sarah-bob`
 - ⚠️ **Combinatorial**: n players → n(n−1)/2 channels. A 12-player tribe is 66 channels; 20 players is 190 — against Discord's hard ceiling of **500 channels / 50 categories per guild**.
 
+### 🏝️ Tribe Channels
+Each tribe gets a category holding its shared channels: a **tribe chat** (all tribemates + trusted spectators reading along) and a **tribe challenges** channel (tribemates only — spectators are typically excluded from challenge planning). Hosts remake these at every swap, which is why CastBot's registry keys them by tribe **role ID** (the future Swap/Merge integration archives by that key).
+
+- **Naming**: `#💬balboa-chat`, `#🏃balboa-challenges` under a `🌴 Balboa` category; conventions vary, so CastBot's templates use a `%tribe%` placeholder
+- **Access**: chat = tribe role + trusted spectators (read+react) + hosts; challenges = tribe role + hosts only
+
 ### 🤝 Alliances
 A group of players on the same tribe who have agreed to work together. **The existence of an alliance is extremely sensitive game information** — leaking it can decide a season. Any alliance feature must be very closely guarded. CastBot models these since 2026-07-28 (Alliances v1, whitelist-hidden) with that secrecy baked in — generic `alliance` channel names, no Trusted Spectator access, silent-by-default creation. See [ChannelAdministration.md](../03-features/ChannelAdministration.md) and [RaP 0892](../01-RaP/0892_20260728_Alliances_Analysis.md).
 

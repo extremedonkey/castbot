@@ -106,6 +106,7 @@ export const ACTIONS = {
   CONFESSIONALS: 'confessionals',
   SUBS: 'subs',
   ONE_ON_ONES: 'one_on_ones',
+  TRIBE_CHANNELS: 'tribe_channels',
   BROADCAST: 'broadcast',
   ALLIANCES: 'alliances'
 };
