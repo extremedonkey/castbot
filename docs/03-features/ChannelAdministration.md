@@ -138,7 +138,7 @@ The registry is flushed **every 5 items** (between Discord batches, never during
 
 | Channel | Player | Trusted Spectator | Host (`globalRoleAccess`) |
 |---|---|---|---|
-| 🎙️ Confessional | player role **AND** user (was XOR until 2026-08-16 — the role-only grant locked players out pre-Activate, since confessionals are made before the cast reveal) | ✅ read + react, **no posting** | ✅ |
+| 🎙️ Confessional | player role **AND** user (was XOR until 2026-08-16 — the role-only grant locked players out pre-Activate, since confessionals are made before the cast reveal) | ✅ read + react, **no posting** — OR an explicit **deny** when the modal's Trusted Spectators radio is 🚫 Disabled (2026-08-17, for pre-reveal confessionals; deny not omission, so re-running strips existing access; re-run ✅ Enabled to reveal) | ✅ |
 | 🗳️ Subs | player role **AND** user | ❌ | ✅ |
 | 🏝️ Tribe chat | tribe role | ✅ read + react, **no posting** | ✅ |
 | 🏃 Tribe challenges | tribe role | ❌ | ✅ |

@@ -165,6 +165,42 @@ describe('Channels section — guided walkthrough layout (sections, 2026-08-16)'
   });
 });
 
+describe('🎙️ Confessionals — Trusted Spectator radio (2026-08-17)', () => {
+  // Spectator visibility was ALWAYS on — a problem for hosts opening confessionals pre-reveal.
+
+  it('the modal grows a bottom Radio Group: Enabled (default) / Disabled, within limits', async () => {
+    const { buildConfessionalsModal } = await import('../src/channels/channelsView.js');
+    const m = buildConfessionalsModal({ configId: CID });
+    const spec = m.components.at(-1);
+    assert.equal(spec.label, 'Trusted Spectators');
+    assert.equal(spec.component.type, 21);
+    assert.equal(spec.component.custom_id, 'spectators');
+    assert.deepEqual(spec.component.options.map(o => [o.value, !!o.default]), [['enabled', true], ['disabled', false]]);
+    assert.ok(m.components.length <= 5, 'modal component cap');
+    for (const o of spec.component.options) assert.ok([...o.description].length <= 100, o.description);
+    assert.ok([...spec.description].length <= 100, spec.description);
+  });
+
+  it('buildOverwrites (real): spectatorDeny writes an EXPLICIT deny — re-runs strip existing access', async () => {
+    const { buildOverwrites } = await import('../src/channels/channelPlan.js');
+    const VIEW = 1n << 10n;
+    const args = { everyoneId: 'e', principals: [], spectatorRoleId: 'spec', spectatorAccess: [VIEW], viewChannelBit: VIEW };
+    const enabled = buildOverwrites(args).find(o => o.id === 'spec');
+    const disabled = buildOverwrites({ ...args, spectatorDeny: true }).find(o => o.id === 'spec');
+    assert.ok(enabled.allow.includes(VIEW), 'enabled = the old always-on grant');
+    assert.ok(disabled.deny.includes(VIEW), 'disabled = deny, NOT omission — the overwrite must exist to strip access');
+    assert.ok(!disabled.allow?.includes?.(VIEW));
+  });
+
+  it('spectators is confessional-only and validated (replica of the planChannels guard)', () => {
+    const normalize = (kind, spectators) =>
+      (kind !== 'confessional' || !['enabled', 'disabled'].includes(spectators)) ? 'enabled' : spectators;
+    assert.equal(normalize('confessional', 'disabled'), 'disabled');
+    assert.equal(normalize('confessional', 'garbage'), 'enabled');
+    assert.equal(normalize('subs', 'disabled'), 'enabled', 'subs never admit spectators — the field cannot leak');
+  });
+});
+
 describe('🗃️ Archive 1on1s — view-only transform + registry-driven targeting (2026-08-17)', () => {
   const SEND = 1n << 11n; // PermissionFlagsBits.SendMessages
 

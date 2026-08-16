@@ -238,6 +238,8 @@ export async function routeChannelsModalSubmit({ context, components, data }) {
     resolved: data?.resolved || {}, values: fields.targets || [],
     // RaP 0881 — subs-only placement fields; absent on the confessionals modal.
     placement: fields.placement?.[0] || 'keep',
-    categoryName: fields.category_name?.[0] || ''
+    categoryName: fields.category_name?.[0] || '',
+    // Confessional-only Trusted Spectator radio (2026-08-17); absent on the subs modal.
+    spectators: fields.spectators?.[0] || 'enabled'
   });
 }

@@ -528,6 +528,23 @@ export function buildConfessionalsModal({ configId }) {
           min_values: 0,
           max_values: 25
         }
+      },
+      // Spectator visibility was ALWAYS on until 2026-08-17 — a problem for hosts who open
+      // confessionals early, pre-reveal. Disabled = an explicit DENY overwrite (not omission),
+      // so re-running with Disabled strips access from existing channels too.
+      {
+        type: 18,
+        label: 'Trusted Spectators',
+        description: 'Applies to every confessional this step creates or updates — change it later by re-running.',
+        component: {
+          type: 21, // Radio Group
+          custom_id: 'spectators',
+          required: true,
+          options: [
+            { label: '✅ Enabled', value: 'enabled', description: 'Trusted Spectators can read + react in every confessional this step touches.', default: true },
+            { label: '🚫 Disabled', value: 'disabled', description: 'Explicitly hidden from Trusted Specs — for opening confessionals early, pre-reveal.' }
+          ]
+        }
       }
     ]
   };

@@ -188,13 +188,20 @@ export function buildOverwrites({
   principals = [],
   spectatorRoleId = null,
   spectatorAccess = [],
+  spectatorDeny = false,
   roleAccessEntries = [],
   viewChannelBit
 }) {
   return mergeOverwrites([
     { id: everyoneId, deny: [viewChannelBit] },
     ...principals,
-    ...(spectatorRoleId ? [{ id: spectatorRoleId, allow: spectatorAccess }] : []),
+    // spectatorDeny (confessionals, 2026-08-17): an EXPLICIT deny, not omission — re-running
+    // with spectators disabled must strip access from channels that already granted it.
+    ...(spectatorRoleId
+      ? [spectatorDeny
+        ? { id: spectatorRoleId, deny: [viewChannelBit] }
+        : { id: spectatorRoleId, allow: spectatorAccess }]
+      : []),
     ...roleAccessEntries
   ]);
 }

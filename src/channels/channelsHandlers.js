@@ -577,9 +577,11 @@ async function accessContext(guild, playerData) {
  * Build the plan + confirm screen for confessionals/subs.
  * @param {'confessional'|'subs'} kind
  */
-export async function planChannels({ kind, mode, configId, guildId, userId, client, resolved, values, placement = 'keep', categoryName = '' }) {
+export async function planChannels({ kind, mode, configId, guildId, userId, client, resolved, values, placement = 'keep', categoryName = '', spectators = 'enabled' }) {
   // Placement is a subs-only concept (RaP 0881); the confessionals modal has no such field.
   if (kind !== 'subs' || !['keep', 'single', 'per_tribe'].includes(placement)) placement = 'keep';
+  // Spectator visibility is confessional-only (2026-08-17); subs never admit spectators.
+  if (kind !== 'confessional' || !['enabled', 'disabled'].includes(spectators)) spectators = 'enabled';
   const guild = await client.guilds.fetch(guildId);
   const perms = await checkBotPermissions(guild);
   if (!perms.ok) return err(`CastBot is missing the **${perms.missing.join('** and **')}** permission${perms.missing.length > 1 ? 's' : ''}.`);
@@ -742,7 +744,7 @@ export async function planChannels({ kind, mode, configId, guildId, userId, clie
   if (budget.etaSeconds > MAX_JOB_SECONDS) return etaRefusal(budget, configId);
 
   const token = stashPlan(userId, {
-    type: 'create', kind, configId, guildId, placement,
+    type: 'create', kind, configId, guildId, placement, spectators,
     items: members.map((m) => ({ ...serializeItem(m), targetName: names.get(m.userId) })),
     buckets: buckets.map((b) => ({ categoryName: b.categoryName, categoryId: b.categoryId, tribeRoleId: b.tribeRoleId || null, userIds: b.items.map((i) => i.userId) }))
   });
@@ -760,7 +762,11 @@ export async function planChannels({ kind, mode, configId, guildId, userId, clie
       // Same model both kinds since 2026-08-16 — the direct user grant is what lets players in
       // BEFORE their role is assigned via 🟢 Activate (confessionals are made pre-reveal).
       '> **Both** the player and their player role get access.',
-      ...(kind === 'confessional' ? ['> Trusted Spectators can **read + react** (not post).'] : []),
+      ...(kind === 'confessional'
+        ? [spectators === 'disabled'
+          ? '> 🚫 Trusted Spectators are **explicitly hidden** this run — re-run with ✅ Enabled to reveal.'
+          : '> Trusted Spectators can **read + react** (not post).']
+        : []),
       ...rosterLines(members, { creating: creatingIds }),
       ...(dropped.length ? ['', `-# Dropped (left the server): ${dropped.slice(0, 10).map((d) => `<@${d.userId}>`).join(', ')}${dropped.length > 10 ? ` …and ${dropped.length - 10} more` : ''}`] : []),
       ...(skipped.length ? ['', `-# ${skipped.length} applicant(s) skipped (not accepted / withdrawn).`] : [])
@@ -1198,6 +1204,8 @@ async function execCreate({ plan, guild, snapshot, playerData, buffer, flush, pr
       const principals = principalsFor(plan.kind, item, snapshot, buffer);
       const overwrites = buildOverwrites({
         everyoneId, principals, spectatorRoleId: specRoleId, spectatorAccess: SPECTATOR_ACCESS,
+        // 'disabled' (confessionals, 2026-08-17) = explicit deny — re-running strips existing access.
+        spectatorDeny: plan.kind === 'confessional' && plan.spectators === 'disabled',
         roleAccessEntries, viewChannelBit: PermissionFlagsBits.ViewChannel
       });
 
