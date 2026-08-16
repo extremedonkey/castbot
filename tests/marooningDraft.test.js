@@ -598,6 +598,61 @@ describe('New Tribe — context-aware origin routing', () => {
   });
 });
 
+// ── Planner eligibility — the REAL getMarooningTribeRoleIds (Reece 2026-08-16) ──
+// Default castlist OR tribePlanner flag; archive/promo/legacy tribes are hidden. This replaced
+// the 2026-07-25 show-every-known-tribe rule that surfaced years of old seasons on prod guilds.
+describe('Marooning — planner tribe eligibility (default castlist OR tribePlanner flag)', () => {
+  const load = async () => (await import('../castRankingManager.js')).getMarooningTribeRoleIds;
+  const G = 'g1';
+  const pd = (tribes) => ({ [G]: { tribes } });
+
+  it('admits the default castlist in ALL three storage formats', async () => {
+    const fn = await load();
+    assert.deepEqual(fn(pd({
+      r1: { castlistIds: ['default'] },          // v3
+      r2: { castlistId: 'default' },             // mid-era
+      r3: { castlist: 'default' },               // legacy string
+      r4: { castlistIds: ['default', 'other'] }  // default among others still counts
+    }), G), ['r1', 'r2', 'r3', 'r4']);
+  });
+
+  it('admits a tribePlanner-flagged tribe with NO castlist association (New Tribe / Existing Tribe)', async () => {
+    const fn = await load();
+    assert.deepEqual(fn(pd({ r1: { castlistIds: [], tribePlanner: true } }), G), ['r1']);
+  });
+
+  it('HIDES archive/custom-castlist tribes and unflagged legacy tribes — the prod complaint', async () => {
+    const fn = await load();
+    // Mirrors guild 974318870057848842: 8 archive-season tribes + 1 default tribe rendered.
+    assert.deepEqual(fn(pd({
+      winner: { castlistIds: ['castlist_1762009143029_system'], castlist: 'Winners' },
+      s12:    { castlist: 'S12 - Jurassic Park' },                    // legacy string, non-default
+      s1:     { castlistIds: ['castlist_1763247652320_custom'] },
+      pre:    { castlistIds: ['castlist_archive_1774199671187'] },
+      legacy: {},                                                     // debug-flow tribe, no association, no flag
+      fun:    { castlistIds: ['default'], castlist: 'default' }
+    }), G), ['fun']);
+  });
+
+  it('the flag re-admits a tribe that lives ONLY on an archive castlist (the Existing Tribe escape hatch)', async () => {
+    const fn = await load();
+    assert.deepEqual(fn(pd({ old: { castlistIds: ['castlist_archive_1'], tribePlanner: true } }), G), ['old']);
+  });
+
+  it('still skips null entries and (with a guild) deleted roles', async () => {
+    const fn = await load();
+    const tribes = { dead: null, live: { tribePlanner: true }, gone: { tribePlanner: true } };
+    assert.deepEqual(fn(pd(tribes), G), ['live', 'gone'], 'no guild → no role filtering');
+    const guild = { roles: { cache: new Map([['live', {}]]) } };
+    assert.deepEqual(fn(pd(tribes), G, guild), ['live']);
+  });
+
+  it('truthy-but-not-true flag values do not qualify — the flag is an explicit stamp', async () => {
+    const fn = await load();
+    assert.deepEqual(fn(pd({ r1: { tribePlanner: 'yes' }, r2: { tribePlanner: 1 } }), G), []);
+  });
+});
+
 describe('Marooning — deleted Discord roles are gracefully ignored', () => {
   const mockGuild = roleIds => ({ roles: { cache: new Map(roleIds.map(id => [id, {}])) } });
 

@@ -143,18 +143,26 @@ function registerExistingTribeData(existing, role) {
   const tribe = populateTribeData(existing || {}, role, 'default', 'default');
   tribe.castlistIds = existing?.castlistIds || [];
   if (existing?.castlist) tribe.castlist = existing.castlist; else delete tribe.castlist;
+  tribe.tribePlanner = true; // planner eligibility — see getMarooningTribeRoleIds
   return tribe;
 }
 
 const role = { id: 'r1', name: 'Balboa', color: 0xE74C3C, managed: false };
 
 describe('Existing Tribe — prior castlist associations are preserved exactly', () => {
-  it('a fresh role becomes a PRIVATE tribe: no castlist link at all', () => {
+  it('a fresh role becomes a PRIVATE tribe: no castlist link, planner flag set', () => {
     const tribe = registerExistingTribeData(undefined, role);
     assert.deepEqual(tribe.castlistIds, []);
     assert.equal('castlist' in tribe, false);
+    assert.equal(tribe.tribePlanner, true, 'without the flag a castlist-less tribe is invisible to Marooning');
     assert.equal(tribe.analyticsName, 'Balboa');
     assert.equal(tribe.emoji, '🏕️');
+  });
+
+  it('re-registering an archive-only tribe gains the flag — the escape hatch back into the planner', () => {
+    const tribe = registerExistingTribeData({ castlistIds: ['castlist_archive_1'] }, role);
+    assert.equal(tribe.tribePlanner, true);
+    assert.deepEqual(tribe.castlistIds, ['castlist_archive_1'], 'flag added, links still untouched');
   });
 
   it('a role already on a public castlist keeps its links — re-registering must not un-publish it', () => {

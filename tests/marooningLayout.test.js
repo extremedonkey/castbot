@@ -183,6 +183,7 @@ function submitTribe({ origin, submittedMemberIds = [] }) {
   if (priv) {
     tribe.castlistIds = [];
     delete tribe.castlist;
+    tribe.tribePlanner = true; // planner eligibility — a castlist-less tribe is otherwise invisible
   } else {
     effects.castlistLinked = true;
     effects.rolesAssigned = [...submittedMemberIds];
@@ -221,6 +222,12 @@ describe('New Tribe from Marooning — private by construction', () => {
   it('still creates the tribe entity, so Marooning lists it and Draft Tribes can use it', () => {
     const { tribe } = submitTribe({ origin: MAROONING });
     assert.equal(tribe.analyticsName, 'Tribe');
+    assert.equal(tribe.tribePlanner, true, 'the flag is what admits a castlist-less tribe to the planner');
+  });
+
+  it('a Castlist Hub tribe never gets the planner flag — it qualifies (or not) via its castlist', () => {
+    const { tribe } = submitTribe({ origin: undefined });
+    assert.equal('tribePlanner' in tribe, false);
   });
 });
 

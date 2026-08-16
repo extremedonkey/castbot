@@ -1349,25 +1349,33 @@ export async function generateDncOverviewUI({ guildId, configId, guild }) {
  * @returns {Object} Complete UI response object for navigation
  */
 /**
- * Which tribe role IDs Marooning (Tribes line, Draft Tribes, roster grouping) treats as "this guild's
- * tribes". Simplified from the old 3-format castlist-membership check (castlistIds[]/castlistId/legacy
- * castlist string, matched against the 'default' castlist) to a direct existence check: every tribe
- * CastBot knows about, whose Discord role still exists. Robustness win — the legacy format-matching had
- * real gaps (e.g. a tribe created via the "Tribes (Legacy)" debug flow has NO castlistIds at all and
- * could silently fail every one of the three format checks).
+ * Which tribe role IDs Marooning (Tribes line, Draft Tribes, roster grouping) treats as "this
+ * guild's planning tribes". Reece 2026-08-16 — a tribe qualifies ONLY when:
+ *   (a) it is on the DEFAULT castlist (all three storage formats checked: castlistIds[] /
+ *       castlistId / legacy `castlist` string), OR
+ *   (b) it carries `tribePlanner: true` — stamped when the Marooning screen's 🏕️ New Tribe or
+ *       ➕ Existing Tribe creates/registers it.
+ * Everything else is hidden: archive-season castlists, promo castlists, legacy debug-flow tribes
+ * (this replaces the 2026-07-25 show-EVERY-known-tribe existence check, which surfaced years of
+ * old seasons — e.g. 8 archive tribes on one prod guild). The escape hatch for a hidden tribe is
+ * deliberate and cheap: register its role via ➕ Existing Tribe, which sets the flag.
+ * Null entries (prod data really contains them) and deleted-role tribes are still filtered.
+ * Exported for tests.
  * @param {Object} playerData
  * @param {string} guildId
  * @param {import('discord.js').Guild} [guild] - when omitted, deleted-role filtering is skipped
  * @returns {string[]} tribe role IDs
  */
-function getMarooningTribeRoleIds(playerData, guildId, guild) {
-  // Skip null/undefined tribe entries — prod data really contains them, which is why the virtual
-  // adapter guards `if (!tribe) continue` in three places. Without this, a nulled-out tribe whose
-  // Discord role still exists would resurrect here (count toward canDraft, render in the Tribes line).
-  const allTribeIds = Object.entries(playerData[guildId]?.tribes || {})
-    .filter(([, tribe]) => tribe)
+export function getMarooningTribeRoleIds(playerData, guildId, guild) {
+  const eligible = Object.entries(playerData[guildId]?.tribes || {})
+    .filter(([, tribe]) => tribe && (
+      tribe.tribePlanner === true ||
+      tribe.castlistIds?.includes('default') ||
+      tribe.castlistId === 'default' ||
+      tribe.castlist === 'default'
+    ))
     .map(([roleId]) => roleId);
-  return guild ? allTribeIds.filter(rid => guild.roles.cache.has(rid)) : allTribeIds;
+  return guild ? eligible.filter(rid => guild.roles.cache.has(rid)) : eligible;
 }
 
 /**
@@ -1794,6 +1802,9 @@ export async function registerExistingTribe({ guildId, roleId, emojiInput, color
     if (existing?.castlist) tribe.castlist = existing.castlist; else delete tribe.castlist;
     if (processedEmoji) tribe.emoji = processedEmoji;
     if (processedColor) tribe.color = processedColor;
+    // Planner-eligibility flag (getMarooningTribeRoleIds). Registering via ➕ Existing Tribe is
+    // ALSO the escape hatch that re-admits a tribe hidden by the default-castlist-or-flag rule.
+    tribe.tribePlanner = true;
     playerData[guildId].tribes[roleId] = tribe;
     await savePlayerData(playerData);
   });

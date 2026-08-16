@@ -40623,6 +40623,9 @@ To fix this:
           // entity (Marooning lists it, Draft Tribes can use it) but no castlist renderer can find it.
           tribe.castlistIds = [];
           delete tribe.castlist;
+          // The planner-eligibility flag (getMarooningTribeRoleIds): with no castlist association,
+          // THIS is what makes the tribe show on the Marooning Tribes line / Draft Tribes.
+          tribe.tribePlanner = true;
         }
         playerData[guildId].tribes[role.id] = tribe;
         await savePlayerData(playerData);
