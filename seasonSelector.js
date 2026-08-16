@@ -118,7 +118,7 @@ export function buildSeasonNavRow(configId, active, userId = null) {
     tab('marooning', `season_marooning_${configId}`, 'Marooning', '🚣')
   ];
   if (isChannelAdmin(userId)) {
-    tabs.push(tab('channels', `season_channels_${configId}`, 'Channels', '🔐'));
+    tabs.push(tab('channels', `season_channels_${configId}`, 'Channels', '#️⃣'));
   }
   return { type: 1, components: tabs };
 }

@@ -92,7 +92,7 @@ describe('Channels tab — nav row visibility', () => {
     assert.equal(row.components.length, 5);
     assert.equal(row.components[4].label, 'Channels');
     assert.equal(row.components[4].custom_id, `season_channels_${CID}`);
-    assert.equal(row.components[4].emoji.name, '🔐');
+    assert.equal(row.components[4].emoji.name, '#️⃣', 'matches the #️⃣ Channels section heading (was 🔐, changed 2026-08-16)');
   });
 
   it('hides Channels from the test account — no shown-but-denied drift (137c6aca class)', () => {
