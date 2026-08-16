@@ -98,9 +98,9 @@ describe('Channels section — guided walkthrough layout (sections, 2026-08-16)'
     assert.equal(p0[1].accessory.custom_id, `channels_roles_${CID}`, 'same handler — display move only');
 
     const p1 = paged(1).filter(p => p.type === 9);
-    assert.deepEqual(p1.map(s => s.accessory.label), ['Tribe Channels', '1 on 1s']);
+    assert.deepEqual(p1.map(s => s.accessory.label), ['Tribe Channels', '1 on 1s', 'Alliances', 'Swap/Merge']);
     assert.match(p1[0].components[0].content, /^\*\*7 · Tribe Channels/);
-    assert.match(p1[1].components[0].content, /^\*\*8 · 1 on 1s/, 'numbering survives pagination');
+    assert.match(p1[3].components[0].content, /^\*\*10 · Swap\/Merge/, 'numbering survives pagination');
   });
 
   it('pagination follows the Apps-tab convention: ◀ ▶, Primary when live, grey+disabled at the edges', () => {
@@ -117,16 +117,14 @@ describe('Channels section — guided walkthrough layout (sections, 2026-08-16)'
   });
 
   it('an out-of-range page clamps instead of rendering an empty screen', () => {
-    assert.deepEqual(paged(99).filter(p => p.type === 9).map(s => s.accessory.label), ['Tribe Channels', '1 on 1s']);
+    assert.deepEqual(paged(99).filter(p => p.type === 9).map(s => s.accessory.label), ['Tribe Channels', '1 on 1s', 'Alliances', 'Swap/Merge']);
     assert.deepEqual(paged(-5).filter(p => p.type === 9)[0].accessory.label, 'Create');
   });
 
-  it('Swap/Merge and Alliances are OFF the tab (Hub and Premium keep them)', () => {
-    for (const page of [0, 1]) {
-      const ids = JSON.stringify(paged(page));
-      assert.ok(!ids.includes('castlist_swap_merge_default'), `page ${page}`);
-      assert.ok(!ids.includes(`channels_alliances_${CID}`), `page ${page}`);
-    }
+  it('Swap/Merge and Alliances are BACK as steps 9–10 (they briefly left the tab 2026-08-17)', () => {
+    const ids = JSON.stringify(paged(1));
+    assert.ok(ids.includes('castlist_swap_merge_default'));
+    assert.ok(ids.includes(`channels_alliances_${CID}`));
   });
 
   it('the guidance tells the story: roles → spectator → accept → pre-reveal → reveal → castlist', () => {
@@ -155,7 +153,8 @@ describe('Channels section — guided walkthrough layout (sections, 2026-08-16)'
       `channels_castlist_${CID}` // castlists are a free core feature
     ]);
     assert.deepEqual(paged(1, false).filter(p => p.type === 9).map(s => s.accessory.custom_id),
-      [`premium_locked_channels_tribes_${CID}`, `premium_locked_channels_1on1s_${CID}`]);
+      [`premium_locked_channels_tribes_${CID}`, `premium_locked_channels_1on1s_${CID}`,
+       `premium_locked_channels_alliances_${CID}`, 'castlist_swap_merge_default']);
     assert.ok(paged(0, false).find(p => p.type === 1).components.every(b => !b.custom_id.startsWith('premium_locked_')),
       'pagination is never locked');
   });

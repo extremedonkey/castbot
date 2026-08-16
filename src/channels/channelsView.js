@@ -130,7 +130,11 @@ export function buildChannelsSection(configId, { entitled = true, layout = 'row'
     section('**5 · Assign Player Roles** — at 🚣 Marooning: hand each player their role. This is the reveal — profiles now show who was cast. You review every change first.', BTN.assignRoles),
     section('**6 · Set up Castlist** — once the tribes are announced: add them to the Active Castlist to publish the season\'s /castlist. The per-tribe steps below read from it.', BTN.castlists),
     section('**7 · Tribe Channels** — once tribes exist: a category per tribe holding its 💬 chat (players + Trusted Specs) and 🏃 challenges channel (players only).', BTN.tribeChannels),
-    section('**8 · 1 on 1s** — once the tribes are announced: one private channel per pair of tribemates, so hosts can watch player-to-player chat.', BTN.oneOnOnes)
+    section('**8 · 1 on 1s** — once the tribes are announced: one private channel per pair of tribemates, so hosts can watch player-to-player chat.', BTN.oneOnOnes),
+    // Back as numbered steps (Reece 2026-08-17) — pagination absorbed the cost their trailing
+    // row once dodged.
+    section('**9 · Create Alliances** — as the game runs: secret channels for alliances. Their existence is season-deciding info — no spectators, generic names.', BTN.alliances),
+    section('**10 · Swap/Merge** — at a tribe swap or merge: archives the old tribes as a castlist and moves everyone onto the new ones.', BTN.swapMerge)
   ];
 
   const totalPages = Math.ceil(sections.length / WALKTHROUGH_PAGE_SIZE);
