@@ -271,3 +271,38 @@ describe('mostRecentConfigId — the season-less surfaces resolve a season by re
     assert.equal(mostRecentConfigId(undefined, 'g'), null);
   });
 });
+
+/**
+ * 🚨 Component-budget guard for the Premium menu.
+ *
+ * This menu has hit 41/40 in production before (the "Get Premium renders unconditionally" test
+ * above exists because the fix was to make that button conditional). Discord rejects the whole
+ * message at 41 — a hard failure, not a degraded render. The trap is that the heaviest render
+ * is a rare COMBINATION nobody clicks by accident: Reece's header Section (+1 for its accessory)
+ * AND the grace-period nag AND a guild with a Channels config (+7 section, +1 Msg Category).
+ * A change measured only on a plain render looks fine at 33 and ships a 41.
+ */
+describe('⭐ Premium menu — component budget (heaviest render ≤ 40)', () => {
+  it('stays within Discord\'s 40-component ceiling with EVERY conditional section present', async () => {
+    const { log, warn, error } = console;
+    console.log = console.warn = console.error = () => {}; // menuBuilder logs on import/build
+    try {
+      const [{ MenuBuilder }, { buildChannelsSection }, { countComponents }] = await Promise.all([
+        import('../menuBuilder.js'), import('../src/channels/channelsView.js'), import('../utils.js'),
+      ]);
+      // Reece's id → the type-9 header Section with its Entitlements accessory (the +1 case).
+      const menu = await MenuBuilder.create('premium_menu', { guildId: '0', userId: '391415444084490240' });
+      const base = countComponents([menu], { enableLogging: false });
+      // The three conditionals a bare test guild never renders.
+      const channels = countComponents(buildChannelsSection('cfg'), { enableLogging: false });
+      const heaviest = base + channels + 1 /* Msg Category */ + 1 /* grace nag */;
+
+      assert.ok(heaviest <= 40,
+        `Premium menu heaviest render is ${heaviest}/40 (base ${base} + channels ${channels} + 2). ` +
+        `Discord rejects the message outright at 41. Free a component before adding another button — ` +
+        `merging an adjacent header + blurb into one Text Display is invisible and costs nothing.`);
+    } finally {
+      Object.assign(console, { log, warn, error });
+    }
+  });
+});

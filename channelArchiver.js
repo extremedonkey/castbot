@@ -31,18 +31,19 @@ const SAFE_UPLOAD_BYTES = 9 * 1024 * 1024;
  *   `embed`   — base64-embed images into the HTML (permanent) vs. keep CDN links (expire ~24h)
  *   `deletes` — delete each source channel after its archive is VERIFIED posted
  *
- * 🔴 Full Archive is the DEFAULT: if a mode deletes the source, embedded images are the only
- * ones that survive it — a Fast archive of a deleted channel loses its images within a day.
+ * 🔴 Full Archive is the DEFAULT **and listed first** (Reece, 2026-08-19), in both halves of the
+ * list: if a mode deletes the source, embedded images are the only ones that survive it — a Fast
+ * archive of a deleted channel loses its images within a day. Full leads, Fast is the trade-down.
  */
 export const ARCHIVE_MODES = [
-  { value: 'archive_only', label: 'Fast Archive', emoji: '📥', implemented: true, embed: false, deletes: false,
-    description: 'Archives fast; text permanent but images expire in 24hrs. HTML file that can also be viewed online.' },
   { value: 'archive_embed', label: 'Full Archive', emoji: '🖼️', implemented: true, embed: true, deletes: false,
     description: 'Slower but permanently saves images which last forever and survive channel deletion.' },
-  { value: 'archive_delete', label: 'Fast Archive + Delete Channels', emoji: '🗑️', implemented: true, embed: false, deletes: true,
-    description: '☠️ Fast archive, then PERMANENTLY DELETES each channel. Images expire in 24hrs — gone for good.' },
+  { value: 'archive_only', label: 'Fast Archive', emoji: '📥', implemented: true, embed: false, deletes: false,
+    description: 'Archives fast; text permanent but images expire in 24hrs. HTML file that can also be viewed online.' },
   { value: 'archive_embed_delete', label: 'Full Archive + Delete Channels', emoji: '☠️', implemented: true, embed: true, deletes: true,
     description: '☠️ Embeds images permanently, then PERMANENTLY DELETES each channel. The safest way to delete.' },
+  { value: 'archive_delete', label: 'Fast Archive + Delete Channels', emoji: '🗑️', implemented: true, embed: false, deletes: true,
+    description: '☠️ Fast archive, then PERMANENTLY DELETES each channel. Images expire in 24hrs — gone for good.' },
 ];
 
 /** The mode used when nothing is chosen (and the fallback for an unknown value). */

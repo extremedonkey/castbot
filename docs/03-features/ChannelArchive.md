@@ -67,12 +67,14 @@ flowchart TD
 1. **`archive_channel`** (`updateMessage: true`) — renders the main archive screen via `buildArchiveScreen()` (in `channelArchiver.js`): an **Archive Mode** string select (`archive_mode_select`) followed by a **multi-select channel/category select** (type 8, `channel_types: [0, 4, 5]`, `min_values: 1`, `max_values: 25`), plus **← Back**, **📥 Retrieve Archive** and a **☢️ Nuke Channels** button (`prod_nuke_category`). LEAN-sectioned (`⚙️ Archive Mode` / `📁 Select Channels`), 15/40 components.
    - **Archive Mode** (`ARCHIVE_MODES`) — **four real modes, no stubs**, spanning two orthogonal flags (`embed`, `deletes`):
 
-     | value | Label | `embed` | `deletes` |
-     |---|---|---|---|
-     | `archive_only` | 📥 Fast Archive | ✗ | ✗ |
-     | `archive_embed` | 🖼️ **Full Archive** (default) | ✓ | ✗ |
-     | `archive_delete` | 🗑️ Fast Archive + Delete Channels | ✗ | ✓ |
-     | `archive_embed_delete` | ☠️ Full Archive + Delete Channels | ✓ | ✓ |
+     | # | value | Label | `embed` | `deletes` |
+     |---|---|---|---|---|
+     | 1 | `archive_embed` | 🖼️ **Full Archive** (default) | ✓ | ✗ |
+     | 2 | `archive_only` | 📥 Fast Archive | ✗ | ✗ |
+     | 3 | `archive_embed_delete` | ☠️ Full Archive + Delete Channels | ✓ | ✓ |
+     | 4 | `archive_delete` | 🗑️ Fast Archive + Delete Channels | ✗ | ✓ |
+
+     **Full leads both halves** (Reece, 2026-08-19) — the default is option 1, not option 2, and the same reasoning orders the deleting pair: embedded images are the only ones that survive deleting the source.
 
      `embed` base64-embeds images so they never expire (slower, larger, splits more, non-image files not kept); `deletes` deletes each source channel after its archive is **verified posted**. **Full Archive is the default** — if a mode deletes the source, embedded images are the only ones that survive it, and a mis-click must never land on a deleting mode. `getArchiveMode(value)` always resolves to a usable mode, falling back to the default for unknown/stale values (so a stale ephemeral holding `category_archive_delete` degrades to a *non*-deleting mode). The chosen mode is remembered per-user in `global.pendingArchiveMode` (set in `archive_mode_select`) and applied at `archive_confirm`. Selecting a `deletes` mode turns the whole card red and swaps the blurb for a **DELETION ARMED** warning.
 2. **`archive_channel_select`** (`deferred: true`, `updateMessage: true`) —

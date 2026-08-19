@@ -26,10 +26,10 @@ function expandArchiveSelection(selectedIds, allChannels, resolved = {}) {
 
 // Keep in sync with channelArchiver.js → ARCHIVE_MODES / getArchiveMode / DEFAULT_ARCHIVE_MODE.
 const ARCHIVE_MODES = [
-  { value: 'archive_only', label: 'Fast Archive', embed: false, deletes: false },
   { value: 'archive_embed', label: 'Full Archive', embed: true, deletes: false },
-  { value: 'archive_delete', label: 'Fast Archive + Delete Channels', embed: false, deletes: true },
+  { value: 'archive_only', label: 'Fast Archive', embed: false, deletes: false },
   { value: 'archive_embed_delete', label: 'Full Archive + Delete Channels', embed: true, deletes: true },
+  { value: 'archive_delete', label: 'Fast Archive + Delete Channels', embed: false, deletes: true },
 ];
 const DEFAULT_ARCHIVE_MODE = 'archive_embed';
 function getArchiveMode(value) {
@@ -247,7 +247,19 @@ describe('channelArchiver — ARCHIVE_MODES (Fast/Full × Delete)', () => {
   it('offers exactly the four real modes — no coming-soon stubs remain', () => {
     assert.equal(ARCHIVE_MODES.length, 4);
     assert.deepEqual(ARCHIVE_MODES.map(m => m.value),
-      ['archive_only', 'archive_embed', 'archive_delete', 'archive_embed_delete']);
+      ['archive_embed', 'archive_only', 'archive_embed_delete', 'archive_delete']);
+  });
+
+  it('Full leads BOTH halves of the list — the default is option 1, not option 2 (Reece)', () => {
+    assert.equal(ARCHIVE_MODES[0].value, DEFAULT_ARCHIVE_MODE, 'the default mode must be the first option');
+    const [plain, deleting] = [ARCHIVE_MODES.filter(m => !m.deletes), ARCHIVE_MODES.filter(m => m.deletes)];
+    assert.equal(plain[0].embed, true, 'Full Archive leads the plain pair');
+    assert.equal(deleting[0].embed, true, 'Full Archive + Delete leads the deleting pair');
+  });
+
+  it('the two halves are contiguous — deleting modes never interleave with plain ones', () => {
+    const flags = ARCHIVE_MODES.map(m => m.deletes);
+    assert.deepEqual(flags, [false, false, true, true]);
   });
 
   it('defaults to Full Archive — NOT a delete mode (a mis-click must never delete)', () => {

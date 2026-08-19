@@ -238,9 +238,12 @@ export class MenuBuilder {
     // it's the flagship premium feature, so non-entitled guilds must SEE it — their clicks
     // lock-swap to the upsell like everything else. Entitled guilds get the real buttons,
     // whose handlers enforce the entitlement + environment gates regardless.
+    // Header + blurb share ONE Text Display (2026-08-19). They always render adjacent, so the
+    // newline is visually identical — but the split cost a component, and the heaviest render
+    // (Reece header Section + grace nag + Channels section + Msg Category) sat at exactly 40/40.
+    // Adding ☢️ Nuke Channels to Utilities would have made it 41 → a hard Discord rejection.
     const askSection = [
-      { type: 10, content: `### \`\`\`👾 Ask CastBot\`\`\`` },
-      { type: 10, content: `Ask CastBot is like giving ChatGPT access to CastBot. You can get it to bulk create items, generate flavor text for your safari, ask which player has which items, or even just general questions about how to do things in CastBot.` },
+      { type: 10, content: `### \`\`\`👾 Ask CastBot\`\`\`\nAsk CastBot is like giving ChatGPT access to CastBot. You can get it to bulk create items, generate flavor text for your safari, ask which player has which items, or even just general questions about how to do things in CastBot.` },
       { type: 1, components: [
         { type: 2, custom_id: 'askcb_post', label: 'Post Ask CastBot', style: 1, emoji: { name: '👾' } },
         { type: 2, custom_id: 'askcb_ask', label: 'Ask CastBot', style: 2, emoji: { name: '👾' } }
@@ -307,7 +310,10 @@ export class MenuBuilder {
         { type: 2, custom_id: 'category_post', label: 'Category Post', style: 2, emoji: { name: '🖼️' } },
         ...(channelsConfigId
           ? [{ type: 2, custom_id: `channels_msg_${channelsConfigId}`, label: 'Msg Category', style: 2, emoji: { name: '📨' } }]
-          : [])
+          : []),
+        // Availability moved here from Utilities (Reece 2026-08-19): asking players when they're
+        // free is a host→player tool, not a utility — and it frees the Utilities slot for Nuke.
+        { type: 2, custom_id: 'prod_availability', label: 'Availability', style: 2, emoji: { name: '🕐' } }
       ] },
       { type: 10, content: `### \`\`\`🔮 Utilities\`\`\`` },
       {
@@ -315,10 +321,12 @@ export class MenuBuilder {
         components: [
           // Archiver leads (moved from the retired Cleanup section 2026-08-08);
           // Stopwatch/Snowflake are the old Timers (same ids, new labels).
+          // Nuke Channels sits beside Archiver deliberately (Reece 2026-08-19) — the two are one
+          // workflow (back it up, then reclaim the slots), and Archive + Delete spans both.
           { type: 2, custom_id: 'archive_channel', label: 'Archiver', style: 2, emoji: { name: '🧹' } },
+          { type: 2, custom_id: 'prod_nuke_category', label: 'Nuke Channels', style: 2, emoji: { name: '☢️' } },
           { type: 2, custom_id: 'snowflake_calculator', label: 'Stopwatch', style: 2, emoji: { name: '⏱️' } },
           { type: 2, custom_id: 'snowflake_lookup', label: 'Snowflake', style: 2, emoji: { name: '❄️' } },
-          { type: 2, custom_id: 'prod_availability', label: 'Availability', style: 2, emoji: { name: '🕐' } },
           { type: 2, custom_id: 'emoji_editor', label: 'Emoji Editor', style: 2, emoji: { name: '🎨' } }
         ]
       }
