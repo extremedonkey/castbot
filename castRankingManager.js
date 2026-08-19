@@ -1040,9 +1040,13 @@ export function buildCastingInvitesModal(playerData, guildId, appIndex, configId
     // Don't Cast has no "accepted" concept (unsuccessful cards ship with no Accept/Decline buttons) —
     // "Notified" reads correctly there, where "Offered" implies a spot that doesn't exist.
     const offeredLabel = messageType === 'unsuccessful' ? 'Update Status Only - Notified' : 'Update Status Only - Offered';
+    // Send is FIRST and the DEFAULT (Serviver 2026-08-17: hosts hit Submit expecting the send
+    // and "saved draft 15+ times"). Single-applicant only — one accidental submit messages ONE
+    // person. The BULK modal deliberately keeps Save-as-draft as its default: an inattentive
+    // submit there would invite an entire unfinalised cast.
     modeOptions = [
-      { label: 'Save as draft only', value: 'draft', emoji: { name: '💾' }, description: 'Save the templates, send nothing', default: true },
-      { label: sendLabel, value: 'selected', emoji: { name: '📨' }, description: 'Sends the relevant msg above to their app channel (with a Check-In button if Cast/Alternate)'.slice(0, 100) },
+      { label: sendLabel, value: 'selected', emoji: { name: '📨' }, description: 'Sends the relevant msg above to their app channel (with a Check-In button if Cast/Alternate)'.slice(0, 100), default: true },
+      { label: 'Save as draft only', value: 'draft', emoji: { name: '💾' }, description: 'Save the templates, send nothing' },
       { label: offeredLabel, value: 'status_only', emoji: { name: '🕵️' }, description: "Use to tell CastBot when you've manually messaged an applicant".slice(0, 100) }
     ];
     if (ACCEPTED_RESPONSE_FOR_STATUS[opts.castingStatus]) {

@@ -23,9 +23,10 @@ function singleModeOptions(applicantName, castingStatus) {
   const word = SINGLE_SEND_WORD[messageType] || 'Message';
   const sendLabel = `Send ${applicantName || 'this applicant'} ${word}`.slice(0, 100);
   const offeredLabel = messageType === 'unsuccessful' ? 'Update Status Only - Notified' : 'Update Status Only - Offered';
+  // Send FIRST + default (Serviver 2026-08-17); draft stays default on BULK only.
   const opts = [
-    { value: 'draft', default: true },
-    { value: 'selected', label: sendLabel, emoji: '📨' },
+    { value: 'selected', label: sendLabel, emoji: '📨', default: true },
+    { value: 'draft' },
     { value: 'status_only', label: offeredLabel, emoji: '🕵️' }
   ];
   if (ACCEPTED_RESPONSE_FOR_STATUS[castingStatus]) {
@@ -65,11 +66,12 @@ describe('Send Invite button — context-aware label/style/disabled', () => {
 });
 
 describe('Single invite modal — invite_mode options', () => {
-  it('Cast/Alternate get 4 options: draft, selected, status_only (Offered), status_only_accepted', () => {
+  it('Cast/Alternate get 4 options: selected FIRST (the default), draft, status_only (Offered), status_only_accepted', () => {
     for (const status of ['cast', 'alternative']) {
       const opts = singleModeOptions('Reece', status);
-      assert.deepEqual(opts.map(o => o.value), ['draft', 'selected', 'status_only', 'status_only_accepted'], status);
-      assert.equal(opts[0].default, true);
+      assert.deepEqual(opts.map(o => o.value), ['selected', 'draft', 'status_only', 'status_only_accepted'], status);
+      assert.equal(opts[0].default, true, 'Send is the default — hosts hit Submit expecting the send (Serviver)');
+      assert.ok(!opts[1].default, 'draft must NOT also be default');
       assert.equal(opts[2].label, 'Update Status Only - Offered');
       assert.equal(opts[3].label, 'Update Status Only - Accepted');
       assert.equal(opts[3].emoji, '🎉');
@@ -77,13 +79,20 @@ describe('Single invite modal — invite_mode options', () => {
   });
   it("Don't Cast gets only 3 options — no accepted state, so no status_only_accepted", () => {
     const opts = singleModeOptions('Reece', 'reject');
-    assert.deepEqual(opts.map(o => o.value), ['draft', 'selected', 'status_only']);
+    assert.deepEqual(opts.map(o => o.value), ['selected', 'draft', 'status_only']);
     assert.equal(opts[2].label, 'Update Status Only - Notified'); // not "Offered" — no spot exists to offer
   });
   it('undecided (no castingStatus) also gets only 3 options, generic "Offered" label', () => {
     const opts = singleModeOptions('Reece', undefined);
-    assert.deepEqual(opts.map(o => o.value), ['draft', 'selected', 'status_only']);
+    assert.deepEqual(opts.map(o => o.value), ['selected', 'draft', 'status_only']);
     assert.equal(opts[2].label, 'Update Status Only - Offered');
+  });
+  it('the BULK modal is untouched: Save as draft stays its first option AND its default', async () => {
+    // One inattentive bulk submit would invite an entire unfinalised cast (Reece).
+    const { BULK_MODE_OPTIONS } = await import('../castRankingManager.js');
+    assert.equal(BULK_MODE_OPTIONS[0].value, 'draft');
+    assert.equal(BULK_MODE_OPTIONS[0].default, true);
+    assert.ok(BULK_MODE_OPTIONS.every((o, i) => i === 0 || !o.default));
   });
   it('the "Send {name}" label reflects the casting decision', () => {
     assert.equal(singleModeOptions('Reece', 'cast').find(o => o.value === 'selected').label, 'Send Reece Casting Offer');
