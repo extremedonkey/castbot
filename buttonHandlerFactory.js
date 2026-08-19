@@ -889,32 +889,40 @@ export const BUTTON_REGISTRY = {
     category: 'analytics'
   },
   'prod_nuke_category': {
-    label: 'Nuke Category',
-    description: 'Select and delete all channels in a Discord category',
+    label: 'Nuke Channels',
+    description: 'Permanently delete selected channels and/or whole categories (custom_id kept from the category-only version)',
     emoji: '☢️',
     style: 'Secondary',
     parent: 'castbot_tools',
     category: 'admin'
   },
-  'nuke_cat_select': {
-    label: 'Category Select',
-    description: 'Select a category to delete all channels from',
-    emoji: '🧹',
+  'nuke_chan_select': {
+    label: 'Nuke Selection',
+    description: 'Pick channels and/or categories to delete; categories expand to everything inside',
+    emoji: '☢️',
     style: 'Secondary',
     parent: 'prod_nuke_category',
     category: 'admin'
   },
-  'nuke_cat_confirm_*': {
-    label: 'Confirm Category Nuke',
-    description: 'Confirm deletion of all channels in selected category',
-    emoji: '🗑️',
+  'nuke_chan_confirm': {
+    label: 'Confirm Nuke',
+    description: 'Confirm permanent deletion and start the paced background delete run',
+    emoji: '☢️',
     style: 'Danger',
     parent: 'prod_nuke_category',
     category: 'admin'
   },
+  'nuke_chan_abandon': {
+    label: 'Abandon Nuking',
+    description: 'Halt an in-progress nuke run before the next deletion',
+    emoji: '🚧',
+    style: 'Danger',
+    parent: 'nuke_chan_confirm',
+    category: 'admin'
+  },
   'nuke_cat_cancel': {
-    label: 'Cancel Category Nuke',
-    description: 'Cancel category deletion',
+    label: 'Cancel Nuke',
+    description: 'Cancel channel/category deletion',
     emoji: '❌',
     style: 'Secondary',
     parent: 'prod_nuke_category',
@@ -5011,7 +5019,7 @@ export const BUTTON_REGISTRY = {
   },
   'archive_mode_select': {
     label: 'Archive Mode',
-    description: 'String select for archive mode (Archive Only + future expansion stubs)',
+    description: 'String select for archive mode: Fast/Full Archive, each with an optional "+ Delete Channels" variant',
     emoji: '⚙️',
     style: 'Secondary',
     category: 'admin',

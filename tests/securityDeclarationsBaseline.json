@@ -16,7 +16,6 @@
   "app.js::apps_planner",
   "app.js::archive_abandon",
   "app.js::archive_channel",
-  "app.js::archive_channel_select",
   "app.js::archive_confirm",
   "app.js::archive_mode_select",
   "app.js::archive_refresh",

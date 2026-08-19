@@ -83,8 +83,6 @@ const FROZEN_A_BASELINE = [
   'app.js::map_admin_blacklist_modal::A',
   'app.js::map_admin_edit_quantities::A',
   'app.js::menu_visibility_select::A',
-  'app.js::nuke_cat_confirm::A',
-  'app.js::nuke_cat_select::A',
   'app.js::outcome_select::A',
   'app.js::placement_response::A',
   'app.js::planner_apps::A',
@@ -160,7 +158,10 @@ const FROZEN_A_BASELINE = [
 // 2026-08-09: 123 → 120. Fixed season_app_ranking + season_marooning (returned bare
 // content on the permission-denied branch → prod 50035); dropped map_drop_style, whose
 // handler no longer exists anywhere in the codebase.
-const FROZEN_A_MAX = 120;
+// 2026-08-19: 120 → 118. Nuke Category became ☢️ Nuke Channels: nuke_cat_select and
+// nuke_cat_confirm_* were replaced by nuke_chan_select / nuke_chan_confirm, which return
+// proper V2 containers on every branch (channelNuker.js builds them).
+const FROZEN_A_MAX = 118;
 
 // Legacy res.send(UPDATE_MESSAGE) count ratchets (migrate handlers to the factory).
 const FROZEN_C_MAX = 6;   // content-only data

@@ -27,48 +27,62 @@ const SAFE_UPLOAD_BYTES = 9 * 1024 * 1024;
 
 /**
  * Archive modes shown in the "Archive Mode" string select on the main archive screen.
- * Only `archive_only` is implemented today; the rest are stubs for future expansion
- * (the select re-renders with a "coming soon" note and stays on Archive Only).
+ * Two orthogonal axes, four combinations — no stubs, everything here runs:
+ *   `embed`   — base64-embed images into the HTML (permanent) vs. keep CDN links (expire ~24h)
+ *   `deletes` — delete each source channel after its archive is VERIFIED posted
+ *
+ * 🔴 Full Archive is the DEFAULT: if a mode deletes the source, embedded images are the only
+ * ones that survive it — a Fast archive of a deleted channel loses its images within a day.
  */
 export const ARCHIVE_MODES = [
-  { value: 'archive_only', label: 'Fast Archive', emoji: '📥', implemented: true,
+  { value: 'archive_only', label: 'Fast Archive', emoji: '📥', implemented: true, embed: false, deletes: false,
     description: 'Archives fast; text permanent but images expire in 24hrs. HTML file that can also be viewed online.' },
-  { value: 'archive_embed', label: 'Full Archive', emoji: '🖼️', implemented: true,
-    description: 'Slower but permanently saves image which last forever and survives channel deletion.' },
-  { value: 'archive_delete', label: 'Archive + Delete', emoji: '🗑️',
-    description: 'Archive, then delete the originals to free channel slots' },
-  { value: 'category_archive', label: 'Category Archive', emoji: '📁',
-    description: 'One archive channel per category; archives posted inside each' },
-  { value: 'category_archive_delete', label: 'Category Archive + Delete', emoji: '🗂️',
-    description: 'Per-category archive channel, then delete the originals' },
-  { value: 'clone_archive', label: 'Clone Archive', emoji: '📋',
-    description: 'Copy an existing archive into a new target channel' },
-  { value: 'move_archive', label: 'Move Archive', emoji: '📦',
-    description: 'Move an existing archive to a new channel (deletes the source)' },
+  { value: 'archive_embed', label: 'Full Archive', emoji: '🖼️', implemented: true, embed: true, deletes: false,
+    description: 'Slower but permanently saves images which last forever and survive channel deletion.' },
+  { value: 'archive_delete', label: 'Fast Archive + Delete Channels', emoji: '🗑️', implemented: true, embed: false, deletes: true,
+    description: '☠️ Fast archive, then PERMANENTLY DELETES each channel. Images expire in 24hrs — gone for good.' },
+  { value: 'archive_embed_delete', label: 'Full Archive + Delete Channels', emoji: '☠️', implemented: true, embed: true, deletes: true,
+    description: '☠️ Embeds images permanently, then PERMANENTLY DELETES each channel. The safest way to delete.' },
 ];
+
+/** The mode used when nothing is chosen (and the fallback for an unknown value). */
+export const DEFAULT_ARCHIVE_MODE = 'archive_embed';
+
+/** Look up a mode by value, always returning a usable mode object. Pure. */
+export function getArchiveMode(value) {
+  return ARCHIVE_MODES.find(m => m.value === value)
+    || ARCHIVE_MODES.find(m => m.value === DEFAULT_ARCHIVE_MODE);
+}
 
 /**
  * Build the main Archive Channels screen container (LEAN: sectioned, ephemeral menu).
  * Shared by the `archive_channel` button and the `archive_mode_select` re-render.
- * @param {string} mode - selected archive mode value (default 'archive_only')
- * @param {string} [note] - optional small note line (e.g. "coming soon")
+ * Picking a "+ Delete Channels" mode turns the whole card red and swaps the blurb for a
+ * warning — the mode select is the first place the host can find out deletion is armed.
+ * @param {string} mode - selected archive mode value (default 'archive_embed' = Full Archive)
+ * @param {string} [note] - optional small note line
  */
-export function buildArchiveScreen(mode = 'archive_only', note = '') {
+export function buildArchiveScreen(mode = DEFAULT_ARCHIVE_MODE, note = '') {
+  const selected = getArchiveMode(mode);
   const options = ARCHIVE_MODES.map(m => ({
     label: m.label,
     value: m.value,
-    description: (m.implemented ? m.description : `🚧 Coming soon — ${m.description}`).slice(0, 100), // Discord caps option descriptions at 100
+    description: m.description.slice(0, 100), // Discord caps option descriptions at 100
     emoji: { name: m.emoji },
-    default: m.value === mode,
+    default: m.value === selected.value,
   }));
+
+  const modeBlurb = selected.deletes
+    ? `### \`\`\`☠️ Archive Mode — DELETION ARMED\`\`\`\n-# **${selected.label}** archives each channel and then **permanently deletes it**. There is no undo. You'll get one more confirmation before anything is deleted.`
+    : `### \`\`\`⚙️ Archive Mode\`\`\`\n-# How images are stored: **Fast Archive** keeps links (fast; images expire ~24h) · **Full Archive** embeds them so they never expire (slower, larger).`;
 
   return {
     type: 17,
-    accent_color: 0x3498db,
+    accent_color: selected.deletes ? 0xe74c3c : 0x3498db,
     components: [
       { type: 10, content: `## 🧹 Archive Channels\n\nArchive full message history as styled HTML files.${note ? `\n\n${note}` : ''}` },
       { type: 14 },
-      { type: 10, content: `### \`\`\`⚙️ Archive Mode\`\`\`\n-# How images are stored: **Fast Archive** keeps links (fast; images expire ~24h) · **Full Archive** embeds them so they never expire (slower, larger).` },
+      { type: 10, content: modeBlurb },
       { type: 1, components: [{ type: 3, custom_id: 'archive_mode_select', placeholder: 'Archive mode...', min_values: 1, max_values: 1, options }] },
       { type: 14 },
       { type: 10, content: `### \`\`\`📁 Select Channels\`\`\`\n-# Up to 25 channels/categories — categories expand to all their text channels. Large/many channels take time (~1 min per 3,000 msgs). Needs the **Message Content Intent**, or text is blank.` },
@@ -84,7 +98,7 @@ export function buildArchiveScreen(mode = 'archive_only', note = '') {
       { type: 1, components: [
         { type: 2, style: 2, label: '← Back', custom_id: 'castbot_tools' },
         { type: 2, custom_id: 'archive_retrieve', label: 'Retrieve Archive', style: 2, emoji: { name: '📥' } },
-        { type: 2, custom_id: 'prod_nuke_category', label: 'Nuke Category', style: 2, emoji: { name: '☢️' } }
+        { type: 2, custom_id: 'prod_nuke_category', label: 'Nuke Channels', style: 2, emoji: { name: '☢️' } }
       ] }
     ]
   };
@@ -143,8 +157,10 @@ function buildCategoryBanner(name) {
  * @param {Array<{id,name,type,parent_id,position}>} allChannels - the guild's channels
  *   (from the bot cache or one REST call), normalized to these fields
  * @param {object} [resolved] - req.body.data.resolved.channels (fallback for selected items)
- * @returns {{channels: Array<{id,name}>, categoryCount: number}}
- *   channels de-duped by id (category + a child inside it won't archive twice)
+ * @returns {{channels: Array<{id,name,category,categoryId}>, categoryCount: number, categories: Array<{id,name}>}}
+ *   channels de-duped by id (category + a child inside it won't archive twice).
+ *   `categories` lists the EXPLICITLY selected categories — the "+ Delete Channels" modes use
+ *   it to tidy up a category once every channel inside it has been archived and deleted.
  */
 export function expandArchiveSelection(selectedIds, allChannels, resolved = {}) {
   const byId = new Map((allChannels || []).map(c => [c.id, c]));
@@ -152,19 +168,103 @@ export function expandArchiveSelection(selectedIds, allChannels, resolved = {}) 
     .filter(c => c.parent_id === catId && [0, 5].includes(c.type))
     .sort((a, b) => (a.position || 0) - (b.position || 0));
 
-  const picked = new Map(); // id → {id, name, category} — Map gives us dedupe + insertion order
-  let categoryCount = 0;
+  const picked = new Map();     // id → {id, name, category, categoryId} — dedupe + insertion order
+  const categories = new Map(); // id → {id, name} — explicitly selected categories only
   for (const id of (selectedIds || [])) {
     const ch = byId.get(id) || resolved[id];
     if (!ch) continue;
     if (ch.type === 4) { // category → expand to its text/announcement children (tagged with the category name)
-      categoryCount++;
-      for (const kid of childrenOf(id)) picked.set(kid.id, { id: kid.id, name: kid.name, category: ch.name });
+      categories.set(ch.id, { id: ch.id, name: ch.name });
+      for (const kid of childrenOf(id)) picked.set(kid.id, { id: kid.id, name: kid.name, category: ch.name, categoryId: ch.id });
     } else if ([0, 5].includes(ch.type)) { // directly-picked channel → no category divider
-      picked.set(ch.id, { id: ch.id, name: ch.name, category: null });
+      picked.set(ch.id, { id: ch.id, name: ch.name, category: null, categoryId: null });
     }
   }
-  return { channels: [...picked.values()], categoryCount };
+  return { channels: [...picked.values()], categoryCount: categories.size, categories: [...categories.values()] };
+}
+
+/**
+ * Build the pre-flight confirmation screen shown after channels are picked.
+ *
+ * Two very different cards from one builder, because they are the same decision at two
+ * stakes: a plain archive is reversible (delete the file), an archive+delete is not. The
+ * delete card therefore states the blast radius, names the channel that is protected from
+ * deletion, and only then offers a red button that says what it does.
+ *
+ * @param {object} args
+ * @param {Array} args.channels - expanded channel list
+ * @param {number} args.categoryCount
+ * @param {Array} [args.categories] - explicitly selected categories (deleted if emptied)
+ * @param {string} args.mode - archive mode value
+ * @param {string} args.invokedChannelId - where archives are posted; never deleted
+ * @param {boolean} [args.botCanDelete] - false → render the missing-permission card instead
+ */
+export function buildArchiveConfirmScreen({ channels, categoryCount = 0, categories = [], mode, invokedChannelId, botCanDelete = true }) {
+  const selected = getArchiveMode(mode);
+  const displayChannels = channels.slice(0, 20);
+  const channelList = displayChannels.map(c => `- #${c.name}`).join('\n');
+  const overflow = channels.length > 20 ? `\n-# ...and ${channels.length - 20} more` : '';
+  const estMin = channels.length === 1 ? '1–5 min' : `${channels.length * 1}–${channels.length * 5} min`;
+  const catNote = categoryCount > 0 ? ` (incl. ${categoryCount} categor${categoryCount !== 1 ? 'ies' : 'y'} expanded)` : '';
+  const backRow = { type: 1, components: [{ type: 2, style: 2, label: '← Back', custom_id: 'archive_channel' }] };
+
+  if (!selected.deletes) {
+    const modeNote = selected.embed ? `\n-# 🖼️ Full Archive: images embedded as compressed WebP (survives source deletion; slower; non-image files not kept).` : '';
+    return {
+      type: 17,
+      accent_color: 0x3498db,
+      components: [
+        { type: 10, content: `## 🧹 Archive Channels\n\n**${channels.length} channel${channels.length !== 1 ? 's' : ''}** will be archived${catNote}:\n\n${channelList}${overflow}\n\n-# ⏱️ Estimated time: ${estMin} (varies by message count)${modeNote}` },
+        { type: 14 },
+        { type: 1, components: [
+          { type: 2, style: 4, label: '📦 Archive', custom_id: 'archive_confirm' },
+          { type: 2, style: 2, label: '← Back', custom_id: 'archive_channel' }
+        ]}
+      ]
+    };
+  }
+
+  // ── Delete modes ──────────────────────────────────────────────────────────────
+  if (!botCanDelete) {
+    return {
+      type: 17,
+      accent_color: 0xe74c3c,
+      components: [
+        { type: 10, content: `## ❌ CastBot can't delete channels\n\nCastBot is missing the **Manage Channels** permission, so **${selected.label}** cannot run. Nothing has been archived or deleted.\n\n-# Give CastBot's role **Manage Channels** (Server Settings → Roles), or switch to a plain archive mode.` },
+        { type: 14 },
+        backRow,
+      ],
+    };
+  }
+
+  const deletable = channels.filter(c => c.id !== invokedChannelId);
+  const selfProtected = deletable.length !== channels.length;
+  const protectionLine = selfProtected
+    ? `\n\n🛡️ **This channel is protected.** The archives are posted here, so it is archived but **never deleted** — ${deletable.length} of the ${channels.length} will actually be deleted.`
+    : '';
+  const catLine = categories.length
+    ? `\n📁 The ${categories.length} selected categor${categories.length !== 1 ? 'ies are' : 'y is'} deleted too, but **only** once empty — anything left inside keeps it alive.`
+    : '';
+  const imageLine = selected.embed
+    ? `-# 🖼️ Images are embedded into the HTML first, so they survive the deletion permanently.`
+    : `-# ⚠️ **Fast mode keeps image _links_, and those links die with the channel.** Images will be gone within ~24 hours. Use **Full Archive + Delete Channels** to keep them.`;
+
+  return {
+    type: 17,
+    accent_color: 0xe74c3c,
+    components: [
+      { type: 10, content: `## ☠️ Archive AND DELETE ${channels.length} channel${channels.length !== 1 ? 's' : ''}?` },
+      { type: 14 },
+      { type: 10, content: `Each channel is archived into **this** channel, and then **permanently deleted**${catNote}.\n\n☠️ **This cannot be undone.** Once a channel is deleted, the HTML archive posted here is the ONLY copy of its history that exists.${protectionLine}${catLine}` },
+      { type: 14 },
+      { type: 10, content: `${channelList}${overflow}\n\n-# ⏱️ Estimated time: ${estMin} · a channel is deleted only after CastBot re-reads its archive from Discord and confirms it is really there.\n${imageLine}` },
+      { type: 14 },
+      { type: 1, components: [
+        { type: 2, style: 2, label: 'Cancel', custom_id: 'archive_channel', emoji: { name: '❌' } },
+        { type: 2, style: 4, label: `Archive & Delete ${deletable.length}`, custom_id: 'archive_confirm', emoji: { name: '☠️' } },
+      ]}
+    ]
+  };
 }
 
 /** Recursively find the resolved CDN URL inside a type-13 (File) component tree. */
@@ -315,7 +415,7 @@ async function postOneArchive(post, channelName, msgs, cbEmojiStr, partLabel, pr
 async function updateRunMessage(container, { interactionToken, applicationId }) {
   if (!interactionToken || !applicationId) {
     console.log('ℹ️ Archive: no interaction token — run message not updated.');
-    return;
+    return false;
   }
   try {
     const res = await fetch(`https://discord.com/api/v10/webhooks/${applicationId}/${interactionToken}/messages/@original`, {
@@ -323,15 +423,135 @@ async function updateRunMessage(container, { interactionToken, applicationId }) 
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ flags: IS_CV2, components: [container] })
     });
-    if (res.ok) return;
+    if (res.ok) return true;
     const body = await res.text();
-    if (res.status === 401) {
+    // 401/404 = the 15-minute token is gone for good; anything else may well be transient, so the
+    // caller must not treat a one-off 500 as "stop updating for the rest of the run".
+    if (res.status === 401 || res.status === 404) {
       console.log('ℹ️ Archive: run message not updated — interaction token expired on a long run.');
-    } else {
-      console.error(`⚠️ Archive: run message update failed: ${res.status} ${body}`);
+      return 'dead';
     }
+    console.error(`⚠️ Archive: run message update failed: ${res.status} ${body}`);
   } catch (err) {
     console.error(`⚠️ Archive: run message update error: ${err.message}`);
+  }
+  return false;
+}
+
+/**
+ * The "started" card the confirm click replaces itself with — the first frame of the run, and
+ * the first place the 🚧 Abandon button appears.
+ */
+export function buildArchiveStarted(channelCount, mode) {
+  const selected = getArchiveMode(mode);
+  const modeLine = selected.embed ? `-# 🖼️ Full Archive (images embedded — slower).\n` : '';
+  return {
+    type: 17,
+    accent_color: selected.deletes ? 0xe74c3c : 0x2ecc71,
+    components: [
+      { type: 10, content: `## ${selected.deletes ? '☠️' : '📦'} ${selected.deletes ? 'Archiving & deleting' : 'Archiving'} **${channelCount} channel${channelCount !== 1 ? 's' : ''}**\n${modeLine}-# Archive messages appear in this channel as each one completes.${selected.deletes ? ' Each channel is deleted immediately after its archive is verified.' : ''}\n-# 🚧 **Abandon** stops the run — nothing after that point is touched.` },
+      { type: 14 },
+      { type: 1, components: [
+        { type: 2, style: 4, label: 'Abandon Archiving', custom_id: 'archive_abandon', emoji: { name: '🚧' } },
+        { type: 2, style: 2, label: '← Data', custom_id: 'data_admin' }
+      ] }
+    ]
+  };
+}
+
+/**
+ * Live progress card for the ephemeral run message. Re-posts the 🚧 Abandon button on EVERY
+ * update — it is the only way to stop a delete-mode run, so it must never be edited away.
+ *
+ * The interaction token dies at 15 minutes and these PATCHes stop landing; the button on the
+ * last-rendered card keeps working regardless, because clicking it is a brand-new interaction.
+ */
+function buildProgressContainer({ done, total, succeeded, failed, deleted, current, deletes }) {
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  const filled = Math.round(pct / 10);
+  const bar = '█'.repeat(filled) + '░'.repeat(10 - filled);
+  const stats = `-# 📂 ${succeeded} archived${deletes ? ` · 🗑️ ${deleted} deleted` : ''}${failed ? ` · ❌ ${failed} failed` : ''}`;
+  return {
+    type: 17,
+    accent_color: deletes ? 0xe74c3c : 0x2ecc71,
+    components: [
+      { type: 10, content: `## ${deletes ? '☠️ Archiving & deleting…' : '📦 Archiving…'}\n\`${bar}\` ${done}/${total} (${pct}%)\n${stats}${current ? `\n-# Now: **#${current}**` : ''}` },
+      { type: 14 },
+      { type: 1, components: [
+        { type: 2, style: 4, label: 'Abandon Archiving', custom_id: 'archive_abandon', emoji: { name: '🚧' } },
+        { type: 2, style: 2, label: '← Data', custom_id: 'data_admin' }
+      ] }
+    ]
+  };
+}
+
+/**
+ * 🔴 The ONLY gate between "archived" and "deleted" — every condition must hold or the channel
+ * lives. Conditions are ordered cheapest-first so the REST verify only runs once the local
+ * guards pass. Anything unexpected keeps the channel: a surplus channel is an inconvenience,
+ * a wrongly-deleted one is unrecoverable.
+ *
+ * Gates 1–4 are pure and live in `checkDeleteGates` so they can be tested without a network —
+ * gate 1 in particular ("never delete the channel holding the archives") is the invariant that,
+ * if it ever broke, would destroy the archives at the exact moment they became the only copy.
+ *
+ * @returns {Promise<void>} — outcomes are recorded into `deleteStats`
+ */
+export function checkDeleteGates({ channelId, invokedChannelId, hasGuild, partMessageIds, aborted }) {
+  // 1. NEVER delete the channel the archives were posted into — that destroys the archives.
+  if (channelId === invokedChannelId) return { ok: false, reason: `it's this channel, where the archives live` };
+  // 2. No guild object (bot cache miss) → we cannot resolve or delete anything safely.
+  if (!hasGuild) return { ok: false, reason: 'guild not in cache, deletion skipped' };
+  // 3. No file-message id → the archive never posted → there is nothing to fall back on.
+  if (!partMessageIds?.length) return { ok: false, reason: 'archive did not post' };
+  // 4. Abandoned between archiving and deleting → honour the abort.
+  if (aborted) return { ok: false, reason: 'abandoned before deletion' };
+  return { ok: true, reason: null };
+}
+
+async function verifyThenDelete(channel, { partMessageIds, invokedChannelId, guild, deleteStats, isAborted, userId }) {
+  const gate = checkDeleteGates({
+    channelId: channel.id, invokedChannelId, hasGuild: !!guild, partMessageIds, aborted: isAborted(),
+  });
+  if (!gate.ok) {
+    deleteStats.skipped.push(`#${channel.name} — ${gate.reason}`);
+    console.warn(`🛡️ Refused to delete #${channel.name}: ${gate.reason}`);
+    return;
+  }
+  // 5. Re-fetch the LAST part straight from Discord. The POST returning 200 is not quite proof
+  //    the message survives (auto-mod/webhook edge cases); this is. One GET per channel is a
+  //    cheap price for an irreversible action.
+  try {
+    const lastId = partMessageIds[partMessageIds.length - 1];
+    const res = await fetch(`https://discord.com/api/v10/channels/${invokedChannelId}/messages/${lastId}`, {
+      headers: { Authorization: `Bot ${process.env.DISCORD_TOKEN}` }
+    });
+    if (!res.ok) {
+      deleteStats.skipped.push(`#${channel.name} — archive could not be verified (${res.status})`);
+      console.warn(`🛡️ Refused to delete #${channel.name}: archive verify returned ${res.status}`);
+      return;
+    }
+    const msg = await res.json();
+    if (!getArchiveFileUrl(msg)) {
+      deleteStats.skipped.push(`#${channel.name} — archive file missing from its message`);
+      console.warn(`🛡️ Refused to delete #${channel.name}: no archive file on message ${lastId}`);
+      return;
+    }
+  } catch (err) {
+    deleteStats.skipped.push(`#${channel.name} — archive verify failed (${err.message})`);
+    console.warn(`🛡️ Refused to delete #${channel.name}: verify threw ${err.message}`);
+    return;
+  }
+
+  // Verified. Delete it.
+  const { deleteOneChannel } = await import('./channelNuker.js');
+  const outcome = await deleteOneChannel(guild, channel, `CastBot Archive & Delete (by ${userId || 'unknown'})`);
+  if (outcome.status === 'deleted' || outcome.status === 'gone') {
+    deleteStats.deleted++;
+    console.log(`🗑️ Archived & deleted #${channel.name} (${deleteStats.deleted})`);
+  } else {
+    deleteStats.failed++;
+    deleteStats.skipped.push(`#${channel.name} — ${outcome.error}`);
   }
 }
 
@@ -347,14 +567,17 @@ async function updateRunMessage(container, { interactionToken, applicationId }) 
  * @param {boolean} [opts.embedImages] - base64-embed images so they never expire ("Self-Contained" mode)
  * @param {string} [opts.abortKey] - key into global.abortArchive; set true to halt the run (🚧 Abandon)
  * @param {string} [opts.userId] - host who ran it; the run is registered under their player record for cross-server retrieval
+ * @param {boolean} [opts.deleteAfter] - "+ Delete Channels" modes: delete each source channel once its archive is VERIFIED posted
+ * @param {Array<{id,name}>} [opts.selectedCategories] - explicitly-picked categories; removed at the end if deleteAfter emptied them
  */
-export async function archiveChannels(channels, invokedChannelId, { interactionToken, applicationId, client, guildId, embedImages = false, abortKey = null, userId = null } = {}) {
+export async function archiveChannels(channels, invokedChannelId, { interactionToken, applicationId, client, guildId, embedImages = false, abortKey = null, userId = null, deleteAfter = false, selectedCategories = [] } = {}) {
   const post = createMessagePoster(invokedChannelId);
   const cbEmoji = getBotEmoji('cb_blue');
   const cbEmojiStr = cbEmoji?.id ? `<:cb_blue:${cbEmoji.id}>` : '🗄️';
   const isAborted = () => !!(abortKey && global.abortArchive?.get(abortKey));
   let abandoned = false;
   const runChannels = []; // { name, category, partMessageIds } — for the cross-server archive registry
+  const deleteStats = { deleted: 0, failed: 0, skipped: [] }; // "+ Delete Channels" outcomes
 
   // Build the mention name-resolver ONCE from the bot's in-memory guild cache (no REST).
   // User names are also auto-filled per-message from each message's `mentions[]` in the generator.
@@ -377,9 +600,25 @@ export async function archiveChannels(channels, invokedChannelId, { interactionT
   let failed = 0;
   let totalMsgs = 0, totalThreads = 0, totalThreadMsgs = 0; // aggregated for the completion summary
 
+  // Live progress on the ephemeral run message. Throttled, and self-disarming once the 15-minute
+  // interaction token dies (further PATCHes would 401 on every channel for the rest of the run).
+  // Only a definitive 'dead' disarms it — a transient 5xx must not silence the rest of the run.
+  let progressDead = false, lastProgressAt = 0;
+  const showProgress = async (current) => {
+    if (progressDead) return;
+    if (Date.now() - lastProgressAt < 5000) return;
+    lastProgressAt = Date.now();
+    const result = await updateRunMessage(
+      buildProgressContainer({ done: succeeded + failed, total: channels.length, succeeded, failed, deleted: deleteStats.deleted, current, deletes: deleteAfter }),
+      { interactionToken, applicationId }
+    );
+    if (result === 'dead') progressDead = true;
+  };
+
   let lastCategory = null;
   for (const channel of channels) {
     if (isAborted()) { abandoned = true; break; } // 🚧 user abandoned → stop before the next channel
+    await showProgress(channel.name);
 
     // Entering a new category (channels are grouped by category) → post a divider banner above it.
     if (channel.category && channel.category !== lastCategory) {
@@ -470,6 +709,13 @@ export async function archiveChannels(channels, invokedChannelId, { interactionT
       totalMsgs += messages.length;
       totalThreads += threads.length;
       totalThreadMsgs += threads.reduce((n, t) => n + (t.messages?.length || 0), 0);
+
+      // "+ Delete Channels" modes — per channel, and only through verifyThenDelete's gate.
+      // Deleting here (rather than in a sweep at the end) keeps archive+delete atomic per
+      // channel: whatever the run does next, this channel is either both or neither.
+      if (deleteAfter) {
+        await verifyThenDelete(channel, { partMessageIds, invokedChannelId, guild, deleteStats, isAborted, userId });
+      }
     } catch (err) {
       failed++;
       console.error(`❌ Archive error for #${channel.name}:`, err);
@@ -482,6 +728,27 @@ export async function archiveChannels(channels, invokedChannelId, { interactionT
           headers: { 'Content-Type': 'application/json' }
         });
       } catch { /* posting the error failed too — nothing more to do */ }
+    }
+  }
+
+  // "+ Delete Channels": a selected category whose channels have all just been deleted is now an
+  // empty shell — remove it too, so the run actually frees the slots the host came here for.
+  // deleteChannelItems' survivor check does the guarding: anything still inside (a protected
+  // channel, a voice channel we never archived, a failed delete) keeps the category alive.
+  if (deleteAfter && !abandoned && guild && selectedCategories.length) {
+    try {
+      const { deleteChannelItems } = await import('./channelNuker.js');
+      const catItems = selectedCategories.map(c => ({ id: c.id, name: c.name, type: 4, category: null }));
+      const catResult = await deleteChannelItems(guild, catItems, {
+        protectIds: [invokedChannelId],
+        shouldAbort: isAborted,
+        reason: `CastBot Archive & Delete (by ${userId || 'unknown'})`,
+      });
+      deleteStats.deleted += catResult.deleted + catResult.gone;
+      deleteStats.failed += catResult.failed;
+      deleteStats.skipped.push(...catResult.protected.map(n => `📁 ${n}`), ...catResult.errors);
+    } catch (e) {
+      console.warn(`⚠️ Category cleanup failed: ${e.message}`);
     }
   }
 
@@ -523,23 +790,30 @@ export async function archiveChannels(channels, invokedChannelId, { interactionT
   const remaining = channels.length - succeeded - failed;
   const head = abandoned ? '🛑 Archiving abandoned' : (failed ? '⚠️ Archive complete' : '✅ Archive complete');
   const tail = abandoned && remaining > 0 ? `\n-# Stopped — re-run to finish the remaining ${remaining} channel${remaining !== 1 ? 's' : ''}.` : '';
+  // Deletion is the irreversible half — report it in full, including everything deliberately kept.
+  const deleteLine = deleteAfter
+    ? `\n🗑️ **${deleteStats.deleted}** deleted${deleteStats.failed ? `, ❌ ${deleteStats.failed} could not be deleted` : ''}`
+    : '';
+  const keptLine = deleteAfter && deleteStats.skipped.length
+    ? `\n\n🛡️ **Kept (not deleted):**\n${deleteStats.skipped.slice(0, 5).map(s => `-# • ${s}`).join('\n')}${deleteStats.skipped.length > 5 ? `\n-# • …and ${deleteStats.skipped.length - 5} more` : ''}`
+    : '';
   const summaryContainer = {
     type: 17,
     accent_color: abandoned || failed ? 0xe67e22 : 0x2ecc71,
     components: [
-      { type: 10, content: `## ${head}\n-# ${cbEmojiStr} CastBot Archive\n\n📂 **${succeeded}** channel${succeeded !== 1 ? 's' : ''} archived${failed ? `, ⚠️ ${failed} failed` : ''} (of ${channels.length})\n✉️ ${totalMsgs} message${totalMsgs !== 1 ? 's' : ''}${totalThreads ? `\n🧵 ${totalThreads} thread${totalThreads !== 1 ? 's' : ''} (${totalThreadMsgs} messages)` : ''}${tail}` },
+      { type: 10, content: `## ${head}\n-# ${cbEmojiStr} CastBot Archive\n\n📂 **${succeeded}** channel${succeeded !== 1 ? 's' : ''} archived${failed ? `, ⚠️ ${failed} failed` : ''} (of ${channels.length})\n✉️ ${totalMsgs} message${totalMsgs !== 1 ? 's' : ''}${totalThreads ? `\n🧵 ${totalThreads} thread${totalThreads !== 1 ? 's' : ''} (${totalThreadMsgs} messages)` : ''}${deleteLine}${tail}${keptLine}` },
       { type: 14 },
       { type: 1, components: [
         { type: 2, style: 1, custom_id: 'archive_channel', label: 'Archive Another', emoji: { name: '📂' } },
-        { type: 2, style: 2, custom_id: 'prod_nuke_category', label: 'Nuke Category', emoji: { name: '☢️' } },
+        { type: 2, style: 2, custom_id: 'prod_nuke_category', label: 'Nuke Channels', emoji: { name: '☢️' } },
       ] },
     ]
   };
   await updateRunMessage(summaryContainer, { interactionToken, applicationId });
 
   if (abortKey) global.abortArchive?.delete(abortKey);
-  console.log(`🏁 Archive run done: ${succeeded} ok, ${failed} failed${abandoned ? ', ABANDONED' : ''} (of ${channels.length})`);
-  return { succeeded, failed, total: channels.length, abandoned };
+  console.log(`🏁 Archive run done: ${succeeded} ok, ${failed} failed${deleteAfter ? `, ${deleteStats.deleted} deleted` : ''}${abandoned ? ', ABANDONED' : ''} (of ${channels.length})`);
+  return { succeeded, failed, total: channels.length, abandoned, ...deleteStats };
 }
 
 // ── Cross-server retrieval ──────────────────────────────────────────────────────

@@ -7,7 +7,9 @@
 # See: CLAUDE.md "Button Handler Factory" section
 
 BASELINE=99  # Legacy handler count as of 2026-07-28 (prod_setup_tycoons factory conversion). Includes completion_edit modal exception. Only goes DOWN.
-APP_JS_LINES_MAX=49790  # app.js line-count ratchet as of 2026-08-09 (actual: 49790). BUMPED from 49765 — see note below. Only goes DOWN. Extract more than you add.
+APP_JS_LINES_MAX=49581  # app.js line-count ratchet as of 2026-08-19 (actual: 49581). Only goes DOWN. Extract more than you add.
+# 2026-08-19 (−209): Nuke Category → ☢️ Nuke Channels moved its four handler bodies into
+# channelNuker.js, and the Archiver's confirm/started screens moved into channelArchiver.js.
 # ⚠️ 2026-08-09 bump (+25), attributed honestly: the permission funnel (RaP 0882) is net +5 in app.js
 # after extracting the reader to utils/effectivePermissions.js and deleting 22 redundant
 # guild/member fetches; concurrent Add Cast / Marooning feature work in the same working tree is

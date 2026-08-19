@@ -14555,225 +14555,80 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'prod_nuke_category') {
-      // Nuke Category - Show list of categories to select from
+      // ☢️ Nuke Channels — landing screen (channels AND categories; custom_id kept for old menus).
       return ButtonHandlerFactory.create({
         id: 'prod_nuke_category',
         requiresPermission: PermissionFlagsBits.ManageChannels,
         permissionName: 'Manage Channels',
-        deferred: true,
-        ephemeral: true,
+        updateMessage: true,
         handler: async (context) => {
-          const guild = await context.client.guilds.fetch(context.guildId);
-          const channels = await guild.channels.fetch();
-          const categories = channels.filter(ch => ch.type === 4); // ChannelType.GuildCategory = 4
-
-          if (categories.size === 0) {
-            return { content: '❌ No categories found in this server.' };
-          }
-
-          // Build select menu options (max 25)
-          const options = [];
-          for (const [id, cat] of categories) {
-            const childCount = channels.filter(ch => ch.parentId === id).size;
-            options.push({
-              label: cat.name.substring(0, 100),
-              value: id,
-              description: `${childCount} channel${childCount !== 1 ? 's' : ''}`,
-              emoji: { name: '📁' }
-            });
-          }
-          options.sort((a, b) => a.label.localeCompare(b.label));
-
-          const containerComponents = [
-            { type: 10, content: `## 🧹 Nuke Category\nSelect a category to delete all its channels.\n\n**${categories.size}** categories found in this server.` },
-            { type: 14 },
-            { type: 10, content: `> ⚠️ **Caution:** this permanently deletes every channel in the chosen category — **there is no undo**. You are responsible for backing up your own channels first (e.g. **🧹 Cleanup → Archive Channels**). Use at your own risk.` },
-            { type: 14 },
-            {
-              type: 1,
-              components: [{
-                type: 3, // String Select
-                custom_id: 'nuke_cat_select',
-                placeholder: 'Select a category...',
-                options: options.slice(0, 25)
-              }]
-            },
-            { type: 14 },
-            {
-              type: 1,
-              components: [{
-                type: 2,
-                custom_id: 'castbot_tools',
-                label: '← Tools',
-                style: 2
-              }]
-            }
-          ];
-
-          return {
-            flags: (1 << 15),
-            components: [{
-              type: 17,
-              accent_color: 0x3498DB,
-              components: containerComponents
-            }]
-          };
+          global.pendingNuke?.delete(`${context.guildId}:${context.userId}`); // stale plan can't survive a reopen
+          const { buildNukeScreen } = await import('./channelNuker.js');
+          return { components: [buildNukeScreen()] };
         }
       })(req, res, client);
-    } else if (custom_id === 'nuke_cat_select') {
-      // Category selected - show Critical Deletion confirmation
+    } else if (custom_id === 'nuke_chan_select') {
+      // Selection made → expand categories, preflight CastBot's permission, show the ☢️ confirm.
       return ButtonHandlerFactory.create({
-        id: 'nuke_cat_select',
+        id: 'nuke_chan_select',
         requiresPermission: PermissionFlagsBits.ManageChannels,
         permissionName: 'Manage Channels',
         updateMessage: true,
+        deferred: true,
         handler: async (context) => {
-          const categoryId = data.values[0];
-          const guild = await context.client.guilds.fetch(context.guildId);
-          const channels = await guild.channels.fetch();
-          const category = channels.get(categoryId);
-
-          if (!category) {
-            return { content: '❌ Category not found. It may have been deleted.' };
-          }
-
-          const children = channels.filter(ch => ch.parentId === categoryId);
-          const textChannels = children.filter(ch => ch.type === 0).size;
-          const voiceChannels = children.filter(ch => ch.type === 2).size;
-          const otherChannels = children.size - textChannels - voiceChannels;
-
-          // Critical Deletion UI (per LeanUserInterfaceDesign.md standard)
-          const containerComponents = [
-            {
-              type: 10,
-              content: `## ⚠️ Delete Category: ${category.name}`
-            },
-            { type: 14 }, // Separator below header (MANDATORY)
-            {
-              type: 10,
-              content: `**Category:** ${category.name}\n**Total Channels:** ${children.size}\n${textChannels > 0 ? `• ${textChannels} text channel${textChannels !== 1 ? 's' : ''}\n` : ''}${voiceChannels > 0 ? `• ${voiceChannels} voice channel${voiceChannels !== 1 ? 's' : ''}\n` : ''}${otherChannels > 0 ? `• ${otherChannels} other channel${otherChannels !== 1 ? 's' : ''}\n` : ''}\n**This action cannot be undone.** The following will be permanently deleted:\n• **All ${children.size} channels** inside this category\n• The category itself\n• All message history in deleted channels`
-            },
-            { type: 14 }, // Separator above buttons (MANDATORY)
-            {
-              type: 1,
-              components: [
-                {
-                  type: 2,
-                  custom_id: 'nuke_cat_cancel',
-                  label: 'Cancel',
-                  style: 2,
-                  emoji: { name: '❌' }
-                },
-                {
-                  type: 2,
-                  custom_id: `nuke_cat_confirm_${categoryId}`,
-                  label: 'Yes, Delete Everything',
-                  style: 4,
-                  emoji: { name: '🗑️' }
-                }
-              ]
-            }
-          ];
-
-          return {
-            flags: (1 << 15),
-            components: [{
-              type: 17,
-              accent_color: 0xed4245,
-              components: containerComponents
-            }]
-          };
+          const { handleNukeSelect } = await import('./channelNuker.js');
+          const container = await handleNukeSelect({
+            context,
+            selectedIds: req.body.data.values || [],
+            resolved: req.body.data.resolved?.channels || {},
+            invokedChannelId: req.body.channel?.id || req.body.channel_id,
+            DiscordRequest
+          });
+          return { components: [container] };
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('nuke_cat_confirm_')) {
-      // Confirmed category deletion - execute
+    } else if (custom_id === 'nuke_chan_confirm') {
+      // Confirmed → background paced deletion with live progress + a reachable 🚧 Abandon.
       return ButtonHandlerFactory.create({
-        id: 'nuke_cat_confirm',
+        id: 'nuke_chan_confirm',
         requiresPermission: PermissionFlagsBits.ManageChannels,
         permissionName: 'Manage Channels',
-        deferred: true,
         updateMessage: true,
+        deferred: true,
         handler: async (context) => {
-          const categoryId = custom_id.replace('nuke_cat_confirm_', '');
-          const guild = await context.client.guilds.fetch(context.guildId);
-          const channels = await guild.channels.fetch();
-          const category = channels.get(categoryId);
-
-          if (!category) {
-            return { content: '❌ Category not found. It may have already been deleted.' };
+          const { guildId, userId } = context;
+          const plan = global.pendingNuke?.get(`${guildId}:${userId}`);
+          global.pendingNuke?.delete(`${guildId}:${userId}`); // one plan = one run; never replayable
+          const { buildNukeProgress, buildNukeScreen, runNukeJob } = await import('./channelNuker.js');
+          if (!plan?.items?.length) {
+            return { components: [buildNukeScreen('-# ⏳ That selection expired — pick again.')] };
           }
-
-          const children = channels.filter(ch => ch.parentId === categoryId);
-          const totalToDelete = children.size;
-          let deletedCount = 0;
-          const errors = [];
-
-          console.log(`🧹 START: Nuking category "${category.name}" (${totalToDelete} channels)`);
-
-          // Delete all children first
-          for (const [channelId, channel] of children) {
+          const interactionToken = req.body.token;
+          const applicationId = req.body.application_id || process.env.APP_ID;
+          global.abortNuke = global.abortNuke || new Map();
+          global.abortNuke.delete(`${guildId}:${userId}`); // clear any stale flag from a previous run
+          setTimeout(async () => {
             try {
-              await channel.delete('Category nuke');
-              deletedCount++;
-              console.log(`🧹 Deleted channel: ${channel.name} (${deletedCount}/${totalToDelete})`);
-              // Rate limit: pause every 5 deletions
-              if (deletedCount % 5 === 0) {
-                await new Promise(resolve => setTimeout(resolve, 2000));
-              }
-            } catch (error) {
-              // 10003 = Unknown Channel: already deleted (stale cache). Count as done, don't spam errors.
-              if (error.code === 10003) {
-                deletedCount++;
-                console.log(`🧹 Already gone: ${channel.name} (${deletedCount}/${totalToDelete})`);
-              } else {
-                errors.push(`${channel.name}: ${error.message}`);
-                console.error(`🧹 Failed to delete ${channel.name}:`, error.message);
-              }
-            }
-          }
-
-          // Delete the category itself
-          try {
-            await category.delete('Category nuke');
-            console.log(`🧹 Deleted category: ${category.name}`);
-          } catch (error) {
-            errors.push(`Category ${category.name}: ${error.message}`);
-          }
-
-          console.log(`🧹 DONE: Nuked ${deletedCount}/${totalToDelete} channels + category`);
-
-          let resultText = `## 🧹 Category Deleted\n\n`;
-          resultText += `**${category.name}** — ${deletedCount}/${totalToDelete} channels deleted`;
-          if (errors.length > 0) {
-            resultText += `\n\n⚠️ **${errors.length} error(s):**\n${errors.slice(0, 5).map(e => `• ${e}`).join('\n')}`;
-          }
-
-          return {
-            flags: (1 << 15),
-            components: [{
-              type: 17,
-              accent_color: errors.length > 0 ? 0xf39c12 : 0x27ae60,
-              components: [
-                { type: 10, content: resultText },
-                { type: 14 },
-                {
-                  type: 1,
-                  components: [{
-                    type: 2,
-                    custom_id: 'castbot_tools',
-                    label: '← Tools',
-                    style: 2
-                  }, {
-                    type: 2,
-                    custom_id: 'prod_nuke_category',
-                    label: 'Nuke Another',
-                    style: 2,
-                    emoji: { name: '🧹' }
-                  }]
-                }
-              ]
-            }]
-          };
+              await runNukeJob({ client, guildId, userId, plan, interactionToken, applicationId });
+            } catch (err) { console.error('❌ runNukeJob fatal:', err); }
+          }, 0);
+          return { components: [buildNukeProgress({ done: 0, total: plan.items.length, deleted: 0, failed: 0 })] };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'nuke_chan_abandon') {
+      // 🚧 Halt the in-progress nuke (flag checked before every single deletion).
+      return ButtonHandlerFactory.create({
+        id: 'nuke_chan_abandon',
+        requiresPermission: PermissionFlagsBits.ManageChannels,
+        permissionName: 'Manage Channels',
+        updateMessage: true,
+        handler: async (context) => {
+          global.abortNuke = global.abortNuke || new Map();
+          global.abortNuke.set(`${context.guildId}:${context.userId}`, true);
+          return { components: [{ type: 17, accent_color: 0xe67e22, components: [
+            { type: 10, content: `## 🛑 Abandoning…
+-# Stopping before the next deletion. A summary will follow shortly.` }
+          ] }] };
         }
       })(req, res, client);
     } else if (custom_id === 'nuke_cat_cancel') {
@@ -34395,9 +34250,9 @@ To fix this:
         updateMessage: true,
         handler: async (context) => {
           global.pendingArchiveMode = global.pendingArchiveMode || new Map();
-          global.pendingArchiveMode.delete(`${context.guildId}:${context.userId}`); // reset to default on (re)open
+          global.pendingArchiveMode.delete(`${context.guildId}:${context.userId}`); // reset to default (Full Archive) on (re)open
           const { buildArchiveScreen } = await import('./channelArchiver.js');
-          const container = buildArchiveScreen('archive_only');
+          const container = buildArchiveScreen();
           const { countComponents } = await import('./utils.js');
           countComponents([container], { verbosity: 'summary', label: 'Archive Channels' });
           return { components: [container] };
@@ -34455,25 +34310,17 @@ To fix this:
       })(req, res, client);
 
     } else if (custom_id === 'archive_mode_select') {
-      // Archive Mode select: archive_only (default) + archive_embed (base64) implemented; stubs revert.
-      // Chosen mode remembered per-user (global.pendingArchiveMode), applied at archive_confirm.
+      // Archive Mode select — all four modes run. Chosen mode is remembered per-user
+      // (global.pendingArchiveMode) and applied at archive_confirm.
       return ButtonHandlerFactory.create({
         id: 'archive_mode_select',
         updateMessage: true,
         handler: async (context) => {
-          const selected = req.body.data.values?.[0] || 'archive_only';
-          const { buildArchiveScreen, ARCHIVE_MODES } = await import('./channelArchiver.js');
-          const mode = ARCHIVE_MODES.find(m => m.value === selected);
+          const { buildArchiveScreen, getArchiveMode } = await import('./channelArchiver.js');
+          const mode = getArchiveMode(req.body.data.values?.[0]);
           global.pendingArchiveMode = global.pendingArchiveMode || new Map();
-          const key = `${context.guildId}:${context.userId}`;
-          if (mode?.implemented) {
-            global.pendingArchiveMode.set(key, selected);
-            return { components: [buildArchiveScreen(selected)] };
-          }
-          // Stub modes: keep Archive Only, show a coming-soon note.
-          global.pendingArchiveMode.set(key, 'archive_only');
-          const note = `-# 🚧 **${mode?.label || 'That mode'}** is coming soon — using **Archive** for now.`;
-          return { components: [buildArchiveScreen('archive_only', note)] };
+          global.pendingArchiveMode.set(`${context.guildId}:${context.userId}`, mode.value);
+          return { components: [buildArchiveScreen(mode.value)] };
         }
       })(req, res, client);
 
@@ -34593,24 +34440,13 @@ To fix this:
         deferred: true,
         handler: async (context) => {
           const { guildId, userId } = context;
-          const selectedIds = req.body.data.values || [];
           const invokedChannelId = req.body.channel?.id || req.body.channel_id;
+          const { expandArchiveSelection, buildArchiveConfirmScreen, getArchiveMode } = await import('./channelArchiver.js');
+          const { resolveGuildChannels } = await import('./channelNuker.js');
 
-          // Resolve the full channel list ONCE: bot cache (zero REST) → fallback to one REST call.
-          const guild = client?.guilds?.cache?.get(guildId);
-          let allChannels;
-          if (guild && guild.channels.cache.size > 0) {
-            allChannels = [...guild.channels.cache.values()].map(c => ({
-              id: c.id, name: c.name, type: c.type, parent_id: c.parentId || null, position: c.rawPosition ?? 0
-            }));
-          } else {
-            allChannels = (await DiscordRequest(`guilds/${guildId}/channels`, { method: 'GET' })) || [];
-          }
-
-          // Expand categories + dedupe (pure, tested). Selected item types come from resolved.channels.
-          const { expandArchiveSelection } = await import('./channelArchiver.js');
-          const { channels, categoryCount } = expandArchiveSelection(
-            selectedIds, allChannels, req.body.data.resolved?.channels || {}
+          const allChannels = await resolveGuildChannels(client, guildId, DiscordRequest);
+          const { channels, categoryCount, categories } = expandArchiveSelection(
+            req.body.data.values || [], allChannels, req.body.data.resolved?.channels || {}
           );
 
           if (channels.length === 0) {
@@ -34627,35 +34463,30 @@ To fix this:
             };
           }
 
-          // Selected Archive Mode (default archive_only) — remembered from archive_mode_select.
-          const mode = global.pendingArchiveMode?.get(`${guildId}:${userId}`) || 'archive_only';
+          // Selected Archive Mode (default Full Archive) — remembered from archive_mode_select.
+          const mode = getArchiveMode(global.pendingArchiveMode?.get(`${guildId}:${userId}`));
+
+          // Delete modes: preflight BOTH permission tiers before offering the red button — the
+          // host needs Manage Channels, and so does CastBot. Failing here beats failing halfway.
+          let botCanDelete = true;
+          if (mode.deletes) {
+            const { hasPermission, PERMISSIONS } = await import('./utils/permissionUtils.js');
+            if (!hasPermission(context.member, PERMISSIONS.MANAGE_CHANNELS, guildId)) {
+              return { components: [{ type: 17, accent_color: 0xe74c3c, components: [
+                { type: 10, content: `## 🚫 Manage Channels required\n\n**${mode.label}** deletes channels permanently, so it needs the **Manage Channels** permission. Nothing has been archived or deleted.` },
+                { type: 14 },
+                { type: 1, components: [{ type: 2, style: 2, label: '← Back', custom_id: 'archive_channel' }] }
+              ] }] };
+            }
+            const { botCanDeleteChannels } = await import('./channelNuker.js');
+            botCanDelete = await botCanDeleteChannels(await client.guilds.fetch(guildId));
+          }
 
           // Stash pending archive state for archive_confirm to pick up
           global.pendingArchive = global.pendingArchive || new Map();
-          global.pendingArchive.set(`${guildId}:${userId}`, { channels, invokedChannelId, mode });
+          global.pendingArchive.set(`${guildId}:${userId}`, { channels, categories, invokedChannelId, mode: mode.value });
 
-          // Channel list (up to 20 shown)
-          const displayChannels = channels.slice(0, 20);
-          const channelList = displayChannels.map(c => `- #${c.name}`).join('\n');
-          const overflow = channels.length > 20 ? `\n-# ...and ${channels.length - 20} more` : '';
-          const estMin = channels.length === 1 ? '1–5 min' : `${channels.length * 1}–${channels.length * 5} min`;
-          const catNote = categoryCount > 0 ? ` (incl. ${categoryCount} categor${categoryCount !== 1 ? 'ies' : 'y'} expanded)` : '';
-          const modeNote = mode === 'archive_embed' ? `\n-# 🖼️ Self-Contained mode: images embedded as compressed WebP (survives source deletion; slower; non-image files not kept).` : '';
-
-          return {
-            components: [{
-              type: 17,
-              accent_color: 0x3498db,
-              components: [
-                { type: 10, content: `## 🧹 Archive Channels\n\n**${channels.length} channel${channels.length !== 1 ? 's' : ''}** will be archived${catNote}:\n\n${channelList}${overflow}\n\n-# ⏱️ Estimated time: ${estMin} (varies by message count)${modeNote}` },
-                { type: 14 },
-                { type: 1, components: [
-                  { type: 2, style: 4, label: '📦 Archive', custom_id: 'archive_confirm' },
-                  { type: 2, style: 2, label: '← Back', custom_id: 'archive_channel' }
-                ]}
-              ]
-            }]
-          };
+          return { components: [buildArchiveConfirmScreen({ channels, categoryCount, categories, mode: mode.value, invokedChannelId, botCanDelete })] };
         }
       })(req, res, client);
 
@@ -34685,8 +34516,9 @@ To fix this:
             };
           }
 
-          const { channels, invokedChannelId, mode } = pending;
-          const embedImages = mode === 'archive_embed';
+          const { channels, categories, invokedChannelId, mode } = pending;
+          const { getArchiveMode, buildArchiveStarted } = await import('./channelArchiver.js');
+          const selected = getArchiveMode(mode);
           // Captured for the EPHEMERAL run-summary followup (token lives ~15 min).
           const interactionToken = req.body.token;
           const applicationId = req.body.application_id || process.env.APP_ID;
@@ -34697,32 +34529,21 @@ To fix this:
 
           // Background archive run — fires after factory sends the "started" response.
           // All fetch/render/post logic (incl. write-path rate-limit pacing, 413 splitting,
-          // mention resolution, threads, image-embedding) lives in channelArchiver.js.
+          // mention resolution, threads, image-embedding, verified deletion) lives in channelArchiver.js.
           setTimeout(async () => {
             try {
               const { archiveChannels } = await import('./channelArchiver.js');
-              await archiveChannels(channels, invokedChannelId, { interactionToken, applicationId, client, guildId, embedImages, abortKey, userId });
+              await archiveChannels(channels, invokedChannelId, {
+                interactionToken, applicationId, client, guildId, abortKey, userId,
+                embedImages: selected.embed, deleteAfter: selected.deletes, selectedCategories: categories || []
+              });
             } catch (err) {
               console.error('❌ archiveChannels fatal:', err);
             }
           }, 0);
 
           // Immediate "started" response (factory sends this, then background loop runs)
-          const modeLine = embedImages ? `-# 🖼️ Self-Contained (images embedded — slower).\n` : '';
-          return {
-            components: [{
-              type: 17,
-              accent_color: 0x2ecc71,
-              components: [
-                { type: 10, content: `## 📦 Archiving ${channels.length === 1 ? `**#${channels[0].name}**` : `**${channels.length} channels**`}\n${modeLine}-# Archive messages will appear in this channel as each one completes.` },
-                { type: 14 },
-                { type: 1, components: [
-                  { type: 2, style: 4, label: 'Abandon Archiving', custom_id: 'archive_abandon', emoji: { name: '🚧' } },
-                  { type: 2, style: 2, label: '← Data', custom_id: 'data_admin' }
-                ] }
-              ]
-            }]
-          };
+          return { components: [buildArchiveStarted(channels.length, selected.value)] };
         }
       })(req, res, client);
 

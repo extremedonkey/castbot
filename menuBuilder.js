@@ -168,7 +168,7 @@ export class MenuBuilder {
     if (isTest) cleanupButtons.push({ type: 2, custom_id: 'archive_channel', label: 'Archiver', style: 2, emoji: { name: '🧹' } });
     // Clear Vanity Roles moved to CastBot Settings as Vanity Roles (2026-08-08)
     cleanupButtons.push(
-      { type: 2, custom_id: 'prod_nuke_category', label: 'Nuke Category', style: 2, emoji: { name: '☢️' } }
+      { type: 2, custom_id: 'prod_nuke_category', label: 'Nuke Channels', style: 2, emoji: { name: '☢️' } }
     );
 
     const components = [

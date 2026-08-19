@@ -10,18 +10,30 @@ function expandArchiveSelection(selectedIds, allChannels, resolved = {}) {
     .filter(c => c.parent_id === catId && [0, 5].includes(c.type))
     .sort((a, b) => (a.position || 0) - (b.position || 0));
   const picked = new Map();
-  let categoryCount = 0;
+  const categories = new Map();
   for (const id of (selectedIds || [])) {
     const ch = byId.get(id) || resolved[id];
     if (!ch) continue;
     if (ch.type === 4) {
-      categoryCount++;
-      for (const kid of childrenOf(id)) picked.set(kid.id, { id: kid.id, name: kid.name, category: ch.name });
+      categories.set(ch.id, { id: ch.id, name: ch.name });
+      for (const kid of childrenOf(id)) picked.set(kid.id, { id: kid.id, name: kid.name, category: ch.name, categoryId: ch.id });
     } else if ([0, 5].includes(ch.type)) {
-      picked.set(ch.id, { id: ch.id, name: ch.name, category: null });
+      picked.set(ch.id, { id: ch.id, name: ch.name, category: null, categoryId: null });
     }
   }
-  return { channels: [...picked.values()], categoryCount };
+  return { channels: [...picked.values()], categoryCount: categories.size, categories: [...categories.values()] };
+}
+
+// Keep in sync with channelArchiver.js → ARCHIVE_MODES / getArchiveMode / DEFAULT_ARCHIVE_MODE.
+const ARCHIVE_MODES = [
+  { value: 'archive_only', label: 'Fast Archive', embed: false, deletes: false },
+  { value: 'archive_embed', label: 'Full Archive', embed: true, deletes: false },
+  { value: 'archive_delete', label: 'Fast Archive + Delete Channels', embed: false, deletes: true },
+  { value: 'archive_embed_delete', label: 'Full Archive + Delete Channels', embed: true, deletes: true },
+];
+const DEFAULT_ARCHIVE_MODE = 'archive_embed';
+function getArchiveMode(value) {
+  return ARCHIVE_MODES.find(m => m.value === value) || ARCHIVE_MODES.find(m => m.value === DEFAULT_ARCHIVE_MODE);
 }
 
 // Sample guild: category 'cat' with two text children + one announcement child; a loose channel; a voice channel.
@@ -209,5 +221,106 @@ describe('channelArchiver — estimateMessageBytes (token-aware)', () => {
     const uri = 'data:image/webp;base64,' + 'A'.repeat(1000);
     const est = estimateMessageBytes({ content: '', attachments: [{ url: 'u' }] }, { u: uri });
     assert.equal(est, 600 + uri.length);
+  });
+});
+
+describe('channelArchiver — expandArchiveSelection returns the selected categories', () => {
+  it('reports explicitly-picked categories so "+ Delete Channels" can tidy them up', () => {
+    const { categories, categoryCount } = expandArchiveSelection(['cat', 'loose'], GUILD);
+    assert.deepEqual(categories, [{ id: 'cat', name: 'Season' }]);
+    assert.equal(categoryCount, 1); // a loose channel is not a category
+  });
+
+  it('stamps each expanded child with its categoryId (the name alone can be duplicated)', () => {
+    const { channels } = expandArchiveSelection(['cat'], GUILD);
+    assert.ok(channels.every(c => c.categoryId === 'cat'));
+  });
+
+  it('a directly-picked channel carries no categoryId — it never triggers category cleanup', () => {
+    const { channels, categories } = expandArchiveSelection(['loose'], GUILD);
+    assert.equal(channels[0].categoryId, null);
+    assert.deepEqual(categories, []);
+  });
+});
+
+describe('channelArchiver — ARCHIVE_MODES (Fast/Full × Delete)', () => {
+  it('offers exactly the four real modes — no coming-soon stubs remain', () => {
+    assert.equal(ARCHIVE_MODES.length, 4);
+    assert.deepEqual(ARCHIVE_MODES.map(m => m.value),
+      ['archive_only', 'archive_embed', 'archive_delete', 'archive_embed_delete']);
+  });
+
+  it('defaults to Full Archive — NOT a delete mode (a mis-click must never delete)', () => {
+    const def = getArchiveMode(undefined);
+    assert.equal(def.value, 'archive_embed');
+    assert.equal(def.deletes, false);
+    assert.equal(def.embed, true);
+  });
+
+  it('falls back to the safe default for an unknown/stale mode value', () => {
+    assert.equal(getArchiveMode('category_archive_delete').value, 'archive_embed');
+    assert.equal(getArchiveMode('').deletes, false);
+  });
+
+  it('exactly two modes delete, and each has an embed counterpart', () => {
+    const deleting = ARCHIVE_MODES.filter(m => m.deletes);
+    assert.equal(deleting.length, 2);
+    assert.deepEqual(deleting.map(m => m.embed).sort(), [false, true]);
+  });
+
+  it('every delete mode label says "Delete Channels" out loud', () => {
+    for (const m of ARCHIVE_MODES.filter(m => m.deletes)) {
+      assert.ok(m.label.includes('Delete Channels'), `${m.value} label must name the deletion`);
+    }
+  });
+});
+
+// Keep in sync with channelArchiver.js → checkDeleteGates (gates 1–4 of verifyThenDelete).
+// Gate 5 (re-GET the archive message) is I/O and lives in the runtime path only.
+function checkDeleteGates({ channelId, invokedChannelId, hasGuild, partMessageIds, aborted }) {
+  if (channelId === invokedChannelId) return { ok: false, reason: `it's this channel, where the archives live` };
+  if (!hasGuild) return { ok: false, reason: 'guild not in cache, deletion skipped' };
+  if (!partMessageIds?.length) return { ok: false, reason: 'archive did not post' };
+  if (aborted) return { ok: false, reason: 'abandoned before deletion' };
+  return { ok: true, reason: null };
+}
+
+describe('channelArchiver — checkDeleteGates (Archive & Delete safety)', () => {
+  const OK = { channelId: 'c1', invokedChannelId: 'home', hasGuild: true, partMessageIds: ['m1'], aborted: false };
+
+  it('permits deletion only when every gate passes', () => {
+    assert.deepEqual(checkDeleteGates(OK), { ok: true, reason: null });
+  });
+
+  it('🔴 NEVER deletes the channel the archives were posted into', () => {
+    const r = checkDeleteGates({ ...OK, channelId: 'home' });
+    assert.equal(r.ok, false);
+    assert.ok(r.reason.includes('archives live'));
+  });
+
+  it('refuses when the archive never posted (no file-message id)', () => {
+    assert.equal(checkDeleteGates({ ...OK, partMessageIds: [] }).ok, false);
+    assert.equal(checkDeleteGates({ ...OK, partMessageIds: undefined }).ok, false);
+    assert.equal(checkDeleteGates({ ...OK, partMessageIds: null }).ok, false);
+  });
+
+  it('refuses when the guild is not in the bot cache', () => {
+    assert.equal(checkDeleteGates({ ...OK, hasGuild: false }).ok, false);
+  });
+
+  it('refuses once the run has been abandoned', () => {
+    const r = checkDeleteGates({ ...OK, aborted: true });
+    assert.equal(r.ok, false);
+    assert.ok(r.reason.includes('abandoned'));
+  });
+
+  it('the self-delete gate wins over every other condition', () => {
+    // Even with everything else "fine", the invoking channel is never deletable.
+    const r = checkDeleteGates({ channelId: 'home', invokedChannelId: 'home', hasGuild: true, partMessageIds: ['m1', 'm2'], aborted: false });
+    assert.equal(r.ok, false);
+  });
+
+  it('fails closed on a completely empty argument object', () => {
+    assert.equal(checkDeleteGates({}).ok, false);
   });
 });

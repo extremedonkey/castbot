@@ -41,30 +41,52 @@ A popular host (whom Reece helps) reuses the **same Discord server season after 
 
 ```mermaid
 flowchart TD
-  A["data_admin menu<br/>🧹 Archive Channels button"] -->|archive_channel| B["Multi-select channel/category (type 8)<br/>max_values 25 + time & intent warning"]
-  B -->|archive_channel_select| C["expandArchiveSelection:<br/>per pick → category expands to children,<br/>channel adds itself; dedupe by id"]
-  C --> F["Confirmation screen<br/>N channels + (categories expanded) + est. time<br/>📦 Archive (danger) / ← Back"]
-  F -->|archive_confirm| G["Green 'Archiving…' ack<br/>(immediate, deferred)"]
+  A["Tools menu<br/>🧹 Archiver button"] -->|archive_channel| B["Archive Mode select (4 modes)<br/>+ multi-select channel/category (type 8)"]
+  B -->|archive_channel_select| C["expandArchiveSelection:<br/>category expands to children,<br/>channel adds itself; dedupe by id"]
+  C --> D{"mode.deletes?"}
+  D -->|no| F["📦 Confirm screen<br/>N channels + est. time"]
+  D -->|yes| E["Preflight: host + bot<br/>Manage Channels"]
+  E -->|missing| E2["Dead-end card<br/>no confirm button"]
+  E -->|ok| F2["☠️ Confirm screen (red)<br/>blast radius + protected channel<br/>+ image warning"]
+  F -->|archive_confirm| G["Ack + 🚧 Abandon<br/>(immediate, deferred)"]
+  F2 -->|archive_confirm| G
   G --> H["setTimeout(0) background loop<br/>per channel"]
   H --> I["Fetch all messages (REST, paced)"]
   I --> J["Generate HTML"]
   J --> K["POST file + type-13 container"]
-  K --> L["Resolve CDN URL from type-13"]
-  L --> M["POST 'View Online' link button"]
+  K --> L["POST Unlock/Unarchive buttons"]
+  L --> N{"mode.deletes?"}
+  N -->|no| P["Progress PATCH → next channel"]
+  N -->|yes| O["verifyThenDelete: 5 gates<br/>(incl. re-GET the archive)"]
+  O --> P
+  P --> H
+  H -.->|all done + deletes| Q["Category cleanup<br/>(only if empty)"]
+  Q --> R["Summary: archived / deleted / kept"]
 ```
 
-1. **`archive_channel`** (`updateMessage: true`) — renders the main archive screen via `buildArchiveScreen()` (in `channelArchiver.js`): an **Archive Mode** string select (`archive_mode_select`) followed by a **multi-select channel/category select** (type 8, `channel_types: [0, 4, 5]`, `min_values: 1`, `max_values: 25`), plus **← Back** and a **Nuke Category** button (a copy of `prod_nuke_category`). LEAN-sectioned (`⚙️ Archive Mode` / `📁 Select Channels`), 14/40 components.
-   - **Archive Mode** (`ARCHIVE_MODES`): two implemented modes — **📥 Archive** (default; link-based, fast/small; image links expire ~24h) and **🖼️ Archive (Self-Contained)** (`archive_embed`; base64-embeds images so they never expire — slower, larger, splits more, non-image files not kept). The rest are **stubs** ("🚧 Coming soon"): Archive + Delete, Category Archive, Category Archive + Delete, Clone Archive, Move Archive. The chosen mode is remembered per-user in `global.pendingArchiveMode` (set in `archive_mode_select`) and applied at `archive_confirm` (`embedImages = mode === 'archive_embed'`); stubs revert to default.
+1. **`archive_channel`** (`updateMessage: true`) — renders the main archive screen via `buildArchiveScreen()` (in `channelArchiver.js`): an **Archive Mode** string select (`archive_mode_select`) followed by a **multi-select channel/category select** (type 8, `channel_types: [0, 4, 5]`, `min_values: 1`, `max_values: 25`), plus **← Back**, **📥 Retrieve Archive** and a **☢️ Nuke Channels** button (`prod_nuke_category`). LEAN-sectioned (`⚙️ Archive Mode` / `📁 Select Channels`), 15/40 components.
+   - **Archive Mode** (`ARCHIVE_MODES`) — **four real modes, no stubs**, spanning two orthogonal flags (`embed`, `deletes`):
+
+     | value | Label | `embed` | `deletes` |
+     |---|---|---|---|
+     | `archive_only` | 📥 Fast Archive | ✗ | ✗ |
+     | `archive_embed` | 🖼️ **Full Archive** (default) | ✓ | ✗ |
+     | `archive_delete` | 🗑️ Fast Archive + Delete Channels | ✗ | ✓ |
+     | `archive_embed_delete` | ☠️ Full Archive + Delete Channels | ✓ | ✓ |
+
+     `embed` base64-embeds images so they never expire (slower, larger, splits more, non-image files not kept); `deletes` deletes each source channel after its archive is **verified posted**. **Full Archive is the default** — if a mode deletes the source, embedded images are the only ones that survive it, and a mis-click must never land on a deleting mode. `getArchiveMode(value)` always resolves to a usable mode, falling back to the default for unknown/stale values (so a stale ephemeral holding `category_archive_delete` degrades to a *non*-deleting mode). The chosen mode is remembered per-user in `global.pendingArchiveMode` (set in `archive_mode_select`) and applied at `archive_confirm`. Selecting a `deletes` mode turns the whole card red and swaps the blurb for a **DELETION ARMED** warning.
 2. **`archive_channel_select`** (`deferred: true`, `updateMessage: true`) —
-   - Resolves the guild's full channel list **once** — from the bot's `guild.channels.cache` (zero REST) with a single `GET guilds/{id}/channels` fallback if the cache is cold.
-   - Calls the pure `expandArchiveSelection(selectedIds, allChannels, resolved)` (in `channelArchiver.js`): for each picked id, a **category (type 4)** expands to its child text/announcement channels (`0`/`5`, sorted by `position`); a channel adds itself. Results are **de-duped by id** (a `Map`), so picking a category *and* a channel inside it won't archive it twice. Selected-item types come from `req.body.data.resolved.channels` — no per-item fetch.
-   - Stashes `{ channels, invokedChannelId }` in `global.pendingArchive` keyed by `${guildId}:${userId}`.
-   - Renders a **confirmation screen**: total count + `(incl. N categories expanded)` note, channel list (up to 20, with overflow count), estimated time (`1–5 min` single / `N×1–N×5 min` for N channels), a red **📦 Archive** button (style 4), and **← Back**.
+   - Resolves the guild's full channel list **once** via `resolveGuildChannels()` (shared with Nuke Channels) — the bot's `guild.channels.cache` (zero REST) with a single `GET guilds/{id}/channels` fallback if the cache is cold.
+   - Calls the pure `expandArchiveSelection(selectedIds, allChannels, resolved)` (in `channelArchiver.js`): for each picked id, a **category (type 4)** expands to its child text/announcement channels (`0`/`5`, sorted by `position`, each stamped with `categoryId`); a channel adds itself. Results are **de-duped by id** (a `Map`), so picking a category *and* a channel inside it won't archive it twice. Also returns `categories` — the explicitly-picked categories, used by the delete modes for post-run cleanup. Selected-item types come from `req.body.data.resolved.channels` — no per-item fetch.
+   - **Delete-mode preflight** (before the red button is ever offered): the host must hold **Manage Channels** (`hasPermission`), and CastBot must too (`guild.members.me`). Either failing renders a dead-end card with no confirm button on it.
+   - Stashes `{ channels, categories, invokedChannelId, mode }` in `global.pendingArchive` keyed by `${guildId}:${userId}`.
+   - Renders `buildArchiveConfirmScreen()` — one builder, two cards. Plain: count + `(incl. N categories expanded)`, channel list (up to 20 + overflow), estimated time, red **📦 Archive**, **← Back**. Delete: red container, "☠️ Archive AND DELETE N channels?", the blast radius spelled out, the protected-channel notice, the category-cleanup rule, a mode-specific image warning (Fast mode's image links **die with the channel**), then **❌ Cancel** and **☠️ Archive & Delete N**.
    - Edge case: nothing resolvable (e.g. only empty categories) → orange "No text channels found in your selection" with a back button.
 3. **`archive_confirm`** (`deferred: true`, `updateMessage: true`) —
    - Pops the stashed state (deletes the map entry). If missing → red "Session expired — please start over."
-   - Returns an **immediate green "📦 Archiving…" ack** with a ← Data button.
+   - Returns an **immediate ack** (`buildArchiveStarted()`) carrying the 🚧 **Abandon Archiving** button.
    - Kicks off a **`setTimeout(0)` background loop** that runs *after* the factory sends the ack, so the per-channel work escapes the interaction response path. Each channel's archive message lands in the channel as it completes.
+   - **Live progress**: after each channel the loop PATCHes the ephemeral `@original` with a progress bar, counts and the Abandon button (throttled to 5s). The PATCH stops landing once the 15-minute interaction token expires — the loop notices the first failure and **self-disarms** rather than 401-ing per channel. The Abandon button on the last-rendered card keeps working regardless, because clicking it is a brand-new interaction.
 
 ---
 
@@ -137,7 +159,22 @@ Threads are **separate channels**, so `GET /channels/{id}/messages` never includ
 ### `channelArchiver.js` — background run orchestrator
 `archiveChannels(channels, invokedChannelId, { interactionToken, applicationId, client, guildId })` — the whole per-channel loop (fetch → render → size-split → paced POST file → resolve CDN → paced POST button), per-channel error reporting, mention-resolver setup, and the final ephemeral run summary. Extracted from `app.js` so the router stays thin.
 - **`expandArchiveSelection(selectedIds, allChannels, resolved)`** — pure, unit-tested helper for the multi-select: expands categories, dedupes by id, returns `{ channels, categoryCount }`. Used by `archive_channel_select`.
-- **`buildArchiveScreen(mode, note)`** + **`ARCHIVE_MODES`** — builds the main archive screen (Archive Mode select + channel select + nav). Two implemented modes: `archive_only` (default), `archive_embed` (Self-Contained/base64).
+- **`buildArchiveScreen(mode, note)`** + **`ARCHIVE_MODES`** / **`getArchiveMode(value)`** / **`DEFAULT_ARCHIVE_MODE`** — builds the main archive screen (Archive Mode select + channel select + nav). Four modes across `embed` × `deletes`; default `archive_embed` (Full Archive).
+- **`buildArchiveConfirmScreen(...)`** / **`buildArchiveStarted(...)`** — the pre-flight confirm (plain vs. ☠️ delete variants, incl. the missing-permission dead end) and the run's first frame. Both pure; extracted from app.js so the router stays a router.
+- **`verifyThenDelete(...)`** (private) — the five-gate check that stands between "archived" and "deleted". See [Deletion](#-deletion--archive--delete---nuke-channels).
+
+### `channelNuker.js` — the shared destructive-deletion engine
+
+Used by ☢️ Nuke Channels **and** the Archiver's `+ Delete Channels` modes.
+
+- **`expandNukeSelection(selectedIds, allChannels, resolved)`** — pure; expands categories to **every** deletable child type, dedupes, returns items ordered children-first/categories-last plus `channelCount`/`categoryCount`/`viaCategoryCount`.
+- **`orderForDeletion(items, invokedChannelId)`** — pure; plain channels → invoking channel → categories.
+- **`deleteOneChannel(guild, item, reason)`** — one delete, with Discord error codes translated to `deleted` / `gone` (10003) / `failed` (50013 missing perms, 50074 Community-required, other).
+- **`deleteChannelItems(guild, items, opts)`** — the engine: `protectIds`, `shouldAbort` (checked before *every* deletion), category-survivor checks, pacing (`pace`, default 2s per 5), `onProgress`.
+- **`buildNukeScreen` / `buildNukeConfirmScreen` / `buildNukeProgress` / `buildNukeSummary`** — the UI, all pure.
+- **`resolveGuildChannels` / `handleNukeSelect` / `runNukeJob`** — handler bodies, so app.js only routes.
+
+Tested for real (not replicated inline) in `tests/channelNuker.test.js` — 28 tests, because this is the one module in the family whose bugs are unrecoverable.
 - **`buildArchiveButtons(fileMsgId, { viewUrl })`** — the per-archive action buttons message: Locked `[🔐 Unlock][✨ Unarchive]` or Unlocked `[🔓 View][✨ Unarchive]`. See [Link freshness](#-link-freshness-unlock--view).
 
 ### `channelExportFetcher.js` — rate-limited REST (read **and** write)
@@ -183,6 +220,36 @@ Mentions render as Discord-style pills with **real names**, resolved **when the 
 
 ---
 
+## ☠️ Deletion — Archive & Delete + ☢️ Nuke Channels
+
+Both destructive paths run through **one** engine: `channelNuker.js`. (Not `src/channels/channelOps.deleteChannels` — that one is id-in/id-out for the Channels tab and has no abort, no category-survivor check, and no named failure reasons. Bending it to fit would have hurt its own caller.)
+
+### The five gates before a channel dies (`verifyThenDelete`, `channelArchiver.js`)
+
+Ordered cheapest-first, so the REST call only happens once the local guards pass. **Any** failure keeps the channel — a surplus channel is an inconvenience, a wrongly-deleted one is unrecoverable.
+
+1. **Not the invoking channel.** The archives are posted *into* it; deleting it destroys the very archives just made. Hard refusal, always, even if the host selected it. It is still *archived*, just never deleted, and the confirm screen says so up front.
+2. **The guild is in the bot cache.** No guild object → nothing can be resolved safely → skip.
+3. **The archive actually posted** (`partMessageIds.length > 0`).
+4. **Not abandoned** since this channel was archived.
+5. **The archive is verifiably still there.** One `GET /channels/{invoked}/messages/{lastPart}` proves the file message survives *right now* and carries a type-13 file. A 200 from the original POST is not quite proof; this is.
+
+Deletion is **per channel, immediately after its own archive is verified** — not a sweep at the end. That keeps archive+delete atomic per channel: whatever the run does next, each channel is either both or neither.
+
+### Category cleanup
+
+A category is only removed once it is genuinely **empty**. `deleteChannelItems` re-reads the live cache and keeps the category alive if anything survives inside it — a protected channel, an unselected voice channel, or a child whose delete *failed* (failures are added to the survivor set for exactly this reason). Orphaning a channel by deleting its parent is treated as worse than leaving an empty category behind.
+
+### ☢️ Nuke Channels (was "Nuke Category")
+
+Same engine, no archive step. `custom_id` is still `prod_nuke_category` (deliberately — old ephemeral menus and three call sites still point at it); only the label and the selection model changed. The old category-only string select is gone: `nuke_chan_select` is a **type-8 channel select** accepting channels *and* categories (`NUKE_CHANNEL_TYPES = [0, 2, 4, 5, 13, 15, 16]`), so a category expands to **every** deletable type inside it, not just text.
+
+Ordering is `orderForDeletion()`: plain channels → **the invoking channel** → categories. Nuking the channel you're standing in is allowed (hosts legitimately do this) but happens *last*, so the progress message survives as long as possible; the confirm screen warns that the message will vanish with it.
+
+Runs are paced (2s every 5 deletions), stream progress to the ephemeral `@original`, and check `global.abortNuke` **before every single deletion** — 🚧 **Abandon Nuking** stops it cold and reports what was left untouched.
+
+---
+
 ## 🔘 Button Registry
 
 Registered in `buttonHandlerFactory.js` `BUTTON_REGISTRY`:
@@ -197,6 +264,11 @@ Registered in `buttonHandlerFactory.js` `BUTTON_REGISTRY`:
 | `archive_unlock_*` | Unlock Archive | Secondary 🔐 | `archive_channel` |
 | `archive_restore_*` | Unarchive | Primary ✨ | `archive_channel` |
 | `archive_refresh_*` | Refresh Link (legacy) | Secondary 🔄 | `archive_channel` |
+| `prod_nuke_category` | ☢️ Nuke Channels | Secondary ☢️ | `castbot_tools` |
+| `nuke_chan_select` | Nuke Selection | Channel select | `prod_nuke_category` |
+| `nuke_chan_confirm` | Confirm Nuke | Danger ☢️ | `prod_nuke_category` |
+| `nuke_chan_abandon` | Abandon Nuking | Danger 🚧 | `nuke_chan_confirm` |
+| `nuke_cat_cancel` | Cancel Nuke | Secondary ❌ | `prod_nuke_category` |
 
 All use `ButtonHandlerFactory.create()` (`[✨ FACTORY]` in logs). The file/buttons POSTs in the background loop are raw `node-fetch`/`DiscordRequest` calls (not interactions), so they don't appear in the factory. `archive_relock` is a durable **scheduler** action (not a button).
 
@@ -253,7 +325,7 @@ These were designed in the original RaP but are **not implemented**. Kept here a
 
 - **Pre-flight estimate + tracked background job** — a size estimate before confirming and a job that posts its own result, fully escaping the 15-min interaction token for very large channels. (Today the loop runs via `setTimeout` after a deferred ack, which works because the largest known channel ≈13k msgs ≈4 min, comfortably inside the token; there's no separate job tracker or progress edits.)
 - **Dedicated on-Discord archive channel** — upload HTML to a permanent archive channel and record CDN URL + metadata, instead of posting back into the invoking channel. Would also fix the ~24h link-expiry fragility.
-- **Slot reclamation** — export → archive → **delete original channel** (with export-verified confirmation, cf. nuke-category pattern). *This is the actual fix for the 500-channel cap.*
+- ~~**Slot reclamation** — export → archive → **delete original channel** (with export-verified confirmation).~~ ✅ **Built (2026-08-19)** as the two `+ Delete Channels` Archive Modes — see [Deletion](#-deletion--archive--delete---nuke-channels).
 - **Index / "compression" channels** — a maintained index message linking each archived channel to its HTML, rolling older archives into linked sub-channels as the index grows.
 
 ---
