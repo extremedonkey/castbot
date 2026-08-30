@@ -30,7 +30,7 @@ These are the 5 things you will mess up if you don't internalize them:
 ```javascript
 // ❌ DATA LOSS - Returns Promise, not data
 const playerData = loadPlayerData();
-// playerData is Promise { <pending> }, modifications create ~200 bytes = wipes 171KB
+// playerData is Promise { <pending> }, modifications create ~200 bytes = wipes the whole file
 
 // ✅ CORRECT - Always await
 const playerData = await loadPlayerData();
@@ -41,8 +41,12 @@ const playerData = await loadPlayerData();
 
 **Before committing storage code:**
 ```javascript
-console.log('Data size:', JSON.stringify(playerData).length);  // Should be ~170KB
+console.log('Data size:', JSON.stringify(playerData).length);  // Compare to the file on disk
 ```
+**Don't hardcode an expected size** — prod playerData is **~5.8MB / 205 guilds** and growing (safariContent ~3.2MB / 45). Any figure you write here is wrong within months; that is exactly how the `minSize: 50000` floor came to be 0.86% of the real file.
+
+**The write guard is now relative, not absolute** (`atomicSave.js`): `minSizeRatio: 0.5` refuses any save smaller than half the file currently on disk, so it scales with the data instead of rotting. The absolute `minSize` only bites on a near-empty file. Largest single guild is ~18% of playerData, so no legitimate delete — including a full `dataNuker` guild wipe — trips it. **New Tier-1 data files should set `minSizeRatio`, not a big `minSize`.**
+> ⚠️ The `validate` guild-count checks (`>= 10` for 205 guilds, `>= 1` for safari) are stale in the same way and catch almost nothing — the byte ratio is the guard doing the work.
 
 ## 🔴 CRITICAL: Components V2 - ALL Discord UI Must Use This
 
@@ -455,7 +459,7 @@ await withStorageLock(async () => {
 2. **Use `atomicSave()`** for writes — never raw `fs.writeFile` on data files (`import { atomicSave } from './atomicSave.js'`)
 3. **Add to backup service** — add entry to `BACKUP_FILES` in `src/monitoring/backupService.js`
 4. **Classify its tier** — see [Backup Strategy](docs/03-features/BackupStrategy.md)
-   - **Tier 1** (critical): `atomicSave` with `minSize` + `validate` + Discord backup
+   - **Tier 1** (critical): `atomicSave` with `minSizeRatio: 0.5` (+ a small `minSize` floor) + `validate` + Discord backup
    - **Tier 2** (important): Discord backup, regenerable on restart
    - **Tier 3** (ephemeral): just gitignore, no backup needed
 

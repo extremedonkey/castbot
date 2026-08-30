@@ -20,13 +20,26 @@ async function atomicSave(filePath, data, options = {}) {
 }
 
 async function _atomicSaveUnsafe(filePath, data, options) {
-  const { minSize = 100, validate = null, label = 'test', onSaved = null } = options;
+  const { minSize = 100, minSizeRatio = null, validate = null, label = 'test', onSaved = null } = options;
 
   const dataStr = JSON.stringify(data, null, 2);
 
-  if (dataStr.length < minSize) {
+  let effectiveMin = minSize;
+  let sizeReason = `${minSize} byte threshold`;
+  if (minSizeRatio) {
+    try {
+      const { size: currentSize } = await fs.stat(filePath);
+      const relativeMin = Math.floor(currentSize * minSizeRatio);
+      if (relativeMin > effectiveMin) {
+        effectiveMin = relativeMin;
+        sizeReason = `${Math.round(minSizeRatio * 100)}% of the ${currentSize} bytes on disk`;
+      }
+    } catch { /* no existing file — absolute floor stands */ }
+  }
+
+  if (dataStr.length < effectiveMin) {
     await fs.writeFile(filePath + '.REJECTED', dataStr);
-    throw new Error(`${label} save rejected — too small (${dataStr.length} bytes < ${minSize})`);
+    throw new Error(`${label} save rejected — too small (${dataStr.length} bytes < ${sizeReason})`);
   }
 
   if (validate) {
@@ -46,7 +59,7 @@ async function _atomicSaveUnsafe(filePath, data, options) {
   await fs.writeFile(tempPath, dataStr);
 
   const tempStats = await fs.stat(tempPath);
-  if (tempStats.size < minSize) {
+  if (tempStats.size < effectiveMin) {
     await fs.unlink(tempPath);
     throw new Error(`${label} temp file verification failed`);
   }
@@ -106,6 +119,70 @@ describe('atomicSave — size validation', () => {
     await atomicSave(f, { safe: true }, { minSize: 5 });
     try { await atomicSave(f, {}, { minSize: 1000 }); } catch { /* expected */ }
     assert.equal(JSON.parse(await fs.readFile(f, 'utf8')).safe, true);
+  });
+});
+
+// The failure these pin: a fixed minSize is calibrated once and then rots as the data
+// grows. playerData's floor stayed at 50,000 bytes while the file reached 5.8MB, so a save
+// carrying 1% of the guilds cleared it. minSizeRatio scales with the file, so it can't rot.
+describe('atomicSave — relative size guard (minSizeRatio)', () => {
+  const big = { guilds: Array.from({ length: 500 }, (_, i) => ({ id: i, name: `guild-${i}` })) };
+
+  it('rejects a save that would halve the file on disk', async () => {
+    const f = await freshFile();
+    await atomicSave(f, big, { minSize: 10 });
+    const half = { guilds: big.guilds.slice(0, 200) };
+    await assert.rejects(atomicSave(f, half, { minSize: 10, minSizeRatio: 0.5 }), /too small/);
+    // original survives untouched
+    assert.equal(JSON.parse(await fs.readFile(f, 'utf8')).guilds.length, 500);
+  });
+
+  it('rejects the catastrophic case a stale absolute floor lets through', async () => {
+    const f = await freshFile();
+    await atomicSave(f, big, { minSize: 10 });
+    // 5 of 500 entries — comfortably over a 50-byte floor, nowhere near half the file
+    const wiped = { guilds: big.guilds.slice(0, 5) };
+    await atomicSave(f, wiped, { minSize: 50 });                      // old behaviour: accepted
+    await fs.writeFile(f, JSON.stringify(big, null, 2));              // restore
+    await assert.rejects(atomicSave(f, wiped, { minSize: 50, minSizeRatio: 0.5 }), /too small/);
+  });
+
+  it('allows a shrink that stays above the ratio', async () => {
+    const f = await freshFile();
+    await atomicSave(f, big, { minSize: 10 });
+    const trimmed = { guilds: big.guilds.slice(0, 450) };  // ~10% smaller, a real delete
+    await atomicSave(f, trimmed, { minSize: 10, minSizeRatio: 0.5 });
+    assert.equal(JSON.parse(await fs.readFile(f, 'utf8')).guilds.length, 450);
+  });
+
+  it('allows growth', async () => {
+    const f = await freshFile();
+    await atomicSave(f, big, { minSize: 10 });
+    const grown = { guilds: [...big.guilds, { id: 500, name: 'guild-500' }] };
+    await atomicSave(f, grown, { minSize: 10, minSizeRatio: 0.5 });
+    assert.equal(JSON.parse(await fs.readFile(f, 'utf8')).guilds.length, 501);
+  });
+
+  it('falls back to the absolute floor on first save (no file yet)', async () => {
+    const f = await freshFile();
+    await atomicSave(f, { fresh: true }, { minSize: 5, minSizeRatio: 0.5 });
+    assert.equal(JSON.parse(await fs.readFile(f, 'utf8')).fresh, true);
+  });
+
+  it('names the ratio in the rejection so the cause is obvious in logs', async () => {
+    const f = await freshFile();
+    await atomicSave(f, big, { minSize: 10 });
+    await assert.rejects(
+      atomicSave(f, { guilds: [] }, { minSize: 10, minSizeRatio: 0.5, label: 'playerData' }),
+      /50% of the \d+ bytes on disk/
+    );
+  });
+
+  it('is inert when minSizeRatio is not set (existing callers unchanged)', async () => {
+    const f = await freshFile();
+    await atomicSave(f, big, { minSize: 10 });
+    await atomicSave(f, { guilds: [] }, { minSize: 10 });
+    assert.equal(JSON.parse(await fs.readFile(f, 'utf8')).guilds.length, 0);
   });
 });
 

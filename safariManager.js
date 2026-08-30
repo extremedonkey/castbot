@@ -656,7 +656,10 @@ async function loadSafariContent() {
 async function saveSafariContent(data) {
     const { atomicSave } = await import('./atomicSave.js');
     return atomicSave(SAFARI_CONTENT_FILE, data, {
-        minSize: 1000,
+        minSize: 1000,       // absolute floor (only bites on a near-empty file)
+        minSizeRatio: 0.5,   // real guard: never halve the file. Largest single guild is
+                             // ~17% of prod's 3.2MB/45 guilds; Safari Reset clears play
+                             // state, not entities, so it cannot approach this either.
         label: 'safariContent',
         validate: (d) => {
             const guildCount = Object.keys(d).filter(k => /^\d+$/.test(k)).length;

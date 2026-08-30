@@ -276,7 +276,10 @@ export async function loadPlayerData(guildId, { forceFresh = false } = {}) {
 
 export async function savePlayerData(data) {
     return atomicSave(STORAGE_FILE, data, {
-        minSize: 50000,
+        minSize: 50000,      // absolute floor (only bites on a near-empty file)
+        minSizeRatio: 0.5,   // real guard: never halve the file. Largest single guild is
+                             // ~18% of prod's 5.8MB/205 guilds, so no legitimate delete —
+                             // including a full dataNuker guild wipe — can trip this.
         label: 'playerData',
         validate: (d) => {
             const guildCount = Object.keys(d).filter(k => /^\d+$/.test(k)).length;

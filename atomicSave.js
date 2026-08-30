@@ -37,6 +37,11 @@ function withMutex(fn) {
  * @param {object} data - Data to serialize and save
  * @param {object} options
  * @param {number} options.minSize - Minimum byte size to accept (wipe protection)
+ * @param {number} [options.minSizeRatio] - Reject a save smaller than this fraction of the
+ *   file ALREADY on disk (0.5 = refuse to halve the file). Prefer this over a big minSize:
+ *   a fixed floor is calibrated once and then rots as the data grows. playerData's floor sat
+ *   at 50,000 bytes while the real file reached 5.8MB — 0.86% — so a save that dropped 200 of
+ *   205 guilds would have passed both it and the `validate` guild-count check.
  * @param {function} [options.validate] - Optional fn(data) → { ok: boolean, reason?: string }
  * @param {string} [options.label] - Human-readable name for log messages (e.g. 'playerData')
  * @param {function} [options.onSaved] - Called after successful write (e.g. to clear a cache)
@@ -48,6 +53,7 @@ export async function atomicSave(filePath, data, options = {}) {
 async function _atomicSaveUnsafe(filePath, data, options) {
   const {
     minSize = 100,
+    minSizeRatio = null,
     validate = null,
     label = filePath.split('/').pop(),
     onSaved = null,
@@ -56,11 +62,28 @@ async function _atomicSaveUnsafe(filePath, data, options) {
   // 1. SERIALIZE
   const dataStr = JSON.stringify(data, null, 2);
 
-  // 2. SIZE VALIDATION
-  if (dataStr.length < minSize) {
-    console.error(`🚨 REFUSING to save ${label}: ${dataStr.length} bytes < ${minSize} byte threshold`);
+  // 2. SIZE VALIDATION — the absolute floor, raised by a floor RELATIVE to what is on
+  // disk right now. The relative one is the guard that cannot go stale: it tracks the
+  // data instead of being tuned once and forgotten. Missing file = first save, floor only.
+  let effectiveMin = minSize;
+  let sizeReason = `${minSize} byte threshold`;
+  if (minSizeRatio) {
+    try {
+      const { size: currentSize } = await fs.stat(filePath);
+      const relativeMin = Math.floor(currentSize * minSizeRatio);
+      if (relativeMin > effectiveMin) {
+        effectiveMin = relativeMin;
+        sizeReason = `${Math.round(minSizeRatio * 100)}% of the ${currentSize} bytes on disk`;
+      }
+    } catch {
+      // No existing file — nothing to compare against, absolute floor stands
+    }
+  }
+
+  if (dataStr.length < effectiveMin) {
+    console.error(`🚨 REFUSING to save ${label}: ${dataStr.length} bytes < ${sizeReason}`);
     await fs.writeFile(filePath + '.REJECTED', dataStr);
-    throw new Error(`${label} save rejected — too small (${dataStr.length} bytes < ${minSize})`);
+    throw new Error(`${label} save rejected — too small (${dataStr.length} bytes < ${sizeReason})`);
   }
 
   // 3. STRUCTURE VALIDATION (optional)
@@ -87,9 +110,9 @@ async function _atomicSaveUnsafe(filePath, data, options) {
 
   // 6. VERIFY TEMP FILE
   const tempStats = await fs.stat(tempPath);
-  if (tempStats.size < minSize) {
+  if (tempStats.size < effectiveMin) {
     await fs.unlink(tempPath);
-    throw new Error(`${label} temp file verification failed (${tempStats.size} bytes < ${minSize})`);
+    throw new Error(`${label} temp file verification failed (${tempStats.size} bytes < ${effectiveMin})`);
   }
 
   // 7. ATOMIC RENAME
