@@ -32081,7 +32081,6 @@ To fix this:
       })(req, res, client);
 
     } else if (custom_id === 'map_delete') {
-      // Whole-map deletion confirmation — UI built in src/maps/mapSectionHandlers.js
       return ButtonHandlerFactory.create({
         id: 'map_delete',
         requiresPermission: PermissionFlagsBits.ManageRoles,
@@ -32115,6 +32114,7 @@ To fix this:
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         updateMessage: true,
+        deferred: true, // rebuild regenerates the section overlay (download+sharp+CDN upload) — blows the 3s window
         handler: async (context) => {
           const { handleSectionNav } = await import('./src/maps/mapSectionHandlers.js');
           return handleSectionNav(context, custom_id);

@@ -107,3 +107,14 @@ describe('Blacklist round-trip — returns to the viewed section', () => {
         assert.ok(handler.slice(0, 2000).includes('buildMapExplorerResponse(context.guildId, context.userId, context.client, true, blIdx)'));
     });
 });
+
+describe('Pager responsiveness — the ◀ ▶ rebuild MUST defer', () => {
+    it('map_section_nav route sets deferred (overlay regeneration blows the 3s window)', () => {
+        const src = read('app.js');
+        const route = src.slice(src.indexOf("custom_id.startsWith('map_section_prev_')"));
+        const factoryBlock = route.slice(0, route.indexOf('handler:'));
+        assert.ok(factoryBlock.includes('deferred: true'),
+            'paging rebuilds the section overlay (download+sharp+CDN upload) — an immediate UPDATE_MESSAGE times out');
+        assert.ok(factoryBlock.includes('updateMessage: true'));
+    });
+});
