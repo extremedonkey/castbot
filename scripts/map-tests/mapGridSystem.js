@@ -18,7 +18,13 @@ export class MapGridSystem {
             gridColor: options.gridColor || 'black',
             borderColor: options.borderColor || 'white',
             labelStyle: options.labelStyle || 'standard', // standard, boxed, shadowed
-            coordinateSchema: options.coordinateSchema || 'letters-numbers' // letters-numbers, numbers-only, chess-style
+            coordinateSchema: options.coordinateSchema || 'letters-numbers', // letters-numbers, numbers-only, chess-style
+            // Section origin (RaP 0894): a map SECTION's image starts at a non-A1 grid
+            // position (e.g. H1 → colOffset 7). Labels render TRUE coordinates, and
+            // parseCoordinate returns SECTION-LOCAL {x,y} — which is exactly what the
+            // fog builder's cell rects need, so it works per-section unchanged.
+            colOffset: options.colOffset || 0,
+            rowOffset: options.rowOffset || 0
         };
         
         this.metadata = null;
@@ -56,14 +62,14 @@ export class MapGridSystem {
                 return `${String.fromCharCode(97 + x)}${y + 1}`;
             case 'letters-numbers':
             default:
-                // Support Excel-style columns for wide grids
+                // Support Excel-style columns for wide grids (offset by the section origin)
                 let column = '';
-                let colIndex = x;
+                let colIndex = x + this.options.colOffset;
                 while (colIndex >= 0) {
                     column = String.fromCharCode(65 + (colIndex % 26)) + column;
                     colIndex = Math.floor(colIndex / 26) - 1;
                 }
-                return `${column}${y + 1}`;
+                return `${column}${y + this.options.rowOffset + 1}`;
         }
     }
 
@@ -87,15 +93,17 @@ export class MapGridSystem {
                 let colIndex = 0;
                 let colPart = upperLabel.match(/^[A-Z]+/)[0];
                 let rowPart = upperLabel.match(/\d+$/)[0];
-                
+
                 // Convert column letters to index
                 for (let i = 0; i < colPart.length; i++) {
                     colIndex = colIndex * 26 + (colPart.charCodeAt(i) - 65 + 1);
                 }
                 colIndex -= 1; // Convert to 0-based index
-                
+
                 const rowIndex = parseInt(rowPart) - 1;
-                return { x: colIndex, y: rowIndex };
+                // Section-local position: a true coordinate ("H3") on a section whose
+                // image starts at H1 maps to cell (0,2) on THAT image.
+                return { x: colIndex - this.options.colOffset, y: rowIndex - this.options.rowOffset };
         }
     }
 
@@ -252,9 +260,9 @@ export class MapGridSystem {
             `;
         }
         
-        // Row labels
+        // Row labels (true coordinates when the section starts below row 1)
         for (let i = 0; i < gridHeight; i++) {
-            const rowLabel = (i + 1).toString();
+            const rowLabel = (i + this.options.rowOffset + 1).toString();
             
             // Row labels (left)
             if (labelStyle === 'boxed') {
