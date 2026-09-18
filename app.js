@@ -44567,6 +44567,12 @@ To fix this:
         const timestamp = Date.now();
         const newActionId = `${cloneName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')}_${timestamp}`;
 
+        // Locations: an explicit target coordinate wins; otherwise the clone INHERITS
+        // the source action's locations. (The global clone path used to be silently
+        // patched up by the editor's coordinate auto-assign, removed 2026-09-18 —
+        // inheritance is now explicit and includes the anchor updates it never had.)
+        const cloneCoordinates = coordinate ? [coordinate] : [...(sourceAction.coordinates || [])];
+
         // Build the cloned action
         const clonedAction = {
           id: newActionId,
@@ -44578,7 +44584,7 @@ To fix this:
           actions: clonedActions,
           conditions: clonedConditions,
           trigger: clonedTrigger,
-          coordinates: coordinate ? [coordinate] : [],
+          coordinates: cloneCoordinates,
           menuVisibility: 'none', // Reset to hidden
           metadata: {
             createdBy: userId,
@@ -44598,33 +44604,34 @@ To fix this:
         }
         allSafariContent[guildId].buttons[newActionId] = clonedAction;
 
-        // If coordinate provided, also add to map coordinate buttons array
-        if (coordinate && allSafariContent[guildId].maps) {
-          // Find the map that has this coordinate
-          for (const [mapId, map] of Object.entries(allSafariContent[guildId].maps)) {
-            if (map.coordinates && map.coordinates[coordinate]) {
-              if (!map.coordinates[coordinate].buttons) {
-                map.coordinates[coordinate].buttons = [];
+        // Sync every clone location's buttons array (bidirectional link)
+        if (cloneCoordinates.length > 0 && allSafariContent[guildId].maps) {
+          for (const coord of cloneCoordinates) {
+            for (const [mapId, map] of Object.entries(allSafariContent[guildId].maps)) {
+              if (map.coordinates && map.coordinates[coord]) {
+                if (!map.coordinates[coord].buttons) {
+                  map.coordinates[coord].buttons = [];
+                }
+                if (!map.coordinates[coord].buttons.includes(newActionId)) {
+                  map.coordinates[coord].buttons.push(newActionId);
+                }
+                console.log(`🔄 DEBUG: Added cloned action to ${coord} in map ${mapId}`);
+                break;
               }
-              if (!map.coordinates[coordinate].buttons.includes(newActionId)) {
-                map.coordinates[coordinate].buttons.push(newActionId);
-              }
-              console.log(`🔄 DEBUG: Added cloned action to ${coordinate} in map ${mapId}`);
-              break;
             }
           }
         }
 
         await saveSafariContent(allSafariContent);
 
-        console.log(`✅ DEBUG: Created cloned action ${newActionId} from ${sourceActionId}`);
+        console.log(`✅ DEBUG: Created cloned action ${newActionId} from ${sourceActionId} at [${cloneCoordinates.join(', ') || 'no location'}]`);
 
-        // Queue anchor message update if coordinate was provided
-        if (coordinate) {
+        // Queue anchor updates for every location the clone landed on
+        for (const coord of cloneCoordinates) {
           try {
             const { afterAddCoordinate } = await import('./anchorMessageIntegration.js');
-            await afterAddCoordinate(guildId, newActionId, coordinate);
-            console.log(`📍 DEBUG: clone_action_modal - queued anchor update for ${coordinate}`);
+            await afterAddCoordinate(guildId, newActionId, coord);
+            console.log(`📍 DEBUG: clone_action_modal - queued anchor update for ${coord}`);
           } catch (error) {
             console.error('Error queueing anchor update:', error);
           }

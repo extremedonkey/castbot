@@ -196,4 +196,14 @@ describe('Editor coordinate auto-assign — creation-only opt-in (assignCoordina
         assert.ok(callBlock.includes('coordinate'), 'coordinate stays as UI context');
         assert.ok(!callBlock.includes('assignCoordinate'), 'selecting an existing action must never auto-assign');
     });
+
+    it('clones INHERIT the source action\'s locations when no target coordinate is given', () => {
+        const src = read('app.js');
+        assert.ok(src.includes("coordinate ? [coordinate] : [...(sourceAction.coordinates || [])]"),
+            'global-path clones must live where their source lives (the removed editor auto-assign used to paper over this)');
+        // Anchor updates must cover every inherited location, not just an explicit target
+        const cloneBlock = src.slice(src.indexOf('const cloneCoordinates'));
+        assert.ok(cloneBlock.slice(0, 3000).includes('for (const coord of cloneCoordinates)'),
+            'buttons sync + afterAddCoordinate must loop the inherited set');
+    });
 });
