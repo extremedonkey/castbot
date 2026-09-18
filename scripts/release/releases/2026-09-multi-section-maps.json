@@ -1,0 +1,77 @@
+{
+  "period": "SEPTEMBER 2026",
+  "title": "CastBot Update",
+  "subtitle": "Multi-Section Maps — Add a Second Map, Page Between Them, Teleport Players Across",
+  "footer": "Deployed to production 18 September 2026",
+  "accent": "#2ecc71",
+  "cards": [
+    {
+      "title": "Map Sections",
+      "badge": "NEW",
+      "color": "#2ecc71",
+      "desc": [
+        "Your Safari is no longer one map. Add Section takes a brand",
+        "new image, builds its channels and fog in its own category,",
+        "and joins it to your season mid-game — the existing map is",
+        "never touched. Players cross only where you place a Teleport."
+      ]
+    },
+    {
+      "title": "Page Through Your Maps",
+      "badge": "NEW",
+      "color": "#3498db",
+      "desc": [
+        "Map Explorer grows PREV / NEXT arrows that flip between",
+        "section images. Update Map, Delete and Blacklist all act on",
+        "the section you are looking at — replace one area's art or",
+        "delete a finished area without touching the rest."
+      ]
+    },
+    {
+      "title": "Teleports Land Properly",
+      "badge": "IMPROVED",
+      "color": "#9b59b6",
+      "desc": [
+        "A teleported player now gets the same arrival card a walking",
+        "player gets — posted in the destination channel with a",
+        "Navigate button — and their stale compass at the old cell is",
+        "cleaned up. Silent navigate mode still suppresses it."
+      ]
+    },
+    {
+      "title": "Wide Maps Actually Work",
+      "badge": "FIXED",
+      "color": "#e74c3c",
+      "desc": [
+        "Maps wider than 26 columns always generated fine — then",
+        "movement quietly broke past column Z. Coordinates like AA5",
+        "now work everywhere: compass moves, blacklists, overlays,",
+        "teleports. A 30-column idol hunt is a real option now."
+      ]
+    },
+    {
+      "title": "Actions Stay Where You Put Them",
+      "badge": "FIXED",
+      "color": "#f39c12",
+      "desc": [
+        "Opening an existing action from another location's menu used",
+        "to silently attach it to that location — half-wired, so the",
+        "button never even appeared. Now looking is just looking. Add",
+        "locations on purpose in Action Editor > Locations."
+      ]
+    }
+  ],
+  "underHood": [
+    "Movement seals at every section edge",
+    "One arrival card for walk, teleport & admin moves",
+    "500-channel guard before section builds",
+    "3,889 tests passing"
+  ],
+  "stats": [
+    { "value": "14", "label": "COMMITS", "color": "#3498db" },
+    { "value": "+3,498", "label": "INSERTIONS", "color": "#2ecc71" },
+    { "value": "-827", "label": "DELETIONS", "color": "#e74c3c" },
+    { "value": "36", "label": "FILES CHANGED", "color": "#e91e63" },
+    { "value": "3,889", "label": "TESTS PASSING", "color": "#f1c40f" }
+  ]
+}
