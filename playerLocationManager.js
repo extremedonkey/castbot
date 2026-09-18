@@ -11,6 +11,7 @@ import { getEntityPoints } from './pointsManager.js';
 import { getPlayerSafariState } from './safariPlayerUtils.js';
 import { logger } from './logger.js';
 import { getExcelColumn, generateCoordinate, tryParseCoordinate } from './utils/coordinateParser.js';
+import { getSectionForCoordinate } from './src/maps/mapSections.js';
 
 /**
  * Get all players on the map with their current locations
@@ -490,6 +491,14 @@ export async function getNearbyPlayers(guildId, userId, distance = 1, client = n
     const pos = tryParseCoordinate(coord); // Excel-safe (AA10 etc.)
     if (!pos) return [];
 
+    // Section seal (RaP 0894): cells adjacent across a section seam are different physical
+    // places — proximity (whispers etc.) never crosses sections. Identity for legacy maps
+    // (one synthesized full-grid section).
+    const safariData = await loadSafariContent();
+    const activeMapId = safariData[guildId]?.maps?.active;
+    const mapData = activeMapId ? safariData[guildId].maps[activeMapId] : null;
+    const mySection = mapData ? getSectionForCoordinate(mapData, coord) : null;
+
     const allLocations = await getAllPlayerLocations(guildId, true, client);
     const nearbyPlayers = [];
 
@@ -498,6 +507,8 @@ export async function getNearbyPlayers(guildId, userId, distance = 1, client = n
 
         const otherPos = tryParseCoordinate(locationData.coordinate);
         if (!otherPos) continue;
+
+        if (mySection && getSectionForCoordinate(mapData, locationData.coordinate)?.id !== mySection.id) continue;
 
         // Calculate Chebyshev distance (max of row/col difference)
         const dist = Math.max(Math.abs(pos.x - otherPos.x), Math.abs(pos.y - otherPos.y));

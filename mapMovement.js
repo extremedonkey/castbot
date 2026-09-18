@@ -3,6 +3,7 @@ import { loadPlayerData, savePlayerData, withStorageLock } from './storage.js';
 import { loadSafariContent } from './safariManager.js';
 import { hasEnoughPoints, usePoints, getTimeUntilRegeneration, getRegenRemainingMs, initializeEntityPoints, getEntityPoints, getStaminaRegenSummary } from './pointsManager.js';
 import { tryParseCoordinate, generateCoordinate } from './utils/coordinateParser.js';
+import { getSectionForCoordinate } from './src/maps/mapSections.js';
 
 /**
  * Map Movement System for Safari
@@ -114,6 +115,29 @@ export const DIRECTION_LABELS = {
     southwest: '↙️ SW', south: '⬇️ S', southeast: '↘️ SE'
 };
 
+/**
+ * Movement bounds for a player standing at `coordinate`: the owning SECTION's
+ * rectangle (RaP 0894 — sections are movement-sealed; cross-section travel is
+ * teleport-only), falling back to the whole grid when the map has no sections
+ * (the lazy shim makes that the identity) or the coordinate resolves to no
+ * section (defensive: better a full-grid bound than stranding the player).
+ * @returns {Promise<{minX:number, maxX:number, minY:number, maxY:number}>}
+ */
+export async function getMovementBounds(guildId, coordinate) {
+    const gridDimensions = guildId ? await getMapGridDimensions(guildId) : { width: 7, height: 7 };
+    const globalBounds = { minX: 0, maxX: gridDimensions.width - 1, minY: 0, maxY: gridDimensions.height - 1 };
+    if (!guildId) return globalBounds;
+
+    const safariData = await loadSafariContent();
+    const activeMapId = safariData[guildId]?.maps?.active;
+    const mapData = activeMapId ? safariData[guildId].maps[activeMapId] : null;
+    if (!mapData) return globalBounds;
+
+    const section = getSectionForCoordinate(mapData, coordinate);
+    if (!section) return globalBounds;
+    return { minX: section.colStart, maxX: section.colEnd, minY: section.rowStart, maxY: section.rowEnd };
+}
+
 // Get valid moves from current position based on movement schema
 export async function getValidMoves(currentCoordinate, movementSchema = 'adjacent_8', guildId = null) {
     const pos = tryParseCoordinate(currentCoordinate); // Excel-safe (AA10 etc.)
@@ -130,23 +154,23 @@ export async function getValidMoves(currentCoordinate, movementSchema = 'adjacen
         south: { col: col, row: row + 1, direction: '⬇️ South' },
         southeast: { col: col + 1, row: row + 1, direction: '↘️ Southeast' }
     };
-    
-    // Get the actual grid dimensions for this guild's map
-    const gridDimensions = guildId ? await getMapGridDimensions(guildId) : { width: 7, height: 7 };
-    
+
+    // Bounds = the player's section rectangle (whole grid for legacy single-section maps)
+    const bounds = await getMovementBounds(guildId, currentCoordinate);
+
     // Import isCoordinateBlacklisted to check for restricted coordinates
     const { isCoordinateBlacklisted } = await import('./mapExplorer.js');
-    
+
     const validMoves = [];
-    const directionsToCheck = movementSchema === 'cardinal_4' 
+    const directionsToCheck = movementSchema === 'cardinal_4'
         ? ['north', 'east', 'south', 'west']
         : Object.keys(moves);
-    
+
     for (const direction of directionsToCheck) {
         const move = moves[direction];
-        
-        // Check if move is within grid bounds using proper width and height
-        if (move.col >= 0 && move.col < gridDimensions.width && move.row >= 0 && move.row < gridDimensions.height) {
+
+        // Check if move is within the section's bounds (inclusive rectangle)
+        if (move.col >= bounds.minX && move.col <= bounds.maxX && move.row >= bounds.minY && move.row <= bounds.maxY) {
             const coordinate = generateCoordinate(move.col, move.row);
             
             // Check if coordinate is blacklisted
@@ -449,8 +473,8 @@ export async function getMovementDisplay(guildId, userId, coordinate, isDeferred
     let description = '';
     let actionRows = [];
 
-    // Get grid dimensions for bounds checking
-    const gridDimensions = await getMapGridDimensions(guildId);
+    // Bounds = the player's section rectangle (whole grid for legacy single-section maps)
+    const bounds = await getMovementBounds(guildId, coordinate);
     const { x: col, y: row } = tryParseCoordinate(coordinate) || { x: 0, y: 0 }; // Excel-safe
 
     // Create 3x3 grid layout for movement buttons
@@ -463,7 +487,7 @@ export async function getMovementDisplay(guildId, userId, coordinate, isDeferred
     // Helper to create button for direction (label comes from the single-source DIRECTION_LABELS map)
     const createButton = (dir, targetCol, targetRow) => {
         const dirLabel = DIRECTION_LABELS[dir] || dir;
-        const isOutOfBounds = targetCol < 0 || targetCol >= gridDimensions.width || targetRow < 0 || targetRow >= gridDimensions.height;
+        const isOutOfBounds = targetCol < bounds.minX || targetCol > bounds.maxX || targetRow < bounds.minY || targetRow > bounds.maxY;
         const targetCoordinate = !isOutOfBounds ? generateCoordinate(targetCol, targetRow) : null;
 
         if (movesByDirection[dir] && !isOutOfBounds) {

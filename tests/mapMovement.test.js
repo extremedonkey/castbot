@@ -162,3 +162,73 @@ describe('Reverse Blacklist — AND mode (guild opted into multi-key doors)', ()
         assert.equal(computeReverseBlacklistCoverage(held, ITEMS, true).includes('A1'), false);
     });
 });
+
+/**
+ * Section-scoped movement bounds (RaP 0894 Phase 1) — the seam seal.
+ * getMovementBounds itself does file I/O, but its bounds→move filter is pure:
+ * replicated from getValidMoves' inclusive-rectangle check. The section geometry
+ * behind the bounds is real-imported (src/maps/mapSections.js is pure).
+ */
+import { getSections, getSectionForCoordinate } from '../src/maps/mapSections.js';
+import { tryParseCoordinate, generateCoordinate } from '../utils/coordinateParser.js';
+
+function boundsFor(mapData, coordinate) {
+    const w = mapData.gridWidth || mapData.gridSize || 7;
+    const h = mapData.gridHeight || mapData.gridSize || 7;
+    const globalBounds = { minX: 0, maxX: w - 1, minY: 0, maxY: h - 1 };
+    const section = getSectionForCoordinate(mapData, coordinate);
+    if (!section) return globalBounds;
+    return { minX: section.colStart, maxX: section.colEnd, minY: section.rowStart, maxY: section.rowEnd };
+}
+
+function validTargets(coordinate, bounds) {
+    const { x: col, y: row } = tryParseCoordinate(coordinate);
+    const deltas = [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]];
+    return deltas
+        .map(([dx, dy]) => ({ col: col + dx, row: row + dy }))
+        .filter(m => m.col >= bounds.minX && m.col <= bounds.maxX && m.row >= bounds.minY && m.row <= bounds.maxY)
+        .map(m => generateCoordinate(m.col, m.row));
+}
+
+describe('Section-scoped movement bounds — cross-seam moves never exist', () => {
+    // Section 1: A1-G7 (7x7). Section 2 below: A8-G10.
+    const sectionedMap = {
+        gridWidth: 7, gridHeight: 10,
+        sections: [
+            { id: 's1', colStart: 0, rowStart: 0, colEnd: 6, rowEnd: 6 },
+            { id: 's2', colStart: 0, rowStart: 7, colEnd: 6, rowEnd: 9 }
+        ]
+    };
+
+    it('a player on section 1\'s bottom row gets NO south-family moves into section 2', () => {
+        const targets = validTargets('D7', boundsFor(sectionedMap, 'D7'));
+        assert.ok(!targets.includes('D8'), 'D8 is across the seam');
+        assert.ok(!targets.includes('C8') && !targets.includes('E8'));
+        assert.deepEqual(targets.sort(), ['C6', 'C7', 'D6', 'E6', 'E7'].sort());
+    });
+
+    it('a player on section 2\'s top row gets NO north-family moves into section 1', () => {
+        const targets = validTargets('D8', boundsFor(sectionedMap, 'D8'));
+        assert.ok(!targets.includes('D7') && !targets.includes('C7') && !targets.includes('E7'));
+    });
+
+    it('IDENTITY: a legacy section-less map has exactly the old whole-grid bounds', () => {
+        const legacy = { gridWidth: 7, gridHeight: 10 };
+        assert.deepEqual(boundsFor(legacy, 'D7'), { minX: 0, maxX: 6, minY: 0, maxY: 9 });
+        const targets = validTargets('D7', boundsFor(legacy, 'D7'));
+        assert.ok(targets.includes('D8'), 'no seam on a legacy map — D8 reachable');
+        assert.equal(getSections(legacy).length, 1);
+    });
+
+    it('defensive: a coordinate in a bounding-box hole falls back to global bounds (no strand)', () => {
+        const holed = {
+            gridWidth: 12, gridHeight: 7,
+            sections: [
+                { id: 's1', colStart: 0, rowStart: 0, colEnd: 6, rowEnd: 6 },
+                { id: 's2', colStart: 7, rowStart: 0, colEnd: 11, rowEnd: 4 }
+            ]
+        };
+        assert.equal(getSectionForCoordinate(holed, 'H6'), null);
+        assert.deepEqual(boundsFor(holed, 'H6'), { minX: 0, maxX: 11, minY: 0, maxY: 6 });
+    });
+});

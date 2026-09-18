@@ -452,10 +452,15 @@ export async function importSafariData(guildId, importJson, context = {}, option
                     existingMap.blacklistedCoordinates = blacklist;
                 }
 
-                // Merge coordinates into target map (skipping any outside the active map's grid)
+                // Merge coordinates into target map (skipping any outside the active map's grid).
+                // Multi-section maps (RaP 0894): the bounding box can contain holes — cells in no
+                // section — so on sectioned maps a coordinate must actually EXIST on the target map
+                // (dims alone would let the else-branch below create channel-less ghost cells).
+                const targetHasSections = Array.isArray(existingMap.sections) && existingMap.sections.length > 0;
                 const skippedCoords = [];
                 for (const [coord, coordData] of Object.entries(mapData.coordinates || {})) {
-                    if (targetDims && !isCoordInGrid(coord, targetDims)) {
+                    if ((targetDims && !isCoordInGrid(coord, targetDims)) ||
+                        (targetHasSections && !existingMap.coordinates[coord])) {
                         skippedCoords.push(coord);
                         continue;
                     }
