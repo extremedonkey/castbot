@@ -52,6 +52,16 @@ describe('Map Update Modal — builder branches', () => {
         assert.equal(fieldById(modal, 'map_columns').value, '9');
     });
 
+    it('sectionOverride scopes the modal to one section (RaP 0894 Phase 3)', () => {
+        const modal = buildMapUpdateModal(true, { gridWidth: 30, gridHeight: 8 }, 'textUrl',
+            { idx: 1, name: 'The Caves', width: 5, height: 3 });
+        assert.equal(modal.custom_id, 'map_update_modal_s1');
+        assert.equal(modal.title, 'Update The Caves Image');
+        assert.equal(fieldById(modal, 'map_rows').value, '3', 'section dims, NOT the bounding box');
+        assert.equal(fieldById(modal, 'map_columns').value, '5');
+        assert.ok(modal.title.length <= 45);
+    });
+
     it('always emits Label wrappers (modern pattern), custom_id modal identity', () => {
         for (const mode of ['textUrl', 'uploadComponent']) {
             const modal = buildMapUpdateModal(false, null, mode);

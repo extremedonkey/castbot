@@ -1399,40 +1399,156 @@ export function buildLowMemoryWarning(availMB) {
  * @param {string} userId
  * @param {{mapUrl: string, mapColumns: number, mapRows: number, mapEmoji: string}} params
  */
-export async function executeMapBuild(client, guildId, userId, { mapUrl, mapColumns, mapRows, mapEmoji }) {
+export async function executeMapBuild(client, guildId, userId, { mapUrl, mapColumns, mapRows, mapEmoji, sectionIndex = 0 }) {
   const safariData = await loadSafariContent();
   const activeMapId = safariData[guildId]?.maps?.active;
   const existingMap = activeMapId ? safariData[guildId]?.maps?.[activeMapId] : null;
 
   if (activeMapId && existingMap) {
-    // Multi-section maps (RaP 0894): updateMapImage rebuilds the whole grid from the
-    // map-level image, which on a sectioned map would draw the bounding box over
-    // SECTION 1's image and regenerate other sections' fog from the wrong picture.
-    // Per-section image update is Phase 3 — block hard until then.
-    if (Array.isArray(existingMap.sections) && existingMap.sections.length > 1) {
-      return {
-        success: false,
-        message: '❌ This map has multiple sections — per-section image updates are coming soon. For now, updating images on a multi-section map is disabled to protect the existing sections.'
-      };
-    }
+    // Multi-section maps (RaP 0894 Phase 3): updates target ONE section — its
+    // image, its fog, its anchors. updateMapImage's whole-map path stays for
+    // single-section (legacy) maps only.
+    const { getSections } = await import('./src/maps/mapSections.js');
+    const sections = getSections(existingMap);
+    const section = sections[Math.min(Math.max(sectionIndex, 0), sections.length - 1)];
+    const existingWidth = section.colEnd - section.colStart + 1;
+    const existingHeight = section.rowEnd - section.rowStart + 1;
     // Updating: dimensions are immutable (channels/coordinates already exist)
-    const existingWidth = existingMap.gridWidth || existingMap.gridSize || 7;
-    const existingHeight = existingMap.gridHeight || existingMap.gridSize || 7;
     if (mapColumns !== existingWidth || mapRows !== existingHeight) {
       return {
         success: false,
-        message: `❌ Map dimensions cannot be changed (current: ${existingWidth}x${existingHeight}, requested: ${mapColumns}x${mapRows}).\n\nTo use different dimensions, delete the existing map first.`
+        message: `❌ Section dimensions cannot be changed (current: ${existingWidth}x${existingHeight}, requested: ${mapColumns}x${mapRows}).\n\nTo use different dimensions, delete this section/map first.`
       };
     }
-  }
-
-  const guild = await client.guilds.fetch(guildId);
-  if (activeMapId) {
+    const guild = await client.guilds.fetch(guildId);
+    if (sections.length > 1) {
+      console.log(`🔄 Updating section ${sectionIndex} image for guild ${guildId}`);
+      return updateSectionImage(guild, userId, mapUrl, sectionIndex);
+    }
     console.log(`🔄 Updating existing map for guild ${guildId}`);
     return updateMapImage(guild, userId, mapUrl);
   }
+
+  const guild = await client.guilds.fetch(guildId);
   console.log(`🏗️ Creating new map with custom image for guild ${guildId} - dimensions: ${mapColumns}x${mapRows}, emoji: ${mapEmoji}`);
   return createMapGridWithCustomImage(guild, userId, mapUrl, mapColumns, mapRows, mapEmoji);
+}
+
+/**
+ * Per-section image update (RaP 0894 Phase 3): regenerate ONE section's gridded
+ * image (true-coordinate labels via origin offsets), re-upload, then regenerate
+ * fog + PATCH anchors for THAT section's coordinates only. Other sections'
+ * channels, anchors, and images are never touched.
+ */
+export async function updateSectionImage(guild, userId, mapUrl, sectionIndex) {
+  const gate = tryBeginMapBuild(guild.id);
+  if (gate.busy) return mapBuildBusyResult(gate);
+  try {
+    const safariData = await loadSafariContent();
+    const activeMapId = safariData[guild.id]?.maps?.active;
+    const mapData = activeMapId ? safariData[guild.id].maps[activeMapId] : null;
+    if (!mapData) return { success: false, message: '❌ No active map found to update.' };
+
+    const { getSections, coordinatesForSection } = await import('./src/maps/mapSections.js');
+    const sections = getSections(mapData);
+    const section = sections[Math.min(Math.max(sectionIndex, 0), sections.length - 1)];
+    const name = section.name || `Section ${sectionIndex + 1}`;
+    const width = section.colEnd - section.colStart + 1;
+    const height = section.rowEnd - section.rowStart + 1;
+    const progressMessages = [`🔄 Updating **${name}** image...`];
+
+    // Image pipeline (shared with section add) — offsets render TRUE coordinates
+    const { processMapImageWithGrid } = await import('./src/maps/mapImagePipeline.js');
+    const { outputPath, gridSystem, originalJpegBuffer, notes } = await processMapImageWithGrid({
+      imageUrl: mapUrl,
+      gridWidth: width,
+      gridHeight: height,
+      colOffset: section.colStart,
+      rowOffset: section.rowStart,
+      outputDir: path.join(__dirname, 'img', guild.id),
+      outputBasename: `${activeMapId}_${section.id}_updated`
+    });
+    progressMessages.push(...notes);
+
+    // Archive original + upload gridded image
+    try {
+      const { AttachmentBuilder } = await import('discord.js');
+      const storageChannel = await findOrCreateMapStorageChannel(guild);
+      await storageChannel.send({
+        content: `🖼️ Original pre-grid image for ${name} (${guild.name}, updated ${new Date().toISOString().split('T')[0]})`,
+        files: [new AttachmentBuilder(originalJpegBuffer, { name: `original_${section.id}_${Date.now()}.jpg` })]
+      });
+    } catch (e) {
+      console.log(`⚠️ Could not post original section image to storage: ${e.message}`);
+    }
+    const uploadResult = await uploadImageToDiscord(guild, outputPath, `${section.id}_updated${outputPath.endsWith('.jpg') ? '.jpg' : '.png'}`);
+    progressMessages.push('✅ Section image uploaded to Discord CDN');
+
+    // Persist section fields (map-level fields mirror section 0)
+    section.imageFile = outputPath.replace(__dirname + '/', '');
+    section.discordImageUrl = uploadResult.url || uploadResult;
+    section.mapStorageMessageId = uploadResult.messageId;
+    section.mapStorageChannelId = uploadResult.channelId;
+    if (sectionIndex === 0) {
+      mapData.discordImageUrl = section.discordImageUrl;
+      mapData.mapStorageMessageId = uploadResult.messageId;
+      mapData.mapStorageChannelId = uploadResult.channelId;
+      mapData.imageFile = section.imageFile;
+    }
+    mapData.lastUpdated = new Date().toISOString();
+    mapData.updatedBy = userId;
+    await saveSafariContent(safariData);
+
+    // Regenerate fog + PATCH anchors for THIS section's coordinates only
+    const coordinates = coordinatesForSection(section).filter(c => mapData.coordinates[c]);
+    progressMessages.push(`🌫️ Regenerating fog for ${coordinates.length} locations...`);
+    const { DiscordRequest } = await import('./utils.js');
+    const { AttachmentBuilder } = await import('discord.js');
+    const { createAnchorMessageComponents } = await import('./safariButtonHelper.js');
+    const fog = await createFogBuilder(outputPath, gridSystem, coordinates);
+    try {
+      for (let i = 0; i < coordinates.length; i++) {
+        const coord = coordinates[i];
+        const coordData = mapData.coordinates[coord];
+        if (!coordData.anchorMessageId || !coordData.channelId) continue;
+        try {
+          const fogOfWarBuffer = await fog.render(coord);
+          const storageChannel = await findOrCreateMapStorageChannel(guild);
+          const storageMessage = await storageChannel.send({
+            content: `Updated fog map for ${coord}`,
+            files: [new AttachmentBuilder(fogOfWarBuffer, { name: `${coord.toLowerCase()}_fogmap_updated.png` })]
+          });
+          const fogMapUrl = storageMessage.attachments.first()?.url;
+          coordData.fogMapUrl = fogMapUrl;
+          const updatedComponents = await createAnchorMessageComponents(coordData, guild.id, coord, fogMapUrl);
+          await DiscordRequest(`channels/${coordData.channelId}/messages/${coordData.anchorMessageId}`, {
+            method: 'PATCH',
+            body: { flags: (1 << 15), components: updatedComponents }
+          });
+          // Pacing: breathing room for GC every coordinate, longer pause every 5 posts
+          if ((i + 1) % 5 === 0 && i < coordinates.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          } else if (i < coordinates.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        } catch (error) {
+          console.error(`❌ Failed to update fog for ${coord}:`, error);
+          progressMessages.push(`⚠️ Failed to update ${coord}: ${error.message}`);
+        }
+      }
+    } finally {
+      await fog.cleanup();
+    }
+    await saveSafariContent(safariData);
+
+    progressMessages.push(`🎉 **${name} image updated!** ${coordinates.length} locations refreshed.`);
+    return { success: true, message: progressMessages.join('\n') };
+  } catch (error) {
+    console.error('Error updating section image:', error);
+    return { success: false, message: `❌ Error updating section image: ${error.message}` };
+  } finally {
+    endMapBuild();
+  }
 }
 
 /**
@@ -1634,7 +1750,11 @@ export function generateMultiColorLegend(sortedItems, itemColorMap, blacklistedC
  * @param {Object} client - Discord.js client instance
  * @returns {Promise<string>} Discord CDN URL of overlaid image
  */
-export async function generateBlacklistOverlay(guildId, originalImageUrl, gridWidth, gridHeight, client, playerLocations = null) {
+export async function generateBlacklistOverlay(guildId, originalImageUrl, gridWidth, gridHeight, client, playerLocations = null, opts = {}) {
+  // Section rendering (RaP 0894 Phase 3): the image may be ONE section of a
+  // multi-section map — offsets shift global coordinates to section-local cells,
+  // and the section's own storage message provides the fresh-URL refresh.
+  const { colOffset = 0, rowOffset = 0, storageMessageId = null, storageChannelId = null } = opts;
   try {
     console.log(`🎨 Generating blacklist overlay for guild ${guildId}`);
 
@@ -1647,13 +1767,16 @@ export async function generateBlacklistOverlay(guildId, originalImageUrl, gridWi
       const activeMapId = safariData[guildId]?.maps?.active;
       const mapData = safariData[guildId]?.maps?.[activeMapId];
 
+      const refreshMessageId = storageMessageId || mapData?.mapStorageMessageId;
+      const refreshChannelId = storageChannelId || mapData?.mapStorageChannelId;
+
       // If we have storage message info, fetch fresh URL
-      if (mapData?.mapStorageMessageId && mapData?.mapStorageChannelId) {
-        console.log(`🔄 Fetching fresh URL from storage message ${mapData.mapStorageMessageId}`);
+      if (refreshMessageId && refreshChannelId) {
+        console.log(`🔄 Fetching fresh URL from storage message ${refreshMessageId}`);
         const { DiscordRequest } = await import('./utils.js');
 
         const message = await DiscordRequest(
-          `channels/${mapData.mapStorageChannelId}/messages/${mapData.mapStorageMessageId}`,
+          `channels/${refreshChannelId}/messages/${refreshMessageId}`,
           { method: 'GET' }
         );
 
@@ -1761,15 +1884,18 @@ export async function generateBlacklistOverlay(guildId, originalImageUrl, gridWi
     const overlays = [];
 
     // Helper function to convert coordinate to pixel position (accounting for border).
-    // Returns null for coords outside the RENDERED grid — on multi-section maps this
-    // image is one section, and other sections' blacklist/player coords must not draw
-    // off-canvas tints (RaP 0894). Also guards stale out-of-range blacklist entries.
+    // Returns null for coords outside the RENDERED section — global coordinates are
+    // shifted section-local via the offsets, and other sections' blacklist/player
+    // coords must not draw off-canvas tints (RaP 0894). Also guards stale entries.
     const coordToPosition = (coord) => {
       const pos = tryParseCoordinate(coord);
-      if (!pos || pos.x >= gridWidth || pos.y >= gridHeight) return null;
+      if (!pos) return null;
+      const x = pos.x - colOffset;
+      const y = pos.y - rowOffset;
+      if (x < 0 || y < 0 || x >= gridWidth || y >= gridHeight) return null;
       return {
-        left: Math.floor(borderSize + (pos.x * cellWidth)),
-        top: Math.floor(borderSize + (pos.y * cellHeight))
+        left: Math.floor(borderSize + (x * cellWidth)),
+        top: Math.floor(borderSize + (y * cellHeight))
       };
     };
 
@@ -1886,7 +2012,7 @@ export async function generateBlacklistOverlay(guildId, originalImageUrl, gridWi
  * @param {boolean} isEphemeral - Whether response should be ephemeral (default: true)
  * @returns {Promise<Object>} Response data structure with flags and components
  */
-export async function buildMapExplorerResponse(guildId, userId, client, isEphemeral = true) {
+export async function buildMapExplorerResponse(guildId, userId, client, isEphemeral = true, sectionIndex = 0) {
   console.log(`🗺️ DEBUG: Building Map Explorer response for guild ${guildId}, ephemeral: ${isEphemeral}`);
 
   // Import ButtonBuilder for button creation
@@ -1925,15 +2051,25 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
       statusText = '✅ Active';
     }
 
-    // Multi-section maps (RaP 0894): the gallery below shows SECTION 1's image
-    // (per-section paging is Phase 3); list the others so hosts can see them.
-    const { getSections } = await import('./src/maps/mapSections.js');
+    // Multi-section maps (RaP 0894 Phase 3): the ◀ ▶ pager selects which section
+    // renders below; the header underlines the viewed one.
+    const { getSections, sectionContains } = await import('./src/maps/mapSections.js');
     const mapSections = getSections(activeMap);
+    sectionIndex = Math.min(Math.max(sectionIndex, 0), mapSections.length - 1);
+    const viewedSection = mapSections[sectionIndex];
+    const secW = viewedSection.colEnd - viewedSection.colStart + 1;
+    const secH = viewedSection.rowEnd - viewedSection.rowStart + 1;
     const sectionsLine = mapSections.length > 1
-      ? `\n**Sections:** ${mapSections.map((s, i) => `${s.name || `Section ${i + 1}`}${s.building ? ' ⚠️build incomplete' : ''}`).join(' · ')} (image shows ${mapSections[0].name || 'Section 1'})`
+      ? `\n**Sections:** ${mapSections.map((s, i) => {
+          const label = `${s.name || `Section ${i + 1}`}${s.building ? ' ⚠️build incomplete' : ''}`;
+          return i === sectionIndex ? `__**${label}**__` : label;
+        }).join(' · ')}`
       : '';
+    const gridLine = mapSections.length > 1
+      ? `**Grid Size:** ${secW}x${secH} (total ${gridW}x${gridH})`
+      : `**Grid Size:** ${gridW}x${gridH}`;
 
-    headerText = `# 🗺️ Map Explorer\n\n**Active Map:** ${guildName}\n**Grid Size:** ${gridW}x${gridH}${sectionsLine}\n**Status:** ${statusText}\n**Source Images:** <#${activeMap.mapStorageChannelId || ''}> (don't delete!)`;
+    headerText = `# 🗺️ Map Explorer\n\n**Active Map:** ${guildName}\n${gridLine}${sectionsLine}\n**Status:** ${statusText}\n**Source Images:** <#${activeMap.mapStorageChannelId || ''}> (don't delete!)`;
   } else {
     // Instructions differ by the guild's Image Uploads mode (Settings → General)
     const { getImageUploadMode } = await import('./src/settings/generalSettings.js');
@@ -1968,7 +2104,13 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
 
   // Add Media Gallery with overlay if there's an active map with Discord CDN URL
   if (hasActiveMap && guildMaps[activeMapId].discordImageUrl) {
-    console.log(`🖼️ DEBUG: Generating blacklist overlay for map from Discord CDN: ${guildMaps[activeMapId].discordImageUrl}`);
+    // Viewed section (RaP 0894 Phase 3) — drives the image, overlay geometry, and
+    // which section the management buttons operate on
+    const { getSections: getGallerySections } = await import('./src/maps/mapSections.js');
+    const gallerySections = getGallerySections(guildMaps[activeMapId]);
+    const galleryIdx = Math.min(Math.max(sectionIndex, 0), gallerySections.length - 1);
+    const gallerySection = gallerySections[galleryIdx];
+    console.log(`🖼️ DEBUG: Generating blacklist overlay for section ${galleryIdx} from Discord CDN: ${gallerySection.discordImageUrl}`);
 
     // Fetch player locations for overlay and text section
     const { getAllPlayerLocations, formatPlayerLocationDisplay } = await import('./playerLocationManager.js');
@@ -1979,20 +2121,23 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
       console.warn(`⚠️ Could not fetch player locations: ${e.message}`);
     }
 
-    // Generate overlay image with blacklist + player location indicators.
-    // The rendered image is SECTION 1's (map-level fields mirror it) — pass the
-    // section's dims, not the multi-section bounding box, or cell math skews.
-    const { getSections: getOverlaySections } = await import('./src/maps/mapSections.js');
-    const overlaySection = getOverlaySections(guildMaps[activeMapId])[0];
-    let imageUrl = guildMaps[activeMapId].discordImageUrl;
+    // Generate overlay image with blacklist + player location indicators for the
+    // VIEWED section — its own image, dims, origin offsets, and storage message
+    let imageUrl = gallerySection.discordImageUrl || guildMaps[activeMapId].discordImageUrl;
     try {
       imageUrl = await generateBlacklistOverlay(
         guildId,
-        guildMaps[activeMapId].discordImageUrl,  // Original clean map
-        overlaySection.colEnd - overlaySection.colStart + 1,
-        overlaySection.rowEnd - overlaySection.rowStart + 1,
+        imageUrl,  // Original clean section image
+        gallerySection.colEnd - gallerySection.colStart + 1,
+        gallerySection.rowEnd - gallerySection.rowStart + 1,
         client,
-        playerLocations
+        playerLocations,
+        {
+          colOffset: gallerySection.colStart,
+          rowOffset: gallerySection.rowStart,
+          storageMessageId: gallerySection.mapStorageMessageId,
+          storageChannelId: gallerySection.mapStorageChannelId
+        }
       );
       console.log(`✅ Using overlaid image: ${imageUrl}`);
     } catch (error) {
@@ -2011,34 +2156,60 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
       ]
     });
 
-    // Map management row directly under gallery (built early since it's positioned here)
+    // Map management row directly under gallery — Update/Delete/Blacklist operate on
+    // the VIEWED section (multi-section maps get indexed ids; single-section maps
+    // keep the original whole-map ids and flows)
+    const multiSection = gallerySections.length > 1;
     const createUpdateButton = new ButtonBuilder()
-      .setCustomId('map_update')
-      .setLabel('Update Map')
+      .setCustomId(multiSection ? `map_update_section_${galleryIdx}` : 'map_update')
+      .setLabel(multiSection ? `Update ${gallerySection.name || `Section ${galleryIdx + 1}`}` : 'Update Map')
       .setStyle(ButtonStyle.Primary)
       .setEmoji('🗺️');
     const deleteButton = new ButtonBuilder()
-      .setCustomId('map_delete')
-      .setLabel('Delete Map')
+      .setCustomId(multiSection ? `map_delete_section_${galleryIdx}` : 'map_delete')
+      .setLabel(multiSection ? `Delete ${gallerySection.name || `Section ${galleryIdx + 1}`}` : 'Delete Map')
       .setStyle(ButtonStyle.Danger)
       .setEmoji('🗑️')
       .setDisabled(!hasActiveMap);
     const blacklistButton = new ButtonBuilder()
-      .setCustomId('map_admin_blacklist')
+      .setCustomId(`map_admin_blacklist_${galleryIdx}`)
       .setLabel('Blacklist')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🚫')
       .setDisabled(!hasActiveMap);
-    // Multi-section maps (RaP 0894): anchor new sections to the LAST section so
-    // repeated adds chain naturally (per-section pager anchoring is Phase 3)
-    const { getSections: getMgmtSections } = await import('./src/maps/mapSections.js');
-    const addSectionButton = new ButtonBuilder()
-      .setCustomId(`map_section_add_${getMgmtSections(guildMaps[activeMapId]).length - 1}`)
-      .setLabel('Add Section')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('➕');
-    const mapMgmtRow = new ActionRowBuilder().addComponents([createUpdateButton, deleteButton, blacklistButton, addSectionButton]);
+    const mapMgmtRow = new ActionRowBuilder().addComponents([createUpdateButton, deleteButton, blacklistButton]);
     containerComponents.push(mapMgmtRow.toJSON());
+
+    // Section pager row (RaP 0894 Phase 3): ◀ ▶ cycle section images; Add Section
+    // anchors to the viewed section. Host-only — the public Prod Map must never
+    // let players page through sections.
+    if (isEphemeral) {
+      const pagerButtons = [];
+      if (multiSection) {
+        const prevDisabled = galleryIdx === 0;
+        const nextDisabled = galleryIdx === gallerySections.length - 1;
+        pagerButtons.push(
+          new ButtonBuilder()
+            .setCustomId(`map_section_prev_${galleryIdx}`)
+            .setLabel('◀')
+            .setStyle(prevDisabled ? ButtonStyle.Secondary : ButtonStyle.Primary)
+            .setDisabled(prevDisabled),
+          new ButtonBuilder()
+            .setCustomId(`map_section_next_${galleryIdx}`)
+            .setLabel('▶')
+            .setStyle(nextDisabled ? ButtonStyle.Secondary : ButtonStyle.Primary)
+            .setDisabled(nextDisabled)
+        );
+      }
+      pagerButtons.push(
+        new ButtonBuilder()
+          .setCustomId(`map_section_add_${galleryIdx}`)
+          .setLabel('Add Section')
+          .setStyle(ButtonStyle.Secondary)
+          .setEmoji('🗺️')
+      );
+      containerComponents.push(new ActionRowBuilder().addComponents(pagerButtons).toJSON());
+    }
 
     // Generate multi-color legend with per-item color coding
     console.log(`🔍 DEBUG Map Explorer: Generating multi-color legend for guild ${guildId}`);

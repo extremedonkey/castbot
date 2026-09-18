@@ -2696,7 +2696,61 @@ export const BUTTON_REGISTRY = {
   'map_section_add_*': {
     label: 'Add Section',
     description: 'Add a new map section (own image, coordinates continue from the anchor section)',
-    emoji: '➕',
+    emoji: '🗺️',
+    style: 'Secondary',
+    category: 'safari',
+    parent: 'safari_map_explorer'
+  },
+  'map_section_prev_*': {
+    label: '◀',
+    description: 'Map Explorer: view the previous map section',
+    style: 'Primary',
+    category: 'safari',
+    parent: 'safari_map_explorer'
+  },
+  'map_section_next_*': {
+    label: '▶',
+    description: 'Map Explorer: view the next map section',
+    style: 'Primary',
+    category: 'safari',
+    parent: 'safari_map_explorer'
+  },
+  'map_section_cancel_*': {
+    label: 'Cancel',
+    description: 'Cancel section deletion, return to Map Explorer at the viewed section',
+    emoji: '❌',
+    style: 'Secondary',
+    category: 'safari',
+    parent: 'safari_map_explorer'
+  },
+  'map_update_section_*': {
+    label: 'Update Section',
+    description: 'Update the viewed map section\'s image (fog + anchors regenerate for that section only)',
+    emoji: '🗺️',
+    style: 'Primary',
+    category: 'safari',
+    parent: 'safari_map_explorer'
+  },
+  'map_delete_section_*': {
+    label: 'Delete Section',
+    description: 'Delete the viewed map section (channels, coordinates; other sections untouched)',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'safari',
+    parent: 'safari_map_explorer'
+  },
+  'map_delete_section_confirm_*': {
+    label: 'Yes, Delete Section',
+    description: 'Confirmed single-section deletion',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'safari',
+    parent: 'safari_map_explorer'
+  },
+  'map_admin_blacklist_*': {
+    label: 'Blacklist',
+    description: 'Manage blacklisted coordinates (returns to the viewed section)',
+    emoji: '🚫',
     style: 'Secondary',
     category: 'safari',
     parent: 'safari_map_explorer'

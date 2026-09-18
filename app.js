@@ -32081,73 +32081,17 @@ To fix this:
       })(req, res, client);
 
     } else if (custom_id === 'map_delete') {
-      // Handle Map Deletion - Show confirmation first
+      // Whole-map deletion confirmation — UI built in src/maps/mapSectionHandlers.js
       return ButtonHandlerFactory.create({
         id: 'map_delete',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         handler: async (context) => {
-          console.log(`🗑️ START: map_delete - user ${context.userId}`);
-          
-          // Load map data to show what will be deleted
-          const { loadSafariContent } = await import('./safariManager.js');
-          const safariData = await loadSafariContent();
-          const activeMapId = safariData[context.guildId]?.maps?.active;
-          const mapData = safariData[context.guildId]?.maps?.[activeMapId];
-          
-          if (!mapData) {
-            return {
-              content: '❌ No active map found to delete.',
-              ephemeral: true
-            };
-          }
-          
-          // Count what will be deleted
-          const coordinateCount = Object.keys(mapData.coordinates || {}).length;
-          const actionCount = Object.keys(safariData[context.guildId]?.buttons || {}).length;
-          
-          // Critical Deletion UI (per LeanUserInterfaceDesign.md standard)
-          return {
-            components: [{
-              type: 17, // Container
-              accent_color: 0xed4245, // Red - critical deletion
-              components: [
-                {
-                  type: 10, // Header
-                  content: `## ⚠️ Delete Entire Map`
-                },
-                { type: 14 }, // Separator below header (MANDATORY)
-                {
-                  type: 10, // Details & consequences
-                  content: `**Map:** ${mapData.name || 'Adventure Map'}\n**Grid Size:** ${mapData.gridWidth || mapData.gridSize || 7}x${mapData.gridHeight || mapData.gridSize || 7}\n**Coordinates:** ${coordinateCount} locations\n**Custom Actions:** ${actionCount} actions\n\n**This action cannot be undone.** The following will be permanently deleted:\n• **All ${coordinateCount} Discord channels** (one for each map location)\n• All map coordinates and location data\n• All custom actions for this guild\n• All location content (stores, drops, etc.)\n• Map category and images`
-                },
-                { type: 14 }, // Separator above buttons (MANDATORY)
-                {
-                  type: 1, // Action Row
-                  components: [
-                    {
-                      type: 2,
-                      custom_id: 'map_delete_cancel',
-                      label: 'Cancel',
-                      style: 2,
-                      emoji: { name: '❌' }
-                    },
-                    {
-                      type: 2,
-                      custom_id: 'map_delete_confirm',
-                      label: 'Yes, Delete Everything',
-                      style: 4,
-                      emoji: { name: '🗑️' }
-                    }
-                  ]
-                }
-              ]
-            }],
-            ephemeral: true
-          };
+          const { buildMapDeleteConfirmUI } = await import('./src/maps/mapSectionHandlers.js');
+          return buildMapDeleteConfirmUI(context);
         }
       })(req, res, client);
-      
+
     } else if (custom_id === 'map_delete_confirm') {
       // Confirmed map deletion. Checked BEFORE creating handler: deleting from within a map channel decides the deferred config below.
       const isInMapChannel = await (await import('./mapExplorer.js')).isChannelInActiveMapCategory(req.body.guild_id, req.body.channel_id, client);
@@ -32159,42 +32103,60 @@ To fix this:
         // Only use deferred if NOT in a map channel
         deferred: !isInMapChannel,
         handler: async (context) => {
-          console.log(`🗑️ START: map_delete_confirm - user ${context.userId}, channel ${context.channelId}, isInMapChannel: ${isInMapChannel}`);
+          const { handleMapDeleteConfirm } = await import('./src/maps/mapSectionHandlers.js');
+          return handleMapDeleteConfirm(context, isInMapChannel);
+        }
+      })(req, res, client);
 
-          // Helper: wrap result text in Components V2 container (confirmation was V2, can't downgrade)
-          const wrapResult = (text) => ({
-            components: [{
-              type: 17, // Container
-              accent_color: 0x27ae60, // Green - success
-              components: [{ type: 10, content: text }]
-            }]
-          });
+    } else if (custom_id.startsWith('map_section_prev_') || custom_id.startsWith('map_section_next_') || custom_id.startsWith('map_section_cancel_')) {
+      // ◀ ▶ section pager + delete-confirm cancel (RaP 0894 Phase 3)
+      return ButtonHandlerFactory.create({
+        id: 'map_section_nav',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const { handleSectionNav } = await import('./src/maps/mapSectionHandlers.js');
+          return handleSectionNav(context, custom_id);
+        }
+      })(req, res, client);
 
-          if (isInMapChannel) {
-            // If we're in a map channel, send immediate response before deletion
-            // Schedule deletion to happen after response is sent
-            setTimeout(async () => {
-              try {
-                const guild = await context.client.guilds.fetch(context.guildId);
-                const { deleteMapGrid } = await import('./mapExplorer.js');
-                await deleteMapGrid(guild);
-                console.log(`✅ Map deletion completed (from map channel)`);
-              } catch (error) {
-                console.error(`❌ Error during map deletion: ${error.message}`);
-              }
-            }, 1000); // 1 second delay to ensure response is sent
+    } else if (custom_id.startsWith('map_update_section_')) {
+      // Per-section Update Map — modal prefilled with the viewed section's dims
+      return ButtonHandlerFactory.create({
+        id: 'map_update_section',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const { handleSectionUpdateButton } = await import('./src/maps/mapSectionHandlers.js');
+          return handleSectionUpdateButton(context, custom_id);
+        }
+      })(req, res, client);
 
-            return wrapResult('🗑️ **Map deletion initiated!**\n\nThis channel will be deleted momentarily...');
-          } else {
-            // Not in a map channel, proceed normally with deferred response
-            const guild = await context.client.guilds.fetch(context.guildId);
-            const { deleteMapGrid } = await import('./mapExplorer.js');
-            const result = await deleteMapGrid(guild);
+    } else if (custom_id.startsWith('map_delete_section_confirm_')) {
+      // Confirmed single-section deletion (channels take time — deferred)
+      return ButtonHandlerFactory.create({
+        id: 'map_delete_section_confirm',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const { handleSectionDeleteConfirm } = await import('./src/maps/mapSectionHandlers.js');
+          return handleSectionDeleteConfirm(context, custom_id);
+        }
+      })(req, res, client);
 
-            console.log(`✅ SUCCESS: map_delete_confirm - deletion completed`);
-
-            return wrapResult(result.message);
-          }
+    } else if (custom_id.startsWith('map_delete_section_')) {
+      // Single-section deletion confirmation screen
+      return ButtonHandlerFactory.create({
+        id: 'map_delete_section',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const { handleSectionDeleteRequest } = await import('./src/maps/mapSectionHandlers.js');
+          return handleSectionDeleteRequest(context, custom_id);
         }
       })(req, res, client);
       
@@ -32254,8 +32216,8 @@ To fix this:
         }
       })(req, res, client);
       
-    } else if (custom_id === 'map_admin_blacklist') {
-      // Handle blacklisted coordinates management
+    } else if (custom_id === 'map_admin_blacklist' || /^map_admin_blacklist_\d+$/.test(custom_id)) {
+      // Handle blacklisted coordinates management (idx suffix = viewed section, RaP 0894)
       return ButtonHandlerFactory.create({
         id: 'map_admin_blacklist',
         requiresPermission: PermissionFlagsBits.ManageRoles,
@@ -47523,10 +47485,11 @@ To fix this:
         });
       }
       
-    } else if (custom_id === 'map_update_modal') {
-      // Handler moved to src/maps/mapUpdateModalSubmit.js (RaP 0894 — app.js is a router, not a processor)
+    } else if (custom_id.startsWith('map_update_modal')) {
+      // Handler moved to src/maps/mapUpdateModalSubmit.js (RaP 0894 — app.js is a router,
+      // not a processor). map_update_modal_s<idx> = per-section image update.
       const { handleMapUpdateModalSubmit } = await import('./src/maps/mapUpdateModalSubmit.js');
-      return handleMapUpdateModalSubmit(req, res, client, components);
+      return handleMapUpdateModalSubmit(req, res, client, components, custom_id);
 
     } else if (custom_id.startsWith('map_section_add_modal_')) {
       // ➕ Add Map Section submit (RaP 0894 Phase 2) — src/maps/mapSectionAdd.js
@@ -47546,9 +47509,12 @@ To fix this:
           if (!result.success) {
             return { content: result.message };
           }
-          // Regenerate full Map Explorer with updated overlay
+          // Regenerate Map Explorer at the section the host was viewing —
+          // modal id is map_admin_blacklist_modal_<idx>_<nonce> (legacy: _<nonce>)
+          const blSuffix = custom_id.replace('map_admin_blacklist_modal_', '').split('_');
+          const blIdx = blSuffix.length >= 2 ? (parseInt(blSuffix[0], 10) || 0) : 0;
           const { buildMapExplorerResponse } = await import('./mapExplorer.js');
-          return await buildMapExplorerResponse(context.guildId, context.userId, context.client);
+          return await buildMapExplorerResponse(context.guildId, context.userId, context.client, true, blIdx);
         }
       })(req, res, client);
 

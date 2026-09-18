@@ -860,18 +860,23 @@ export async function createCurrencyModal(userId, currentAmount, currencyName) {
  */
 export async function handleMapAdminBlacklist(context) {
   console.log(`🚫 START: map_admin_blacklist - user ${context.userId}`);
-  
+
+  // Section index rides in the button id (map_admin_blacklist_<idx>) so the modal
+  // submit can land back on the section the host was viewing (RaP 0894 Phase 3).
+  const idxMatch = /^map_admin_blacklist_(\d+)$/.exec(context.customId || '');
+  const sectionIndex = idxMatch ? parseInt(idxMatch[1], 10) : 0;
+
   // Load current blacklisted coordinates
   const { getBlacklistedCoordinates } = await import('./mapExplorer.js');
   const blacklistedCoords = await getBlacklistedCoordinates(context.guildId);
-  
+
   return {
     type: InteractionResponseType.MODAL,
     data: {
-      // Nonce defeats Discord's cross-server modal draft cache (see safariConfigUI.js) —
-      // a drafted blacklist from another server silently replacing this one would be
-      // data corruption, not just cosmetic.
-      custom_id: `map_admin_blacklist_modal_${Date.now()}`,
+      // Section index + nonce: the nonce defeats Discord's cross-server modal draft
+      // cache (see safariConfigUI.js) — a drafted blacklist from another server
+      // silently replacing this one would be data corruption, not just cosmetic.
+      custom_id: `map_admin_blacklist_modal_${sectionIndex}_${Date.now()}`,
       title: 'Manage Blacklisted Coordinates',
       components: [
         {

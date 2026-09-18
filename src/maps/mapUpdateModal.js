@@ -23,9 +23,14 @@ import { IMAGE_UPLOAD_COMPONENT_ID } from '../images/modalImageUpload.js';
  * @param {string} [imageUploadMode='textUrl'] - guild Image Uploads mode
  * @returns {Object} modal data for { type: InteractionResponseType.MODAL, data: ... }
  */
-export function buildMapUpdateModal(hasActiveMap, existingMap, imageUploadMode = 'textUrl') {
-    const rows = existingMap?.gridHeight?.toString() || existingMap?.gridSize?.toString() || '7';
-    const cols = existingMap?.gridWidth?.toString() || existingMap?.gridSize?.toString() || '7';
+export function buildMapUpdateModal(hasActiveMap, existingMap, imageUploadMode = 'textUrl', sectionOverride = null) {
+    // Per-section update (RaP 0894 Phase 3): same modal, but scoped to one section —
+    // custom_id carries the index (map_update_modal_s2) and dims prefill from the
+    // section's rectangle instead of the map bounding box.
+    const rows = sectionOverride ? String(sectionOverride.height)
+        : (existingMap?.gridHeight?.toString() || existingMap?.gridSize?.toString() || '7');
+    const cols = sectionOverride ? String(sectionOverride.width)
+        : (existingMap?.gridWidth?.toString() || existingMap?.gridSize?.toString() || '7');
 
     const imageField = imageUploadMode === 'uploadComponent'
         ? {
@@ -81,8 +86,10 @@ export function buildMapUpdateModal(hasActiveMap, existingMap, imageUploadMode =
     }
 
     return {
-        custom_id: 'map_update_modal',
-        title: hasActiveMap ? 'Update Map Image' : 'Upload New Safari Map',
+        custom_id: sectionOverride ? `map_update_modal_s${sectionOverride.idx}` : 'map_update_modal',
+        title: sectionOverride
+            ? `Update ${sectionOverride.name} Image`.slice(0, 45)
+            : (hasActiveMap ? 'Update Map Image' : 'Upload New Safari Map'),
         components
     };
 }

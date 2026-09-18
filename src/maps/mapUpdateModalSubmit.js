@@ -6,7 +6,12 @@
 
 import { InteractionResponseType, InteractionResponseFlags } from 'discord-interactions';
 
-export async function handleMapUpdateModalSubmit(req, res, client, components) {
+export async function handleMapUpdateModalSubmit(req, res, client, components, customId = 'map_update_modal') {
+    // Per-section update (RaP 0894 Phase 3): map_update_modal_s<idx> scopes the
+    // build to one section; the bare id keeps the legacy whole-map semantics.
+    const sectionIndex = customId.startsWith('map_update_modal_s')
+        ? (parseInt(customId.slice('map_update_modal_s'.length), 10) || 0)
+        : 0;
     // Declared outside the try — the catch's error followup references hasActiveMap
     // (was resolved inside the try; any earlier throw became a ReferenceError that
     // swallowed the real error and left the admin on an eternal "thinking" state)
@@ -116,7 +121,7 @@ export async function handleMapUpdateModalSubmit(req, res, client, components) {
         const safariData = await loadSafariContent();
         hasActiveMap = Boolean(safariData[guildId]?.maps?.active);
 
-        const result = await executeMapBuild(client, guildId, userId, { mapUrl, mapColumns, mapRows, mapEmoji });
+        const result = await executeMapBuild(client, guildId, userId, { mapUrl, mapColumns, mapRows, mapEmoji, sectionIndex });
 
         // Check if map creation/update failed
         const followupUrl = `https://discord.com/api/v10/webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
@@ -136,7 +141,7 @@ export async function handleMapUpdateModalSubmit(req, res, client, components) {
         // Rebuild Map Explorer UI with the new image
         try {
             const { buildMapExplorerResponse } = await import('../../mapExplorer.js');
-            const mapExplorerUI = await buildMapExplorerResponse(guildId, userId, client, true);
+            const mapExplorerUI = await buildMapExplorerResponse(guildId, userId, client, true, sectionIndex);
             await fetch(followupUrl, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
