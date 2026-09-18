@@ -8,6 +8,7 @@ import {
   InteractionResponseFlags
 } from 'discord-interactions';
 import { parseTextEmoji, resolveEmoji } from './utils/emojiUtils.js';
+import { COORDINATE_PATTERN } from './utils/coordinateParser.js';
 import { loadSafariContent, saveSafariContent } from './safariManager.js';
 import { setEntityPoints } from './pointsManager.js';
 import { loadPlayerData, savePlayerData } from './storage.js';
@@ -1246,7 +1247,7 @@ export async function handleMapAdminRefreshAnchorsModal(context, req) {
   const coordinatesList = coordinatesInput
     .split(',')
     .map(coord => coord.trim().toUpperCase())
-    .filter(coord => coord.match(/^[A-Z]\d+$/)); // Validate format (e.g., A1, B2)
+    .filter(coord => COORDINATE_PATTERN.test(coord)); // Validate format (Excel-safe: A1, B2, AA10)
 
   if (coordinatesList.length === 0) {
     return {

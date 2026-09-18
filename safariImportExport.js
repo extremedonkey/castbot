@@ -5,6 +5,7 @@
 
 import { loadSafariContent, saveSafariContent } from './safariManager.js';
 import { createArchive, readArchive, isZipBuffer, ArchiveError } from './safariArchive.js';
+import { tryParseCoordinate } from './utils/coordinateParser.js';
 
 /** Export format identifier — present in every v2+ export envelope and package manifest. */
 export const SAFARI_EXPORT_FORMAT = 'castbot-safari-export';
@@ -177,10 +178,10 @@ export function resolveImportGridDims(map, manifest = null) {
     const dims = resolveGridDimensions(map);
     let maxW = 0, maxH = 0;
     for (const coord of Object.keys(map?.coordinates || {})) {
-        const match = /^([A-Z])(\d+)$/.exec(String(coord).trim().toUpperCase());
-        if (!match) continue;
-        maxW = Math.max(maxW, match[1].charCodeAt(0) - 64);
-        maxH = Math.max(maxH, parseInt(match[2]));
+        const pos = tryParseCoordinate(String(coord).trim().toUpperCase()); // Excel-safe (AA10 etc.)
+        if (!pos) continue;
+        maxW = Math.max(maxW, pos.x + 1);
+        maxH = Math.max(maxH, pos.y + 1);
     }
     if (!dims) return (maxW > 0 && maxH > 0) ? { width: maxW, height: maxH } : null;
     return { width: Math.max(dims.width, maxW), height: Math.max(dims.height, maxH) };
@@ -193,11 +194,9 @@ export function resolveImportGridDims(map, manifest = null) {
  * @returns {boolean}
  */
 export function isCoordInGrid(coord, dims) {
-    const match = /^([A-Z])(\d+)$/.exec(String(coord).trim().toUpperCase());
-    if (!match) return false;
-    const col = match[1].charCodeAt(0) - 65;
-    const row = parseInt(match[2]);
-    return col >= 0 && col < dims.width && row >= 1 && row <= dims.height;
+    const pos = tryParseCoordinate(String(coord).trim().toUpperCase()); // Excel-safe (AA10 etc.)
+    if (!pos) return false;
+    return pos.x >= 0 && pos.x < dims.width && pos.y >= 0 && pos.y < dims.height;
 }
 
 /**

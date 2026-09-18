@@ -10,6 +10,7 @@ import { loadSafariContent } from './safariManager.js';
 import { getEntityPoints } from './pointsManager.js';
 import { getPlayerSafariState } from './safariPlayerUtils.js';
 import { logger } from './logger.js';
+import { getExcelColumn, generateCoordinate, tryParseCoordinate } from './utils/coordinateParser.js';
 
 /**
  * Get all players on the map with their current locations
@@ -296,7 +297,8 @@ export async function createPlayerLocationMap(guildId, client = null, options = 
     }
 
     const mapData = safariData[guildId].maps[activeMapId];
-    const gridSize = mapData.gridSize || 7;
+    const gridWidth = mapData.gridWidth || mapData.gridSize || 7;
+    const gridHeight = mapData.gridHeight || mapData.gridSize || 7;
     // Use pre-fetched locations if provided, otherwise fetch (for backward compatibility)
     const allLocations = playerLocations || await getAllPlayerLocations(guildId, true, client);
     
@@ -321,17 +323,17 @@ export async function createPlayerLocationMap(guildId, client = null, options = 
     // Build grid display
     let gridDisplay = '```\n   ';
     
-    // Column headers
-    for (let col = 0; col < gridSize; col++) {
-        gridDisplay += ` ${String.fromCharCode(65 + col)} `;
+    // Column headers (Excel-safe, non-square aware)
+    for (let col = 0; col < gridWidth; col++) {
+        gridDisplay += ` ${getExcelColumn(col)} `;
     }
     gridDisplay += '\n';
-    
+
     // Grid rows
-    for (let row = 0; row < gridSize; row++) {
+    for (let row = 0; row < gridHeight; row++) {
         gridDisplay += ` ${row + 1} `;
-        for (let col = 0; col < gridSize; col++) {
-            const coord = String.fromCharCode(65 + col) + (row + 1);
+        for (let col = 0; col < gridWidth; col++) {
+            const coord = generateCoordinate(col, row);
             const count = playerCounts[coord] || 0;
             const isBlacklisted = blacklistedCoords.includes(coord);
             
@@ -485,21 +487,20 @@ export async function getNearbyPlayers(guildId, userId, distance = 1, client = n
     if (!playerLocation) return [];
     
     const coord = playerLocation.coordinate;
-    const col = coord.charCodeAt(0) - 65;
-    const row = parseInt(coord.substring(1)) - 1;
-    
+    const pos = tryParseCoordinate(coord); // Excel-safe (AA10 etc.)
+    if (!pos) return [];
+
     const allLocations = await getAllPlayerLocations(guildId, true, client);
     const nearbyPlayers = [];
-    
+
     for (const [otherUserId, locationData] of allLocations) {
         if (otherUserId === userId) continue;
-        
-        const otherCoord = locationData.coordinate;
-        const otherCol = otherCoord.charCodeAt(0) - 65;
-        const otherRow = parseInt(otherCoord.substring(1)) - 1;
-        
+
+        const otherPos = tryParseCoordinate(locationData.coordinate);
+        if (!otherPos) continue;
+
         // Calculate Chebyshev distance (max of row/col difference)
-        const dist = Math.max(Math.abs(col - otherCol), Math.abs(row - otherRow));
+        const dist = Math.max(Math.abs(pos.x - otherPos.x), Math.abs(pos.y - otherPos.y));
         
         if (dist <= distance) {
             nearbyPlayers.push({

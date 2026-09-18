@@ -5,6 +5,7 @@
  */
 
 import { loadPlayerData, savePlayerData, withStorageLock } from './storage.js';
+import { tryParseCoordinate } from './utils/coordinateParser.js';
 
 // --- Constants ---
 
@@ -716,11 +717,11 @@ async function generatePlayerOverlay(guildId, userId, client) {
     const cellHeight = innerHeight / gridHeight;
 
     const coordToPosition = (coord) => {
-      const col = coord.charCodeAt(0) - 65;
-      const row = parseInt(coord.substring(1)) - 1;
+      const pos = tryParseCoordinate(coord); // Excel-safe (AA10 etc.)
+      if (!pos) return null;
       return {
-        left: Math.floor(borderSize + (col * cellWidth)),
-        top: Math.floor(borderSize + (row * cellHeight))
+        left: Math.floor(borderSize + (pos.x * cellWidth)),
+        top: Math.floor(borderSize + (pos.y * cellHeight))
       };
     };
 
@@ -730,6 +731,7 @@ async function generatePlayerOverlay(guildId, userId, client) {
     for (const coord of exploredCoords) {
       if (coord === currentLocation) continue;
       const pos = coordToPosition(coord);
+      if (!pos) continue;
       const buf = await sharp({
         create: {
           width: Math.floor(cellWidth),
@@ -742,8 +744,9 @@ async function generatePlayerOverlay(guildId, userId, client) {
     }
 
     // Current location — bright orange
-    {
-      const pos = coordToPosition(currentLocation);
+    const currentPos = coordToPosition(currentLocation);
+    if (currentPos) {
+      const pos = currentPos;
       const buf = await sharp({
         create: {
           width: Math.floor(cellWidth),

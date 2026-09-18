@@ -24,6 +24,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { tryParseCoordinate } from '../utils/coordinateParser.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SOURCE = readFileSync(path.join(__dirname, '..', 'safariImportExport.js'), 'utf8');
@@ -169,12 +170,11 @@ function resolveGridDimensions(map) {
   return null;
 }
 
+// Excel-safe since RaP 0894 Phase 0 — parse helper imported (utils/coordinateParser is pure)
 function isCoordInGrid(coord, dims) {
-  const match = /^([A-Z])(\d+)$/.exec(String(coord).trim().toUpperCase());
-  if (!match) return false;
-  const col = match[1].charCodeAt(0) - 65;
-  const row = parseInt(match[2]);
-  return col >= 0 && col < dims.width && row >= 1 && row <= dims.height;
+  const pos = tryParseCoordinate(String(coord).trim().toUpperCase());
+  if (!pos) return false;
+  return pos.x >= 0 && pos.x < dims.width && pos.y >= 0 && pos.y < dims.height;
 }
 
 describe('Safari Import/Export — grid dimension resolution and coordinate bounds', () => {
@@ -211,6 +211,14 @@ describe('Safari Import/Export — grid dimension resolution and coordinate boun
     assert.equal(isCoordInGrid('5D', dims), false);
     assert.equal(isCoordInGrid('global', dims), false);
   });
+
+  it('handles multi-letter columns Excel-safely (RaP 0894 Phase 0 — the ZZ fix)', () => {
+    const dims = { width: 30, height: 5 };  // 30 columns → AA..AD exist
+    assert.equal(isCoordInGrid('AA1', dims), true);   // col 26 < 30
+    assert.equal(isCoordInGrid('AD5', dims), true);   // col 29 < 30
+    assert.equal(isCoordInGrid('AE1', dims), false);  // col 30 out
+    assert.equal(isCoordInGrid('AA6', dims), false);  // row out
+  });
 });
 
 // Replicated from safariImportExport.js resolveImportGridDims (pure)
@@ -222,10 +230,10 @@ function resolveImportGridDims(map, manifest = null) {
   const dims = resolveGridDimensions(map);
   let maxW = 0, maxH = 0;
   for (const coord of Object.keys(map?.coordinates || {})) {
-    const match = /^([A-Z])(\d+)$/.exec(String(coord).trim().toUpperCase());
-    if (!match) continue;
-    maxW = Math.max(maxW, match[1].charCodeAt(0) - 64);
-    maxH = Math.max(maxH, parseInt(match[2]));
+    const pos = tryParseCoordinate(String(coord).trim().toUpperCase());
+    if (!pos) continue;
+    maxW = Math.max(maxW, pos.x + 1);
+    maxH = Math.max(maxH, pos.y + 1);
   }
   if (!dims) return (maxW > 0 && maxH > 0) ? { width: maxW, height: maxH } : null;
   return { width: Math.max(dims.width, maxW), height: Math.max(dims.height, maxH) };

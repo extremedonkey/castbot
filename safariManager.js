@@ -38,6 +38,7 @@ import {
     initializePlayerOnMap
 } from './mapMovement.js';
 import { checkLimitGate, recordLimitClaim, formatCountdown, formatPeriod, formatPeriodVerbose, formatCountdownVerbose } from './utils/periodUtils.js';
+import { COORDINATE_PATTERN } from './utils/coordinateParser.js';
 import { evaluateClassicGate, addClaim, clearClaim } from './claimsManager.js';
 import { normalizeNavigateMode, coerceCurrencyEnabled, isNavigateDisabled } from './safariFeatureFlags.js';
 
@@ -2357,7 +2358,7 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
                 // Try to extract location from button ID if it contains coordinates
                 const parts = button.id.split('_');
                 const possibleCoord = parts[parts.length - 1];
-                if (/^[A-Z]\d+$/.test(possibleCoord)) {
+                if (COORDINATE_PATTERN.test(possibleCoord)) { // Excel-safe (AA10 etc.)
                     location = possibleCoord;
                 }
             }
@@ -2368,8 +2369,8 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
                 const channelName = interaction.channelName;
                 console.log(`📝 DEBUG: Attempting to extract location from channelName: "${channelName}"`);
                 if (channelName && channelName !== 'Unknown') {
-                    // Extract coordinate from channel name like "#b1"
-                    const match = channelName.match(/#?([A-Za-z]\d+)/);
+                    // Extract coordinate from channel name like "#b1" (1-2 letters: Excel-safe)
+                    const match = channelName.match(/#?([A-Za-z]{1,2}\d+)/);
                     console.log(`📝 DEBUG: Channel name regex match:`, match);
                     if (match) {
                         location = match[1].toUpperCase();

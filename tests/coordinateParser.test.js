@@ -6,7 +6,10 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { parseCoordinateList, COORDINATE_PATTERN } from '../utils/coordinateParser.js';
+import {
+    parseCoordinateList, COORDINATE_PATTERN,
+    getExcelColumn, parseExcelColumn, generateCoordinate, parseCoordinate, tryParseCoordinate
+} from '../utils/coordinateParser.js';
 
 describe('coordinateParser — basic parsing (blacklist-modal contract)', () => {
     it('parses a comma-separated list, trimming and uppercasing', () => {
@@ -75,8 +78,47 @@ describe('coordinateParser — validCoords existence filtering', () => {
 });
 
 describe('coordinateParser — COORDINATE_PATTERN', () => {
-    it('matches classic single-letter-column coordinates only', () => {
-        for (const good of ['A1', 'G7', 'B22']) assert.ok(COORDINATE_PATTERN.test(good), good);
-        for (const bad of ['AA1', 'a1', '7G', 'A', '1', 'A1B']) assert.ok(!COORDINATE_PATTERN.test(bad), bad);
+    it('matches 1-2 letter Excel columns (creation caps: ≤100 cols ⇒ max "CV", ≤3 digit rows)', () => {
+        for (const good of ['A1', 'G7', 'B22', 'AA1', 'AA10', 'CV100']) assert.ok(COORDINATE_PATTERN.test(good), good);
+        for (const bad of ['a1', '7G', 'A', '1', 'A1B', 'AAA1', 'A1234']) assert.ok(!COORDINATE_PATTERN.test(bad), bad);
+    });
+});
+
+describe('coordinateParser — canonical Excel-safe grid math (RaP 0894 Phase 0)', () => {
+    it('getExcelColumn crosses the Z boundary correctly', () => {
+        assert.equal(getExcelColumn(0), 'A');
+        assert.equal(getExcelColumn(25), 'Z');
+        assert.equal(getExcelColumn(26), 'AA');
+        assert.equal(getExcelColumn(27), 'AB');
+        assert.equal(getExcelColumn(51), 'AZ');
+        assert.equal(getExcelColumn(52), 'BA');
+    });
+
+    it('parseExcelColumn is the exact inverse of getExcelColumn', () => {
+        for (const i of [0, 1, 25, 26, 27, 51, 52, 99, 700]) {
+            assert.equal(parseExcelColumn(getExcelColumn(i)), i, `index ${i}`);
+        }
+    });
+
+    it('generateCoordinate/parseCoordinate round-trip incl. multi-letter columns', () => {
+        assert.equal(generateCoordinate(0, 0), 'A1');
+        assert.equal(generateCoordinate(26, 9), 'AA10');
+        for (const [x, y] of [[0, 0], [6, 6], [25, 99], [26, 0], [99, 99]]) {
+            assert.deepEqual(parseCoordinate(generateCoordinate(x, y)), { x, y });
+        }
+    });
+
+    it('parseCoordinate throws on malformed input; tryParseCoordinate returns null', () => {
+        for (const bad of ['', '7G', 'A', 'a1', null, undefined]) {
+            assert.throws(() => parseCoordinate(bad), undefined, String(bad));
+            assert.equal(tryParseCoordinate(bad), null, String(bad));
+        }
+        assert.deepEqual(tryParseCoordinate('AA10'), { x: 26, y: 9 });
+    });
+
+    it('the ZZ regression: the naive charCodeAt(0)-65 math this replaced mis-parsed AA5', () => {
+        // Naive: col = 'AA5'.charCodeAt(0)-65 = 0 ('A'), row = parseInt('A5') = NaN.
+        // Canon: column AA = 26, row 5 → {x:26, y:4}.
+        assert.deepEqual(parseCoordinate('AA5'), { x: 26, y: 4 });
     });
 });

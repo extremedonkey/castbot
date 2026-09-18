@@ -1,4 +1,5 @@
 import sharp from 'sharp';
+import { tryParseCoordinate } from './utils/coordinateParser.js';
 // No libvips cache — ~0% hit rate, starves the 448MB prod box (RaP 0903)
 sharp.cache(false);
 import { planCellLayout, statusColor, truncateName } from './playerCellLayout.js';
@@ -243,16 +244,16 @@ export async function generatePlayerLocationImage({ guildId, gridWidth, gridHeig
 
   // ─── Build overlays (avatar bubbles + status-dot text rows per cell) ───
   const coordToPosition = (coord) => {
-    const col = coord.charCodeAt(0) - 65;
-    const row = parseInt(coord.substring(1)) - 1;
+    const pos = tryParseCoordinate(coord); // Excel-safe (AA10 etc.)
+    if (!pos) return null;
     return {
-      left: Math.floor(BORDER + (col * cellW)),
-      top: Math.floor(BORDER + (row * cellH))
+      left: Math.floor(BORDER + (pos.x * cellW)),
+      top: Math.floor(BORDER + (pos.y * cellH))
     };
   };
 
   const cellOverlayArrays = await Promise.all(
-    Object.entries(cellPlayers).map(([coord, players]) => {
+    Object.entries(cellPlayers).filter(([coord]) => coordToPosition(coord)).map(([coord, players]) => {
       const pos = coordToPosition(coord);
       return buildPlayerCellOverlays({
         players,

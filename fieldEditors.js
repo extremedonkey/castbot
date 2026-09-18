@@ -15,6 +15,7 @@ import {
     ActionRowBuilder
 } from 'discord.js';
 import { SAFARI_LIMITS } from './config/safariLimits.js';
+import { COORDINATE_PATTERN } from './utils/coordinateParser.js';
 import { getFieldGroups } from './entityManagementUI.js';
 import { filenameFromImageUrl, buildImageFieldLabel, IMAGE_UPLOAD_COMPONENT_ID } from './src/images/modalImageUpload.js';
 
@@ -681,7 +682,7 @@ export function parseModalSubmission(modalData, fieldGroupId) {
                     if (value) {
                         const coords = value.split(',')
                             .map(coord => coord.trim().toUpperCase())
-                            .filter(coord => coord.match(/^[A-Z]\d+$/));
+                            .filter(coord => COORDINATE_PATTERN.test(coord)); // Excel-safe (AA10 etc.)
                         fields[fieldId] = coords.length > 0 ? coords : [];
                     } else {
                         fields[fieldId] = [];

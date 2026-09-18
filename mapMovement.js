@@ -2,6 +2,7 @@ import { PermissionFlagsBits } from 'discord.js';
 import { loadPlayerData, savePlayerData, withStorageLock } from './storage.js';
 import { loadSafariContent } from './safariManager.js';
 import { hasEnoughPoints, usePoints, getTimeUntilRegeneration, getRegenRemainingMs, initializeEntityPoints, getEntityPoints, getStaminaRegenSummary } from './pointsManager.js';
+import { tryParseCoordinate, generateCoordinate } from './utils/coordinateParser.js';
 
 /**
  * Map Movement System for Safari
@@ -115,9 +116,10 @@ export const DIRECTION_LABELS = {
 
 // Get valid moves from current position based on movement schema
 export async function getValidMoves(currentCoordinate, movementSchema = 'adjacent_8', guildId = null) {
-    const col = currentCoordinate.charCodeAt(0) - 65; // A=0, B=1, etc.
-    const row = parseInt(currentCoordinate.substring(1)) - 1; // 1-based to 0-based
-    
+    const pos = tryParseCoordinate(currentCoordinate); // Excel-safe (AA10 etc.)
+    if (!pos) return [];
+    const { x: col, y: row } = pos;
+
     const moves = {
         northwest: { col: col - 1, row: row - 1, direction: '↖️ Northwest' },
         north: { col: col, row: row - 1, direction: '⬆️ North' },
@@ -145,7 +147,7 @@ export async function getValidMoves(currentCoordinate, movementSchema = 'adjacen
         
         // Check if move is within grid bounds using proper width and height
         if (move.col >= 0 && move.col < gridDimensions.width && move.row >= 0 && move.row < gridDimensions.height) {
-            const coordinate = String.fromCharCode(65 + move.col) + (move.row + 1);
+            const coordinate = generateCoordinate(move.col, move.row);
             
             // Check if coordinate is blacklisted
             const isBlacklisted = guildId ? await isCoordinateBlacklisted(guildId, coordinate) : false;
@@ -449,8 +451,7 @@ export async function getMovementDisplay(guildId, userId, coordinate, isDeferred
 
     // Get grid dimensions for bounds checking
     const gridDimensions = await getMapGridDimensions(guildId);
-    const col = coordinate.charCodeAt(0) - 65; // A=0, B=1, etc.
-    const row = parseInt(coordinate.substring(1)) - 1; // 1-based to 0-based
+    const { x: col, y: row } = tryParseCoordinate(coordinate) || { x: 0, y: 0 }; // Excel-safe
 
     // Create 3x3 grid layout for movement buttons
     const movesByDirection = {};
@@ -463,7 +464,7 @@ export async function getMovementDisplay(guildId, userId, coordinate, isDeferred
     const createButton = (dir, targetCol, targetRow) => {
         const dirLabel = DIRECTION_LABELS[dir] || dir;
         const isOutOfBounds = targetCol < 0 || targetCol >= gridDimensions.width || targetRow < 0 || targetRow >= gridDimensions.height;
-        const targetCoordinate = !isOutOfBounds ? String.fromCharCode(65 + targetCol) + (targetRow + 1) : null;
+        const targetCoordinate = !isOutOfBounds ? generateCoordinate(targetCol, targetRow) : null;
 
         if (movesByDirection[dir] && !isOutOfBounds) {
             const move = movesByDirection[dir];

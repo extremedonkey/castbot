@@ -7,6 +7,7 @@
 import { loadSafariContent } from './safariManager.js';
 import { loadPlayerData } from './storage.js';
 import { InteractionResponseFlags } from 'discord-interactions';
+import { getExcelColumn, parseExcelColumn } from './utils/coordinateParser.js';
 
 // Constants
 const ROWS_PER_PAGE = 1; // Show one row (A1-A10, B1-B10, etc) per page
@@ -490,30 +491,29 @@ function createNavigationButtons(currentRow, activeMapId, coordinates) {
  */
 function getAvailableRows(coordinates) {
   const rowSet = new Set();
-  
+
   for (const coord of Object.keys(coordinates)) {
-    const row = coord.charAt(0);
-    if (row >= 'A' && row <= 'Z') {
-      rowSet.add(row);
+    const match = /^([A-Z]+)\d+$/.exec(coord); // full column letters (Excel-safe: AA10 → "AA")
+    if (match) {
+      rowSet.add(match[1]);
     }
   }
-  
-  return Array.from(rowSet).sort();
+
+  return Array.from(rowSet).sort((a, b) => parseExcelColumn(a) - parseExcelColumn(b));
 }
 
 /**
- * Get next/previous row
+ * Get next/previous row (column letter, Excel-safe: Z → AA, not Z → A).
+ * The nav buttons only render when the adjacent row exists (createNavigationButtons),
+ * so the old Z↔A wrap was unreachable via the UI — prev now clamps at A instead.
  */
 export function getAdjacentRow(currentRow, direction) {
-  const charCode = currentRow.charCodeAt(0);
-  
+  const index = parseExcelColumn(currentRow);
+
   if (direction === 'next') {
-    if (charCode >= 90) return 'A'; // Wrap Z to A
-    return String.fromCharCode(charCode + 1);
-  } else {
-    if (charCode <= 65) return 'Z'; // Wrap A to Z  
-    return String.fromCharCode(charCode - 1);
+    return getExcelColumn(index + 1);
   }
+  return getExcelColumn(Math.max(0, index - 1));
 }
 
 /**

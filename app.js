@@ -46762,7 +46762,7 @@ To fix this:
             return { content: '❌ Coordinate is required.' };
           }
 
-          if (!/^[A-Z]\d+$/.test(coordinate)) {
+          if (!(await import('./utils/coordinateParser.js')).COORDINATE_PATTERN.test(coordinate)) {
             return { content: '❌ Invalid coordinate format. Use format like A1, B3, D7.' };
           }
 
