@@ -1,7 +1,7 @@
 # 0894 — Multi-Section Maps ("Map Annex") — Detailed Design
 
 **Date:** 2026-09-18
-**Status:** Design complete — awaiting Reece's review before implementation
+**Status:** IN PROGRESS — Phase 0 ✅ (commit 175ecb01), Phase 1 ✅ (279904c3), Phase 2 groundwork: MapGridSystem offsets ✅ (82e354b8). Remaining: Phase 2 Add-Section flow (extract processMapImageWithGrid/createSectionChannels, modal + executeSectionAdd — NOTE: app.js sits exactly AT the Moai line ratchet, so the submit handler must live in a module with net-negative app.js routing), Phase 3 explorer pager UI, Phase 4 polish.
 **Elaborates:** Option B from [RaP 0895 Multi-Map / Hidden Maps Analysis](0895_20260918_MultiMapHiddenMaps_Analysis.md)
 
 Related:
