@@ -4462,7 +4462,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
           try {
             // Import movement functions
-            const { movePlayer, getMovementDisplay, getPlayerLocation, createMovementNotification } = await import('./mapMovement.js');
+            const { movePlayer, getPlayerLocation, announceArrival, retireNavigationPane } = await import('./mapMovement.js');
             const { loadSafariContent } = await import('./safariManager.js');
 
             // Navigate disabled (escape rooms): stale compass buttons degrade politely.
@@ -4493,57 +4493,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             const result = await movePlayer(context.guildId, context.userId, targetCoordinate, context.client, { member: context.member, viaChannelId: context.channelId });
             
             if (result.success) {
-              // Post movement interface to new channel (if different from current)
-              const safariData = await loadSafariContent();
-              const activeMapId = safariData[context.guildId]?.maps?.active;
-              const targetChannelId = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[targetCoordinate]?.channelId;
-              const sourceChannelId = context.channelId;
-              
-              // Arrival card is a public navigate pane — suppressed in 'silent'/'disabled'
-              // navigate modes (escape rooms). The ephemeral move flow below is unaffected.
-              const { shouldPostNavigatePanes } = await import('./safariFeatureFlags.js');
-              if (targetChannelId && targetChannelId !== sourceChannelId
-                  && shouldPostNavigatePanes(safariData[context.guildId]?.safariConfig)) {
-                // Post arrival message with Navigate button
-                const { buildArrivalPanelUI } = await import('./mapNavigationUI.js');
-                console.log(`🔍 DEBUG: Posting arrival message to new channel ${targetChannelId}`);
-                await DiscordRequest(`channels/${targetChannelId}/messages`, {
-                  method: 'POST',
-                  body: buildArrivalPanelUI(context.userId, targetCoordinate)
-                });
-              }
-              
-              // Try to edit the original navigation message to remove buttons
-              if (global.navigationInteractions) {
-                const navData = global.navigationInteractions.get(`${context.userId}_${result.oldCoordinate}`);
-                if (navData) {
-                  try {
-                    console.log(`🔍 Attempting to edit navigation message - appId: ${navData.appId}, token exists: ${!!navData.token}`);
-                    
-                    // Import DiscordRequest if not already imported
-                    const { DiscordRequest } = await import('./utils.js');
-                    
-                    // Use the stored app ID and token to edit the message
-                    const editResponse = await DiscordRequest(`webhooks/${navData.appId}/${navData.token}/messages/@original`, {
-                      method: 'PATCH',
-                      body: {
-                        components: createMovementNotification(context.guildId, context.userId, result.oldCoordinate, result.newCoordinate, targetChannelId).components
-                      }
-                    }, `safari_move ${result.oldCoordinate}→${result.newCoordinate} by ${context.userId}`);
-                    
-                    console.log('✅ Successfully updated original navigation message');
-                    
-                    // Clean up the stored interaction
-                    global.navigationInteractions.delete(`${context.userId}_${result.oldCoordinate}`);
-                  } catch (error) {
-                    console.error('❌ Failed to update navigation message:', error.message);
-                    if (error.response) {
-                      console.error('Discord API response:', await error.response.text());
-                    }
-                  }
-                }
-              }
-              
+              // Arrival pane in the destination channel + retire the stale Navigate pane —
+              // shared with the teleport outcome (mapMovement.js, RaP 0894 follow-up)
+              await announceArrival(context.guildId, context.userId, targetCoordinate, { sourceChannelId: context.channelId });
+              await retireNavigationPane(context.guildId, context.userId, result.oldCoordinate, result.newCoordinate);
+
               console.log(`✅ SUCCESS: safari_move_${targetCoordinate} - player moved successfully`);
               
               // Delete the deferred "thinking" message

@@ -3995,6 +3995,11 @@ async function executeManagePlayerState(config, guildId, userId, interaction) {
                     moveSource: 'teleport'
                 });
                 if (!teleportResult.success) return { content: teleportResult.message };
+                // Arrival pane at the destination + retire any open Navigate pane at the
+                // old cell — same UX as a compass move (shared helpers, mapMovement.js)
+                const { announceArrival, retireNavigationPane } = await import('./mapMovement.js');
+                await announceArrival(guildId, userId, coordinate);
+                await retireNavigationPane(guildId, userId, teleportResult.oldCoordinate, coordinate);
                 const channelLink = await getChannelLink(coordinate);
                 return { content: `📍 You have been teleported to ${channelLink}! Head there to continue exploring.` };
             }
@@ -4040,6 +4045,11 @@ async function executeManagePlayerState(config, guildId, userId, interaction) {
                         moveSource: 'teleport'
                     });
                     if (!iotResult.success) return { content: iotResult.message };
+                    // Same arrival UX as a compass move (initialize paths get theirs from
+                    // initializePlayerOnMap's welcome card — don't double-post there)
+                    const { announceArrival: iotAnnounce, retireNavigationPane: iotRetire } = await import('./mapMovement.js');
+                    await iotAnnounce(guildId, userId, coordinate);
+                    await iotRetire(guildId, userId, iotResult.oldCoordinate, coordinate);
                     const iotLink = await getChannelLink(coordinate);
                     return { content: `📍 You have been teleported to ${iotLink}! Head there to continue exploring.` };
                 }

@@ -10,8 +10,13 @@ import {
   buildNavigateDenialUI,
   buildAdminNavPanelWarningUI,
   buildNavPanelDeleteResultUI,
+  buildNavigatePanelUI,
+  buildArrivalPanelUI,
   NAV_DELETE_PANEL_PREFIX
 } from '../mapNavigationUI.js';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
 const IS_COMPONENTS_V2 = 1 << 15;
 const MANAGE_ROLES = 1n << 28n;
@@ -159,5 +164,83 @@ describe('buildNavPanelDeleteResultUI — UPDATE_MESSAGE after Delete Panel', ()
     assert.equal(buildNavPanelDeleteResultUI(true).components[0].accent_color, 0x27ae60);
     assert.match(buildNavPanelDeleteResultUI(false).components[0].components[0].content, /already been removed/);
     assert.equal(buildNavPanelDeleteResultUI(false).components[0].accent_color, 0xe74c3c);
+  });
+});
+
+describe('buildNavigatePanelUI — the ONE builder behind all three navigate cards', () => {
+  it('buildArrivalPanelUI is byte-identical to the legacy hand-rolled arrival card', () => {
+    // The exact literal this builder replaced (app.js safari_move_* posted it) —
+    // a regression pin so unification never changes the on-Discord shape.
+    assert.deepEqual(buildArrivalPanelUI('391415444084490240', 'A2'), {
+      flags: 1 << 15,
+      components: [{
+        type: 17,
+        accent_color: 0x2ecc71,
+        components: [
+          { type: 10, content: '<@391415444084490240> has arrived at **A2**' },
+          {
+            type: 1,
+            components: [{
+              type: 2,
+              custom_id: 'safari_navigate_391415444084490240_A2',
+              label: 'Navigate',
+              style: 1,
+              emoji: { name: '🗺️' }
+            }]
+          }
+        ]
+      }]
+    });
+  });
+
+  it('withNavigate: false drops the button row entirely (silent/disabled modes)', () => {
+    const ui = buildNavigatePanelUI({ userId: 'u1', coordinate: 'C3', content: 'moved', withNavigate: false });
+    assert.equal(ui.components[0].components.length, 1, 'text only');
+    assert.equal(ui.components[0].components[0].type, 10);
+  });
+
+  it('accent color and content are caller-controlled (init/admin cards use blurple)', () => {
+    const ui = buildNavigatePanelUI({ userId: 'u1', coordinate: 'C3', content: '🎉 Welcome!', accentColor: 0x5865f2 });
+    assert.equal(ui.components[0].accent_color, 0x5865f2);
+    assert.equal(ui.components[0].components[0].content, '🎉 Welcome!');
+    assert.equal(ui.components[0].components[1].components[0].custom_id, 'safari_navigate_u1_C3');
+  });
+
+  it('Navigate button works with multi-letter coordinates (AD1 — 30-column maps)', () => {
+    const ui = buildArrivalPanelUI('u1', 'AD1');
+    assert.equal(ui.components[0].components[1].components[0].custom_id, 'safari_navigate_u1_AD1');
+  });
+});
+
+describe('Teleport arrival wiring — source pins (shared arrival path, RaP 0894 follow-up)', () => {
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const read = (rel) => readFileSync(path.join(__dirname, '..', rel), 'utf8');
+
+  it('both teleport branches of manage_player_state announce arrival and retire the old pane', () => {
+    const src = read('safariManager.js');
+    const teleportBranch = src.slice(src.indexOf("case 'teleport':"), src.indexOf("case 'deinitialize':"));
+    assert.equal((teleportBranch.match(/announceArrival|iotAnnounce\(/g) || []).length >= 2, true,
+      'teleport AND init_or_teleport-else must post the arrival pane');
+    assert.ok(teleportBranch.includes('retireNavigationPane'), 'stale old-cell pane must be retired');
+  });
+
+  it('app.js safari_move_* uses the shared helpers, never an inline arrival post', () => {
+    const src = read('app.js');
+    assert.ok(!src.includes('buildArrivalPanelUI'), 'inline arrival posting must stay extracted');
+    const moveHandler = src.slice(src.indexOf("custom_id.startsWith('safari_move_')"));
+    assert.ok(moveHandler.slice(0, 5000).includes('announceArrival'));
+    assert.ok(moveHandler.slice(0, 5000).includes('retireNavigationPane'));
+  });
+
+  it('safariMapAdmin init + admin-move cards use the shared builder (no hand-rolled copies)', () => {
+    const src = read('safariMapAdmin.js');
+    assert.equal((src.match(/buildNavigatePanelUI/g) || []).length >= 2, true);
+    assert.ok(!src.includes("label: 'Navigate'"), 'no hand-rolled Navigate buttons left');
+  });
+
+  it('announceArrival respects the navigate-pane mode gate', () => {
+    const src = read('mapMovement.js');
+    const fn = src.slice(src.indexOf('export async function announceArrival'), src.indexOf('export async function retireNavigationPane'));
+    assert.ok(fn.includes('shouldPostNavigatePanes'), 'silent/disabled modes must suppress the pane');
   });
 });

@@ -15,18 +15,27 @@
 export const NAV_DELETE_PANEL_PREFIX = 'safari_nav_delete_panel_';
 
 /**
- * The public arrival card posted to a cell's channel when a player moves in
- * ("<@user> has arrived at **C2**" + Navigate button). Posted by app.js safari_move_*.
+ * Generalized "card + Navigate button" pane — the ONE builder behind the three
+ * public navigate panes (arrival card, init welcome card, admin-move card), which
+ * were previously three hand-rolled copies (app.js safari_move_*, safariMapAdmin
+ * init + admin-move). The Navigate button is owner-gated by custom_id.
+ *
+ * @param {Object} p
+ * @param {string} p.userId - panel owner (Navigate button only works for them)
+ * @param {string} p.coordinate - the cell this pane navigates from
+ * @param {string} p.content - Text Display markdown
+ * @param {number} [p.accentColor=0x2ecc71] - container accent (green = movement)
+ * @param {boolean} [p.withNavigate=true] - false drops the button row (silent modes)
  */
-export function buildArrivalPanelUI(userId, coordinate) {
+export function buildNavigatePanelUI({ userId, coordinate, content, accentColor = 0x2ecc71, withNavigate = true }) {
     return {
         flags: 1 << 15, // IS_COMPONENTS_V2
         components: [{
             type: 17, // Container
-            accent_color: 0x2ecc71, // Green for movement
+            accent_color: accentColor,
             components: [
-                { type: 10, content: `<@${userId}> has arrived at **${coordinate}**` },
-                {
+                { type: 10, content },
+                ...(withNavigate ? [{
                     type: 1, // Action Row
                     components: [{
                         type: 2, // Button
@@ -35,10 +44,23 @@ export function buildArrivalPanelUI(userId, coordinate) {
                         style: 1, // Primary
                         emoji: { name: '🗺️' }
                     }]
-                }
+                }] : [])
             ]
         }]
     };
+}
+
+/**
+ * The public arrival card posted to a cell's channel when a player moves in
+ * ("<@user> has arrived at **C2**" + Navigate button). Posted by compass moves
+ * (safari_move_*) AND the teleport outcome via mapMovement.announceArrival.
+ */
+export function buildArrivalPanelUI(userId, coordinate) {
+    return buildNavigatePanelUI({
+        userId,
+        coordinate,
+        content: `<@${userId}> has arrived at **${coordinate}**`
+    });
 }
 
 /**

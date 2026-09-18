@@ -372,6 +372,82 @@ export async function deleteNavigationPanel(channelId, panelMessageId, adminUser
     return buildNavPanelDeleteResultUI(deleted);
 }
 
+/**
+ * Post the public arrival pane ("<@user> has arrived at **X**" + Navigate button)
+ * to a coordinate's channel. Shared by compass moves (safari_move_*) and the
+ * teleport outcome (manage_player_state) so both movement paths land the player
+ * on the same "you have arrived" UX. Gated by the guild's navigate-pane mode
+ * ('silent'/'disabled' suppress it — escape rooms). Never throws: arrival UX
+ * must not fail an already-completed move.
+ *
+ * @param {string} guildId
+ * @param {string} userId - panel owner
+ * @param {string} coordinate - destination cell
+ * @param {Object} [opts]
+ * @param {string|null} [opts.sourceChannelId] - suppress when the destination IS
+ *   the channel the interaction came from (compass moves pass this)
+ * @returns {Promise<boolean>} whether a pane was posted
+ */
+export async function announceArrival(guildId, userId, coordinate, { sourceChannelId = null } = {}) {
+    try {
+        const safariData = await loadSafariContent();
+        const activeMapId = safariData[guildId]?.maps?.active;
+        const channelId = activeMapId ? safariData[guildId].maps[activeMapId]?.coordinates?.[coordinate]?.channelId : null;
+        if (!channelId || channelId === sourceChannelId) return false;
+
+        const { shouldPostNavigatePanes } = await import('./safariFeatureFlags.js');
+        if (!shouldPostNavigatePanes(safariData[guildId]?.safariConfig)) return false;
+
+        const { buildArrivalPanelUI } = await import('./mapNavigationUI.js');
+        const { DiscordRequest } = await import('./utils.js');
+        await DiscordRequest(`channels/${channelId}/messages`, {
+            method: 'POST',
+            body: buildArrivalPanelUI(userId, coordinate)
+        });
+        console.log(`🗺️ Posted arrival pane for ${userId} at ${coordinate}`);
+        return true;
+    } catch (error) {
+        console.error(`❌ Failed to post arrival pane for ${userId} at ${coordinate}:`, error.message);
+        return false;
+    }
+}
+
+/**
+ * PATCH the player's open Navigate pane at their OLD coordinate into the
+ * "you have moved" notification, then forget the stored interaction token.
+ * Without this, a teleport (or compass move) leaves a stale compass pane behind —
+ * its buttons degrade politely via the wrong-channel guard, but this is cleaner.
+ * Shared by safari_move_* and the teleport outcome. Never throws.
+ *
+ * @param {string|null} [newChannelId] - destination channel; resolved from
+ *   safariContent when omitted (the teleport path doesn't have it handy)
+ * @returns {Promise<boolean>} whether a pane was retired
+ */
+export async function retireNavigationPane(guildId, userId, oldCoordinate, newCoordinate, newChannelId = null) {
+    const navData = global.navigationInteractions?.get(`${userId}_${oldCoordinate}`);
+    if (!navData) return false;
+    try {
+        if (!newChannelId) {
+            const safariData = await loadSafariContent();
+            const activeMapId = safariData[guildId]?.maps?.active;
+            newChannelId = activeMapId ? safariData[guildId].maps[activeMapId]?.coordinates?.[newCoordinate]?.channelId : null;
+        }
+        const { DiscordRequest } = await import('./utils.js');
+        await DiscordRequest(`webhooks/${navData.appId}/${navData.token}/messages/@original`, {
+            method: 'PATCH',
+            body: {
+                components: createMovementNotification(guildId, userId, oldCoordinate, newCoordinate, newChannelId).components
+            }
+        }, `retire nav pane ${oldCoordinate}→${newCoordinate} by ${userId}`);
+        global.navigationInteractions.delete(`${userId}_${oldCoordinate}`);
+        console.log(`✅ Retired navigation pane at ${oldCoordinate} for ${userId}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Failed to retire navigation pane:', error.message);
+        return false;
+    }
+}
+
 // Create movement notification for ephemeral response (Components V2 format)
 export function createMovementNotification(guildId, userId, oldCoordinate, newCoordinate, newChannelId) {
     return {

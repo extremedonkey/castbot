@@ -469,31 +469,15 @@ export async function initializePlayerOnMap(guildId, userId, coordinate = null, 
       const channelId = mapData.coordinates[coordinate]?.channelId;
 
       if (channelId && shouldPostNavigatePanes(safariData[guildId]?.safariConfig)) {
-        // Create welcome message with Navigate button
-        const welcomeMessage = {
-          flags: (1 << 15), // IS_COMPONENTS_V2
-          components: [{
-            type: 17, // Container
-            accent_color: 0x5865f2, // Discord blurple
-            components: [
-              {
-                type: 10, // Text Display
-                content: `🎉 **Welcome to the Safari Map!**\n\n<@${userId}> has been initialized at coordinate **${coordinate}**.\n\nYou have been granted **${player.safari.points.stamina.current} stamina** to start exploring!`
-              },
-              {
-                type: 1, // Action Row
-                components: [{
-                  type: 2, // Button
-                  custom_id: `safari_navigate_${userId}_${coordinate}`,
-                  label: 'Navigate',
-                  style: 1, // Primary
-                  emoji: { name: '🗺️' }
-                }]
-              }
-            ]
-          }]
-        };
-        
+        // Welcome card + Navigate button — shared builder (mapNavigationUI.js)
+        const { buildNavigatePanelUI } = await import('./mapNavigationUI.js');
+        const welcomeMessage = buildNavigatePanelUI({
+          userId,
+          coordinate,
+          accentColor: 0x5865f2, // Discord blurple
+          content: `🎉 **Welcome to the Safari Map!**\n\n<@${userId}> has been initialized at coordinate **${coordinate}**.\n\nYou have been granted **${player.safari.points.stamina.current} stamina** to start exploring!`
+        });
+
         // Send the welcome message with movement options to the channel
         await DiscordRequest(`channels/${channelId}/messages`, {
           method: 'POST',
@@ -578,30 +562,14 @@ export async function movePlayerToCoordinate(guildId, userId, coordinate, client
         // Text notification always posts (the player must learn where they are); the Navigate
         // button row is dropped in 'silent'/'disabled' navigate modes (escape rooms).
         const { shouldPostNavigatePanes } = await import('./safariFeatureFlags.js');
-        const withNavigate = shouldPostNavigatePanes(safariData[guildId]?.safariConfig);
-        const notificationMessage = {
-          flags: (1 << 15), // IS_COMPONENTS_V2
-          components: [{
-            type: 17, // Container
-            accent_color: 0x5865f2, // Discord blurple
-            components: [
-              {
-                type: 10, // Text Display
-                content: messageContent
-              },
-              ...(withNavigate ? [{
-                type: 1, // Action Row
-                components: [{
-                  type: 2, // Button
-                  custom_id: `safari_navigate_${userId}_${coordinate}`,
-                  label: 'Navigate',
-                  style: 1, // Primary
-                  emoji: { name: '🗺️' }
-                }]
-              }] : [])
-            ]
-          }]
-        };
+        const { buildNavigatePanelUI } = await import('./mapNavigationUI.js');
+        const notificationMessage = buildNavigatePanelUI({
+          userId,
+          coordinate,
+          accentColor: 0x5865f2, // Discord blurple
+          content: messageContent,
+          withNavigate: shouldPostNavigatePanes(safariData[guildId]?.safariConfig)
+        });
         
         // Send the notification with movement options to the channel
         const { DiscordRequest } = await import('./utils.js');
