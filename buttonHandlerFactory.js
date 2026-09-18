@@ -2693,6 +2693,14 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'safari'
   },
+  'map_section_add_*': {
+    label: 'Add Section',
+    description: 'Add a new map section (own image, coordinates continue from the anchor section)',
+    emoji: '➕',
+    style: 'Secondary',
+    category: 'safari',
+    parent: 'safari_map_explorer'
+  },
   'safari_map_init_player': {
     label: 'Start Exploring',
     description: 'Initialize player on Safari map with starting position and stamina',

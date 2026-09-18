@@ -14,7 +14,7 @@ const __dirname = dirname(__filename);
 import MapGridSystem from './scripts/map-tests/mapGridSystem.js';
 
 // Canonical Excel-safe coordinate math (single source of truth — RaP 0894 Phase 0)
-import { getExcelColumn, parseExcelColumn, generateCoordinate, parseCoordinate } from './utils/coordinateParser.js';
+import { getExcelColumn, parseExcelColumn, generateCoordinate, parseCoordinate, tryParseCoordinate } from './utils/coordinateParser.js';
 
 // Memory-lean fog-of-war generation (RaP 0896) — one builder per map build
 import { createFogBuilder } from './mapFogBuilder.js';
@@ -1405,6 +1405,16 @@ export async function executeMapBuild(client, guildId, userId, { mapUrl, mapColu
   const existingMap = activeMapId ? safariData[guildId]?.maps?.[activeMapId] : null;
 
   if (activeMapId && existingMap) {
+    // Multi-section maps (RaP 0894): updateMapImage rebuilds the whole grid from the
+    // map-level image, which on a sectioned map would draw the bounding box over
+    // SECTION 1's image and regenerate other sections' fog from the wrong picture.
+    // Per-section image update is Phase 3 — block hard until then.
+    if (Array.isArray(existingMap.sections) && existingMap.sections.length > 1) {
+      return {
+        success: false,
+        message: '❌ This map has multiple sections — per-section image updates are coming soon. For now, updating images on a multi-section map is disabled to protect the existing sections.'
+      };
+    }
     // Updating: dimensions are immutable (channels/coordinates already exist)
     const existingWidth = existingMap.gridWidth || existingMap.gridSize || 7;
     const existingHeight = existingMap.gridHeight || existingMap.gridSize || 7;
@@ -1750,12 +1760,16 @@ export async function generateBlacklistOverlay(guildId, originalImageUrl, gridWi
     // Step 5: Create overlay rectangles
     const overlays = [];
 
-    // Helper function to convert coordinate to pixel position (accounting for border)
+    // Helper function to convert coordinate to pixel position (accounting for border).
+    // Returns null for coords outside the RENDERED grid — on multi-section maps this
+    // image is one section, and other sections' blacklist/player coords must not draw
+    // off-canvas tints (RaP 0894). Also guards stale out-of-range blacklist entries.
     const coordToPosition = (coord) => {
-      const { x: col, y: row } = parseCoordinate(coord);
+      const pos = tryParseCoordinate(coord);
+      if (!pos || pos.x >= gridWidth || pos.y >= gridHeight) return null;
       return {
-        left: Math.floor(borderSize + (col * cellWidth)),
-        top: Math.floor(borderSize + (row * cellHeight))
+        left: Math.floor(borderSize + (pos.x * cellWidth)),
+        top: Math.floor(borderSize + (pos.y * cellHeight))
       };
     };
 
@@ -1765,6 +1779,7 @@ export async function generateBlacklistOverlay(guildId, originalImageUrl, gridWi
     // If a cell has an unlock item but is NOT blacklisted → no overlay (alerts hosts to add blacklist)
     for (const coord of blacklistedCoords) {
       const pos = coordToPosition(coord);
+      if (!pos) continue;
       const unlockItem = coordToItemMap.get(coord);
 
       let background;
@@ -1802,7 +1817,7 @@ export async function generateBlacklistOverlay(guildId, originalImageUrl, gridWi
       const cellPlayers = groupPlayersByCell(playerLocations);
 
       const cellOverlayArrays = await Promise.all(
-        Object.entries(cellPlayers).map(([coord, players]) => {
+        Object.entries(cellPlayers).filter(([coord]) => coordToPosition(coord)).map(([coord, players]) => {
           const pos = coordToPosition(coord);
           // Dark backdrop only on cells without an existing color overlay
           const hasColor = blacklistedCoords.includes(coord) || coordToItemMap.has(coord);
@@ -1910,7 +1925,15 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
       statusText = '✅ Active';
     }
 
-    headerText = `# 🗺️ Map Explorer\n\n**Active Map:** ${guildName}\n**Grid Size:** ${gridW}x${gridH}\n**Status:** ${statusText}\n**Source Images:** <#${activeMap.mapStorageChannelId || ''}> (don't delete!)`;
+    // Multi-section maps (RaP 0894): the gallery below shows SECTION 1's image
+    // (per-section paging is Phase 3); list the others so hosts can see them.
+    const { getSections } = await import('./src/maps/mapSections.js');
+    const mapSections = getSections(activeMap);
+    const sectionsLine = mapSections.length > 1
+      ? `\n**Sections:** ${mapSections.map((s, i) => `${s.name || `Section ${i + 1}`}${s.building ? ' ⚠️build incomplete' : ''}`).join(' · ')} (image shows ${mapSections[0].name || 'Section 1'})`
+      : '';
+
+    headerText = `# 🗺️ Map Explorer\n\n**Active Map:** ${guildName}\n**Grid Size:** ${gridW}x${gridH}${sectionsLine}\n**Status:** ${statusText}\n**Source Images:** <#${activeMap.mapStorageChannelId || ''}> (don't delete!)`;
   } else {
     // Instructions differ by the guild's Image Uploads mode (Settings → General)
     const { getImageUploadMode } = await import('./src/settings/generalSettings.js');
@@ -1956,14 +1979,18 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
       console.warn(`⚠️ Could not fetch player locations: ${e.message}`);
     }
 
-    // Generate overlay image with blacklist + player location indicators
+    // Generate overlay image with blacklist + player location indicators.
+    // The rendered image is SECTION 1's (map-level fields mirror it) — pass the
+    // section's dims, not the multi-section bounding box, or cell math skews.
+    const { getSections: getOverlaySections } = await import('./src/maps/mapSections.js');
+    const overlaySection = getOverlaySections(guildMaps[activeMapId])[0];
     let imageUrl = guildMaps[activeMapId].discordImageUrl;
     try {
       imageUrl = await generateBlacklistOverlay(
         guildId,
         guildMaps[activeMapId].discordImageUrl,  // Original clean map
-        guildMaps[activeMapId].gridWidth || guildMaps[activeMapId].gridSize,
-        guildMaps[activeMapId].gridHeight || guildMaps[activeMapId].gridSize,
+        overlaySection.colEnd - overlaySection.colStart + 1,
+        overlaySection.rowEnd - overlaySection.rowStart + 1,
         client,
         playerLocations
       );
@@ -2002,7 +2029,15 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🚫')
       .setDisabled(!hasActiveMap);
-    const mapMgmtRow = new ActionRowBuilder().addComponents([createUpdateButton, deleteButton, blacklistButton]);
+    // Multi-section maps (RaP 0894): anchor new sections to the LAST section so
+    // repeated adds chain naturally (per-section pager anchoring is Phase 3)
+    const { getSections: getMgmtSections } = await import('./src/maps/mapSections.js');
+    const addSectionButton = new ButtonBuilder()
+      .setCustomId(`map_section_add_${getMgmtSections(guildMaps[activeMapId]).length - 1}`)
+      .setLabel('Add Section')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('➕');
+    const mapMgmtRow = new ActionRowBuilder().addComponents([createUpdateButton, deleteButton, blacklistButton, addSectionButton]);
     containerComponents.push(mapMgmtRow.toJSON());
 
     // Generate multi-color legend with per-item color coding
@@ -2309,3 +2344,5 @@ export async function isChannelInActiveMapCategory(guildId, channelId, client) {
 // createMapGrid removed - legacy hardcoded map functionality replaced by createMapGridWithCustomImage
 // buildMapExplorerResponse is exported directly with the function declaration above
 export { deleteMapGrid, createMapExplorerMenu, updateMapImage, createMapGridWithCustomImage, loadSafariContent, saveSafariContent };
+// Map-build primitives shared with the section-add flow (src/maps/mapSectionAdd.js)
+export { tryBeginMapBuild, endMapBuild, mapBuildBusyResult, postFogOfWarMapsToChannels, findOrCreateMapStorageChannel };

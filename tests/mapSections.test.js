@@ -13,7 +13,7 @@ import assert from 'node:assert/strict';
 import {
     getSections, sectionContains, getSectionForCoordinate,
     computeBoundingBox, materializeSections, planSectionPlacement,
-    coordinatesForSection, MAX_GRID_EDGE
+    coordinatesForSection, generateSectionNavigation, MAX_GRID_EDGE
 } from '../src/maps/mapSections.js';
 
 const legacyMap = (extra = {}) => ({
@@ -172,5 +172,39 @@ describe('mapSections — coordinatesForSection', () => {
     it('crosses the Z column boundary correctly', () => {
         const coords = coordinatesForSection({ colStart: 25, rowStart: 4, colEnd: 26, rowEnd: 4 });
         assert.deepEqual(coords, ['Z5', 'AA5']);
+    });
+});
+
+describe('mapSections — generateSectionNavigation (section-bounded nav data)', () => {
+    const rect = { colStart: 7, rowStart: 0, colEnd: 11, rowEnd: 4 }; // H1–L5
+
+    it('interior cell gets all 8 directions with true coordinates', () => {
+        const nav = generateSectionNavigation('I2', rect);
+        assert.equal(nav.north.to, 'I1');
+        assert.equal(nav.south.to, 'I3');
+        assert.equal(nav.east.to, 'J2');
+        assert.equal(nav.west.to, 'H2');
+        assert.equal(nav.northwest.to, 'H1');
+        assert.equal(nav.southeast.to, 'J3');
+    });
+
+    it('section-edge cells have null across the seam — H1 has no west into section 1', () => {
+        const nav = generateSectionNavigation('H1', rect);
+        assert.equal(nav.west, null, 'G1 is another section — no nav across the seam');
+        assert.equal(nav.north, null);
+        assert.equal(nav.east.to, 'I1');
+        assert.equal(nav.south.to, 'H2');
+    });
+
+    it('bottom-right corner clamps both axes', () => {
+        const nav = generateSectionNavigation('L5', rect);
+        assert.equal(nav.east, null);
+        assert.equal(nav.south, null);
+        assert.equal(nav.northwest.to, 'K4');
+    });
+
+    it('malformed coordinate yields the all-null shape instead of throwing', () => {
+        const nav = generateSectionNavigation('banana', rect);
+        assert.ok(Object.values(nav).every(v => v === null));
     });
 });

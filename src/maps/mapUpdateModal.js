@@ -86,3 +86,82 @@ export function buildMapUpdateModal(hasActiveMap, existingMap, imageUploadMode =
         components
     };
 }
+
+/**
+ * Build the Add Map Section modal (RaP 0894 Phase 2). Exactly 5 top-level Labels —
+ * the modal cap — which is why the section name auto-assigns ("Section N") instead
+ * of being a field. Placement uses a Radio Group (type 21): plain-text labels, ONE
+ * default via spread, no emoji on options (ComponentsV2.md Radio Group gotchas).
+ *
+ * @param {number} anchorIdx - index of the section the placement anchors to
+ * @param {Object} anchorSection - the anchor section (labels the placement guidance)
+ * @param {string} [imageUploadMode='textUrl'] - guild Image Uploads mode
+ */
+export function buildSectionAddModal(anchorIdx, anchorSection, imageUploadMode = 'textUrl') {
+    const anchorLabel = anchorSection?.name || `Section ${anchorIdx + 1}`;
+
+    const imageField = imageUploadMode === 'uploadComponent'
+        ? {
+            type: 18, // Label
+            label: 'Section Map Image',
+            description: 'This section gets its OWN image — the existing map is untouched.',
+            component: {
+                type: 19, // File Upload
+                custom_id: IMAGE_UPLOAD_COMPONENT_ID,
+                min_values: 1,
+                max_values: 1,
+                required: true
+            }
+        }
+        : {
+            type: 18, // Label
+            label: 'Discord Image URL',
+            description: 'Upload to Discord first, then paste the CDN link.',
+            component: {
+                type: 4, // Text Input
+                custom_id: 'section_url',
+                style: 2, // Paragraph
+                required: true,
+                min_length: 20,
+                max_length: 500,
+                placeholder: 'https://cdn.discordapp.com/attachments/...'
+            }
+        };
+
+    return {
+        custom_id: `map_section_add_modal_${anchorIdx}`,
+        title: 'Add Map Section',
+        components: [
+            imageField,
+            {
+                type: 18,
+                label: 'Number of Section Rows',
+                component: { type: 4, custom_id: 'section_rows', style: 1, required: true, value: '7', min_length: 1, max_length: 3 }
+            },
+            {
+                type: 18,
+                label: 'Number of Section Columns',
+                component: { type: 4, custom_id: 'section_columns', style: 1, required: true, value: '7', min_length: 1, max_length: 3 }
+            },
+            {
+                type: 18,
+                label: 'Placement',
+                description: `Coordinates continue from ${anchorLabel}'s edge - no skipped rows or columns.`,
+                component: {
+                    type: 21, // Radio Group
+                    custom_id: 'section_direction',
+                    required: true,
+                    options: [
+                        { label: `Right of ${anchorLabel}`, value: 'right', description: 'New columns continue east (e.g. E1, F1...)', default: true },
+                        { label: `Below ${anchorLabel}`, value: 'below', description: 'New rows continue south (e.g. A6, B6...)' }
+                    ]
+                }
+            },
+            {
+                type: 18,
+                label: 'Location Emoji',
+                component: { type: 4, custom_id: 'section_emoji', style: 1, required: false, value: '📍', max_length: 8 }
+            }
+        ]
+    };
+}

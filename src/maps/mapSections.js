@@ -125,3 +125,29 @@ export function coordinatesForSection(rect) {
     }
     return coords;
 }
+
+/**
+ * Per-cell navigation{} data bounded by the SECTION rectangle, not the whole grid —
+ * the section-scoped counterpart of mapExplorer's generateNavigation. (Movement never
+ * reads this data — getValidMoves recomputes — but the map-admin coordinate display
+ * does, and updateBlacklistedCoordinates writes blocked flags into it.)
+ */
+export function generateSectionNavigation(coord, rect) {
+    const pos = tryParseCoordinate(coord);
+    const nav = {
+        north: null, east: null, south: null, west: null,
+        northeast: null, northwest: null, southeast: null, southwest: null
+    };
+    if (!pos) return nav;
+    const dirs = {
+        north: [0, -1], east: [1, 0], south: [0, 1], west: [-1, 0],
+        northeast: [1, -1], northwest: [-1, -1], southeast: [1, 1], southwest: [-1, 1]
+    };
+    for (const [dir, [dx, dy]] of Object.entries(dirs)) {
+        const x = pos.x + dx, y = pos.y + dy;
+        if (x >= rect.colStart && x <= rect.colEnd && y >= rect.rowStart && y <= rect.rowEnd) {
+            nav[dir] = { to: generateCoordinate(x, y), visible: true, blocked: false };
+        }
+    }
+    return nav;
+}

@@ -7,7 +7,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildMapUpdateModal } from '../src/maps/mapUpdateModal.js';
+import { buildMapUpdateModal, buildSectionAddModal } from '../src/maps/mapUpdateModal.js';
 import { collectModalFields, IMAGE_UPLOAD_COMPONENT_ID } from '../src/images/modalImageUpload.js';
 
 function fieldById(modal, customId) {
@@ -114,5 +114,52 @@ describe('Map Update Modal — URL guard fork (pasted vs upload)', () => {
     it('a missing URL is rejected in either mode', () => {
         assert.equal(mapUrlRejected(undefined, 'upload'), true);
         assert.equal(mapUrlRejected('', 'none'), true);
+    });
+});
+
+describe('Add Section Modal (RaP 0894 Phase 2) — builder contract', () => {
+    const anchor = { name: 'Base Camp', colStart: 0, rowStart: 0, colEnd: 6, rowEnd: 6 };
+
+    it('sits exactly AT the 5-component modal cap, all Labels, indexed custom_id', () => {
+        for (const mode of ['textUrl', 'uploadComponent']) {
+            const modal = buildSectionAddModal(2, anchor, mode);
+            assert.equal(modal.custom_id, 'map_section_add_modal_2');
+            assert.equal(modal.components.length, 5, 'the next field added breaks the modal');
+            assert.ok(modal.components.every(row => row.type === 18));
+            assert.ok(modal.title.length <= 45);
+        }
+    });
+
+    it('placement Radio Group follows the ComponentsV2 gotchas (one default, no emoji, plain text)', () => {
+        const radio = fieldById(buildSectionAddModal(0, anchor), 'section_direction');
+        assert.equal(radio.type, 21);
+        assert.equal(radio.options.filter(o => o.default === true).length, 1, 'exactly ONE default');
+        assert.ok(radio.options.every(o => !('emoji' in o)), 'Radio Group options take NO emoji field');
+        assert.ok(radio.options.every(o => o.default !== false), 'no explicit default:false (suppresses pre-selection)');
+        assert.deepEqual(radio.options.map(o => o.value), ['right', 'below']);
+        assert.ok(radio.options.every(o => /^[\x20-\x7E]+$/.test(o.label)), 'plain-text labels');
+    });
+
+    it('anchor name flows into placement labels; anonymous anchors fall back to Section N', () => {
+        const named = fieldById(buildSectionAddModal(0, anchor), 'section_direction');
+        assert.ok(named.options[0].label.includes('Base Camp'));
+        const anon = fieldById(buildSectionAddModal(1, { name: null }), 'section_direction');
+        assert.ok(anon.options[0].label.includes('Section 2'));
+    });
+
+    it('image field swaps by upload mode like the map modal (section_url vs File Upload)', () => {
+        assert.equal(fieldById(buildSectionAddModal(0, anchor, 'textUrl'), 'section_url').type, 4);
+        const upload = fieldById(buildSectionAddModal(0, anchor, 'uploadComponent'), IMAGE_UPLOAD_COMPONENT_ID);
+        assert.equal(upload.type, 19);
+        assert.equal(upload.required, true);
+    });
+
+    it('every Label/description respects Discord limits (45/100 chars)', () => {
+        for (const mode of ['textUrl', 'uploadComponent']) {
+            for (const row of buildSectionAddModal(3, anchor, mode).components) {
+                assert.ok(row.label.length <= 45, row.label);
+                if (row.description) assert.ok(row.description.length <= 100, row.description);
+            }
+        }
     });
 });

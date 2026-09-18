@@ -1,7 +1,7 @@
 # 0894 — Multi-Section Maps ("Map Annex") — Detailed Design
 
 **Date:** 2026-09-18
-**Status:** IN PROGRESS — Phase 0 ✅ (commit 175ecb01), Phase 1 ✅ (279904c3), Phase 2 groundwork: MapGridSystem offsets ✅ (82e354b8). Remaining: Phase 2 Add-Section flow (extract processMapImageWithGrid/createSectionChannels, modal + executeSectionAdd — NOTE: app.js sits exactly AT the Moai line ratchet, so the submit handler must live in a module with net-negative app.js routing), Phase 3 explorer pager UI, Phase 4 polish.
+**Status:** IN PROGRESS — Phase 0 ✅ (175ecb01), Phase 1 ✅ (279904c3), Phase 2 ✅: MapGridSystem offsets (82e354b8) + Add-Section flow shipped — `src/maps/mapSectionAdd.js` (executeSectionAdd + createSectionChannels + modal submit), `src/maps/mapImagePipeline.js` (shared download→grid→re-encode; NOTE: create path still carries its own copy until smoke-verified, then it delegates here), `buildSectionAddModal`, ➕ Add Section button on the explorer, 500-channel `preflightBudget` guard, overlay bounds filter, multi-section Update-Map hard block (until Phase 3 per-section update). The `map_update_modal` submit body moved to `src/maps/mapUpdateModalSubmit.js` (app.js 49581→49443, Moai ratchet locked down). Remaining: Phase 3 explorer pager + per-section Update Map + Prod-Map section publishing, Phase 4 polish (Resume/Remove incomplete builds, per-section delete, section rename, activityLogger/playerLocationImageGenerator per-section rendering).
 **Elaborates:** Option B from [RaP 0895 Multi-Map / Hidden Maps Analysis](0895_20260918_MultiMapHiddenMaps_Analysis.md)
 
 Related:
