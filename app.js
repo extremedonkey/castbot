@@ -38980,6 +38980,7 @@ To fix this:
           guildId,
           actionId: buttonId,
           coordinate,
+          assignCoordinate: true,  // creation flow: auto-assign the new action's location
           skipAutoSave: true  // Skip auto-save during creation to avoid errors
         });
         
@@ -44963,7 +44964,7 @@ To fix this:
             guildId,
             actionId: buttonId,
             coordinate,
-            skipAutoSave: false  // Allow auto-save to assign coordinate
+            assignCoordinate: true  // creation flow: auto-assign + save the new action's location
           });
           
           // Add success note to the UI

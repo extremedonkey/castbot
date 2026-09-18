@@ -161,3 +161,39 @@ describe('Action Visibility — collapse budget replica', () => {
         assert.ok(worst <= 40, `worst expanded screen = ${worst} components`);
     });
 });
+
+/**
+ * Opening an EXISTING action from a location's context menu must NOT silently
+ * associate it with that location (the half-baked auto-assoc never rebuilt the
+ * anchor, so button actions became unusable — and hosts never asked for it).
+ * Creation flows OPT IN via assignCoordinate. Source ratchet: the gate and the
+ * two opted-in creation call sites must hold their shape.
+ */
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+
+describe('Editor coordinate auto-assign — creation-only opt-in (assignCoordinate)', () => {
+    const __dirname = path.dirname(fileURLToPath(import.meta.url));
+    const read = (rel) => readFileSync(path.join(__dirname, '..', rel), 'utf8');
+
+    it('the auto-assign block is gated on assignCoordinate', () => {
+        const src = read('customActionUI.js');
+        assert.ok(src.includes('if (assignCoordinate && coordinate && !action.coordinates?.includes(coordinate))'),
+            'un-gated coordinate auto-assign silently adopts locations from the location context menu');
+    });
+
+    it('both creation modal flows opt in (new actions DO auto-assign their birth location)', () => {
+        const src = read('app.js');
+        assert.equal((src.match(/assignCoordinate: true/g) || []).length, 2,
+            'exactly the two creation call sites opt in');
+    });
+
+    it('the location dropdown edit path passes coordinate WITHOUT opting in', () => {
+        const src = read('app.js');
+        const handler = src.slice(src.indexOf('// Edit existing action'));
+        const callBlock = handler.slice(0, handler.indexOf('});'));
+        assert.ok(callBlock.includes('coordinate'), 'coordinate stays as UI context');
+        assert.ok(!callBlock.includes('assignCoordinate'), 'selecting an existing action must never auto-assign');
+    });
+});

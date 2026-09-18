@@ -381,10 +381,18 @@ export async function createCloneSourceSelectionUI({ guildId, coordinate = null,
  * @param {Object} params
  * @param {string} params.guildId - Guild ID
  * @param {string} params.actionId - Action ID (or "new" for new action)
- * @param {string} params.coordinate - Map coordinate (optional)
+ * @param {string} params.coordinate - Map coordinate (optional — UI context only
+ *   unless assignCoordinate is set)
+ * @param {boolean} params.assignCoordinate - OPT-IN: associate the action with the
+ *   coordinate (creation flows only). Opening an EXISTING action from a location's
+ *   context menu must NOT silently adopt that location — the half-baked association
+ *   (no anchor rebuild) made button actions unusable AND surprised hosts. Hosts add
+ *   locations explicitly via Action Editor → Locations.
+ * @param {boolean} params.skipAutoSave - with assignCoordinate: mutate but let the
+ *   caller save (creation flows that batch their own save)
  * @returns {Object} Discord Components V2 UI
  */
-export async function createCustomActionEditorUI({ guildId, actionId, coordinate, skipAutoSave = false }) {
+export async function createCustomActionEditorUI({ guildId, actionId, coordinate, skipAutoSave = false, assignCoordinate = false }) {
   const allSafariContent = await loadSafariContent();
   const guildData = allSafariContent[guildId] || {};
   const guildItems = guildData.items || {};
@@ -402,8 +410,8 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
   // Ensure action has new structure
   action = ensureActionStructure(action);
   
-  // Pre-populate coordinate if provided and not already assigned
-  if (coordinate && !action.coordinates?.includes(coordinate)) {
+  // Pre-populate coordinate ONLY when a creation flow opts in (assignCoordinate)
+  if (assignCoordinate && coordinate && !action.coordinates?.includes(coordinate)) {
     if (!action.coordinates) {
       action.coordinates = [];
     }
