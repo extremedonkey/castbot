@@ -40877,30 +40877,46 @@ To fix this:
       // Handle display text edit/save modal submissions
       try {
         const guildId = req.body.guild_id;
-        
+
         // Check admin permissions
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to edit actions.')) return;
 
+        // MUST defer: an uploaded image is re-hosted (download + sharp + CDN upload) before the
+        // save returns, which blows Discord's 3s window — the save succeeded server-side but
+        // Discord showed "something went wrong", so hosts re-submitted and duplicated uploads.
+        // Same silent-ACK + PATCH @original combo as the blacklist modal / section pager.
+        await res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
+
         const { handleDisplayTextSave } = await import('./customActionUI.js');
-        const result = await handleDisplayTextSave(guildId, custom_id, req.body.data, client);
-        
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: {
-            ...result
-            // No flags in UPDATE_MESSAGE - per Discord Interaction API requirements
-          }
+        const { ephemeral, ...result } = await handleDisplayTextSave(guildId, custom_id, req.body.data, client);
+
+        if (!result.components) {
+          // Validation/not-found failure — NEW ephemeral follow-up so the Action Editor stays on screen
+          await DiscordRequest(`webhooks/${process.env.APP_ID}/${req.body.token}`, {
+            method: 'POST',
+            body: { content: result.content, flags: InteractionResponseFlags.EPHEMERAL }
+          });
+          return;
+        }
+
+        await DiscordRequest(`webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`, {
+          method: 'PATCH',
+          body: result
         });
-        
+        return;
+
       } catch (error) {
         console.error('Error in safari_display_text_save handler:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error saving display text action.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
+        // Already deferred — errors must go out as a webhook follow-up, not res.send
+        try {
+          await DiscordRequest(`webhooks/${process.env.APP_ID}/${req.body.token}`, {
+            method: 'POST',
+            body: { content: '❌ Error saving display text action.', flags: InteractionResponseFlags.EPHEMERAL }
+          });
+        } catch (followUpError) {
+          console.error('safari_display_text_save follow-up error report failed:', followUpError);
+        }
+        return;
       }
     } else if (custom_id === 'create_season_modal' || custom_id.startsWith('season_modal:')) {
       try {
